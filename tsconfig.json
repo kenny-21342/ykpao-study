@@ -9,6 +9,7 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
@@ -30,5 +31,16 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    // Python extraction workspace and its virtualenv — tens of thousands of
+    // files that the `**/*.ts` include would otherwise walk on every check.
+    "pdf_extraction",
+    ".venv-bank",
+    "backups",
+    // Generated Prisma clients; type-checking generated output is noise.
+    "generated",
+    "public"
+  ]
 }

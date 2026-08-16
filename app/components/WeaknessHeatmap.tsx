@@ -1,0 +1,249 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Loader2, Target, AlertTriangle, TrendingDown, Flame, ChevronRight,
+  BarChart3,
+} from 'lucide-react';
+
+type TopicRow = {
+  key: string;
+  subject: string;
+  topic: string;
+  total: number;
+  correct: number;
+  accuracy: number;
+  mastery: number;
+};
+
+type SubjectRow = {
+  subject: string;
+  total: number;
+  correct: number;
+  accuracy: number;
+};
+
+type Recommended = {
+  id: number;
+  topic: string;
+  subject: string;
+  content: string;
+  marks: number;
+};
+
+type WeaknessData = {
+  topics: TopicRow[];
+  subjects: SubjectRow[];
+  recommended: Recommended[];
+  totalAttempts?: number;
+  sources?: {
+    pastPaper: number;
+    mockExams: number;
+    legacyQuestions: number;
+  };
+  message?: string;
+};
+
+// Colour band for the heatmap cell, based on accuracy 0–100.
+function bandFor(acc: number): { bg: string; text: string; label: string } {
+  if (acc >= 85) return { bg: 'bg-emerald-500', text: 'text-white', label: 'Mastered' };
+  if (acc >= 70) return { bg: 'bg-green-400', text: 'text-white', label: 'Strong' };
+  if (acc >= 55) return { bg: 'bg-yellow-400', text: 'text-yellow-900', label: 'OK' };
+  if (acc >= 40) return { bg: 'bg-orange-400', text: 'text-white', label: 'Weak' };
+  return { bg: 'bg-red-500', text: 'text-white', label: 'Critical' };
+}
+
+export default function WeaknessHeatmap() {
+  const [data, setData] = useState<WeaknessData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [practicing, setPracticing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWeaknesses() {
+      try {
+        const res = await fetch('/api/weaknesses?limit=10');
+        if (!cancelled && res.ok) setData(await res.json());
+      } catch {
+        // best-effort
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadWeaknesses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const practiceWeak = async () => {
+    if (!data || data.recommended.length === 0) return;
+    setPracticing(true);
+    try {
+      // Stash the recommended queue in sessionStorage so the practice page
+      // can pick it up and serve these specific questions in order.
+      const ids = data.recommended.map((q) => q.id);
+      sessionStorage.setItem('weakness-queue', JSON.stringify(ids));
+      // Dispatch an event so a host SPA can switch to its practice tab.
+      window.dispatchEvent(new CustomEvent('open-weakness-practice'));
+    } finally {
+      setPracticing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+      </div>
+    );
+  }
+
+  if (!data || data.topics.length === 0) {
+    return (
+      <div className="floating-panel bg-white rounded-2xl p-12 border border-gray-200 shadow-sm text-center">
+        <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+          <Target className="w-8 h-8 text-gray-400" />
+        </div>
+        <h4 className="font-bold text-gray-900 dark:text-gray-100">No data yet</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+          {data?.message ?? 'Answer a few questions to see your strengths and weaknesses.'}
+        </p>
+      </div>
+    );
+  }
+
+  const sourceSummary = data.sources
+    ? [
+        data.sources.pastPaper ? `${data.sources.pastPaper} practice answers` : null,
+        data.sources.mockExams ? `${data.sources.mockExams} mock-exam items` : null,
+        data.sources.legacyQuestions ? `${data.sources.legacyQuestions} legacy question attempts` : null,
+      ].filter(Boolean).join(' · ')
+    : '';
+
+  return (
+    <div className="space-y-6">
+      {/* Header / CTA */}
+      <div className="floating-panel bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-2xl p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" />
+              Focus Areas
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Based on {data.totalAttempts ?? 0} graded attempts.
+              {sourceSummary ? ` Sources: ${sourceSummary}.` : ' Your weakest topics need the most attention.'}
+            </p>
+          </div>
+          <button
+            onClick={practiceWeak}
+            disabled={data.recommended.length === 0 || practicing}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
+          >
+            <Target className="w-4 h-4" />
+            Practice Weakest ({data.recommended.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Subject overview */}
+      <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-green-500" />
+          By Subject
+        </h4>
+        <div className="space-y-3">
+          {data.subjects.map((s) => {
+            const band = bandFor(s.accuracy);
+            return (
+              <div key={s.subject} className="flex items-center gap-3">
+                <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                  {s.subject}
+                </div>
+                <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                  <div
+                    className={`h-full ${band.bg} ${band.text} flex items-center justify-end pr-2 text-xs font-semibold transition-all duration-500`}
+                    style={{ width: `${Math.max(8, s.accuracy)}%` }}
+                  >
+                    {s.accuracy}%
+                  </div>
+                </div>
+                <div className="w-20 text-xs text-gray-500 dark:text-gray-400 text-right">
+                  {s.correct}/{s.total}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Topic heatmap */}
+      <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-500" />
+            Topic Mastery Heatmap
+          </h4>
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+            <span className="px-1.5 py-0.5 rounded bg-red-500 text-white">Critical</span>
+            <span className="px-1.5 py-0.5 rounded bg-orange-400 text-white">Weak</span>
+            <span className="px-1.5 py-0.5 rounded bg-yellow-400 text-yellow-900">OK</span>
+            <span className="px-1.5 py-0.5 rounded bg-green-400 text-white">Strong</span>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white">Mastered</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {data.topics.map((t) => {
+            const band = bandFor(t.accuracy);
+            return (
+              <div
+                key={t.key}
+                className={`rounded-xl p-3 ${band.bg} ${band.text} transition-transform hover:scale-[1.03] cursor-default`}
+                title={`${t.subject} · ${t.topic} — ${t.accuracy}% (${t.correct}/${t.total})`}
+              >
+                <p className="text-[11px] font-medium opacity-90 truncate">{t.topic}</p>
+                <p className="text-lg font-bold mt-0.5">{t.accuracy}%</p>
+                <p className="text-[10px] opacity-80">{t.total} attempts</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recommended questions */}
+      {data.recommended.length > 0 && (
+        <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-red-500" />
+            Recommended for Practice
+          </h4>
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            {data.recommended.map((q) => (
+              <li
+                key={q.id}
+                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors"
+                onClick={practiceWeak}
+              >
+                <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {q.subject} · {q.topic}
+                    {q.marks > 0 && <> · {q.marks} marks</>}
+                  </p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mt-0.5">
+                    {q.content}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

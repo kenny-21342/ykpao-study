@@ -1,0 +1,1468 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  bgImage       String?
+  password      String?
+  role          String    @default("student") // student | teacher | admin
+  banned        Boolean   @default(false)
+  bannedReason  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  onboardedAt   DateTime? // null = hasn't completed the welcome wizard yet
+  unlocks       String[]  @default([]) // easter-egg unlocks, e.g. ["competition"]
+  syncToken     String? // long-lived bearer token for BetterNotes iPad sync
+
+  accounts                Account[]
+  sessions                Session[]
+  courses                 UserCourse[]
+  notes                   Note[]
+  questionAttempts        QuestionAttempt[]
+  bookmarks               Bookmark[]
+  pastPaperBookmarks      PastPaperBookmark[]
+  studySessions           StudySession[]
+  sharedNotes             SharedNote[]
+  noteComments            NoteComment[]
+  noteRatings             NoteRating[]
+  followers               Follow[]                @relation("Following")
+  following               Follow[]                @relation("Followers")
+  notebooks               Notebook[]
+  pastPaperAttempts       PastPaperAttempt[]
+  mockExams               MockExam[]
+  threads                 DiscussionThread[]
+  posts                   DiscussionPost[]
+  discussionVotes         DiscussionVote[]
+  discussionFlagsGiven    DiscussionFlag[]        @relation("FlagReporter")
+  discussionFlagsResolved DiscussionFlag[]        @relation("FlagResolver")
+  usageRecords            UsageRecord[]
+  notifications           Notification[]
+  sentNotifications       Notification[]          @relation("NotificationsFrom")
+  schoolResources         SchoolResource[]
+  announcements           Announcement[]
+  dailyChallengeAttempts  DailyChallengeAttempt[]
+  noteCollaborations      NoteCollaborator[]
+  cloudDocuments          CloudDocument[]
+  learningProfile         LearningProfile?
+  studyTasks              StudyTask[]
+  reviewItems             ReviewItem[]
+  pageCollaborations      PageCollaborator[]
+  pageComments            PageComment[]
+  pagePresences           PagePresence[]
+  pageAwareness           PageAwareness[]
+  pageSnapshots           PageSnapshot[]
+  aiConversations         AIConversation[]
+  aiProposals             AIActionProposal[]
+  ragDocuments            RagDocument[]
+
+  // lib/sync-auth.ts looks a user up by syncToken on every iPad sync request.
+  // Without this the lookup is a sequential scan of the whole users table.
+  @@index([syncToken])
+  @@map("users")
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String?
+  title     String
+  mode      String   @default("explain")
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  messages  AIMessage[]
+  proposals AIActionProposal[]
+
+  @@index([userId, archived, updatedAt])
+  @@index([courseId])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  sources        Json?
+  actionType     String?
+  actionData     Json?
+  intent         String?
+  corpusCoverage Json?
+  proposalId     String?  @unique
+  createdAt      DateTime @default(now())
+
+  conversation AIConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  proposal     AIActionProposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@map("ai_messages")
+}
+
+// Per-request AI usage tracking (for the Usage & API Credits page)
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  feature   String // "ai-chat" | "mock-exam-generate" | "mock-exam-grade" | "practice-grade"
+  tokensIn  Int      @default(0)
+  tokensOut Int      @default(0)
+  cost      Float    @default(0) // estimated cost in USD
+  model     String   @default("deepseek-chat")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("usage_records")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Course {
+  id             String   @id @default(cuid())
+  name           String
+  code           String   @unique
+  subject        String
+  level          String
+  description    String?
+  catalogManaged Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users            UserCourse[]
+  curriculumScopes CourseCurriculumScope[]
+  conversations    AIConversation[]
+  questions        Question[]
+  notes            Note[]
+  notebooks        Notebook[]
+
+  @@map("courses")
+}
+
+model UserCourse {
+  id                     String    @id @default(cuid())
+  userId                 String
+  courseId               String
+  targetGrade            String?
+  examDate               DateTime?
+  currentLevel           String?
+  recentResult           String?
+  personalizationEnabled Boolean   @default(true)
+  enrolledAt             DateTime  @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("user_courses")
+}
+
+// Canonical bridge from a student-facing course to one or more curriculum
+// slices used by RAG and the past-paper corpus. Course.code is an internal
+// catalog identifier and must never be treated as a syllabus code.
+model CourseCurriculumScope {
+  id            String @id @default(cuid())
+  courseId      String
+  board         String
+  qualification String
+  level         String
+  subjectCode   String
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, board, qualification, level, subjectCode])
+  @@index([subjectCode])
+  @@index([board, qualification, level, subjectCode])
+  @@map("course_curriculum_scopes")
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  courseId     String
+  title        String
+  content      String
+  questionType String
+  difficulty   String
+  year         Int?
+  paperId      String?
+  pageNumber   Int?
+  marks        Int?
+  topics       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attempts  QuestionAttempt[]
+  bookmarks Bookmark[]
+
+  @@map("questions")
+}
+
+// Past-paper bank (CAIE questions migrated from SQLite papers.db).
+// doc_type distinguishes question papers ("qp") from markschemes ("ms").
+model Subject {
+  id   Int    @id @default(autoincrement())
+  code String @unique // CAIE syllabus code ("0625") or IB slug ("ib-biology")
+  name String
+
+  // Browse taxonomy for the past paper browser.
+  board         String @default("CAIE") // CAIE | IB (later AQA | OCR | Edexcel)
+  qualification String @default("") // IGCSE | A Level | Diploma Programme
+
+  papers      PastPaper[]
+  discussions DiscussionThread[]
+
+  @@index([board, qualification])
+  @@map("subjects")
+}
+
+model PastPaper {
+  id          Int      @id @default(autoincrement())
+  subjectId   Int
+  year        Int
+  session     String // CAIE: s | w | m    IB: may | nov
+  paperNumber Int
+  variant     Int      @default(0)
+  docType     String // qp | ms | in | rb | qb | tb | cs
+  filename    String
+  filepath    String   @unique // relative to pdf_extraction/; locates the file on disk
+  fileHash    String?
+  totalMarks  Int      @default(0)
+  insertText  String   @default("")
+  processedAt String?
+  createdAt   DateTime @default(now())
+
+  // Browse metadata. IB splits a sitting by level and timezone, so those are
+  // part of a paper's identity there; both stay empty for CAIE.
+  level     String @default("") // HL | SL | HLSL
+  timezone  String @default("") // TZ1 | TZ2 | TZ3
+  paperCode String @default("") // raw token, e.g. "12" or "1A"
+  pageCount Int?
+  sizeBytes Int?
+
+  subject   Subject             @relation(fields: [subjectId], references: [id])
+  questions PastPaperQuestion[]
+
+  @@index([subjectId])
+  @@index([year])
+  @@index([subjectId, year, session, paperNumber, variant, docType])
+  @@index([subjectId, year, session])
+  @@index([filename])
+  @@map("past_papers")
+}
+
+model PastPaperQuestion {
+  id         Int    @id
+  paperId    Int
+  number     Int
+  part       String @default("")
+  subPart    String @default("")
+  content    String
+  latex      String @default("")
+  marks      Int    @default(0)
+  hasDiagram Int    @default(0)
+  diagramRef String @default("")
+  ordering   Int    @default(0)
+  docType    String @default("qp") // qp | ms — distinguishes question from mark-scheme row
+  topic      String @default("General") // sub-subject label, e.g. "Mechanics", "Algebra"
+
+  paper                  PastPaper               @relation(fields: [paperId], references: [id])
+  images                 QuestionImage[]
+  attempts               PastPaperAttempt[]
+  mockExamItems          MockExamItem[]
+  bookmarks              PastPaperBookmark[]
+  dailyChallengeAttempts DailyChallengeAttempt[]
+  studyTasks             StudyTask[]
+  reviewItems            ReviewItem[]
+
+  @@index([paperId])
+  @@index([number, part, subPart])
+  @@index([docType])
+  @@index([topic])
+  @@map("past_paper_questions")
+}
+
+// A student's planning preferences. Progress and mastery are derived from
+// attempt history rather than copied into this profile.
+model LearningProfile {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  examDate           DateTime?
+  weeklyStudyMinutes Int       @default(300)
+  targetGrade        String    @default("A")
+  board              String?
+  qualification      String?
+  level              String?
+  subjectCode        String?
+  currentLevel       String?
+  recentResult       String?
+  availability       Json      @default("{}") // weekday (0-6) -> available minutes
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_profiles")
+}
+
+// A concrete item on the personal study plan. `source` distinguishes manual
+// tasks from generated recommendations so future plans can be refreshed.
+model StudyTask {
+  id              String    @id @default(cuid())
+  userId          String
+  questionId      Int?
+  title           String
+  subject         String
+  topic           String
+  taskType        String    @default("practice") // practice | review | notes | mock-exam
+  source          String    @default("manual") // manual | auto-plan | mock-exam
+  dueAt           DateTime
+  durationMinutes Int       @default(30)
+  status          String    @default("pending") // pending | completed | skipped
+  completedAt     DateTime?
+  sourceRef       Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, dueAt])
+  @@index([userId, status])
+  @@map("study_tasks")
+}
+
+// Normalized searchable representation of every authorized platform source.
+// The source row remains authoritative; this index is disposable and can be
+// refreshed incrementally after extraction or an edit.
+model RagDocument {
+  id              String    @id @default(cuid())
+  documentKey     String    @unique
+  sourceType      String
+  sourceRecordId  String
+  ownerId         String?
+  title           String
+  route           String?
+  board           String?
+  qualification   String?
+  level           String?
+  subjectCode     String?
+  topic           String?
+  year            Int?
+  session         String?
+  paper           String?
+  documentType    String
+  visibility      String    @default("private") // private | collaborator | shared | platform
+  accessUserIds   String[]  @default([])
+  contentHash     String
+  extractionState String    @default("ready") // extracting | partial | ready
+  metadata        Json      @default("{}")
+  extractedAt     DateTime?
+  indexedAt       DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  owner  User?      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chunks RagChunk[]
+
+  @@index([sourceType, sourceRecordId])
+  @@index([ownerId, visibility])
+  @@index([board, qualification, level, subjectCode])
+  @@index([year, documentType])
+  @@map("rag_documents")
+}
+
+model RagChunk {
+  id          String   @id @default(cuid())
+  documentId  String
+  ordinal     Int
+  content     String
+  contentHash String
+  indexedAt   DateTime @default(now())
+
+  document RagDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, ordinal])
+  @@index([documentId])
+  @@map("rag_chunks")
+}
+
+// A materialized coverage statement for a board/qualification slice. It lets
+// the assistant say exactly what is indexed without implying full coverage.
+model RagCorpusManifest {
+  id               String    @id @default(cuid())
+  board            String    @default("")
+  qualification    String    @default("")
+  level            String    @default("")
+  subjectCode      String    @default("")
+  year             Int       @default(0)
+  documentType     String    @default("")
+  extractionState  String    @default("partial")
+  questionCount    Int       @default(0)
+  markSchemeCount  Int       @default(0)
+  resourceCount    Int       @default(0)
+  noteCount        Int       @default(0)
+  availableYears   Int[]     @default([])
+  availablePapers  String[]  @default([])
+  lastExtractionAt DateTime?
+  lastIndexingAt   DateTime?
+  failures         Json      @default("[]")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([board, qualification, level, subjectCode, year, documentType])
+  @@index([board, qualification, level, subjectCode])
+  @@map("rag_corpus_manifests")
+}
+
+// All AI-generated writes go through this lifecycle. A draft is editable and
+// harmless; only confirmation applies its validated payload atomically.
+model AIActionProposal {
+  id             String    @id @default(cuid())
+  ownerId        String
+  conversationId String?
+  actionType     String
+  payload        Json
+  status         String    @default("draft") // draft | confirmed | cancelled | expired | applied
+  idempotencyKey String    @unique
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  cancelledAt    DateTime?
+  appliedAt      DateTime?
+  appliedResult  Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  conversation AIConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  message      AIMessage?
+
+  @@index([ownerId, status, expiresAt])
+  @@index([conversationId])
+  @@map("ai_action_proposals")
+}
+
+// A mistake or manually-created card in the spaced-repetition queue. Review
+// scheduling uses a compact SM-2-style interval/ease calculation.
+model ReviewItem {
+  id             String    @id @default(cuid())
+  userId         String
+  questionId     Int?
+  prompt         String
+  answer         String
+  subject        String
+  topic          String
+  status         String    @default("active") // active | mastered | archived
+  nextReviewAt   DateTime  @default(now())
+  intervalDays   Int       @default(0)
+  easeFactor     Float     @default(2.5)
+  repetitions    Int       @default(0)
+  lapses         Int       @default(0)
+  lastReviewedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, questionId])
+  @@index([userId, status, nextReviewAt])
+  @@map("review_items")
+}
+
+// Linked figure/diagram for a question (coordinate-matched during extraction)
+model QuestionImage {
+  id         Int    @id @default(autoincrement())
+  questionId Int
+  imagePath  String // relative to extracted_images/
+  pageNumber Int?
+  bboxX0     Float?
+  bboxY0     Float?
+  bboxX1     Float?
+  bboxY1     Float?
+
+  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("question_images")
+}
+
+model PastPaperAttempt {
+  id              String   @id @default(cuid())
+  userId          String
+  questionId      Int
+  answer          String
+  score           Float?
+  maxScore        Int?
+  isCorrect       Boolean?
+  strengths       String[]
+  weaknesses      String[]
+  explanation     String?
+  modelAnswer     String?
+  gradingStatus   String   @default("official") // official | provisional | ungraded
+  gradingSourceId Int?
+  timeSpent       Int?
+  answerImageUrl  String? // optional photo/screenshot of handwritten working
+  attemptedAt     DateTime @default(now())
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([questionId])
+  @@map("past_paper_attempts")
+}
+
+// AI-generated mock exam paper assembled from the past-paper bank
+model MockExam {
+  id              String    @id @default(cuid())
+  userId          String
+  title           String
+  description     String
+  subjectCode     String?
+  durationMinutes Int
+  totalMarks      Int
+  topics          String[]
+  difficulty      String    @default("mixed")
+  status          String    @default("generated") // generated | in_progress | completed
+  startedAt       DateTime?
+  submittedAt     DateTime?
+  score           Float?
+  createdAt       DateTime  @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items MockExamItem[]
+
+  @@index([userId])
+  @@map("mock_exams")
+}
+
+// Each question selected for a mock exam
+model MockExamItem {
+  id              String    @id @default(cuid())
+  mockExamId      String
+  questionId      Int
+  sectionTitle    String
+  order           Int       @default(0)
+  // Per-item attempt state
+  answer          String?
+  score           Float?
+  isCorrect       Boolean?
+  explanation     String?
+  modelAnswer     String?
+  strengths       String[]
+  weaknesses      String[]
+  gradingStatus   String    @default("ungraded") // official | provisional | ungraded
+  gradingSourceId Int?
+  answerImageUrl  String? // optional photo/screenshot of handwritten working
+  attemptedAt     DateTime?
+
+  mockExam MockExam          @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([mockExamId])
+  @@map("mock_exam_items")
+}
+
+model QuestionAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  questionId  String
+  answer      String
+  isCorrect   Boolean?
+  score       Float?
+  feedback    String?
+  timeSpent   Int?
+  attemptedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_attempts")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String?
+  title     String
+  content   String
+  tags      String[]
+  folderId  String?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course              Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  folder              NoteFolder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  linkedQuestions     String[]
+  linkedTextbookPages String[]
+  collaborators       NoteCollaborator[]
+
+  // Postgres does not index foreign keys automatically. /api/notes filters by
+  // userId and orders by updatedAt on every request.
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("notes")
+}
+
+model NoteFolder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  notes    Note[]
+  parent   NoteFolder?  @relation("Subfolders", fields: [parentId], references: [id], onDelete: Cascade)
+  children NoteFolder[] @relation("Subfolders")
+
+  @@map("note_folders")
+}
+
+model SharedNote {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String
+  subject     String?
+  courseCode  String?
+  tags        String[]
+  visibility  String   @default("public")
+  attachments Json     @default("[]")
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments NoteComment[]
+  ratings  NoteRating[]
+
+  @@index([userId])
+  @@index([visibility, createdAt(sort: Desc)])
+  @@map("shared_notes")
+}
+
+model NoteComment {
+  id           String   @id @default(cuid())
+  sharedNoteId String
+  userId       String
+  content      String
+  createdAt    DateTime @default(now())
+
+  sharedNote SharedNote @relation(fields: [sharedNoteId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("note_comments")
+}
+
+model NoteRating {
+  id           String   @id @default(cuid())
+  sharedNoteId String
+  userId       String
+  rating       Int
+  createdAt    DateTime @default(now())
+
+  sharedNote SharedNote @relation(fields: [sharedNoteId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sharedNoteId, userId])
+  @@map("note_ratings")
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@map("bookmarks")
+}
+
+// Star/bookmark for the past-paper question bank (PastPaperQuestion).
+// Distinct from `Bookmark` above which targets the legacy custom Question table.
+model PastPaperBookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId Int
+  note       String? // optional user memo
+  createdAt  DateTime @default(now())
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@map("past_paper_bookmarks")
+}
+
+model StudySession {
+  id        String    @id @default(cuid())
+  userId    String
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int?
+  subject   String?
+  notes     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_sessions")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// Notebook structure (like OneNote)
+model Notebook {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?  @default("#3b82f6")
+  icon      String?  @default("📓")
+  courseId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  sections Section[]
+
+  @@index([userId])
+  @@map("notebooks")
+}
+
+model Section {
+  id         String   @id @default(cuid())
+  notebookId String
+  name       String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  pages    Page[]
+
+  @@index([notebookId, order])
+  @@map("sections")
+}
+
+model Page {
+  id                String   @id @default(cuid())
+  sectionId         String
+  title             String
+  content           String   @default("")
+  icon              String   @default("")
+  tags              String[] @default([])
+  favorite          Boolean  @default(false)
+  archived          Boolean  @default(false)
+  linkedQuestionIds Int[]    @default([])
+  splitQuestionId   Int?
+  revision          Int      @default(1)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  section       Section            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  snapshots     PageSnapshot[]
+  collaborators PageCollaborator[]
+  comments      PageComment[]
+  presences     PagePresence[]
+  awareness     PageAwareness[]
+
+  @@index([sectionId, order])
+  @@index([favorite])
+  @@index([archived])
+  @@map("pages")
+}
+
+model PageSnapshot {
+  id          String   @id @default(cuid())
+  pageId      String
+  createdById String?
+  title       String
+  content     String
+  revision    Int
+  reason      String   @default("autosave")
+  createdAt   DateTime @default(now())
+
+  page      Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([pageId, createdAt])
+  @@map("page_snapshots")
+}
+
+model PageCollaborator {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  role      String   @default("editor") // editor | viewer
+  createdAt DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId])
+  @@map("page_collaborators")
+}
+
+model PageComment {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  content   String
+  anchor    String?
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, resolved, createdAt])
+  @@map("page_comments")
+}
+
+model PagePresence {
+  id         String   @id @default(cuid())
+  pageId     String
+  userId     String
+  lastSeenAt DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([pageId, lastSeenAt])
+  @@map("page_presences")
+}
+
+// Live awareness state for collaborative editing: cursor position, typing
+// indicator, and last-seen heartbeat. Updated via /api/pages/[id]/awareness
+// and broadcast to other editors via Postgres LISTEN/NOTIFY + SSE.
+model PageAwareness {
+  id         String   @id @default(cuid())
+  pageId     String
+  userId     String
+  cursorFrom Int? // ProseMirror text position (start of selection)
+  cursorTo   Int? // ProseMirror text position (end of selection)
+  typing     Boolean  @default(false)
+  lastSeenAt DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([pageId, lastSeenAt])
+  @@map("page_awareness")
+}
+
+// Discussion board: a single general community forum. Threads are NOT tied to
+// a subject; an optional `category` string lets users loosely tag a thread
+// (e.g. "Physics", "Exam Tips"). `subjectId` is kept nullable for legacy rows.
+model DiscussionThread {
+  id        String   @id @default(cuid())
+  subjectId Int?
+  category  String?
+  userId    String
+  title     String
+  content   String   @default("")
+  pinned    Boolean  @default(false)
+  locked    Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  views     Int      @default(0)
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts   DiscussionPost[]
+  votes   DiscussionVote[]
+  flags   DiscussionFlag[]
+
+  @@index([subjectId])
+  @@index([userId])
+  @@index([category])
+  @@index([hidden])
+  @@map("discussion_threads")
+}
+
+// A reply within a thread. Self-referential for nested replies (optional).
+model DiscussionPost {
+  id        String   @id @default(cuid())
+  threadId  String
+  userId    String
+  parentId  String?
+  content   String
+  hidden    Boolean  @default(false)
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  thread  DiscussionThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  DiscussionPost?  @relation("PostReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies DiscussionPost[] @relation("PostReplies")
+  votes   DiscussionVote[]
+  flags   DiscussionFlag[]
+
+  @@index([threadId])
+  @@index([userId])
+  @@index([hidden])
+  @@map("discussion_posts")
+}
+
+// Upvote or downvote on a thread or post. One vote per user per target.
+model DiscussionVote {
+  id        String   @id @default(cuid())
+  threadId  String?
+  postId    String?
+  userId    String
+  direction Int // 1 = upvote, -1 = downvote
+  createdAt DateTime @default(now())
+
+  thread DiscussionThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  post   DiscussionPost?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@unique([userId, postId])
+  @@index([threadId])
+  @@index([postId])
+  @@map("discussion_votes")
+}
+
+// A user-reported flag on a thread or post. Feeds the moderation queue.
+model DiscussionFlag {
+  id           String    @id @default(cuid())
+  threadId     String?
+  postId       String?
+  reporterId   String
+  reason       String
+  status       String    @default("open") // open | dismissed | actioned
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  thread   DiscussionThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  post     DiscussionPost?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User              @relation("FlagReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver User?             @relation("FlagResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([reporterId, threadId])
+  @@unique([reporterId, postId])
+  @@index([status, createdAt])
+  @@index([threadId])
+  @@index([postId])
+  @@map("discussion_flags")
+}
+
+// Notification for social events: replies to your thread/post, ratings, etc.
+// `actorId` is the user who triggered the event; `userId` is the recipient.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String // recipient (the owner of the thing acted upon)
+  actorId   String? // who triggered it (null for system-generated)
+  type      String // "discussion_reply" | "discussion_mention" | ...
+  entityId  String? // id of the related object (e.g. threadId / postId)
+  entityUrl String? // frontend route to open when clicked
+  title     String // short summary, e.g. "Someone replied to your thread"
+  body      String   @default("") // optional preview text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationsFrom", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// School-provided public resources (PDFs, docx, slides, etc.) — distinct
+// from SharedNote (which is user-authored notes). Uploaded by staff for the
+// whole school to retrieve. One row per uploaded file.
+model SchoolResource {
+  id          String   @id @default(cuid())
+  uploaderId  String
+  title       String
+  description String   @default("")
+  subject     String?
+  category    String? // free-text grouping: "Worksheet", "Slides", "Exam", "Handout"
+  fileUrl     String
+  fileName    String
+  fileSize    Int      @default(0)
+  mimeType    String   @default("")
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([subject])
+  @@index([category])
+  @@index([createdAt])
+  @@map("school_resources")
+}
+
+// Platform-wide announcements published by admins.
+model Announcement {
+  id          String    @id @default(cuid())
+  authorId    String
+  title       String
+  body        String
+  severity    String    @default("info") // info | success | warning | critical
+  audience    String    @default("all") // all | students | teachers
+  pinned      Boolean   @default(false)
+  published   Boolean   @default(true)
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([published])
+  @@index([publishedAt])
+  @@index([audience])
+  @@map("announcements")
+}
+
+// ============================================================
+// Smart learning features
+// ============================================================
+
+// Collaborator on a Note. Owner (note.userId) is implicit; this model tracks
+// additional users granted edit access. `role`: editor (read+write) | viewer (read-only).
+model NoteCollaborator {
+  id        String   @id @default(cuid())
+  noteId    String
+  userId    String
+  role      String   @default("editor") // editor | viewer
+  createdAt DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@index([noteId])
+  @@index([userId])
+  @@map("note_collaborators")
+}
+
+// Records a user's attempt at the daily challenge question.
+// One row per user per day (enforced by unique [userId, dateKey]).
+model DailyChallengeAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  questionId  Int
+  dateKey     String // YYYY-MM-DD — the challenge day
+  answer      String   @default("")
+  score       Float?
+  isCorrect   Boolean?
+  attemptedAt DateTime @default(now())
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dateKey])
+  @@index([dateKey])
+  @@map("daily_challenge_attempts")
+}
+
+// Competition math/physics question bank — stored separately from PastPaperQuestion
+// so the main past-paper DB can be wiped/replaced without losing competition data.
+// Currently populated with the STEP database (1986 Specimen – 2018), with room to
+// grow to AMC/AIME/USAMO etc. via the `competition` discriminator.
+model CompetitionQuestion {
+  id          Int      @id @default(autoincrement())
+  competition String   @default("STEP") // STEP | AMC10 | AMC12 | AIME | ...
+  code        String // e.g. "16-S1-Q1", "2024-AMC12-P22"
+  yearLabel   String // e.g. "16", "Spec", "2024"
+  paper       String // e.g. "S1" | "P22"
+  number      Int // question number within the paper
+  title       String // human label, same as code for STEP
+  body        String   @default("") // HTML body (description + embedded img)
+  labels      String[] @default([]) // topic tags, e.g. ["Inequalities", "Complex numbers"]
+  imageUrl    String? // local path under /public, e.g. "/step-images/Spec-S1-Q1.png"
+  pdfUrl      String? // link to the full paper PDF on the source site
+  texUrl      String? // link to the .tex source on the source site
+  sourceSite  String   @default("stepdatabase.maths.org")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([competition, code])
+  @@index([competition])
+  @@index([yearLabel])
+  @@index([paper])
+  @@map("competition_questions")
+}
+
+// Cloud-synced document — the shared format for cross-platform note sync.
+// Both the web Note editor and the iPad BetterNotes app read/write this.
+//
+// Format contract:
+//   format: "hybrid"  — body is markdown-with-LaTeX ($...$, $$...$$);
+//                       blocks is an optional array of spatial elements
+//                       (used by the iPad canvas editor).
+//   format: "markdown" — body only, blocks is null/empty.
+//
+// Sync strategy: last-write-wins per document, keyed on (ownerId, clientId).
+// `revision` increments on each upsert; clients send their last-seen revision
+// and the server rejects stale writes with 409.
+model CloudDocument {
+  id        String    @id @default(cuid())
+  ownerId   String // User.id of the owner
+  clientId  String // stable client-side id (notebook id on iPad / note id on web)
+  title     String    @default("Untitled")
+  format    String    @default("hybrid") // hybrid | markdown
+  body      String    @default("") // markdown with $latex$
+  blocks    Json? // spatial elements (iPad canvas)
+  revision  Int       @default(1)
+  deletedAt DateTime? // soft-delete tombstone (for sync)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, clientId])
+  @@index([ownerId, updatedAt])
+  @@map("cloud_documents")
+}
+
+// ============================================================
+// V4 Question Bank — extraction store
+// ============================================================
+//
+// Local SQLite is the working store; these models are for the
+// Neon Postgres merge target. One row per ROOT question — sub-parts
+// live inside body_md, never as separate rows.
+
+model BankSubject {
+  id    Int     @id @default(autoincrement())
+  board String // CAIE | IB
+  code  String // 9709, or an IB subject slug
+  name  String
+  level String? // igcse | a-level | HL | SL
+
+  papers BankPaper[]
+  topics BankTopic[]
+
+  @@unique([board, code, level])
+  @@map("bank_subjects")
+}
+
+model BankPaper {
+  id           Int      @id @default(autoincrement())
+  subjectId    Int
+  board        String
+  year         Int
+  session      String // s | w | m, or May | November
+  paperNumber  Int
+  variant      Int      @default(0)
+  timezone     String? // IB TZ1 / TZ2
+  docType      String // qp | ms | in
+  sourcePath   String
+  sourceSha256 String
+  pageCount    Int      @default(0)
+  spanStrategy String? // prose | ms_table | answer_key
+  usedOcr      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  subject     BankSubject      @relation(fields: [subjectId], references: [id])
+  questions   BankQuestion[]
+  markSchemes BankMarkScheme[]
+  reviewFlags BankReviewFlag[]
+
+  @@unique([sourcePath])
+  @@index([subjectId])
+  @@index([board, year, session, paperNumber, variant, docType])
+  @@index([sourceSha256])
+  @@map("bank_papers")
+}
+
+model BankQuestion {
+  id                  Int      @id @default(autoincrement())
+  paperId             Int
+  rootNumber          Int
+  bodyMd              String
+  parts               String   @default("[]") // JSON [{"label": "a(i)", "marks": 3}]
+  totalMarks          Int?
+  screenshotId        Int?
+  pageStart           Int?
+  pageEnd             Int?
+  confidence          Float    @default(0)
+  status              String   @default("needs_review") // published | needs_review
+  difficulty          Int? // 1-5
+  difficultySource    String? // llm | empirical | manual
+  difficultyRationale String?
+  runId               String?
+  model               String?
+  promptVersion       String?
+  createdAt           DateTime @default(now())
+
+  paper       BankPaper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  screenshot  BankAsset?          @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
+  assets      BankQuestionAsset[]
+  topics      BankQuestionTopic[]
+  tags        BankQuestionTag[]
+  reviewFlags BankReviewFlag[]
+  markScheme  BankMarkScheme?
+
+  @@unique([paperId, rootNumber])
+  @@index([paperId])
+  @@index([status])
+  @@index([difficulty])
+  @@map("bank_questions")
+}
+
+model BankMarkScheme {
+  id            Int      @id @default(autoincrement())
+  questionId    Int      @unique
+  paperId       Int
+  rootNumber    Int
+  answerMd      String
+  markingPoints String   @default("[]") // JSON [{"mark_code": "M1", "marks": 1, ...}]
+  totalMarks    Int?
+  answerLetter  String? // for MCQ papers
+  confidence    Float    @default(0)
+  status        String   @default("needs_review")
+  runId         String?
+  model         String?
+  promptVersion String?
+  createdAt     DateTime @default(now())
+
+  paper    BankPaper             @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  question BankQuestion          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  assets   BankMarkSchemeAsset[]
+
+  @@unique([paperId, rootNumber])
+  @@index([questionId])
+  @@map("bank_mark_schemes")
+}
+
+model BankAsset {
+  id           Int      @id @default(autoincrement())
+  sha256       String   @unique
+  kind         String // figure | table | screenshot
+  relativePath String // assets/sha256/<ab>/<sha>.png
+  width        Int?
+  height       Int?
+  byteSize     Int?
+  sourcePage   Int?
+  bbox         String? // JSON [x0, y0, x1, y1]
+  sourceDpi    Int      @default(200)
+  createdAt    DateTime @default(now())
+
+  screenshots      BankQuestion[]        @relation("QuestionScreenshot")
+  questionAssets   BankQuestionAsset[]
+  markSchemeAssets BankMarkSchemeAsset[]
+
+  @@map("bank_assets")
+}
+
+model BankQuestionAsset {
+  questionId  Int
+  assetId     Int
+  placeholder String // fig1, fig2, etc.
+  ordering    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  asset    BankAsset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, placeholder])
+  @@map("bank_question_assets")
+}
+
+model BankMarkSchemeAsset {
+  markSchemeId Int
+  assetId      Int
+  placeholder  String
+  ordering     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  markScheme BankMarkScheme @relation(fields: [markSchemeId], references: [id], onDelete: Cascade)
+  asset      BankAsset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([markSchemeId, placeholder])
+  @@map("bank_mark_scheme_assets")
+}
+
+// Syllabus-canonical topics for filtering by course outline
+model BankTopic {
+  id        Int     @id @default(autoincrement())
+  subjectId Int
+  code      String? // syllabus reference, e.g. "3.2"
+  name      String
+
+  subject   BankSubject         @relation(fields: [subjectId], references: [id])
+  questions BankQuestionTopic[]
+
+  @@unique([subjectId, name])
+  @@map("bank_topics")
+}
+
+model BankQuestionTopic {
+  questionId Int
+  topicId    Int
+  confidence Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    BankTopic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, topicId])
+  @@map("bank_question_topics")
+}
+
+// Free-form search tags (what students actually type)
+model BankTag {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique
+  label String
+
+  questions BankQuestionTag[]
+
+  @@map("bank_tags")
+}
+
+model BankQuestionTag {
+  questionId Int
+  tagId      Int
+  confidence Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tag      BankTag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, tagId])
+  @@index([tagId])
+  @@map("bank_question_tags")
+}
+
+// QA advisory queue — never blocks writes, only routes to review
+model BankReviewFlag {
+  id         Int      @id @default(autoincrement())
+  questionId Int?
+  paperId    Int?
+  issueType  String // marks_mismatch | latex_invalid | ...
+  severity   String // low | medium | high
+  message    String
+  evidence   String? // JSON
+  status     String   @default("open") // open | resolved | dismissed
+  createdAt  DateTime @default(now())
+
+  question BankQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  paper    BankPaper?    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([status, issueType])
+  @@map("bank_review_flags")
+}
+
+// Per-question resume ledger for fault-tolerant long runs
+model BankRunLedger {
+  workKey      String   @id // sha256(source + span + model + prompt)
+  stage        String // transcribe | tag
+  sourceSha256 String
+  rootNumber   Int?
+  status       String // ok | failed
+  detail       String?
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  completedAt  DateTime @default(now())
+
+  @@index([sourceSha256])
+  @@index([status, stage])
+  @@map("bank_run_ledger")
+}
+
+/// Durable rate-limit counters.
+///
+/// The previous limiter was a per-process in-memory Map. On serverless every
+/// invocation gets a fresh process, so the limits were effectively unenforced:
+/// the login brute-force guard and the per-user AI spend caps both silently
+/// did nothing across more than one instance.
+///
+/// One row per limiter key (e.g. "signup:1.2.3.4", "token-account:a@b.c",
+/// a bare user id for the AI limiters). Rows are disposable — expired ones are
+/// cleaned up opportunistically and can be truncated at any time.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  // Supports the opportunistic sweep of expired windows.
+  @@index([resetAt])
+  @@map("rate_limits")
+}

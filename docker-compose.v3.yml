@@ -1,0 +1,16 @@
+services:
+  v3-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: smart_edu_v3
+      POSTGRES_USER: smart_edu_v3
+      POSTGRES_PASSWORD: smart_edu_v3_local
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smart_edu_v3 -d smart_edu_v3"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - ./data/v3/postgres:/var/lib/postgresql/data

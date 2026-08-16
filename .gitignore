@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,64 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+/generated/v3/
+
+# Uploaded PDFs
+public/uploads/
+
+# V3 local corpus, extraction workspaces, manifests, and database files
+/data/v3/assets/
+/data/v3/work/
+/data/v3/manifests/
+/data/v3/sources/
+/data/v3/postgres/
+/data/v3/pglite/
+
+# Past paper catalogue manifest (regenerate with npm run papers:index)
+/data/paper-catalogue.json
+
+# Copied from node_modules by npm run pdf:worker (runs on predev/prebuild)
+/public/pdf.worker.min.mjs
+
+# Generated from scripts/sw-template.js by npm run sw:build (predev/prebuild).
+# Edit the template, never this file.
+/public/sw.js
+
+# ---------------------------------------------------------------------------
+# Bulk assets. These live on disk during development but are never committed:
+# they are large, and the paper corpus is copyright-sensitive. In production
+# they are served from object storage, not from the repo.
+# ---------------------------------------------------------------------------
+
+# Raw past-paper PDFs and extraction workspace (~17 GB)
+/pdf_extraction/
+
+# SQLite extraction database, superseded by Postgres (75 MB)
+/papers.db
+/papers.db-*
+
+# Corpus exports / snapshots (~91 MB)
+/backups/
+
+# Generated question and step images (~730 MB total)
+/data/question-images-v1/
+/public/extracted_images/
+/public/step-images/
+
+# Local scrape cache (contains absolute paths from the dev machine)
+/.download_cache.json
+
+# Python virtualenv and pytest cache for the extraction pipeline
+/.venv-bank/
+/.pytest_cache/
+
+# Pipeline evaluation fixtures
+/gold-set/
+
+# Generated Prisma clients and other build output
+/generated/
+
+# Stray screenshot
+/IMG_9878.PNG

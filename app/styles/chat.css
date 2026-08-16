@@ -1,0 +1,74 @@
+/* KaTeX math rendering */
+@import 'katex/dist/katex.min.css';
+
+/* Math display blocks */
+.math-display {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* Inline code */
+.formatted-message .inline-code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+/* Code blocks */
+.formatted-message .code-block {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.formatted-message .code-block code {
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* Lists */
+.formatted-message li {
+  margin: 0.25rem 0;
+}
+
+/* Headers */
+.formatted-message h1,
+.formatted-message h2,
+.formatted-message h3 {
+  font-weight: bold;
+}
+
+/* Links (if AI includes them) */
+.formatted-message a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.formatted-message a:hover {
+  color: #6366f1;
+}
+
+/* Strong/Bold */
+.formatted-message strong {
+  font-weight: 600;
+}
+
+/* Emphasis/Italic */
+.formatted-message em {
+  font-style: italic;
+}
+
+/* Spacing */
+.formatted-message > * {
+  margin-bottom: 0.5rem;
+}

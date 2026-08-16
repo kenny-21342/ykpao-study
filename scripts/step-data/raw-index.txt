@@ -1,0 +1,1401 @@
+Spec-S1-Q1 Inequalities, Binomial coefficient
+Spec-S1-Q2 Euclidean geometry
+Spec-S1-Q3 Differential equation
+Spec-S1-Q4 Integration by substitution
+Spec-S1-Q5 Numbers
+Spec-S1-Q6 Euclidean geometry
+Spec-S1-Q7 Complex Numbers
+Spec-S1-Q8 Coordinate geometry
+Spec-S1-Q9 Inequality, Integral
+Spec-S1-Q10 Work, Power
+Spec-S1-Q11 Friction
+Spec-S1-Q12 Collision
+Spec-S1-Q13 Circular Motion
+Spec-S1-Q14 Discrete random variable
+Spec-S1-Q15 Discrete random variable
+Spec-S1-Q16 Probability density function
+Spec-S2-Q1 Rational Functions
+Spec-S2-Q2 Simultaneous equations
+Spec-S2-Q3 Complex numbers
+Spec-S2-Q4 Curve sketching
+Spec-S2-Q5 Analysis
+Spec-S2-Q6 Functional equation
+Spec-S2-Q7 Integral
+Spec-S2-Q8 Groups
+Spec-S2-Q9 Vector geometry
+Spec-S2-Q10 Logic
+Spec-S2-Q11 Projectile motion
+Spec-S2-Q12 Circular motion
+Spec-S2-Q13 Moment of inertia
+Spec-S2-Q14 Circular motion, Friction
+Spec-S2-Q15 Mean and variances
+Spec-S2-Q16 Tree diagram
+Spec-S3-Q1 Proof by Induction
+Spec-S3-Q2 Proof, Numbers
+Spec-S3-Q3 Complex numbers
+Spec-S3-Q4 Conic sections
+Spec-S3-Q5 Trigonometry
+Spec-S3-Q6 Integration by parts
+Spec-S3-Q7 Differential equation
+Spec-S3-Q8 Vectors
+Spec-S3-Q9 Groups
+Spec-S3-Q10 Number theory
+Spec-S3-Q11 Differential equation
+Spec-S3-Q12 Equilibrium
+Spec-S3-Q13 Circular motion
+Spec-S3-Q14 Collision
+Spec-S3-Q15 Optimisation
+Spec-S3-Q16 Combinatorics
+87-S1-Q1 Curve sketching
+87-S1-Q2 Integration
+87-S1-Q3 Differential equation
+87-S1-Q4 Series
+87-S1-Q5 Integration by substitution
+87-S1-Q6 Integration
+87-S1-Q7 Trigonometry
+87-S1-Q8 Integral
+87-S1-Q9 Vectors
+87-S1-Q10 Hooke's Law
+87-S1-Q11 Energy
+87-S1-Q12 Collision
+87-S1-Q13 Forces
+87-S1-Q14 Probability
+87-S1-Q15 Uniform distribution
+87-S1-Q16 Normal distribution
+87-S2-Q1 Quadratics
+87-S2-Q2 Trigonometry
+87-S2-Q3 Surds
+87-S2-Q4 Complex numbers
+87-S2-Q5 Functions
+87-S2-Q6 Integral
+87-S2-Q7 Integration
+87-S2-Q8 Vectors
+87-S2-Q9 Matrices
+87-S2-Q10 Groups
+87-S2-Q11 Friction
+87-S2-Q12 Equilibrium
+87-S2-Q13 Collision
+87-S2-Q14 Hooke's law
+87-S2-Q15 Uniform distribution
+87-S2-Q16 Tree diagram
+87-S3-Q1 Numbers
+87-S3-Q2 Integration by parts
+87-S3-Q3 Complex numbers
+87-S3-Q4 Functions
+87-S3-Q5 Modulo arithmetic
+87-S3-Q6 Differential equations
+87-S3-Q7 Analysis
+87-S3-Q8 Inequalities
+87-S3-Q9 Groups
+87-S3-Q10 Induction
+87-S3-Q11 Time-distance graph
+87-S3-Q12 Variable mass
+87-S3-Q13 Friction
+87-S3-Q14 Gravitational force
+87-S3-Q15 Optimisation
+87-S3-Q16 Uniform distribution
+88-S1-Q1 Curve sketching
+88-S1-Q2 Differentiation
+88-S1-Q3 Coordinate geometry
+88-S1-Q4 Elementary geometry
+88-S1-Q5 Binomial expansion
+88-S1-Q6 Complex numbers
+88-S1-Q7 Quadratic function
+88-S1-Q8 Euclidean geometry
+88-S1-Q9 Integral
+88-S1-Q10 Projectile motion
+88-S1-Q11 Centre of mass
+88-S1-Q12 Equilibrium
+88-S1-Q13 Hooke's law
+88-S1-Q14 Normal distribution
+88-S1-Q15 Probability distribution
+88-S1-Q16 Pdf
+88-S2-Q1 Binomial expansion
+88-S2-Q2 Quadratic equation
+88-S2-Q3 Polynomial equations
+88-S2-Q4 Complex numbers
+88-S2-Q5 Trigonometry
+88-S2-Q6 Curve sketching
+88-S2-Q7 Integral
+88-S2-Q8 Differential equation
+88-S2-Q9 Groups
+88-S2-Q10 Vector geometry
+88-S2-Q11 Circular motion
+88-S2-Q12 Inextensible string
+88-S2-Q13 Friction
+88-S2-Q14 SHM
+88-S2-Q15 Elementary probability
+88-S2-Q16 Normal distribution
+88-S3-Q1 Curve sketching
+88-S3-Q2 Difference equation
+88-S3-Q3 Complex number
+88-S3-Q4 Optimisation
+88-S3-Q5 Geometric sequence
+88-S3-Q6 Trigonometry
+88-S3-Q7 Differential equation
+88-S3-Q8 Coordinate geometry
+88-S3-Q9 Groups
+88-S3-Q10 Polar coordinates
+88-S3-Q11 Friction
+88-S3-Q12 Collision
+88-S3-Q13 Differential equation
+88-S3-Q14 Projectile motion
+88-S3-Q15 Difference equation
+88-S3-Q16 Combinatorics
+89-S1-Q1 Euclidean geometry
+89-S1-Q2 Integration
+89-S1-Q3 Vector geometry
+89-S1-Q4 Euclidean geometry
+89-S1-Q5 Binomial expansion
+89-S1-Q6 Coordinate geometry
+89-S1-Q7 Curve sketching
+89-S1-Q8 Complex numbers
+89-S1-Q9 Curve sketching
+89-S1-Q10 Acceleration
+89-S1-Q11 Projectile motion
+89-S1-Q12 Centre of mass
+89-S1-Q13 Friction
+89-S1-Q14 Continuous random variable
+89-S1-Q15 Poission distribution
+89-S1-Q16 Discrete random variable
+89-S2-Q1 Cubic equation
+89-S2-Q2 Series
+89-S2-Q3 Complex numbers
+89-S2-Q4 Curve sketching
+89-S2-Q5 Polar coordinates
+89-S2-Q6 Integration
+89-S2-Q7 Differential equation
+89-S2-Q8 Groups
+89-S2-Q9 Matrices
+89-S2-Q10 Vector geometry
+89-S2-Q11 Collision
+89-S2-Q12 Equilibrium
+89-S2-Q13 Centre of mass
+89-S2-Q14 Equilibrium
+89-S2-Q15 Probability density function
+89-S2-Q16 Binomial distribution
+89-S3-Q1 3-D geometry
+89-S3-Q2 Coordinate geometry
+89-S3-Q3 Groups
+89-S3-Q4 Curve sketching
+89-S3-Q5 Hyperbolic functions
+89-S3-Q6 Polar coordinates
+89-S3-Q7 Transformation
+89-S3-Q8 Differential equation
+89-S3-Q9 Infinite series
+89-S3-Q10 Riemann integration
+89-S3-Q11 Collision
+89-S3-Q12 Circular motion
+89-S3-Q13 SHM
+89-S3-Q14 Moment of inertia
+89-S3-Q15 Uniform distribution
+89-S3-Q16 Elementary probability
+90-S1-Q1 Euclidean geometry
+90-S1-Q2 Binomial coefficient
+90-S1-Q3 Curves
+90-S1-Q4 Progressions
+90-S1-Q5 Integral, Curve sketching
+90-S1-Q6 Vector geometry
+90-S1-Q7 Differential equations
+90-S1-Q8 Infinite product
+90-S1-Q9 Coordinate geometry
+90-S1-Q10 Time-distance
+90-S1-Q11 Projectile motion
+90-S1-Q12 Hooke's law
+90-S1-Q13 Friction
+90-S1-Q14 Expectation
+90-S1-Q15 Coin toss
+90-S1-Q16 Pdf
+90-S2-Q1 Polynomial equation
+90-S2-Q2 Trigonometry
+90-S2-Q3 Curve sketching
+90-S2-Q4 Elementary geometry
+90-S2-Q5 Complex numbers
+90-S2-Q6 Inequality
+90-S2-Q7 Differential equations
+90-S2-Q8 Integration by parts
+90-S2-Q9 Polar coordinates
+90-S2-Q10 Matrices
+90-S2-Q11 Circular motion
+90-S2-Q12 Collision
+90-S2-Q13 Equilibrium
+90-S2-Q14 Collision
+90-S2-Q15 Pdf
+90-S2-Q16 Tree diagram
+90-S3-Q1 Complex numbers
+90-S3-Q2 Coordinate geometry
+90-S3-Q3 Groups
+90-S3-Q4 Trigonometry
+90-S3-Q5 Proof by induction
+90-S3-Q6 Transformation
+90-S3-Q7 Curve sketching
+90-S3-Q8 Differential equation
+90-S3-Q9 Polar coordinates
+90-S3-Q10 Roots of equations
+90-S3-Q11 Equilibrium
+90-S3-Q12 Equilibrium
+90-S3-Q13 Projectile motion
+90-S3-Q14 Work done
+90-S3-Q15 Discrete random variables
+90-S3-Q16 Normal and Uniform distribution
+91-S1-Q1 Trigonometry
+91-S1-Q2 Differentiation
+91-S1-Q3 Complex number
+91-S1-Q4 Differentiation
+91-S1-Q5 Vectors
+91-S1-Q6 Proof
+91-S1-Q7 Geometric progression
+91-S1-Q8 Integration by substitution
+91-S1-Q9 Analysis
+91-S1-Q10 Equilibrium
+91-S1-Q11 Pulley
+91-S1-Q12 Friction
+91-S1-Q13 Equilibrium
+91-S1-Q14 Elementary probability
+91-S1-Q15 Coin toss
+91-S1-Q16 Probability
+91-S2-Q1 Quadratic equations
+91-S2-Q2 Conic sections
+91-S2-Q3 Functions
+91-S2-Q4 Trigonometry
+91-S2-Q5 Integration
+91-S2-Q6 Inequality
+91-S2-Q7 Functions
+91-S2-Q8 Differential equations
+91-S2-Q9 Groups
+91-S2-Q10 Spherical polar coordinates
+91-S2-Q11 Projectile motion
+91-S2-Q12 Hooke's law
+91-S2-Q13 Friction
+91-S2-Q14 Velocity
+91-S2-Q15 Elementary probability
+91-S2-Q16 Uniform distribution
+91-S3-Q1 Taylor series
+91-S3-Q2 Complex numbers
+91-S3-Q3 Modulus function
+91-S3-Q4 Coordinate geometry
+91-S3-Q5 Differential equations
+91-S3-Q6 Transformation
+91-S3-Q7 Integration
+91-S3-Q8 Sum
+91-S3-Q9 Conic sections
+91-S3-Q10 Roots of polynomials
+91-S3-Q11 Friction
+91-S3-Q12 Projectile motion
+91-S3-Q13 Collision
+91-S3-Q14 Hooke's law
+91-S3-Q15 Combinatorics
+91-S3-Q16 Discrete random variable
+92-S1-Q1 Counting
+92-S1-Q2 Magic square
+92-S1-Q3 Integral
+92-S1-Q4 Complex number
+92-S1-Q5 Polynomial factors
+92-S1-Q6 Approximation
+92-S1-Q7 Functions
+92-S1-Q8 Derivative of an integral
+92-S1-Q9 Differentiation
+92-S1-Q10 Projectile motion
+92-S1-Q11 Elastic strings
+92-S1-Q12 Friction
+92-S1-Q13 Gravitational attraction
+92-S1-Q14 Statistics
+92-S1-Q15 Graphical probability
+92-S1-Q16 Elementary probability
+92-S2-Q1 Limits
+92-S2-Q2 Differential equations
+92-S2-Q3 Polar coordinates
+92-S2-Q4 Diamond derivative
+92-S2-Q5 Groups
+92-S2-Q6 Curve sketching
+92-S2-Q7 Cubic equation
+92-S2-Q8 Integrals
+92-S2-Q9 Vectors
+92-S2-Q10 Complex numbers
+92-S2-Q11 Projectile motion
+92-S2-Q12 Hooke's law
+92-S2-Q13 Friction
+92-S2-Q14 Pulley
+92-S2-Q15 Random walk
+92-S2-Q16 Elementary probability
+92-S3-Q1 Taylor series
+92-S3-Q2 Matrices
+92-S3-Q3 Parametric equations
+92-S3-Q4 Curve sketching
+92-S3-Q5 Vectors
+92-S3-Q6 Integration
+92-S3-Q7 Euclidean geometry
+92-S3-Q8 Sum
+92-S3-Q9 Conic sections
+92-S3-Q10 Parametric equation, Polar coordinates
+92-S3-Q11 Collision
+92-S3-Q12 Circular motion
+92-S3-Q13 Hooke's law
+92-S3-Q14 Projectile motion
+92-S3-Q15 Continuous random variable
+92-S3-Q16 Poisson distribution
+93-S1-Q1 Combinatorics
+93-S1-Q2 Geometric progression
+93-S1-Q3 Solution of equation
+93-S1-Q4 Integration by substitution
+93-S1-Q5 Complex numbers
+93-S1-Q6 Curve sketching
+93-S1-Q7 Cubic equation
+93-S1-Q8 3-D geometry
+93-S1-Q9 Differential equation
+93-S1-Q10 Springs and strings
+93-S1-Q11 Equilibrium
+93-S1-Q12 Projectile motion
+93-S1-Q13 Work and power
+93-S1-Q14 Continuous random variable
+93-S1-Q15 Elementary probability
+93-S1-Q16 Geometrical probability
+93-S2-Q1 Colonel Blotto
+93-S2-Q2 Integrals
+93-S2-Q3 Differential equation
+93-S2-Q4 Vector geometry
+93-S2-Q5 Polar coordinates
+93-S2-Q6 Matrices
+93-S2-Q7 Roots of equation, Modulo arithmetic
+93-S2-Q8 Inequalities
+93-S2-Q9 Complex number
+93-S2-Q10 Matrices
+93-S2-Q11 Fluid dynamics
+93-S2-Q12 Friction
+93-S2-Q13 SHM
+93-S2-Q14 Energy
+93-S2-Q15 Uniform distribution
+93-S2-Q16 Poisson process
+93-S3-Q1 Parametric equations
+93-S3-Q2 Implicit equation
+93-S3-Q3 Matrices
+93-S3-Q4 Sum of series
+93-S3-Q5 Groups
+93-S3-Q6 Complex numbers
+93-S3-Q7 Hyperbolic functions
+93-S3-Q8 Coordinate geometry
+93-S3-Q9 Inequality
+93-S3-Q10 Linear transformation
+93-S3-Q11 Moment of inertia
+93-S3-Q12 Hooke's law
+93-S3-Q13 Pulley
+93-S3-Q14 Collision
+93-S3-Q15 Coin toss
+93-S3-Q16 Truncated normal distribution
+94-S1-Q1 Volume and Surface area
+94-S1-Q2 Differentiation
+94-S1-Q3 Binomial coefficient
+94-S1-Q4 Integration
+94-S1-Q5 Sketching
+94-S1-Q6 Complex numbers
+94-S1-Q7 Proof by induction
+94-S1-Q8 Integration by substitution
+94-S1-Q9 Projectile motion
+94-S1-Q10 Circular motion
+94-S1-Q11 Pulley
+94-S1-Q12 Elementary probability
+94-S1-Q13 Indicator function
+94-S1-Q14 Poisson distribution
+94-S2-Q1 Number theory
+94-S2-Q2 Integration by parts
+94-S2-Q3 Functions
+94-S2-Q4 Integration
+94-S2-Q5 Roots of equations
+94-S2-Q6 Proof by induction
+94-S2-Q7 Coordinate geometry
+94-S2-Q8 Financial mathematics
+94-S2-Q9 Equilibrium
+94-S2-Q10 Collision
+94-S2-Q11 Projectile motion
+94-S2-Q12 Elementary probability
+94-S2-Q13 Exponential distribution
+94-S2-Q14 Geometrical probability
+94-S3-Q1 Integration by parts
+94-S3-Q2 Polynomial equations
+94-S3-Q3 Euclidean geometry
+94-S3-Q4 Differential equations
+94-S3-Q5 Taylor series
+94-S3-Q6 Complex numbers
+94-S3-Q7 Groups
+94-S3-Q8 Matrices
+94-S3-Q9 Collision
+94-S3-Q10 Time-distance
+94-S3-Q11 Equilibrium
+94-S3-Q12 Elementary probability
+94-S3-Q13 Continuous random variable
+94-S3-Q14 Geometrical probability
+95-S1-Q1 Inequalities
+95-S1-Q2 Integration
+95-S1-Q3 Proof by induction
+95-S1-Q4 Complex numbers
+95-S1-Q5 Analysis
+95-S1-Q6 Differential equations
+95-S1-Q7 Vector geometry
+95-S1-Q8 Differential equation
+95-S1-Q9 Projectile motion
+95-S1-Q10 Hooke's law
+95-S1-Q11 Friction
+95-S1-Q12 Elementary probability
+95-S1-Q13 Poisson distribution
+95-S1-Q14 Normal distribution
+95-S2-Q1 Sum
+95-S2-Q2 Combinatorics
+95-S2-Q3 Tour de Clochemerle
+95-S2-Q4 Analysis
+95-S2-Q5 Elementary geometry
+95-S2-Q6 Complex numbers
+95-S2-Q7 Heron's formula
+95-S2-Q8 Differential equations
+95-S2-Q9 Friction
+95-S2-Q10 Collision
+95-S2-Q11 Projectile motion
+95-S2-Q12 Elementary probability
+95-S2-Q13 Poisson distribution
+95-S2-Q14 Normal distribution
+95-S3-Q1 Simultaneous equations
+95-S3-Q2 Integration by parts
+95-S3-Q3 Differential equation
+95-S3-Q4 Analysis
+95-S3-Q5 Taylor series
+95-S3-Q6 Complex numbers
+95-S3-Q7 Groups
+95-S3-Q8 Vector geometry
+95-S3-Q9 Circular motion
+95-S3-Q10 Projectile motion
+95-S3-Q11 Time-distance
+95-S3-Q12 Probability density function
+95-S3-Q13 Coding and Cryptography
+95-S3-Q14 Moment generating function
+96-S1-Q1 Differentiation
+96-S1-Q2 Integration
+96-S1-Q3 Number theory
+96-S1-Q4 Integral
+96-S1-Q5 Complex numbers
+96-S1-Q6 Analysis
+96-S1-Q7 Differential equation
+96-S1-Q8 Decimal expansions
+96-S1-Q9 Hooke's law
+96-S1-Q10 Collision
+96-S1-Q11 Projectile motion
+96-S1-Q12 Combinatorics
+96-S1-Q13 Discrete random variable
+96-S1-Q14 Coin toss
+96-S2-Q1 Binomial expansion
+96-S2-Q2 Simultaneous equations
+96-S2-Q3 Fibonacci number
+96-S2-Q4 Integral
+96-S2-Q5 Complex numbers
+96-S2-Q6 Number theory
+96-S2-Q7 Euclidean geometry
+96-S2-Q8 Differential equation
+96-S2-Q9 Centre of mass
+96-S2-Q10 Circular motion
+96-S2-Q11 SHM
+96-S2-Q12 Pdf
+96-S2-Q13 Binomial distribution
+96-S2-Q14 Continuous random variable
+96-S3-Q1 Hyperbolic functions
+96-S3-Q2 Simultaneous equations
+96-S3-Q3 Integral
+96-S3-Q4 Number theory
+96-S3-Q5 Complex numbers
+96-S3-Q6 Groups
+96-S3-Q7 Area and perimeters
+96-S3-Q8 Transformation
+96-S3-Q9 Centre of mass
+96-S3-Q10 Friction
+96-S3-Q11 SHM
+96-S3-Q12 Markov chains
+96-S3-Q13 Chebyshev's inequality
+96-S3-Q14 Differential equation
+97-S1-Q1 Combinatorics
+97-S1-Q2 Differentiation
+97-S1-Q3 Sequences
+97-S1-Q4 Modulus function
+97-S1-Q5 Euclidean geometry
+97-S1-Q6 Analysis
+97-S1-Q7 Cubic polynomial
+97-S1-Q8 Curve sketching
+97-S1-Q9 How does a chicken cross the road
+97-S1-Q10 Circular motion
+97-S1-Q11 Projectile motion
+97-S1-Q12 Uniform distribution
+97-S1-Q13 Elementary probability
+97-S1-Q14 Continuous random variable
+97-S2-Q1 Number theory
+97-S2-Q2 Proof by induction
+97-S2-Q3 Integral
+97-S2-Q4 Polynomials
+97-S2-Q5 Complex numbers
+97-S2-Q6 Trigonometry
+97-S2-Q7 Curve sketching
+97-S2-Q8 Inequalities
+97-S2-Q9 Friction
+97-S2-Q10 Collision
+97-S2-Q11 Projectile motion
+97-S2-Q12 Binomial expansion
+97-S2-Q13 Geometrical probability
+97-S2-Q14 Poisson distribution
+97-S3-Q1 Taylor series
+97-S3-Q2 Curve sketching
+97-S3-Q3 Complex numbers
+97-S3-Q4 AM-GM inequality
+97-S3-Q5 Surface of revolution
+97-S3-Q6 Differential equation
+97-S3-Q7 e is irrational
+97-S3-Q8 Transformations
+97-S3-Q9 Hooke's law
+97-S3-Q10 Circular motion
+97-S3-Q11 Equilibrium
+97-S3-Q12 Coin toss
+97-S3-Q13 Pdf, Mgf
+97-S3-Q14 Independence
+98-S1-Q1 Numbers
+98-S1-Q2 Integration by substitution
+98-S1-Q3 Proof
+98-S1-Q4 Optimisation
+98-S1-Q5 Complex numbers
+98-S1-Q6 Recurrence relation
+98-S1-Q7 Geometric sequences
+98-S1-Q8 Fluid dynamics
+98-S1-Q9 Collision
+98-S1-Q10 Projectile motion
+98-S1-Q11 Pulley
+98-S1-Q12 Algebraic probability
+98-S1-Q13 Sampling with replacement
+98-S1-Q14 Continuous random variable
+98-S2-Q1 Number theory
+98-S2-Q2 Binomial expansion
+98-S2-Q3 Analysis
+98-S2-Q4 Integration by parts
+98-S2-Q5 Complex numbers
+98-S2-Q6 Parametric equations
+98-S2-Q7 Functions
+98-S2-Q8 Vector geometry
+98-S2-Q9 Centre of mass
+98-S2-Q10 Wedge
+98-S2-Q11 Projectile motion
+98-S2-Q12 Mathematitis
+98-S2-Q13 Continuous random variable
+98-S2-Q14 Poisson distribution
+98-S3-Q1 Curve sketching
+98-S3-Q2 Integral
+98-S3-Q3 Difference equation
+98-S3-Q4 Polar coordinates
+98-S3-Q5 Matrices
+98-S3-Q6 Elementary geometry
+98-S3-Q7 Curve sketching
+98-S3-Q8 Vector geometry
+98-S3-Q9 SHM
+98-S3-Q10 Collision
+98-S3-Q11 Real pendulum
+98-S3-Q12 Elementary probability
+98-S3-Q13 MLE
+98-S3-Q14 Uniform distribution
+99-S1-Q1 Number theory
+99-S1-Q2 Coordinate geometry
+99-S1-Q3 Recurrence relation
+99-S1-Q4 Curve sketching
+99-S1-Q5 Approximation
+99-S1-Q6 Inequality
+99-S1-Q7 Differential equation
+99-S1-Q8 Analysis
+99-S1-Q9 Time-distance
+99-S1-Q10 SHM
+99-S1-Q11 Gravitational attraction
+99-S1-Q12 Die
+99-S1-Q13 Geometrical probability
+99-S1-Q14 Continuous random variable
+99-S2-Q1 Binomial expansion
+99-S2-Q2 Quadratic equation
+99-S2-Q3 Proof by induction
+99-S2-Q4 Binomial expansion
+99-S2-Q5 Trigonometry
+99-S2-Q6 Integral
+99-S2-Q7 Curve sketching
+99-S2-Q8 Analysis
+99-S2-Q9 Differential equation
+99-S2-Q10 Collision
+99-S2-Q11 Projectile motion
+99-S2-Q12 Micro-chip
+99-S2-Q13 Geometrical probability
+99-S2-Q14 Die
+99-S3-Q1 Cubic equation
+99-S3-Q2 Curve sketching
+99-S3-Q3 Limit
+99-S3-Q4 Elementary geometry
+99-S3-Q5 Difference equation
+99-S3-Q6 Parametric equation
+99-S3-Q7 Groups
+99-S3-Q8 Differential equation
+99-S3-Q9 Gravitational force
+99-S3-Q10 Impulse
+99-S3-Q11 Circular motion
+99-S3-Q12 Discrete random variable
+99-S3-Q13 Continuous random variable
+99-S3-Q14 Poisson distribution
+00-S1-Q1 Logarithms
+00-S1-Q2 Binomial coefficient
+00-S1-Q3 Integration
+00-S1-Q4 Integration
+00-S1-Q5 Euclidean geometry
+00-S1-Q6 Curve sketching
+00-S1-Q7 Differentiation
+00-S1-Q8 Integral
+00-S1-Q9 Projectile motion
+00-S1-Q10 Collision
+00-S1-Q11 Friction
+00-S1-Q12 Sampling with/out replacement
+00-S1-Q13 Tree diagram
+00-S1-Q14 Continuous random variable
+00-S2-Q1 Unit fraction
+00-S2-Q2 Factors of polynomials
+00-S2-Q3 Approximation
+00-S2-Q4 Complex numbers
+00-S2-Q5 Integration
+00-S2-Q6 Integral
+00-S2-Q7 Vector geometry
+00-S2-Q8 Differential equation
+00-S2-Q9 Free-fall
+00-S2-Q10 Pulley
+00-S2-Q11 Hooke's law
+00-S2-Q12 Normal distribution
+00-S2-Q13 Microtus agrestis
+00-S2-Q14 Uniform distribution
+00-S3-Q1 Curve sketching
+00-S3-Q2 Integration by substitution
+00-S3-Q3 Complex numbers
+00-S3-Q4 Curve sketching
+00-S3-Q5 2d Vector product
+00-S3-Q6 Polynomials
+00-S3-Q7 Analysis
+00-S3-Q8 Proof by induction
+00-S3-Q9 Collision
+00-S3-Q10 Friction
+00-S3-Q11 Friction
+00-S3-Q12 Lottery
+00-S3-Q13 Pgf
+00-S3-Q14 Joint distribution
+01-S1-Q1 Euclidean geometry
+01-S1-Q2 Inequality
+01-S1-Q3 Polynomials
+01-S1-Q4 Trigonometry
+01-S1-Q5 Integral
+01-S1-Q6 Area/Volume of revolution
+01-S1-Q7 Hubble's constant
+01-S1-Q8 Differential equations
+01-S1-Q9 Time-distance
+01-S1-Q10 Projectile motion
+01-S1-Q11 Hooke's law
+01-S1-Q12 Tree diagram
+01-S1-Q13 Poisson distribution
+01-S1-Q14 Combintorics
+01-S2-Q1 Binomial approximation
+01-S2-Q2 Curve sketching
+01-S2-Q3 Euclidean geometry
+01-S2-Q4 Trigonometry
+01-S2-Q5 Differential equation
+01-S2-Q6 Integral
+01-S2-Q7 Complex number
+01-S2-Q8 Differential equation
+01-S2-Q9 Air resistance
+01-S2-Q10 Collision
+01-S2-Q11 Projectile motion
+01-S2-Q12 Lottery
+01-S2-Q13 Pdf
+01-S2-Q14 Coin toss
+01-S3-Q1 Maclaurin series
+01-S3-Q2 Area by integration
+01-S3-Q3 Quadratic equations
+01-S3-Q4 Functions
+01-S3-Q5 Parabola
+01-S3-Q6 Coordinate geometry
+01-S3-Q7 Differential equation
+01-S3-Q8 Complex numbers
+01-S3-Q9 Friction
+01-S3-Q10 Vector velocity
+01-S3-Q11 Moment of inertia
+01-S3-Q12 Sampling with/out replacement
+01-S3-Q13 Coin toss
+01-S3-Q14 Continuous random variable
+02-S1-Q1 Simultaneous equations
+02-S1-Q2 Curve sketching
+02-S1-Q3 Inequalities
+02-S1-Q4 Curve sketching
+02-S1-Q5 Roots of polynomials
+02-S1-Q6 Euclidean geometry
+02-S1-Q7 Integral
+02-S1-Q8 Geometric series
+02-S1-Q9 Friction
+02-S1-Q10 Collision
+02-S1-Q11 Collision
+02-S1-Q12 Harry the Calculating Horse
+02-S1-Q13 Discrete random variable
+02-S1-Q14 Poisson distribution
+02-S2-Q1 Integral
+02-S2-Q2 Polynomial equation
+02-S2-Q3 Fermat number
+02-S2-Q4 Trigonometry
+02-S2-Q5 Logistic map
+02-S2-Q6 Euclidean geometry
+02-S2-Q7 3-D geometry
+02-S2-Q8 Differential equation
+02-S2-Q9 Projectile motion
+02-S2-Q10 Time-distance
+02-S2-Q11 Friction
+02-S2-Q12 Coin toss
+02-S2-Q13 Cdf
+02-S2-Q14 Geometric probability
+02-S3-Q1 Volume of revolution
+02-S3-Q2 Trigonometry
+02-S3-Q3 Curve sketching
+02-S3-Q4 Inequality
+02-S3-Q5 Quartic equation
+02-S3-Q6 Differential equation
+02-S3-Q7 Inequality
+02-S3-Q8 Complex numbers
+02-S3-Q9 Inclined plane
+02-S3-Q10 Friction
+02-S3-Q11 Collision
+02-S3-Q12 Coin toss
+02-S3-Q13 Continuous random variable
+02-S3-Q14 Discrete random variable
+03-S1-Q1 Sum
+03-S1-Q2 Solution to equations
+03-S1-Q3 Trigonometry
+03-S1-Q4 Inequality
+03-S1-Q5 Binomial expansion
+03-S1-Q6 Integrals
+03-S1-Q7 Number theory
+03-S1-Q8 Differential equations
+03-S1-Q9 Projectile motion
+03-S1-Q10 Centre of gravity
+03-S1-Q11 Collision
+03-S1-Q12 Sampling with/out replacement
+03-S1-Q13 Binomial distribution
+03-S1-Q14 Poisson distribution
+03-S2-Q1 Simultaneous equations
+03-S2-Q2 Trigonometry
+03-S2-Q3 Irrational number
+03-S2-Q4 Euclidean geometry
+03-S2-Q5 Vector geometry
+03-S2-Q6 Integration
+03-S2-Q7 Analysis
+03-S2-Q8 Differential equations
+03-S2-Q9 Friction
+03-S2-Q10 Acceleration
+03-S2-Q11 Projectile motion
+03-S2-Q12 Elementary particles
+03-S2-Q13 Poisson distribution
+03-S2-Q14 Hypothesis testing
+03-S3-Q1 Integration
+03-S3-Q2 Binomial series
+03-S3-Q3 Curve sketching
+03-S3-Q4 Parametric equation
+03-S3-Q5 Cubic equations
+03-S3-Q6 Trigonometric series
+03-S3-Q7 Coordinate geometry
+03-S3-Q8 Differential equation
+03-S3-Q9 SHM
+03-S3-Q10 Acceleration
+03-S3-Q11 Projectile motion
+03-S3-Q12 Poisson distribution
+03-S3-Q13 Rabbit warren
+03-S3-Q14 Dice roll
+04-S1-Q1 Surds and polynomials
+04-S1-Q2 Curve sketching
+04-S1-Q3 Factors of polynomials
+04-S1-Q4 Integration by substitution
+04-S1-Q5 Number theory
+04-S1-Q6 Coordinate geometry
+04-S1-Q7 Recurrence relation
+04-S1-Q8 Recurrence relations
+04-S1-Q9 Projectile motion
+04-S1-Q10 Time-distance
+04-S1-Q11 Friction
+04-S1-Q12 Microships
+04-S1-Q13 Hypothesis testing
+04-S1-Q14 Pirates
+04-S2-Q1 Surds
+04-S2-Q2 Quadratic function
+04-S2-Q3 Curve sketching
+04-S2-Q4 Euclidean geometry
+04-S2-Q5 Integration
+04-S2-Q6 Vector geometry
+04-S2-Q7 Interval bisection
+04-S2-Q8 Differential equations
+04-S2-Q9 Centre of gravity
+04-S2-Q10 Inclined plane
+04-S2-Q11 Work and power
+04-S2-Q12 Pdf
+04-S2-Q13 Balls from bags
+04-S2-Q14 Probability with sets
+04-S3-Q1 Integration by substitution
+04-S3-Q2 Curve sketching
+04-S3-Q3 Analysis
+04-S3-Q4 Euclidean geometry
+04-S3-Q5 Trigonometry
+04-S3-Q6 Recurrence relations
+04-S3-Q7 Integration by parts
+04-S3-Q8 Differential equation
+04-S3-Q9 Circular motion
+04-S3-Q10 Hooke's law
+04-S3-Q11 Repulsive force
+04-S3-Q12 Approximations
+04-S3-Q13 Tree diagram
+04-S3-Q14 Hypothesis testing
+05-S1-Q1 Number theory
+05-S1-Q2 Coordinate geometry
+05-S1-Q3 Solutions of equation
+05-S1-Q4 Trigonometry
+05-S1-Q5 Integration
+05-S1-Q6 Coordinate geometry
+05-S1-Q7 Product
+05-S1-Q8 Differential equation
+05-S1-Q9 Friction
+05-S1-Q10 Collision
+05-S1-Q11 Time-distance
+05-S1-Q12 Hobbit and Wizard
+05-S1-Q13 Normal distribution
+05-S1-Q14 Discrete random variable
+05-S2-Q1 Polynomials
+05-S2-Q2 Number theory
+05-S2-Q3 Integration
+05-S2-Q4 Trigonometry
+05-S2-Q5 Euclidean geometry
+05-S2-Q6 Sum
+05-S2-Q7 Vectors
+05-S2-Q8 Differential equations
+05-S2-Q9 Friction
+05-S2-Q10 Projectile motion
+05-S2-Q11 Inclined plane
+05-S2-Q12 Elementary probability
+05-S2-Q13 Poisson distribution
+05-S2-Q14 Pdf
+05-S3-Q1 Curve sketching
+05-S3-Q2 Differential equations
+05-S3-Q3 Polynomials
+05-S3-Q4 Recurrence relations
+05-S3-Q5 Coordinate geometry
+05-S3-Q6 Hyperbolic functions
+05-S3-Q7 Integration by substitution
+05-S3-Q8 Complex numbers
+05-S3-Q9 Collision
+05-S3-Q10 Collision
+05-S3-Q11 Circular motion
+05-S3-Q12 Sum of random variables
+05-S3-Q13 Pack of cards
+05-S3-Q14 Continuous random variable
+06-S1-Q1 Number theory
+06-S1-Q2 Optimisation
+06-S1-Q3 Quadratic equations
+06-S1-Q4 Elementary geometry
+06-S1-Q5 Integration by substitution
+06-S1-Q6 Coordinate geometry
+06-S1-Q7 Integration
+06-S1-Q8 Coordinate geometry
+06-S1-Q9 Pulley
+06-S1-Q10 Projectile motion
+06-S1-Q11 Collision
+06-S1-Q12 Oxtown and Camville
+06-S1-Q13 Dice roll
+06-S1-Q14 Sampling with/out replacement
+06-S2-Q1 Difference equation
+06-S2-Q2 Analysis
+06-S2-Q3 Inequality
+06-S2-Q4 Integration by substitution
+06-S2-Q5 Floor function
+06-S2-Q6 Inequality
+06-S2-Q7 Coordinate geometry
+06-S2-Q8 Vector geometry
+06-S2-Q9 Ladder
+06-S2-Q10 Collision
+06-S2-Q11 Projectile motion
+06-S2-Q12 Binomial distribution
+06-S2-Q13 Elementary probability
+06-S2-Q14 Continuous random variable
+06-S3-Q1 Curve sketching
+06-S3-Q2 Integration
+06-S3-Q3 Series
+06-S3-Q4 Functional equations
+06-S3-Q5 Complex numbers
+06-S3-Q6 Polar coordinates
+06-S3-Q7 Differential equation
+06-S3-Q8 Diamond derivatives
+06-S3-Q9 Energy
+06-S3-Q10 Circular motion
+06-S3-Q11 Collision
+06-S3-Q12 Normal distributions
+06-S3-Q13 Geometrical probability
+06-S3-Q14 Independence
+07-S1-Q1 Number theory
+07-S1-Q2 Trigonometry
+07-S1-Q3 Integration
+07-S1-Q4 Cubic equations
+07-S1-Q5 Elementary geometry
+07-S1-Q6 Numbers
+07-S1-Q7 Vectors
+07-S1-Q8 Curve sketching
+07-S1-Q9 Friction
+07-S1-Q10 Norman army
+07-S1-Q11 Projectile motion
+07-S1-Q12 Coin and sweets
+07-S1-Q13 Sampling with/out replacement
+07-S1-Q14 Poisson distribution
+07-S2-Q1 Binomial approximations
+07-S2-Q2 Cubic equation
+07-S2-Q3 Integration by substitution
+07-S2-Q4 Trigonometry
+07-S2-Q5 Functions
+07-S2-Q6 Differential equation
+07-S2-Q7 Jensen's inequality
+07-S2-Q8 Vector geometry
+07-S2-Q9 Collision
+07-S2-Q10 Friction
+07-S2-Q11 Projectile motion
+07-S2-Q12 Dice
+07-S2-Q13 Birthday problem
+07-S2-Q14 Pdf
+07-S3-Q1 Trigonometry
+07-S3-Q2 Sum
+07-S3-Q3 Fibonacci numbers
+07-S3-Q4 Parametric equations
+07-S3-Q5 Differential equations
+07-S3-Q6 Complex numbers
+07-S3-Q7 Integration by substitution
+07-S3-Q8 Differential equations
+07-S3-Q9 SHM
+07-S3-Q10 Projectile motion
+07-S3-Q11 Friction
+07-S3-Q12 Discrete random variables
+07-S3-Q13 Random walk
+07-S3-Q14 Geometrical probability
+08-S1-Q1 Number theory
+08-S1-Q2 Differentiation
+08-S1-Q3 Inequalities
+08-S1-Q4 Convex functions
+08-S1-Q5 Chebyshev's theorem
+08-S1-Q6 Inverse functions
+08-S1-Q7 Coordinate geometry
+08-S1-Q8 Differential equation
+08-S1-Q9 Kinetic energy
+08-S1-Q10 Projectile motion
+08-S1-Q11 Friction
+08-S1-Q12 Discrete random variables
+08-S1-Q13 Combinatorics
+08-S2-Q1 Sequences
+08-S2-Q2 Binomial expansion
+08-S2-Q3 Cubic equations
+08-S2-Q4 Differentiation
+08-S2-Q5 Integrals
+08-S2-Q6 Trigonometry
+08-S2-Q7 Differential equation
+08-S2-Q8 Vector geometry
+08-S2-Q9 Projectile motion
+08-S2-Q10 Collision
+08-S2-Q11 Friction
+08-S2-Q12 Court of Farnia
+08-S2-Q13 Sampling with/out replacement
+08-S3-Q1 Simultaneous equations
+08-S3-Q2 Polynomials
+08-S3-Q3 Conic sections
+08-S3-Q4 Inequality
+08-S3-Q5 Chebyshev's polynomial
+08-S3-Q6 Differential equation
+08-S3-Q7 Complex number
+08-S3-Q8 Infinite series
+08-S3-Q9 Time-distance
+08-S3-Q10 Hooke's law
+08-S3-Q11 Circular motion
+08-S3-Q12 Laplace distribution
+08-S3-Q13 Geometrical probability
+09-S1-Q1 Number theory
+09-S1-Q2 Cubic equations
+09-S1-Q3 Quadratic equations
+09-S1-Q4 Euclidean geometry
+09-S1-Q5 Optimisation
+09-S1-Q6 Integration by substitution
+09-S1-Q7 Integration by parts
+09-S1-Q8 Euclidean geometry
+09-S1-Q9 Projectile motion
+09-S1-Q10 Wedge
+09-S1-Q11 Collision
+09-S1-Q12 Sampling without replacement
+09-S1-Q13 Combinatorics
+09-S2-Q1 Coordinate geometry
+09-S2-Q2 Functions
+09-S2-Q3 Trigonometry
+09-S2-Q4 Polynomials
+09-S2-Q5 Integration
+09-S2-Q6 Fibonacci numbers
+09-S2-Q7 Integration
+09-S2-Q8 Vector geometry
+09-S2-Q9 Centre of mass
+09-S2-Q10 Collision
+09-S2-Q11 Work and Power
+09-S2-Q12 Continuous random variable
+09-S2-Q13 Andover and Basingstoke Rockets
+09-S3-Q1 Coordinate geometry
+09-S3-Q2 Series solutions
+09-S3-Q3 Functions
+09-S3-Q4 Laplace transform
+09-S3-Q5 Simultaneous equations
+09-S3-Q6 Complex numbers
+09-S3-Q7 Proof by induction
+09-S3-Q8 Infinite series
+09-S3-Q9 Projectile motion
+09-S3-Q10 SHM
+09-S3-Q11 Differential equation
+09-S3-Q12 Coin toss
+09-S3-Q13 Geometrical probability
+10-S1-Q1 Simultaneous equations
+10-S1-Q2 Curve sketching
+10-S1-Q3 Trigonometry
+10-S1-Q4 Integration by substitution
+10-S1-Q5 Binomial coefficients
+10-S1-Q6 Differential equations
+10-S1-Q7 Vector geometry
+10-S1-Q8 Number theory
+10-S1-Q9 Friction
+10-S1-Q10 Time-displacement
+10-S1-Q11 Collision
+10-S1-Q12 Discrete random variables
+10-S1-Q13 Poisson distribution
+10-S2-Q1 Osculating Circle
+10-S2-Q2 Integration
+10-S2-Q3 Fibonacci numbers
+10-S2-Q4 Integration by substitution
+10-S2-Q5 Vector geometry
+10-S2-Q6 Elementary geometry
+10-S2-Q7 Quadratic equation
+10-S2-Q8 Integration
+10-S2-Q9 Projectile motion
+10-S2-Q10 Collision
+10-S2-Q11 Equilibrium
+10-S2-Q12 Continuous random variable
+10-S2-Q13 Elementary probability
+10-S3-Q1 Sum
+10-S3-Q2 Integration
+10-S3-Q3 Complex numbers
+10-S3-Q4 Quadratic equations
+10-S3-Q5 Coordinate geometry
+10-S3-Q6 Coordinate geometry
+10-S3-Q7 Maclaurin series
+10-S3-Q8 Integrating factors
+10-S3-Q9 Equilibrium
+10-S3-Q10 SHM
+10-S3-Q11 Friction force
+10-S3-Q12 Expectation
+10-S3-Q13 Corr
+11-S1-Q1 Differentiation
+11-S1-Q2 Integrals
+11-S1-Q3 Trigonometry
+11-S1-Q4 Coordinate geometry
+11-S1-Q5 Analysis
+11-S1-Q6 Binomial expansion
+11-S1-Q7 Fluid dynamics
+11-S1-Q8 Number theory
+11-S1-Q9 Projectile motion
+11-S1-Q10 Collision
+11-S1-Q11 Equilibrium
+11-S1-Q12 Raffle tickets
+11-S1-Q13 Continuous random variable
+11-S2-Q1 Square roots
+11-S2-Q2 Number theory
+11-S2-Q3 Functions
+11-S2-Q4 Trigonometry
+11-S2-Q5 Vector geometry
+11-S2-Q6 Integration
+11-S2-Q7 Recurrence relations
+11-S2-Q8 Parametric equation
+11-S2-Q9 Collision
+11-S2-Q10 Projectile motion
+11-S2-Q11 Vector geometry
+11-S2-Q12 Elementary probability
+11-S2-Q13 Skewness
+11-S3-Q1 Differential equation
+11-S3-Q2 Number theory
+11-S3-Q3 Factorisation
+11-S3-Q4 Inequalities
+11-S3-Q5 Integration
+11-S3-Q6 Integrals
+11-S3-Q7 Proof by induction
+11-S3-Q8 Mobius map
+11-S3-Q9 Equilibrium
+11-S3-Q10 Collision
+11-S3-Q11 Circular motion
+11-S3-Q12 Pgf
+11-S3-Q13 Integer part
+12-S1-Q1 Coordinate geometry
+12-S1-Q2 Curve sketching
+12-S1-Q3 Inequality
+12-S1-Q4 Coordinate geometry
+12-S1-Q5 Integration
+12-S1-Q6 Euclidean geometry
+12-S1-Q7 Sequences
+12-S1-Q8 Differential equation
+12-S1-Q9 Projectile motion
+12-S1-Q10 Time-distance
+12-S1-Q11 Pulley
+12-S1-Q12 Pdf
+12-S1-Q13 Random integer
+12-S2-Q1 Binomial expansion
+12-S2-Q2 Polynomials
+12-S2-Q3 Integration by substitution
+12-S2-Q4 Analysis
+12-S2-Q5 Curve sketching
+12-S2-Q6 Euclidean geometry
+12-S2-Q7 Vector geometry
+12-S2-Q8 Difference equations
+12-S2-Q9 Projectile motion
+12-S2-Q10 Friction
+12-S2-Q11 Collision
+12-S2-Q12 Elementary probability
+12-S2-Q13 Geometric probability
+12-S3-Q1 Differential equation
+12-S3-Q2 Infinite series
+12-S3-Q3 Curve sketching
+12-S3-Q4 Sum
+12-S3-Q5 Rational points
+12-S3-Q6 Complex number
+12-S3-Q7 Differential equation
+12-S3-Q8 Fibonacci sequence
+12-S3-Q9 Pulley
+12-S3-Q10 Circular motion
+12-S3-Q11 Acceleration
+12-S3-Q12 Geometric probability
+12-S3-Q13 Normal distribution
+13-S1-Q1 Square roots
+13-S1-Q2 Integer part
+13-S1-Q3 Vectors
+13-S1-Q4 Integration by substitution
+13-S1-Q5 Curve sketching
+13-S1-Q6 Binomial coefficients
+13-S1-Q7 Differential equations
+13-S1-Q8 Functions
+13-S1-Q9 Projectile motion
+13-S1-Q10 Collision and Friction
+13-S1-Q11 Friction
+13-S1-Q12 Stirling's approximation
+13-S1-Q13 Discrete random distribution
+13-S2-Q1 Curve sketching
+13-S2-Q2 Integration
+13-S2-Q3 Cubic equation
+13-S2-Q4 Coordinate geometry
+13-S2-Q5 Functions
+13-S2-Q6 Sequences
+13-S2-Q7 Number theory
+13-S2-Q8 Functions
+13-S2-Q9 Friction
+13-S2-Q10 Projectile motion
+13-S2-Q11 Collision
+13-S2-Q12 Poisson distributions
+13-S2-Q13 Coin toss
+13-S3-Q1 Integration
+13-S3-Q2 Infinite series
+13-S3-Q3 Vector geometry
+13-S3-Q4 Complex sum
+13-S3-Q5 Number theory
+13-S3-Q6 Complex numbers
+13-S3-Q7 Differential equations
+13-S3-Q8 Conic sections
+13-S3-Q9 SHM
+13-S3-Q10 Circular motion
+13-S3-Q11 Hooke's law
+13-S3-Q12 Discrete random variable
+13-S3-Q13 Cdf
+14-S1-Q1 Number theory
+14-S1-Q2 Integration
+14-S1-Q3 Curve sketching
+14-S1-Q4 Clock
+14-S1-Q5 Cubic equations
+14-S1-Q6 Sequences
+14-S1-Q7 Vector geometry
+14-S1-Q8 Coordinate geometry
+14-S1-Q9 Projectile motion
+14-S1-Q10 Collision
+14-S1-Q11 Pulley
+14-S1-Q12 Gambling
+14-S1-Q13 Triangular distribution
+14-S2-Q1 Euclidean geometry
+14-S2-Q2 Inequality
+14-S2-Q3 Coordinate geometry
+14-S2-Q4 Integration by substitution
+14-S2-Q5 Differential equations
+14-S2-Q6 Trigonometric series
+14-S2-Q7 Curve sketching
+14-S2-Q8 Binomial expansion
+14-S2-Q9 Friction
+14-S2-Q10 Projectile motion
+14-S2-Q11 Circular motion
+14-S2-Q12 Hazard function
+14-S2-Q13 Discrete random variables
+14-S3-Q1 Series
+14-S3-Q2 Integration by substitution
+14-S3-Q3 Coordinate geometry
+14-S3-Q4 Variational principle
+14-S3-Q5 Complex numbers
+14-S3-Q6 Analysis
+14-S3-Q7 Vectors
+14-S3-Q8 Analysis
+14-S3-Q9 Projectile motion
+14-S3-Q10 Hooke's law
+14-S3-Q11 Circular motion
+14-S3-Q12 Normal distribution
+14-S3-Q13 Pgf
+15-S1-Q1 Curve sketching
+15-S1-Q2 Trigonometry
+15-S1-Q3 Optimisation
+15-S1-Q4 Euclidean geometry
+15-S1-Q5 Curve sketching
+15-S1-Q6 Euclidean geometry
+15-S1-Q7 Differentiation
+15-S1-Q8 Number theory
+15-S1-Q9 Projectile motion
+15-S1-Q10 Bus and rain
+15-S1-Q11 Friction
+15-S1-Q12 Poisson distribution
+15-S1-Q13 Dice
+15-S2-Q1 Analysis
+15-S2-Q2 Euclidean geometry
+15-S2-Q3 Proof by induction
+15-S2-Q4 Curve sketching
+15-S2-Q5 Arctan sum
+15-S2-Q6 Integration
+15-S2-Q7 Coordinate geometry
+15-S2-Q8 Vector geometry
+15-S2-Q9 Rotating rods
+15-S2-Q10 Pulley
+15-S2-Q11 Collisions
+15-S2-Q12 Coin toss
+15-S2-Q13 Random variable
+15-S3-Q1 Integration
+15-S3-Q2 Analysis
+15-S3-Q3 Polar coordinates
+15-S3-Q4 Roots of polynomials
+15-S3-Q5 Number theory
+15-S3-Q6 Complex system
+15-S3-Q7 Differentiation
+15-S3-Q8 Differential equations
+15-S3-Q9 Elastic string
+15-S3-Q10 Kinematics
+15-S3-Q11 Circular motion
+15-S3-Q12 Dice
+15-S3-Q13 Uniform distribution
+16-S1-Q1 Polynomials
+16-S1-Q2 Anti-differentiation
+16-S1-Q3 Graphs of floor functions
+16-S1-Q4 Touching circles
+16-S1-Q5 Curvature
+16-S1-Q6 Vector geometry
+16-S1-Q7 Integer sets
+16-S1-Q8 Generating functions
+16-S1-Q9 Static equilibrium wall and rod
+16-S1-Q10 Particle collisions
+16-S1-Q11 Projectile and tower
+16-S1-Q12 Coin tossing
+16-S1-Q13 Internet tester
+16-S2-Q1 Coordinate geometry
+16-S2-Q2 Factor theorem
+16-S2-Q3 Roots of polynomial
+16-S2-Q4 Inequalities for rational function
+16-S2-Q5 Binomial identities
+16-S2-Q6 Quadratic differential equation
+16-S2-Q7 Trigonometric integrals
+16-S2-Q8 Approximating sums using integrals
+16-S2-Q9 Bullet fired into block
+16-S2-Q10 Hanging triangle
+16-S2-Q11 Projectile and target
+16-S2-Q12 Old hat probability problem
+16-S2-Q13 Binomial distribution approximations
+16-S3-Q1 Integral reduction
+16-S3-Q2 Parabola normals
+16-S3-Q3 Integration
+16-S3-Q4 Telescoping sums
+16-S3-Q5 Prime number distribution
+16-S3-Q6 Intersecting curves number
+16-S3-Q7 Argand geometry
+16-S3-Q8 Functional equations
+16-S3-Q9 Simple harmonic motion
+16-S3-Q10 Motion on a plane
+16-S3-Q11 Accelerating car
+16-S3-Q12 Chebyshev's inequality
+16-S3-Q13 Kurtosis
+17-S1-Q1 Integration by substitution
+17-S1-Q2 Inequalities
+17-S1-Q3 Parabola
+17-S1-Q4 Geometric progression
+17-S1-Q5 Area of rectangle in circle segment
+17-S1-Q6 Integration
+17-S1-Q7 Triangles
+17-S1-Q8 Sequence
+17-S1-Q9 Projectile motion
+17-S1-Q10 Colliding particles
+17-S1-Q11 Box on inclined plane
+17-S1-Q12 Lottery
+17-S1-Q13 Sliced loaf
+17-S2-Q1 arctan integral
+17-S2-Q2 Periodic sequences
+17-S2-Q3 Trigonometric equations
+17-S2-Q4 Schwarz inequality
+17-S2-Q5 Parabola and circle
+17-S2-Q6 Inverse square root series
+17-S2-Q7 x to the power x to the power x
+17-S2-Q8 Vector geometry
+17-S2-Q9 Plank on cylinders
+17-S2-Q10 Car with air and rolling resistance
+17-S2-Q11 Projectile
+17-S2-Q12 Fishing
+17-S2-Q13 Game show
+17-S3-Q1 Inverse cube series
+17-S3-Q2 Transformations
+17-S3-Q3 Quartic equation
+17-S3-Q4 Geometric mean
+17-S3-Q5 Polar equations
+17-S3-Q6 Arctan
+17-S3-Q7 Ellipse
+17-S3-Q8 Trigonometric sums
+17-S3-Q9 Particles connected by spring
+17-S3-Q10 Hinged rod
+17-S3-Q11 Gun carriage
+17-S3-Q12 Discrete random variable
+17-S3-Q13 Variance
+18-S1-Q1 Area between curve and line
+18-S1-Q2 Logarithms
+18-S1-Q3 Hyperbola
+18-S1-Q4 Sketching an integral function
+18-S1-Q5 Polynomials at integer points
+18-S1-Q6 Numerical integration
+18-S1-Q7 Solving the cubic
+18-S1-Q8 Coupled differential equations
+18-S1-Q9 Motion on two inclined roads
+18-S1-Q10 Tension in train coupling
+18-S1-Q11 Pulley and rough inclined plane
+18-S1-Q12 Coin tosses
+18-S1-Q13 Multiple choice questions
+18-S2-Q1 Quartic repeated roots
+18-S2-Q2 Concave functions
+18-S2-Q3 Tan integral
+18-S2-Q4 Trigonometric equations
+18-S2-Q5 Integration of series
+18-S2-Q6 Factorial equations
+18-S2-Q7 Triangle intersection
+18-S2-Q8 Differential equations
+18-S2-Q9 Beads on wire
+18-S2-Q10 Ant on elastic string
+18-S2-Q11 Motorbike slipping
+18-S2-Q12 Coin toss game
+18-S2-Q13 Pass the parcel
+18-S3-Q1 Quadratic roots inequalities
+18-S3-Q2 Hermite polynomials
+18-S3-Q3 Second order differential equation
+18-S3-Q4 Tangent to hyperbola
+18-S3-Q5 Arithmetic mean - geometric mean
+18-S3-Q6 Complex geometry
+18-S3-Q7 Basel series
+18-S3-Q8 Integrating fractional part
+18-S3-Q9 Particle bouncing
+18-S3-Q10 Oscillating disc with point mass
+18-S3-Q11 Slack pendulum
+18-S3-Q12 Ordering samples
+18-S3-Q13 Poisson distribution

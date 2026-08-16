@@ -1,0 +1,425 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@smart-edu/v3-prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum V3DocumentStatus {
+  MISSING
+  DOWNLOADING
+  INVALID
+  READY
+  EXTRACTING
+  REVIEW
+  PUBLISHED
+  FAILED
+}
+
+enum V3DocumentType {
+  QUESTION_PAPER
+  MARK_SCHEME
+  INSERT
+  SOURCE_BOOKLET
+  AUDIO
+  OTHER
+}
+
+enum V3RunStatus {
+  QUEUED
+  PREFLIGHT
+  EXTRACTING
+  VERIFYING
+  REVIEW
+  PASSED
+  FAILED
+}
+
+enum V3PublicationStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED_LOCAL
+}
+
+enum V3IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum V3IssueStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+model V3Subject {
+  id            String   @id
+  board         String
+  qualification String
+  subjectCode   String
+  name          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  papers V3Paper[]
+  topics V3Topic[]
+
+  @@unique([board, qualification, subjectCode])
+  @@index([name])
+  @@map("v3_subjects")
+}
+
+model V3Paper {
+  id            String              @id
+  subjectId     String
+  qualification String
+  level         String
+  year          Int
+  session       String
+  paperNumber   String
+  paperType     String
+  component     String              @default("")
+  variant       String              @default("")
+  timezone      String              @default("")
+  language      String              @default("en")
+  totalMarks    Int?
+  status        V3PublicationStatus @default(DRAFT)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  subject         V3Subject          @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  sourceDocuments V3SourceDocument[]
+  questions       V3Question[]
+  markSchemes     V3MarkScheme[]
+  resources       V3PaperResource[]
+
+  @@unique([subjectId, qualification, level, year, session, paperNumber, paperType, component, variant, timezone, language])
+  @@index([subjectId, year, session])
+  @@index([status])
+  @@map("v3_papers")
+}
+
+model V3SourceDocument {
+  id             String           @id
+  paperId        String
+  documentType   V3DocumentType
+  resourceCode   String           @default("")
+  language       String           @default("en")
+  status         V3DocumentStatus @default(MISSING)
+  expected       Boolean          @default(true)
+  inventoryBasis String           @default("authoritative")
+  sourceUrl      String?
+  sourcePaths    String[]         @default([])
+  localPath      String?
+  partialPath    String?
+  sha256         String?
+  byteSize       BigInt?
+  pageCount      Int?
+  readable       Boolean?
+  validation     Json             @default("{}")
+  lastError      String?
+  attemptCount   Int              @default(0)
+  validatedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  duplicateOfId  String?
+
+  paper       V3Paper            @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  duplicateOf V3SourceDocument?  @relation("V3DocumentDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates  V3SourceDocument[] @relation("V3DocumentDuplicates")
+  runs        V3ExtractionRun[]
+  questions   V3Question[]
+  markSchemes V3MarkScheme[]
+  assets      V3Asset[]
+  resources   V3PaperResource[]
+
+  @@unique([paperId, documentType, resourceCode, language])
+  @@index([status, documentType])
+  @@index([sha256])
+  @@map("v3_source_documents")
+}
+
+model V3ExtractionRun {
+  id                String      @id
+  sourceDocumentId  String
+  status            V3RunStatus @default(QUEUED)
+  extractorModel    String
+  verifierModel     String
+  promptVersion     String
+  schemaVersion     String
+  rendererVersion   String
+  extractorProvider String      @default("")
+  verifierProvider  String      @default("")
+  workPath          String
+  inputSha256       String
+  confidence        Float?
+  usage             Json        @default("{}")
+  estimatedCostUsd  Decimal     @default(0) @db.Decimal(12, 6)
+  stageReport       Json        @default("{}")
+  failureStage      String?
+  failureMessage    String?
+  startedAt         DateTime    @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  sourceDocument V3SourceDocument @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  questions      V3Question[]
+  markSchemes    V3MarkScheme[]
+  reviewIssues   V3ReviewIssue[]
+
+  @@index([sourceDocumentId, status])
+  @@index([createdAt])
+  @@map("v3_extraction_runs")
+}
+
+model V3Question {
+  id                String              @id
+  paperId           String
+  sourceDocumentId  String
+  extractionRunId   String
+  rootNumber        String
+  numberSort        Int
+  document          Json
+  schemaVersion     String              @default("QuestionDocumentV1")
+  contentHash       String
+  sourceHash        String
+  marks             Int?
+  confidence        Float
+  publicationStatus V3PublicationStatus @default(DRAFT)
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  paper          V3Paper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  sourceDocument V3SourceDocument  @relation(fields: [sourceDocumentId], references: [id], onDelete: Restrict)
+  extractionRun  V3ExtractionRun   @relation(fields: [extractionRunId], references: [id], onDelete: Restrict)
+  markScheme     V3MarkScheme?
+  assets         V3QuestionAsset[]
+  topics         V3QuestionTopic[]
+  tags           V3QuestionTag[]
+  reviewIssues   V3ReviewIssue[]
+
+  @@unique([paperId, rootNumber, schemaVersion])
+  @@index([paperId, numberSort])
+  @@index([publicationStatus, confidence])
+  @@index([contentHash])
+  @@map("v3_questions")
+}
+
+model V3MarkScheme {
+  id                String              @id
+  paperId           String
+  sourceDocumentId  String
+  extractionRunId   String
+  questionId        String?             @unique
+  rootNumber        String
+  document          Json
+  schemaVersion     String              @default("MarkSchemeDocumentV1")
+  contentHash       String
+  sourceHash        String
+  marks             Int?
+  confidence        Float
+  publicationStatus V3PublicationStatus @default(DRAFT)
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  paper          V3Paper             @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  sourceDocument V3SourceDocument    @relation(fields: [sourceDocumentId], references: [id], onDelete: Restrict)
+  extractionRun  V3ExtractionRun     @relation(fields: [extractionRunId], references: [id], onDelete: Restrict)
+  question       V3Question?         @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  assets         V3MarkSchemeAsset[]
+  reviewIssues   V3ReviewIssue[]
+
+  @@unique([paperId, rootNumber, schemaVersion])
+  @@index([paperId, rootNumber])
+  @@index([publicationStatus, confidence])
+  @@map("v3_mark_schemes")
+}
+
+model V3Asset {
+  id               String   @id
+  sha256           String   @unique
+  relativePath     String   @unique
+  mimeType         String
+  width            Int
+  height           Int
+  byteSize         BigInt
+  sourceDocumentId String?
+  sourcePage       Int?
+  cropX0           Float?
+  cropY0           Float?
+  cropX1           Float?
+  cropY1           Float?
+  role             String
+  caption          String?
+  provenance       Json     @default("{}")
+  qaOnly           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  sourceDocument V3SourceDocument?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  questions      V3QuestionAsset[]
+  markSchemes    V3MarkSchemeAsset[]
+  paperResources V3PaperResource[]
+  sourceCrops    V3ReviewIssue[]     @relation("V3IssueSourceCrop")
+
+  @@index([sourceDocumentId, sourcePage])
+  @@map("v3_assets")
+}
+
+model V3QuestionAsset {
+  questionId String
+  assetId    String
+  role       String
+  ordering   Int
+  blockId    String?
+
+  question V3Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  asset    V3Asset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@id([questionId, assetId, role])
+  @@index([questionId, ordering])
+  @@map("v3_question_assets")
+}
+
+model V3MarkSchemeAsset {
+  markSchemeId String
+  assetId      String
+  role         String
+  ordering     Int
+  blockId      String?
+
+  markScheme V3MarkScheme @relation(fields: [markSchemeId], references: [id], onDelete: Cascade)
+  asset      V3Asset      @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@id([markSchemeId, assetId, role])
+  @@index([markSchemeId, ordering])
+  @@map("v3_mark_scheme_assets")
+}
+
+model V3PaperResource {
+  id               String   @id
+  paperId          String
+  sourceDocumentId String?
+  assetId          String?
+  resourceType     String
+  label            String
+  mimeType         String?
+  relativePath     String?
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now())
+
+  paper          V3Paper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  sourceDocument V3SourceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  asset          V3Asset?          @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@unique([paperId, resourceType, label])
+  @@index([paperId, resourceType])
+  @@map("v3_paper_resources")
+}
+
+model V3Topic {
+  id                String   @id
+  subjectId         String
+  taxonomyVersion   String
+  code              String
+  canonicalLabel    String
+  aliases           String[] @default([])
+  parentId          String?
+  effectiveFromYear Int
+  effectiveToYear   Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subject   V3Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  parent    V3Topic?          @relation("V3TopicTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  V3Topic[]         @relation("V3TopicTree")
+  questions V3QuestionTopic[]
+
+  @@unique([subjectId, taxonomyVersion, code])
+  @@index([subjectId, effectiveFromYear])
+  @@map("v3_topics")
+}
+
+model V3QuestionTopic {
+  questionId      String
+  topicId         String
+  source          String
+  confidence      Float
+  taxonomyVersion String
+  adminOverride   Boolean @default(false)
+
+  question V3Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    V3Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, topicId])
+  @@index([topicId, confidence])
+  @@map("v3_question_topics")
+}
+
+model V3Tag {
+  id             String   @id
+  canonicalLabel String   @unique
+  aliases        String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  questions V3QuestionTag[]
+
+  @@map("v3_tags")
+}
+
+model V3QuestionTag {
+  questionId      String
+  tagId           String
+  source          String
+  confidence      Float
+  taxonomyVersion String
+  adminOverride   Boolean @default(false)
+
+  question V3Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tag      V3Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, tagId])
+  @@index([tagId, confidence])
+  @@map("v3_question_tags")
+}
+
+model V3ReviewIssue {
+  id                String          @id
+  extractionRunId   String
+  questionId        String?
+  markSchemeId      String?
+  sourceCropAssetId String?
+  issueType         String
+  severity          V3IssueSeverity
+  status            V3IssueStatus   @default(OPEN)
+  fieldPath         String?
+  message           String
+  evidence          Json            @default("{}")
+  correction        Json?
+  resolutionNote    String?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  extractionRun V3ExtractionRun @relation(fields: [extractionRunId], references: [id], onDelete: Cascade)
+  question      V3Question?     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  markScheme    V3MarkScheme?   @relation(fields: [markSchemeId], references: [id], onDelete: Cascade)
+  sourceCrop    V3Asset?        @relation("V3IssueSourceCrop", fields: [sourceCropAssetId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity, issueType])
+  @@index([extractionRunId, status])
+  @@index([questionId])
+  @@map("v3_review_issues")
+}

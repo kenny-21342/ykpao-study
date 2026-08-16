@@ -1,36 +1,234 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YKPao Study
 
-## Getting Started
+An integrated study platform for a single school cohort: past-paper practice, AI
+tutoring and grading, collaborative notes, mock exams, and a discussion board.
 
-First, run the development server:
+Built with Next.js 16 (App Router), React 19, Prisma 7 on Postgres, NextAuth v4,
+and Tailwind v4.
+
+---
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env      # then fill in DATABASE_URL and NEXTAUTH_SECRET
+npm install
+npm run dev               # predev generates the Prisma clients, PDF worker, and service worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app boots at http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`DATABASE_URL` and `NEXTAUTH_SECRET` are **required** — the app throws at
+startup rather than falling back to a localhost socket or an insecure default
+signing key. See `.env.example` for the full list; every variable there is
+documented with what breaks in its absence.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To reach the admin console, put your address in `ADMIN_EMAILS`.
 
-## Learn More
+### Database
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx prisma migrate deploy   # apply migrations
+npx prisma studio           # browse data
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The 29 historical migrations — 14 of which contained no `migration.sql` at all,
+because the schema was evolved with `db push` — have been squashed into a single
+baseline, `prisma/migrations/00000000000000_init/`. The originals are kept in
+`prisma/migrations-legacy/`, which explains what was and wasn't carried over.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`migrate deploy` against an empty database has been verified to reproduce
+`schema.prisma` exactly (69 tables), with full-text search working.
 
-## Deploy on Vercel
+**On a database that already exists** — including the current dev database —
+do *not* run `migrate deploy`; it would try to create tables that are already
+there. Follow the adoption steps in `prisma/migrations-legacy/README.md`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+#### Known, intentional schema drift
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`prisma migrate diff` reports four differences against any correctly-built
+database:
+
+```
+[*] rag_chunks    [-] column `searchVector`, [-] 2 GIN indexes
+[*] rag_documents [-] 1 GIN index
+```
+
+These are **not** drift to fix. `rag_chunks."searchVector"` is a
+`GENERATED ALWAYS … STORED` tsvector, and the three indexes use
+`gin_trgm_ops` — none of which `schema.prisma` can express, so Prisma sees them
+as surplus and proposes dropping them. `lib/rag.ts` queries that column
+directly, so dropping it breaks AI study search entirely.
+
+They are created by hand at the bottom of the baseline migration. **Never run
+`prisma migrate dev` or `prisma db push --accept-data-loss` without checking
+what it plans to drop**, and re-append that block if the baseline is ever
+regenerated.
+
+There is a second, independent datasource for the V3 question corpus
+(`prisma/v3/schema.prisma`, configured by `prisma/v3.config.ts`). It is an
+internal tool: the whole `/v3` route segment requires an admin session.
+
+---
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` / `npm run build` | Develop / production build (Turbopack) |
+| `npm test` | Every suite — Node, V3, personalization, catalogue, and the Python `bank`/`question_images` suites |
+| `npm run lint` | ESLint over the app (Next 16 no longer lints during `build`) |
+| `npm run sw:build` | Regenerates `public/sw.js` with a fresh cache version |
+| `npm run icons:build` | Regenerates the PWA PNG icons from `public/icon.svg` |
+| `npm run pdf:worker` | Copies the pdf.js worker into `public/` |
+| `npm run papers:index` | Indexes the past-paper catalogue |
+| `npm run rag:index` | Rebuilds the RAG index |
+
+`predev` and `prebuild` run the Prisma, PDF-worker, and service-worker steps
+automatically; you rarely need to invoke them by hand.
+
+Tests require `python3` on `PATH` for the pipeline suites.
+
+---
+
+## Generated files — do not edit
+
+- `public/sw.js` — generated from `scripts/sw-template.js`. Edit the template.
+  The generator stamps in a per-build cache version; without it, returning users
+  are served a previous build's HTML referencing deleted asset chunks.
+- `public/pdf.worker.min.mjs` — copied from `node_modules`.
+- `public/icon-*.png`, `public/apple-touch-icon.png` — generated from `icon.svg`.
+- `generated/` — Prisma clients.
+
+---
+
+## Deployment notes
+
+The target is Vercel (serverless).
+
+### Function timeouts — this needs a Pro plan
+
+Route handlers declare `maxDuration` because the platform kills an invocation at
+its default limit no matter what the request is doing. The binding one is
+`app/api/mock-exams/[id]/submit`: it makes one LLM grading call per exam item,
+capped at `MAX_GRADED_ITEMS = 60`, at four concurrent calls — roughly 75s for a
+full paper. It declares `maxDuration = 300`, which **Hobby (60s) cannot grant**.
+
+On Hobby, lower `MAX_GRADED_ITEMS` to about 12 and set `maxDuration = 60`;
+otherwise a student submitting a full exam gets a gateway error and loses the
+attempt. The two SSE routes have the same constraint — keep
+`SSE_MAX_LIFETIME_MS` below whatever your plan allows.
+
+### Startup validation
+
+`instrumentation.ts` calls `getEnv()` when the server boots, so a missing
+`DATABASE_URL`, `NEXTAUTH_SECRET`, `ADMIN_EMAILS`, or storage configuration
+fails immediately instead of one request at a time. It deliberately skips the
+build phase (`NEXT_PHASE === 'phase-production-build'`), where a build machine
+legitimately has none of those.
+
+### Object storage
+
+Bulk assets — past-paper PDFs (~17 GB), uploads, extracted diagrams, STEP
+images, V3 corpus assets — are read and written through `lib/storage/`, which
+has two drivers:
+
+| `STORAGE_DRIVER` | Backend | Use |
+|---|---|---|
+| `local` (default) | Filesystem | Development, self-hosting with real disks |
+| `s3` | Any S3-compatible bucket | Serverless (**required**) |
+
+On a serverless host the filesystem is read-only, empty, and discarded between
+invocations, so the local driver would 404 every past paper and every uploaded
+image. `lib/env.ts` refuses to start a production deploy with `STORAGE_DRIVER`
+unset; set `STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true` to opt out on a box with
+persistent disks.
+
+The S3 driver signs its own requests (SigV4, `lib/storage/sigv4.ts`) rather than
+depending on `@aws-sdk/client-s3`, which would add tens of megabytes to every
+function bundle to perform a handful of HMACs. The implementation is pinned to
+AWS's published `get-vanilla` test vector in `tests/sigv4.test.ts`.
+
+**First deploy:** configure the variables in `.env.example`, then upload the
+existing corpus from a machine that has it checked out:
+
+```bash
+npm run storage:sync -- --dry-run     # preview
+npm run storage:sync                  # ~13,000 PDFs; expect this to take a while
+```
+
+The sync skips objects already present, so an interrupted run resumes cheaply.
+
+**Bucket CORS.** Past papers are served by redirecting to a presigned URL, and
+`react-pdf` fetches that URL with XHR. The bucket must therefore allow `GET`
+from your app's origin, or the PDF viewer fails with an opaque CORS error while
+the same URL opens fine in a new tab.
+
+**URL shapes are unchanged.** `/uploads/**`, `/extracted_images/**` and
+`/step-images/**` are still the public paths — they are recorded in thousands of
+database rows and embedded in stored note HTML. They are now served by route
+handlers (`app/uploads/[...path]/route.ts` and siblings) that resolve through
+the object store. In development the static file under `public/` still wins, so
+nothing changes locally.
+
+> **Access control:** `/uploads/**` is readable by anyone holding the URL, which
+> is exactly what the static `public/uploads/` directory did before. Filenames
+> are UUIDs, so they are unguessable, but that is obscurity rather than a
+> permission check. Gating it on a session is a sensible follow-up.
+
+### Rate limiting
+
+`lib/rate-limit.ts` is backed by Postgres (the `rate_limits` table), because the
+previous in-memory `Map` was per-process: on serverless every invocation started
+empty, so the login brute-force guard and the per-user AI spend caps silently
+did nothing.
+
+**Run `prisma migrate deploy` before deploying the code that uses it.** If the
+table is missing the limiter logs a loud error and allows the request rather
+than locking every user out — but until you migrate, limits are not enforced.
+
+### Realtime collaboration (SSE)
+
+`lib/page-pubsub.ts` uses Postgres `LISTEN/NOTIFY`, which **does not work
+through a transaction-mode connection pooler** (Neon `-pooler`, Supabase port
+6543, any pgbouncer). LISTEN appears to succeed and then silently delivers
+nothing — collaboration shows as connected and never updates.
+
+- Set `DIRECT_DATABASE_URL` to the direct, unpooled connection string. The app
+  warns at startup if the string it is given looks pooled.
+- Set `SSE_MAX_LIFETIME_MS` a little *below* your platform's function timeout
+  (default 240000) so the server closes streams cleanly instead of the platform
+  killing them mid-flight.
+- If a direct connection isn't available, set `COLLAB_REALTIME=off`. The
+  endpoint then returns 501 and clients stop retrying after a few attempts;
+  editing still works, it just doesn't show other people's cursors.
+
+---
+
+## Repository layout
+
+```
+app/                Next.js App Router — routes, API handlers, components
+  api/              ~90 route handlers
+  components/       Shared client components
+  admin/            Admin console (gated by requireAdmin)
+  v3/               Internal corpus review tool (admin only)
+lib/                Server-side helpers: auth, prisma, ai, rate limiting, env
+prisma/             Main schema + migrations; v3/ holds the corpus datasource
+scripts/            Build steps, one-off migrations, indexing
+tests/              Node (`*.test.ts`) and Python (`bank/`, `question_images/`) suites
+docs/               Pipeline documentation; docs/archive/ holds superseded status notes
+pdf_extraction/     Python extraction pipeline (not deployed)
+```
+
+## Security
+
+`lib/auth.ts` is the single entry point for session handling: `getSessionUser()`
+returns `null` for banned users, and `isModerator()` / `requireAdmin()` gate
+elevated actions. Untrusted HTML — rich-text from students, markdown rendered by
+`marked`, admin announcements — must go through `sanitizeHtml()` from
+`lib/sanitize-html.ts` before reaching `dangerouslySetInnerHTML`.
+
+The Content-Security-Policy in `next.config.ts` is intentionally
+**Report-Only**: enforcing it requires per-request nonces from middleware, which
+does not exist yet.
