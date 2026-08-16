@@ -11,8 +11,17 @@
  * stream cleanly and the client reconnects on the normal path.
  */
 
-/** Default max lifetime of one SSE connection, in milliseconds. */
-const DEFAULT_STREAM_LIFETIME_MS = 240_000; // 4 minutes
+/**
+ * Default max lifetime of one SSE connection, in milliseconds.
+ *
+ * 50s, comfortably under the 60s `maxDuration` the stream routes declare (which
+ * is itself Vercel Hobby's ceiling). The default is deliberately the *safe*
+ * value rather than the generous one: too long and the platform kills every
+ * stream mid-flight, which the browser cannot distinguish from a network fault.
+ * Raise `SSE_MAX_LIFETIME_MS` — and `maxDuration` with it — on a plan that
+ * allows longer functions.
+ */
+const DEFAULT_STREAM_LIFETIME_MS = 50_000;
 
 /** Hard bounds — a stream shorter than this reconnects wastefully. */
 const MIN_LIFETIME_MS = 30_000;

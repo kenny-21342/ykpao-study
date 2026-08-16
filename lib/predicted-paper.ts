@@ -1,6 +1,7 @@
 import { chatJSON } from '@/lib/ai';
 import { plainText } from '@/lib/learning';
 import { prisma } from '@/lib/prisma';
+import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 
 type QuestionType = 'short-answer' | 'structured' | 'extended';
 
@@ -256,7 +257,16 @@ export async function createPredictedPaper(input: PredictedPaperOptions): Promis
 
   const markschemes = await Promise.all(candidates.map((question) => findMatchingMarkscheme(question)));
   const targetMarks = input.totalMarks ?? blueprint.typicalTotalMarks;
-  const targetCount = input.questionCount ?? Math.max(4, Math.min(20, blueprint.typicalQuestionCount));
+  // Clamped to what one submission can grade inside a single function
+  // invocation — see lib/mock-exam-limits.ts. A predicted paper larger than
+  // this generates fine and is then impossible to submit.
+  const targetCount = Math.max(
+    1,
+    Math.min(
+      MAX_EXAM_ITEMS,
+      input.questionCount ?? Math.max(4, Math.min(20, blueprint.typicalQuestionCount))
+    )
+  );
   const targetDuration = input.durationMinutes ?? Math.max(30, Math.round(targetMarks * 1.5));
 
   const catalogue = candidates.map((question, index) => ({
@@ -305,6 +315,8 @@ ${JSON.stringify(catalogue)}`,
   const flatItems: Array<{ questionId: number; sectionTitle: string; order: number }> = [];
   for (const section of plan.sections ?? []) {
     for (const questionId of section.questionIds ?? []) {
+      // The count in the prompt is a hint; the model often exceeds it.
+      if (flatItems.length >= MAX_EXAM_ITEMS) break;
       if (!candidateIds.has(questionId) || usedIds.has(questionId)) continue;
       usedIds.add(questionId);
       flatItems.push({
@@ -313,6 +325,7 @@ ${JSON.stringify(catalogue)}`,
         order: flatItems.length,
       });
     }
+    if (flatItems.length >= MAX_EXAM_ITEMS) break;
   }
 
   if (flatItems.length === 0) {

@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
  * through an error path on a fixed cycle forever. Lower SSE_MAX_LIFETIME_MS
  * rather than raising this past what your plan allows.
  */
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ id: string }> };
 

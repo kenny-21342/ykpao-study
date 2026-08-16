@@ -106,18 +106,28 @@ Tests require `python3` on `PATH` for the pipeline suites.
 
 The target is Vercel (serverless).
 
-### Function timeouts — this needs a Pro plan
+### Function timeouts — configured for Vercel Hobby (60s)
 
-Route handlers declare `maxDuration` because the platform kills an invocation at
-its default limit no matter what the request is doing. The binding one is
-`app/api/mock-exams/[id]/submit`: it makes one LLM grading call per exam item,
-capped at `MAX_GRADED_ITEMS = 60`, at four concurrent calls — roughly 75s for a
-full paper. It declares `maxDuration = 300`, which **Hobby (60s) cannot grant**.
+Route handlers declare `maxDuration = 60`, Hobby's ceiling, because the platform
+kills an invocation at its default limit regardless of what the request is
+doing. Two consequences are worth knowing before you change anything:
 
-On Hobby, lower `MAX_GRADED_ITEMS` to about 12 and set `maxDuration = 60`;
-otherwise a student submitting a full exam gets a gateway error and loses the
-attempt. The two SSE routes have the same constraint — keep
-`SSE_MAX_LIFETIME_MS` below whatever your plan allows.
+**Mock exams are capped at 12 questions.** `lib/mock-exam-limits.ts` holds
+`MAX_EXAM_ITEMS`, and grading runs `GRADING_CONCURRENCY = 4` LLM calls in
+parallel — about 15–25s for a full paper, inside the limit. Generation
+(`/api/mock-exams/generate` and `lib/predicted-paper.ts`) clamps to the *same*
+constant, so an exam can never be created at a size that cannot be submitted.
+That mattered: the model routinely returns more questions than the prompt asks
+for, and `submit` used to silently `take:` the first N — a student answered
+twenty questions, twelve came back graded, and eight vanished with nothing in
+the UI to explain it.
+
+**SSE streams last 50s**, then close cleanly and the client reconnects.
+
+Moving to a plan with longer functions is a three-line change: raise
+`MAX_EXAM_ITEMS`, raise `maxDuration` in the route handlers to match, and raise
+`SSE_MAX_LIFETIME_MS`. Raising `MAX_EXAM_ITEMS` alone produces timeouts rather
+than larger exams.
 
 ### Startup validation
 

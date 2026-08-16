@@ -6,6 +6,7 @@ import { aiLimiter, recordUsage } from '@/lib/rate-limit';
 import { createPredictedPaper } from '@/lib/predicted-paper';
 import type { MockExamPlan } from '@/types/ai';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
+import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic';
  * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
  * regardless of what the request is doing. Generates and validates a whole paper: several LLM calls per request.
  */
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 const MAX_CANDIDATES = 60;
 
@@ -134,7 +135,15 @@ export async function POST(req: Request) {
       preview: q.content.slice(0, 220),
     }));
 
-    const targetCount = questionCount ?? Math.max(4, Math.min(20, Math.round(totalMarks / 6)));
+    // `questionCount` comes straight from the request body. Clamp it to what a
+    // submission can actually grade inside one function invocation — an exam
+    // larger than MAX_EXAM_ITEMS would generate fine and then be impossible to
+    // submit, which is a much worse failure than a smaller paper.
+    const requestedCount =
+      typeof questionCount === 'number' && Number.isFinite(questionCount)
+        ? Math.round(questionCount)
+        : Math.max(4, Math.min(20, Math.round(totalMarks / 6)));
+    const targetCount = Math.max(1, Math.min(MAX_EXAM_ITEMS, requestedCount));
 
     const userContent = `Design a mock exam paper.
 
@@ -176,6 +185,10 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
     let order = 0;
     for (const section of plan.sections ?? []) {
       for (const qid of section.questionIds ?? []) {
+        // `targetCount` is only a hint in the prompt — the model routinely
+        // returns more. Enforce the ceiling here, or the exam is created at a
+        // size that can never be submitted.
+        if (flatItems.length >= MAX_EXAM_ITEMS) break;
         if (pool.some((p) => p.id === qid)) {
           flatItems.push({
             questionId: qid,
@@ -184,6 +197,7 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
           });
         }
       }
+      if (flatItems.length >= MAX_EXAM_ITEMS) break;
     }
 
     if (flatItems.length === 0) {

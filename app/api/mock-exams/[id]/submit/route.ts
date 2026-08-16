@@ -6,28 +6,17 @@ import { aiLimiter, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, isVisionConfigured } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
+import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * This is the longest-running request the app makes. Vercel's default cap is
- * 60s (Hobby) / 300s (Pro); without this the platform kills the invocation
- * mid-grading and the student loses the attempt. Requires a Pro plan — see the
- * note on MAX_GRADED_ITEMS if you are on Hobby.
+ * This is the longest-running request the app makes: without an explicit
+ * ceiling the platform kills the invocation mid-grading and the student loses
+ * the attempt. 60 is Vercel Hobby's maximum; raise it together with
+ * `MAX_EXAM_ITEMS` if you move to a plan that allows more.
  */
-export const maxDuration = 300;
-
-/**
- * Most marks a single submit will grade. Comfortably above a real paper
- * (a CAIE paper is well under 50 items) while bounding a crafted request.
- *
- * On a 60s function limit this must come down to roughly 12, or a full paper
- * cannot finish inside the invocation.
- */
-const MAX_GRADED_ITEMS = 60;
-
-/** Concurrent grading calls. See the comment at the grading loop below. */
-const GRADING_CONCURRENCY = 4;
+export const maxDuration = 60;
 
 /**
  * Map over `items`, keeping at most `limit` calls in flight, preserving order.
@@ -107,10 +96,10 @@ export async function POST(
       orderBy: { order: 'asc' },
       // Hard ceiling on work per request. Grading runs one LLM completion per
       // item (plus an OCR call for any attached photo), so without a cap a
-      // single submit is unbounded spend — and exams are generated from a
-      // user-supplied item count. The per-minute limiter above throttles
-      // repeats; this bounds one request.
-      take: MAX_GRADED_ITEMS,
+      // single submit is unbounded spend. Generation clamps to the same
+      // constant, so in practice this never truncates a real exam — it is the
+      // backstop for rows created before the clamp existed, or by hand.
+      take: MAX_EXAM_ITEMS,
     });
 
     // Also pre-fetch markschemes for each item
