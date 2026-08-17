@@ -59,12 +59,46 @@ const IMAGE_MIME_BY_EXT: Record<string, string> = {
   ".gif": "image/gif",
 };
 
-type RetryOpts = { maxRetries?: number; delays?: number[] };
+type RetryOpts = { maxRetries?: number; delays?: number[]; budgetMs?: number };
 
 const DEFAULT_DELAYS = [2, 5, 12, 20, 30];
 
+/**
+ * Wall-clock ceiling for a whole transcription, retries and backoff included.
+ *
+ * The retry ladder above sleeps for up to 69 seconds before it gives up, and
+ * `fetch` has no timeout of its own — so a rate-limited or stalled vision API
+ * could outlast the entire serverless invocation. That matters most in
+ * `/api/mock-exams/[id]/submit`, where OCR runs *per item* ahead of grading: a
+ * flapping vision backend would consume the whole 60s budget on sleeping and
+ * take every question's grading down with it. OCR is a best-effort enhancement
+ * (callers fall back to text-only grading on `null`), so it must fail fast.
+ */
+const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
+
+/** Per-request timeout; never longer than what is left of the budget. */
+const VISION_REQUEST_TIMEOUT_MS = 15_000;
+
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * How long this attempt may take, and whether it is worth starting at all.
+ * Returns null once the budget is spent.
+ */
+function attemptTimeout(deadline: number): number | null {
+  const remaining = deadline - Date.now();
+  if (remaining < 1_000) return null;
+  return Math.min(VISION_REQUEST_TIMEOUT_MS, remaining);
+}
+
+/** Back off, but never past the deadline. Returns false if there is no time left. */
+async function backoff(deadline: number, seconds: number): Promise<boolean> {
+  const remaining = deadline - Date.now();
+  if (remaining < 2_000) return false;
+  await sleep(Math.min(seconds * 1000, remaining - 1_000));
+  return true;
 }
 
 /**
@@ -147,7 +181,11 @@ async function callSiliconFlow(
     max_tokens: 2048,
   };
 
+  const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const timeout = attemptTimeout(deadline);
+    if (timeout === null) return null;
     try {
       const res = await fetch(SF_BASE, {
         method: "POST",
@@ -156,11 +194,11 @@ async function callSiliconFlow(
           Authorization: `Bearer ${SILICONFLOW_KEY}`,
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(timeout),
       });
 
       if (res.status === 429 || res.status >= 500) {
-        const delay = delays[Math.min(attempt, delays.length - 1)] * 1000;
-        await sleep(delay);
+        if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
         continue;
       }
 
@@ -175,8 +213,7 @@ async function callSiliconFlow(
       if (!content || !content.trim()) return null;
       return content.trim();
     } catch {
-      const delay = delays[Math.min(attempt, delays.length - 1)] * 1000;
-      await sleep(delay);
+      if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
     }
   }
   return null;
@@ -214,17 +251,21 @@ async function callGemini(
 
   const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
 
+  const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const timeout = attemptTimeout(deadline);
+    if (timeout === null) return null;
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(timeout),
       });
 
       if (res.status === 429 || res.status >= 500) {
-        const delay = delays[Math.min(attempt, delays.length - 1)] * 1000;
-        await sleep(delay);
+        if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
         continue;
       }
 
@@ -239,8 +280,7 @@ async function callGemini(
       if (!text || !text.trim()) return null;
       return text.trim();
     } catch {
-      const delay = delays[Math.min(attempt, delays.length - 1)] * 1000;
-      await sleep(delay);
+      if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
     }
   }
   return null;

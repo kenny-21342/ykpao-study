@@ -9,6 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Prisma CLI operations need a session-capable connection. In production
+    // DATABASE_URL points at Neon's transaction pooler, which cannot support
+    // migrations or LISTEN/NOTIFY; runtime queries still use DATABASE_URL in
+    // lib/prisma.ts.
+    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });

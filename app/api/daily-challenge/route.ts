@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAIConfigured, chatJSON } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,9 +127,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Grading a daily challenge is an LLM call.
-  if (!(await aiLimiter.check(`daily-challenge:${user.id}`))) {
+  const allowance = await checkAiAllowance(user.id);
+  if (!allowance.allowed) {
     return NextResponse.json(
-      { error: 'Too many attempts. Please wait a moment and try again.' },
+      { error: allowance.message },
       { status: 429 }
     );
   }

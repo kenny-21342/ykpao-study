@@ -63,7 +63,7 @@ const githubConfig =
 // `httpOptions` is a valid next-auth runtime option that is missing from the
 // v4 type defs, hence the final cast.
 export const authOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma) as unknown as NonNullable<NextAuthOptions['adapter']>,
   // Secret for JWT signing/encryption. In production this MUST be set via
   // NEXTAUTH_SECRET (see .env.example).
   secret: authSecret,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Lock, Sparkles, KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
 
 /**
@@ -24,23 +24,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
   const [status, setStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
   const konamiBuffer = useRef<string[]>([]);
 
-  // Listen for the Konami sequence globally.
-  useEffect(() => {
-    const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-    const onKey = (e: KeyboardEvent) => {
-      konamiBuffer.current.push(e.key === 'B' ? 'b' : e.key === 'A' ? 'a' : e.key);
-      if (konamiBuffer.current.length > KONAMI.length) konamiBuffer.current.shift();
-      if (konamiBuffer.current.join(',') === KONAMI.join(',')) {
-        void submit('konami');
-        konamiBuffer.current = [];
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const submit = async (codeOrPassphrase: string) => {
+  const submit = useCallback(async (codeOrPassphrase: string) => {
     setBusy(true);
     setStatus('idle');
     try {
@@ -62,13 +46,26 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
         setStatus('fail');
       }
     } catch {
-      // A network failure previously threw straight past the status update,
-      // so the widget just stopped responding.
       setStatus('fail');
     } finally {
       setBusy(false);
     }
-  };
+  }, [onUnlocked]);
+
+  // Listen for the Konami sequence globally.
+  useEffect(() => {
+    const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    const onKey = (e: KeyboardEvent) => {
+      konamiBuffer.current.push(e.key === 'B' ? 'b' : e.key === 'A' ? 'a' : e.key);
+      if (konamiBuffer.current.length > KONAMI.length) konamiBuffer.current.shift();
+      if (konamiBuffer.current.join(',') === KONAMI.join(',')) {
+        void submit('konami');
+        konamiBuffer.current = [];
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [submit]);
 
   return (
     <>

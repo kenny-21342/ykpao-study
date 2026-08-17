@@ -59,7 +59,9 @@ export default function UsagePage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
-    else if (status === 'authenticated') load();
+    if (status !== 'authenticated') return;
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [status, load, router]);
 
   if (status === 'loading' || loading) {

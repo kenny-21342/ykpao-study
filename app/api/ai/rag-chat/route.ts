@@ -5,7 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat, isAIConfigured } from '@/lib/ai';
 import { retrieveContext } from '@/lib/rag';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
 import type { IntakeQuestion } from '@/lib/copilot-types';
 import {
@@ -34,6 +34,14 @@ export const dynamic = 'force-dynamic';
  * training data alone. RAG grounds answers in the student's actual textbook,
  * notes, and exam materials.
  */
+
+/**
+ * Retrieval plus one LLM completion runs well past the platform's default
+ * function limit; without this the invocation is killed part-way and the
+ * student's question fails with an opaque gateway error. 60s is the same
+ * ceiling every other AI route declares.
+ */
+export const maxDuration = 60;
 
 const Body = z.object({
   message: z.string().min(1).max(2000),
@@ -185,8 +193,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (!(await aiLimiter.check(user.id))) {
-    return NextResponse.json({ error: 'Too many AI requests. Try again shortly.', conversationId: conversation.id }, { status: 429 });
+  const allowance = await checkAiAllowance(user.id);
+  if (!allowance.allowed) {
+    return NextResponse.json({ error: allowance.message, conversationId: conversation.id }, { status: 429 });
   }
   if (!isAIConfigured()) {
     return NextResponse.json(

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { renderLatexSpans, renderTeX, renderMarkdownWithMath } from '@/lib/latex';
+import { renderLatexSpans, renderMathTextNodes, renderMarkdownWithMath } from '@/lib/latex';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 
 /**
@@ -59,52 +59,9 @@ function normalizeContent(src: string | undefined | null): string {
   root.innerHTML = s;
   renderLatexSpans(root);
   renderMathTextNodes(root);
-  return root.innerHTML;
-}
-
-// Replace $$...$$ and $...$ in a plain string with KaTeX HTML spans.
-function renderMathInString(s: string): string {
-  let out = s;
-  out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_m, latex) =>
-    wrapMath(renderTeX(latex.trim(), true)),
-  );
-  out = out.replace(/\$([^\$\n]+?)\$/g, (_m, latex) =>
-    wrapMath(renderTeX(latex.trim(), false)),
-  );
-  return out;
-}
-
-function wrapMath(html: string): string {
-  return `<span class="inline-math">${html}</span>`;
-}
-
-function renderMathTextNodes(root: HTMLElement) {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      let parent: Node | null = node.parentNode;
-      while (parent && parent !== root) {
-        if (parent.nodeName === 'CODE' || parent.nodeName === 'PRE') {
-          return NodeFilter.FILTER_REJECT;
-        }
-        parent = parent.parentNode;
-      }
-      return node.nodeValue?.includes('$')
-        ? NodeFilter.FILTER_ACCEPT
-        : NodeFilter.FILTER_REJECT;
-    },
-  });
-
-  const targets: Text[] = [];
-  let node: Node | null;
-  while ((node = walker.nextNode())) targets.push(node as Text);
-
-  for (const textNode of targets) {
-    const original = textNode.nodeValue ?? '';
-    const rendered = renderMathInString(original);
-    if (rendered === original) continue;
-
-    const span = document.createElement('span');
-    span.innerHTML = rendered;
-    textNode.replaceWith(span);
-  }
+  // KaTeX output is generated from validated delimiters, but sanitize the
+  // final string as a defence-in-depth boundary before it reaches React's
+  // `dangerouslySetInnerHTML`. This also protects future transforms added to
+  // this normalisation pipeline.
+  return sanitizeHtml(root.innerHTML);
 }

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { transcribeHandwriting, isVisionConfigured, getVisionBackend } from '@/lib/vision';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +36,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!(await aiLimiter.check(`practice-ocr:${user.id}`))) {
+    const allowance = await checkAiAllowance(user.id);
+    if (!allowance.allowed) {
       return NextResponse.json(
-        { error: 'Too many AI requests. Please wait a moment and try again.' },
+        { error: allowance.message },
         { status: 429 }
       );
     }
