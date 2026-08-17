@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, isVisionConfigured } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
@@ -31,9 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!(await aiLimiter.check(`practice-grade:${user.id}`))) {
+    const allowance = await checkAiAllowance(user.id, { requests: 2 });
+    if (!allowance.allowed) {
       return NextResponse.json(
-        { error: 'Too many AI requests. Please wait a moment and try again.' },
+        { error: allowance.message },
         { status: 429 }
       );
     }

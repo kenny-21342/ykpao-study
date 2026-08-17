@@ -3,8 +3,7 @@
 import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { getStroke } from 'perfect-freehand';
 import {
-  Pencil, Eraser, Type, Trash2, Undo2, Redo2, Download, Upload,
-  Palette, Minus, Plus,
+  Pencil, Eraser, Type, Trash2, Undo2, Redo2, Upload,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -74,6 +73,33 @@ function strokeToPath(stroke: Stroke): string {
   );
 }
 
+function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
+  if (stroke.points.length < 2) return;
+  if (stroke.tool === 'eraser') {
+    // Eraser: use destination-out to actually erase
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+    ctx.lineWidth = stroke.size;
+    ctx.beginPath();
+    ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
+    for (let i = 1; i < stroke.points.length; i++) {
+      ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    // Pen: use perfect-freehand for natural strokes
+    const path = strokeToPath(stroke);
+    if (path) {
+      ctx.save();
+      ctx.fillStyle = stroke.color;
+      ctx.fill(new Path2D(path));
+      ctx.restore();
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -91,17 +117,32 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // Drawing state
     const strokesRef = useRef<Stroke[]>([]);
     const redoStackRef = useRef<Stroke[]>([]);
-    const textBoxesRef = useRef<TextBox[]>([]);
+    const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
     const currentStrokeRef = useRef<Stroke | null>(null);
     const isDrawingRef = useRef(false);
-    const activeTextBoxRef = useRef<TextBox | null>(null);
-
-    // Render state
-    const [, forceRender] = useState(0);
-    const rerender = useCallback(() => forceRender((n) => n + 1), []);
+    const nextTextBoxIdRef = useRef(0);
 
     // Uploaded background image
     const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+
+    // -----------------------------------------------------------------------
+    // Rendering
+    // -----------------------------------------------------------------------
+
+    const redraw = useCallback(() => {
+      const ctx = ctxRef.current;
+      const canvas = canvasRef.current;
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, width, height);
+
+      if (bgImage) {
+        ctx.drawImage(bgImage, 0, 0, width, height);
+      }
+
+      for (const stroke of strokesRef.current) {
+        drawStroke(ctx, stroke);
+      }
+    }, [bgImage, height, width]);
 
     // -----------------------------------------------------------------------
     // Canvas setup
@@ -123,8 +164,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         ctxRef.current = ctx;
       }
       redraw();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [width, height]);
+    }, [width, height, redraw]);
 
     // -----------------------------------------------------------------------
     // Drawing logic
@@ -175,37 +215,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       redraw();
     };
 
-    // -----------------------------------------------------------------------
-    // Rendering
-    // -----------------------------------------------------------------------
-
-    const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
-      if (stroke.points.length < 2) return;
-      if (stroke.tool === 'eraser') {
-        // Eraser: use destination-out to actually erase
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.strokeStyle = 'rgba(0,0,0,1)';
-        ctx.lineWidth = stroke.size;
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
-        for (let i = 1; i < stroke.points.length; i++) {
-          ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
-        }
-        ctx.stroke();
-        ctx.restore();
-      } else {
-        // Pen: use perfect-freehand for natural strokes
-        const path = strokeToPath(stroke);
-        if (path) {
-          ctx.save();
-          ctx.fillStyle = stroke.color;
-          ctx.fill(new Path2D(path));
-          ctx.restore();
-        }
-      }
-    };
-
     const drawCurrentStroke = () => {
       const ctx = ctxRef.current;
       const stroke = currentStrokeRef.current;
@@ -214,33 +223,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       drawStroke(ctx, stroke);
     };
 
-    const redraw = () => {
-      const ctx = ctxRef.current;
-      const canvas = canvasRef.current;
-      if (!ctx || !canvas) return;
-      // Clear
-      ctx.clearRect(0, 0, width, height);
-
-      // Draw background image if present
-      if (bgImage) {
-        ctx.drawImage(bgImage, 0, 0, width, height);
-      }
-
-      // Draw all committed strokes
-      for (const stroke of strokesRef.current) {
-        drawStroke(ctx, stroke);
-      }
-
-      rerender();
-    };
-
     // -----------------------------------------------------------------------
     // Text boxes (simple overlay)
     // -----------------------------------------------------------------------
 
     const createTextBox = (e: React.PointerEvent) => {
       const pos = getPointerPos(e);
-      const id = `tb-${Date.now()}`;
+      nextTextBoxIdRef.current += 1;
+      const id = `tb-${nextTextBoxIdRef.current}`;
       const tb: TextBox = {
         id,
         x: pos[0],
@@ -249,22 +239,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         color,
         fontSize: 16,
       };
-      textBoxesRef.current.push(tb);
-      activeTextBoxRef.current = tb;
-      rerender();
+      setTextBoxes((boxes) => [...boxes, tb]);
     };
 
     const updateTextBox = (id: string, text: string) => {
-      const tb = textBoxesRef.current.find((t) => t.id === id);
-      if (tb) {
-        tb.text = text;
-        rerender();
-      }
+      setTextBoxes((boxes) =>
+        boxes.map((box) => (box.id === id ? { ...box, text } : box)),
+      );
     };
 
     const deleteTextBox = (id: string) => {
-      textBoxesRef.current = textBoxesRef.current.filter((t) => t.id !== id);
-      rerender();
+      setTextBoxes((boxes) => boxes.filter((box) => box.id !== id));
     };
 
     // -----------------------------------------------------------------------
@@ -276,9 +261,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         const last = strokesRef.current.pop()!;
         redoStackRef.current.push(last);
         redraw();
-      } else if (textBoxesRef.current.length > 0) {
-        textBoxesRef.current.pop();
-        rerender();
+      } else if (textBoxes.length > 0) {
+        setTextBoxes((boxes) => boxes.slice(0, -1));
       }
     };
 
@@ -293,7 +277,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     const clearAll = () => {
       const hasWork =
         strokesRef.current.length > 0 ||
-        textBoxesRef.current.length > 0 ||
+        textBoxes.length > 0 ||
         bgImage !== null;
       // This wipes working a student may be part-way through writing, and the
       // canvas is not persisted anywhere, so an accidental click was
@@ -304,7 +288,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       }
       redoStackRef.current = [...strokesRef.current].reverse();
       strokesRef.current = [];
-      textBoxesRef.current = [];
+      setTextBoxes([]);
       setBgImage(null);
       redraw();
     };
@@ -343,7 +327,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       }
 
       // Text boxes
-      for (const tb of textBoxesRef.current) {
+      for (const tb of textBoxes) {
         if (tb.text) {
           tctx.fillStyle = tb.color;
           tctx.font = `${tb.fontSize}px sans-serif`;
@@ -355,7 +339,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       }
 
       return tmp.toDataURL('image/png');
-    }, [width, height, bgImage]);
+    }, [width, height, bgImage, textBoxes]);
 
     const handleSave = () => {
       const dataUrl = exportDataURL();
@@ -374,21 +358,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         const img = new Image();
         img.onload = () => {
           setBgImage(img);
-          redraw();
         };
         img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
-    };
-
-    // Download
-    const handleDownload = () => {
-      const dataUrl = exportDataURL();
-      if (!dataUrl) return;
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = 'drawing.png';
-      a.click();
     };
 
     // -----------------------------------------------------------------------
@@ -401,12 +374,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         const img = new Image();
         img.onload = () => {
           setBgImage(img);
-          redraw();
         };
         img.src = data;
       },
       clear: clearAll,
-      isEmpty: () => strokesRef.current.length === 0 && textBoxesRef.current.length === 0 && !bgImage,
+      isEmpty: () => strokesRef.current.length === 0 && textBoxes.length === 0 && !bgImage,
     }));
 
     // -----------------------------------------------------------------------
@@ -529,7 +501,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             style={{ width, height }}
           />
           {/* Text boxes overlay */}
-          {textBoxesRef.current.map((tb) => (
+          {textBoxes.map((tb) => (
             <textarea
               key={tb.id}
               value={tb.text}

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, isVisionConfigured } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
@@ -17,6 +17,18 @@ export const dynamic = 'force-dynamic';
  * `MAX_EXAM_ITEMS` if you move to a plan that allows more.
  */
 export const maxDuration = 60;
+
+/**
+ * Per-item wall-clock budget for one grading call.
+ *
+ * Derived from the same arithmetic as MAX_EXAM_ITEMS: the items are graded in
+ * `ceil(MAX_EXAM_ITEMS / GRADING_CONCURRENCY)` sequential waves, and the whole
+ * submission — waves, OCR, and the database writes — has to land inside
+ * `maxDuration`. Reserve a slice of the invocation for everything that is not
+ * an LLM call, then split what remains across the waves.
+ */
+const GRADING_WAVES = Math.ceil(MAX_EXAM_ITEMS / GRADING_CONCURRENCY);
+const GRADING_BUDGET_MS = Math.floor(((maxDuration - 12) * 1000) / GRADING_WAVES);
 
 /**
  * Map over `items`, keeping at most `limit` calls in flight, preserving order.
@@ -56,9 +68,10 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!(await aiLimiter.check(`mock-exam-submit:${user.id}`))) {
+    const allowance = await checkAiAllowance(user.id, { requests: MAX_EXAM_ITEMS });
+    if (!allowance.allowed) {
       return NextResponse.json(
-        { error: 'Too many AI requests. Please wait a moment and try again.' },
+        { error: allowance.message },
         { status: 429 }
       );
     }
@@ -218,7 +231,18 @@ export async function POST(
   ${answer}`,
               },
             ],
-            { temperature: 0.2, maxTokens: 1200 }
+            {
+              temperature: 0.2,
+              maxTokens: 1200,
+              // Grading fans out: MAX_EXAM_ITEMS items at GRADING_CONCURRENCY
+              // means ceil(items/concurrency) sequential waves inside one 60s
+              // invocation. The default per-call budget in lib/ai.ts assumes a
+              // lone request, so give each item its share instead — one slow
+              // upstream call must not consume the budget for everything after
+              // it and take the whole submission down with it.
+              budgetMs: GRADING_BUDGET_MS,
+              maxAttempts: 1,
+            }
           );
 
           const score = Math.max(0, Math.min(max, Number(grade.score) || 0));
@@ -283,6 +307,30 @@ export async function POST(
           // One item failing to grade must not fail the whole submission — the
           // student's other answers are already persisted.
           console.error(`Failed to grade item ${item.id}:`, err);
+          // ...but the answer itself must still survive. This used to return
+          // without writing anything, so a transient upstream failure threw
+          // away work the student had already typed, and the item came back
+          // looking unattempted. Persist it as `ungraded` (the same state the
+          // practice route uses) so it can be reviewed or re-graded later.
+          try {
+            await prisma.mockExamItem.update({
+              where: { id: item.id },
+              data: {
+                answer,
+                score: null,
+                isCorrect: null,
+                explanation:
+                  'Automatic marking was unavailable for this question. Your answer has been saved — compare it against the mark scheme, or resubmit later.',
+                modelAnswer: markscheme,
+                gradingStatus: 'ungraded',
+                gradingSourceId: markschemeId,
+                answerImageUrl,
+                attemptedAt: new Date(),
+              },
+            });
+          } catch (persistErr) {
+            console.error(`Failed to persist ungraded item ${item.id}:`, persistErr);
+          }
           return 0;
         }
       }

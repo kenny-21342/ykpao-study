@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile, readdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Tests for the counter semantics of the Postgres-backed limiter in
@@ -16,6 +19,8 @@ import { test } from 'node:test';
  */
 
 type Row = { count: number; resetAt: number };
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Mirror of the SQL upsert: returns the new row state for this request. */
 function windowDecision(
@@ -80,4 +85,51 @@ test('exactly at resetAt the window is treated as expired', () => {
   const first = windowDecision(undefined, 1000, intervalMs);
   const atBoundary = windowDecision(first, first.resetAt, intervalMs);
   assert.equal(atBoundary.count, 1);
+});
+
+test('monthly AI reservations are atomic and fail closed at the dollar cap', async () => {
+  const src = await readFile(join(root, 'lib/rate-limit.ts'), 'utf8');
+  assert.match(src, /AI_MONTHLY_USER_SPEND_LIMIT_USD/);
+  assert.match(src, /ai-spend:\$\{month\}:\$\{userId\}/);
+  assert.match(src, /ON CONFLICT \("key"\) DO UPDATE/);
+  assert.match(
+    src,
+    /WHERE rate_limits\."resetAt" <= now\(\)[\s\S]*rate_limits\."count" \+ EXCLUDED\."count" <= \$\{capMicroUsd\}/,
+    'the reservation update must refuse to cross the cap',
+  );
+  assert.match(src, /return 'unavailable'/, 'a broken budget backend must fail closed');
+});
+
+test('every paid AI route checks the shared per-user allowance', async () => {
+  const apiRoot = join(root, 'app/api');
+  const routes: string[] = [];
+
+  async function walk(dir: string) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.name === 'route.ts') routes.push(full);
+    }
+  }
+  await walk(apiRoot);
+
+  const missing: string[] = [];
+  for (const file of routes) {
+    const src = await readFile(file, 'utf8');
+    const callsPaidAi =
+      /from ['"]@\/lib\/ai['"]/.test(src) && /\b(chat|chatJSON)\s*[<(]/.test(src);
+    if (callsPaidAi && !/\bcheckAiAllowance\s*\(/.test(src)) {
+      missing.push(file.slice(root.length + 1));
+    }
+  }
+
+  assert.deepEqual(missing, [], `AI routes without the spend guard: ${missing.join(', ')}`);
+});
+
+test('login and signup keep both IP and account throttles on durable limiters', async () => {
+  const token = await readFile(join(root, 'app/api/auth/token/route.ts'), 'utf8');
+  const signup = await readFile(join(root, 'app/api/auth/signup/route.ts'), 'utf8');
+  assert.match(token, /strictLimiter\.check\(`token:\$\{ip\}`\)/);
+  assert.match(token, /strictLimiter\.check\(`token-account:\$\{parsed\.email\.toLowerCase\(\)\}`\)/);
+  assert.match(signup, /strictLimiter\.check\(`signup:\$\{ip\}`\)/);
 });

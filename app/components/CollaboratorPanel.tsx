@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Users, UserPlus, Trash2, X, Loader2, Crown, Pencil, Eye, Mail,
+  Users, UserPlus, Trash2, Loader2, Crown, Pencil, Eye, Mail,
 } from 'lucide-react';
 
 type User = { id: string; name: string | null; email: string; image: string | null };
@@ -41,7 +41,8 @@ export default function CollaboratorPanel({ noteId }: Props) {
   }, [noteId]);
 
   useEffect(() => {
-    load();
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const invite = async () => {

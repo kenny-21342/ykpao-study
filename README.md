@@ -181,10 +181,10 @@ handlers (`app/uploads/[...path]/route.ts` and siblings) that resolve through
 the object store. In development the static file under `public/` still wins, so
 nothing changes locally.
 
-> **Access control:** `/uploads/**` is readable by anyone holding the URL, which
-> is exactly what the static `public/uploads/` directory did before. Filenames
-> are UUIDs, so they are unguessable, but that is obscurity rather than a
-> permission check. Gating it on a session is a sensible follow-up.
+> **Access control:** `/uploads/**` requires an authenticated session. Uploads
+> contain student work, so UUID filenames are not treated as a permission
+> check. The S3-backed handler redirects an authenticated request to a
+> short-lived signed URL; the local driver streams the object directly.
 
 ### Rate limiting
 
@@ -196,6 +196,20 @@ did nothing.
 **Run `prisma migrate deploy` before deploying the code that uses it.** If the
 table is missing the limiter logs a loud error and allows the request rather
 than locking every user out — but until you migrate, limits are not enforced.
+
+### Monitoring and backups
+
+The root layout includes Vercel Web Analytics and Speed Insights. Enable both
+for the Vercel project (the project settings are already enabled) so page views
+and Web Vitals are collected after the first deployment. `GET /api/health` is
+the unauthenticated uptime probe, and `instrumentation.ts` emits a consistent
+`[request-error]` log record for server-side failures.
+
+An independent nightly PostgreSQL backup workflow is ready at
+`.github/workflows/neon-backup.yml`. It requires the direct production database
+URL and private S3-compatible backup credentials as GitHub secrets. See
+`docs/PRODUCTION_OPERATIONS.md` for the exact secret names, Neon snapshot
+schedule, retention, and restore test required before launch.
 
 ### Realtime collaboration (SSE)
 

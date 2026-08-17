@@ -173,7 +173,8 @@ export default function StudyCoach({
   const [selectedSubject, setSelectedSubject] = useState('all');
 
   useEffect(() => {
-    setView(initialView);
+    const timer = window.setTimeout(() => setView(initialView), 0);
+    return () => window.clearTimeout(timer);
   }, [initialView]);
 
   const load = useCallback(async () => {
@@ -205,8 +206,10 @@ export default function StudyCoach({
   }, [status]);
 
   // Initial remote-data synchronization for this client workspace.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   const updateTask = async (id: string, taskStatus: 'pending' | 'completed' | 'skipped') => {
     setBusy(id);
@@ -561,7 +564,10 @@ function DeckBrowser({ onOpenQuestion }: { onOpenQuestion: (id: number) => void 
     setLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   const subjects = useMemo(() => [...new Set(cards.map((c) => c.subject))].sort(), [cards]);
   const filtered = filterSubject === 'all' ? cards : cards.filter((c) => c.subject === filterSubject);

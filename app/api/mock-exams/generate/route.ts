@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS, DeepSeekError } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createPredictedPaper } from '@/lib/predicted-paper';
 import type { MockExamPlan } from '@/types/ai';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
@@ -25,9 +25,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!(await aiLimiter.check(`mock-exam-generate:${user.id}`))) {
+    const allowance = await checkAiAllowance(user.id);
+    if (!allowance.allowed) {
       return NextResponse.json(
-        { error: 'Too many AI requests. Please wait a moment and try again.' },
+        { error: allowance.message },
         { status: 429 }
       );
     }

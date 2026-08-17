@@ -1,0 +1,82 @@
+name: Neon database backup
+
+on:
+  # Keep an independent copy outside Neon's point-in-time history window.
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neon-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEON_DIRECT_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
+    steps:
+      - name: Validate backup configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            NEON_DIRECT_DATABASE_URL \
+            BACKUP_S3_BUCKET \
+            BACKUP_S3_ACCESS_KEY_ID \
+            BACKUP_S3_SECRET_ACCESS_KEY \
+            BACKUP_S3_REGION; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required repository secret: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Dump and verify the database
+        id: dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          file="ykpao-study-${stamp}.dump"
+          # Neon currently runs PostgreSQL 18; use the matching client so
+          # pg_dump can read the server without a major-version mismatch.
+          docker run --rm \
+            -e NEON_DIRECT_DATABASE_URL \
+            -v "$RUNNER_TEMP:/backup" \
+            postgres:18-alpine \
+            sh -ec 'pg_dump --format=custom --no-owner --no-privileges \
+              --dbname="$NEON_DIRECT_DATABASE_URL" --file="/backup/'"$file"'"'
+          docker run --rm \
+            -v "$RUNNER_TEMP:/backup" \
+            postgres:18-alpine \
+            pg_restore --list "/backup/$file" >/dev/null
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          endpoint_args=()
+          if [[ -n "${BACKUP_S3_ENDPOINT:-}" ]]; then
+            endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          fi
+          aws configure set aws_access_key_id "$BACKUP_S3_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
+          aws configure set region "$BACKUP_S3_REGION"
+          aws s3 cp \
+            "$RUNNER_TEMP/${{ steps.dump.outputs.file }}" \
+            "s3://$BACKUP_S3_BUCKET/$prefix/${{ steps.dump.outputs.file }}" \
+            "${endpoint_args[@]}" \
+            --only-show-errors

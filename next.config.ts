@@ -70,6 +70,7 @@ const CSP_WITH_STORAGE = storageOrigin
   : CONTENT_SECURITY_POLICY_REPORT_ONLY;
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['192.168.1.101'],
   // Don't advertise the framework version to attackers scanning for CVEs.
   poweredByHeader: false,
 

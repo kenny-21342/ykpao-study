@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat, isAIConfigured } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +28,8 @@ const LEVEL_RULES: Record<number, string> = {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!(await aiLimiter.check(user.id))) return NextResponse.json({ error: 'Too many AI requests. Try again shortly.' }, { status: 429 });
+  const allowance = await checkAiAllowance(user.id);
+  if (!allowance.allowed) return NextResponse.json({ error: allowance.message }, { status: 429 });
 
   let body: z.infer<typeof HintBody>;
   try {

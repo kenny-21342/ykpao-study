@@ -3,10 +3,18 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import type { GradeResult } from '@/types/ai';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Grading is one LLM completion, which routinely runs well past the platform's
+ * default function limit. Without this declaration the invocation is killed
+ * after a few seconds and the student sees a gateway error instead of a mark —
+ * the same 60s ceiling every other AI route declares.
+ */
+export const maxDuration = 60;
 
 const Body = z.object({
   question: z.string().min(1).max(8000),
@@ -29,9 +37,10 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!(await aiLimiter.check(session.user.id))) {
+  const allowance = await checkAiAllowance(session.user.id);
+  if (!allowance.allowed) {
     return NextResponse.json(
-      { error: 'Rate limit exceeded. Please slow down.' },
+      { error: allowance.message },
       { status: 429 }
     );
   }

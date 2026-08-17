@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { chat, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
-import { aiLimiter, recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,9 +48,10 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!(await aiLimiter.check(session.user.id))) {
+  const allowance = await checkAiAllowance(session.user.id);
+  if (!allowance.allowed) {
     return NextResponse.json(
-      { error: 'Rate limit exceeded. Please slow down.' },
+      { error: allowance.message },
       { status: 429 }
     );
   }

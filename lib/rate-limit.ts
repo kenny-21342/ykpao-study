@@ -134,6 +134,131 @@ export const aiLimiter = rateLimit({ intervalMs: 60_000, max: 20 });
 // attempts per minute per IP (and, for login, per account).
 export const strictLimiter = rateLimit({ intervalMs: 60_000, max: 5 });
 
+type AiAllowance =
+  | { allowed: true }
+  | { allowed: false; reason: 'rate' | 'budget' | 'unavailable'; message: string };
+
+type AiAllowanceOptions = {
+  /** Number of paid provider calls this request can fan out into. */
+  requests?: number;
+};
+
+const MICRO_USD_PER_USD = 1_000_000;
+
+function positiveNumber(raw: string | undefined, fallback: number): number {
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/**
+ * Hard per-user monthly ceiling, expressed in USD.
+ *
+ * The reservation is intentionally conservative: reserve before calling the
+ * provider and never refund the difference. That makes the ceiling safe under
+ * concurrent serverless requests, whereas summing UsageRecord rows after the
+ * provider responds can always overshoot.
+ */
+const AI_MONTHLY_USER_SPEND_LIMIT_USD = positiveNumber(
+  process.env.AI_MONTHLY_USER_SPEND_LIMIT_USD,
+  5,
+);
+const AI_REQUEST_RESERVE_USD = positiveNumber(
+  process.env.AI_REQUEST_RESERVE_USD,
+  0.02,
+);
+
+function startOfNextUtcMonth(now = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+}
+
+async function reserveMonthlyAiSpend(
+  userId: string,
+  requests: number,
+): Promise<'allowed' | 'budget' | 'unavailable'> {
+  const now = new Date();
+  const safeRequests = Math.max(1, Math.min(100, Math.ceil(requests)));
+  const reserveMicroUsd = Math.max(
+    1,
+    Math.ceil(AI_REQUEST_RESERVE_USD * safeRequests * MICRO_USD_PER_USD),
+  );
+  const capMicroUsd = Math.max(
+    1,
+    Math.floor(AI_MONTHLY_USER_SPEND_LIMIT_USD * MICRO_USD_PER_USD),
+  );
+  if (reserveMicroUsd > capMicroUsd) return 'budget';
+
+  const resetAt = startOfNextUtcMonth(now);
+  const month = now.toISOString().slice(0, 7);
+  const key = `ai-spend:${month}:${userId}`;
+
+  try {
+    // The WHERE clause is the hard-cap guarantee: when an open window lacks
+    // enough budget, Postgres performs no update and RETURNING yields no row.
+    // Competing invocations serialize on this key, so they cannot both reserve
+    // the same remaining allowance.
+    const rows = await prisma.$queryRaw<Array<{ count: number }>>`
+      INSERT INTO rate_limits ("key", "count", "resetAt")
+      VALUES (${key}, ${reserveMicroUsd}, ${resetAt})
+      ON CONFLICT ("key") DO UPDATE SET
+        "count" = CASE
+          WHEN rate_limits."resetAt" <= now() THEN EXCLUDED."count"
+          ELSE rate_limits."count" + EXCLUDED."count"
+        END,
+        "resetAt" = CASE
+          WHEN rate_limits."resetAt" <= now() THEN EXCLUDED."resetAt"
+          ELSE rate_limits."resetAt"
+        END
+      WHERE rate_limits."resetAt" <= now()
+         OR rate_limits."count" + EXCLUDED."count" <= ${capMicroUsd}
+      RETURNING "count"
+    `;
+    return rows.length === 1 ? 'allowed' : 'budget';
+  } catch (error) {
+    console.error('[ai-spend-limit] failed to reserve budget for user %s:', userId, error);
+    // Paid operations fail closed when their durable spend control cannot be
+    // verified. A database outage prevents the surrounding route from doing
+    // useful work anyway, and allowing the provider call would remove the cap.
+    return 'unavailable';
+  }
+}
+
+/**
+ * Check both AI controls before a paid provider call.
+ *
+ * The per-minute key is deliberately feature-agnostic. Previously callers
+ * used keys such as `mock-exam-generate:<id>` and `practice-grade:<id>`, which
+ * multiplied one student's allowance by the number of endpoints they used.
+ */
+export async function checkAiAllowance(
+  userId: string,
+  options: AiAllowanceOptions = {},
+): Promise<AiAllowance> {
+  if (!(await aiLimiter.check(`ai-minute:${userId}`))) {
+    return {
+      allowed: false,
+      reason: 'rate',
+      message: 'Too many AI requests. Please wait a minute and try again.',
+    };
+  }
+
+  const monthly = await reserveMonthlyAiSpend(userId, options.requests ?? 1);
+  if (monthly === 'budget') {
+    return {
+      allowed: false,
+      reason: 'budget',
+      message: `Your monthly AI allowance has been reached. It resets on ${startOfNextUtcMonth().toISOString().slice(0, 10)}.`,
+    };
+  }
+  if (monthly === 'unavailable') {
+    return {
+      allowed: false,
+      reason: 'unavailable',
+      message: 'AI is temporarily unavailable because usage controls could not be verified. Please try again.',
+    };
+  }
+  return { allowed: true };
+}
+
 /**
  * Record an AI usage event for the Usage & API Credits dashboard.
  * Never throws — usage logging is best-effort.

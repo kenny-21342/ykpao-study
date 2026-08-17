@@ -145,3 +145,66 @@ export function renderLatexSpans(root: HTMLElement) {
     el.setAttribute('data-katex-rendered', '1');
   });
 }
+
+/**
+ * Replace `$$...$$` / `$...$` in a **text node's value** with KaTeX HTML.
+ *
+ * The input is text, not markup: by the time we see it the sanitiser has
+ * already entity-escaped anything a student typed that looked like a tag, and
+ * reading `.nodeValue` decodes those entities back. Since the result is
+ * assigned to `innerHTML`, every non-math span must be re-escaped — otherwise a
+ * post containing the literal text `<img src=x onerror=…>` plus any `$…$`
+ * reconstitutes that tag as a live element, which is stored XSS straight past
+ * DOMPurify.
+ */
+export function renderMathInText(text: string): string {
+  const pattern = /\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;
+  let out = '';
+  let last = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    out += escapeHtml(text.slice(last, match.index));
+    const display = match[1] !== undefined;
+    const latex = (match[1] ?? match[2] ?? '').trim();
+    out += `<span class="inline-math">${renderTeX(latex, display)}</span>`;
+    last = match.index + match[0].length;
+  }
+  out += escapeHtml(text.slice(last));
+  return out;
+}
+
+/**
+ * Walk a (already sanitised) DOM tree and render `$...$` math found in text
+ * nodes, skipping `code`/`pre` where dollar signs are literal.
+ */
+export function renderMathTextNodes(root: HTMLElement) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      let parent: Node | null = node.parentNode;
+      while (parent && parent !== root) {
+        if (parent.nodeName === 'CODE' || parent.nodeName === 'PRE') {
+          return NodeFilter.FILTER_REJECT;
+        }
+        parent = parent.parentNode;
+      }
+      return node.nodeValue?.includes('$')
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    },
+  });
+
+  const targets: Text[] = [];
+  let node: Node | null;
+  while ((node = walker.nextNode())) targets.push(node as Text);
+
+  for (const textNode of targets) {
+    const original = textNode.nodeValue ?? '';
+    const rendered = renderMathInText(original);
+    if (rendered === escapeHtml(original)) continue;
+
+    const span = document.createElement('span');
+    span.innerHTML = rendered;
+    textNode.replaceWith(span);
+  }
+}

@@ -55,7 +55,10 @@ export default function CompetitionVault() {
     }
   }, [page, search, paperFilter, yearFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   // Debounce search input.
   useEffect(() => {
