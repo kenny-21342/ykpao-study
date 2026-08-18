@@ -1,6 +1,6 @@
-import { serveStoredObject } from '@/lib/storage/serve';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { serveProtectedAsset } from '@/lib/storage/protected-asset';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,9 +17,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return new Response('Unauthorized', { status: 401 });
-
   const { path } = await params;
-  return serveStoredObject(['uploads', ...path]);
+  return serveProtectedAsset('uploads', path, {
+    getSession: () => getServerSession(authOptions),
+  });
 }

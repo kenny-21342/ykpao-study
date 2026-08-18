@@ -181,10 +181,19 @@ handlers (`app/uploads/[...path]/route.ts` and siblings) that resolve through
 the object store. In development the static file under `public/` still wins, so
 nothing changes locally.
 
-> **Access control:** `/uploads/**` requires an authenticated session. Uploads
-> contain student work, so UUID filenames are not treated as a permission
-> check. The S3-backed handler redirects an authenticated request to a
-> short-lived signed URL; the local driver streams the object directly.
+> **Access control:** all three prefixes require an authenticated session,
+> enforced by `serveProtectedAsset()` in `lib/storage/protected-asset.ts`
+> before object storage is touched. Uploads contain student work, extracted
+> images are crops of copyrighted past papers, and STEP images are worked
+> solutions — none of that is public, and unguessable filenames are obscurity
+> rather than a permission check. The gate reads the JWT session only (no
+> database round trip), because one question page can pull dozens of diagrams;
+> the consequence is that a banned user's unexpired token still resolves
+> imagery, while every route that hands out *new* material still goes through
+> `getSessionUser()`. A denial is `401` with `Cache-Control: no-store`, so no
+> cache or service worker can retain it. The S3-backed handler then redirects
+> an authenticated request to a short-lived signed URL; the local driver
+> streams the object directly.
 
 ### Rate limiting
 
