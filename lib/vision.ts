@@ -2,9 +2,22 @@
  * Vision LLM client for transcribing handwritten student work to text.
  *
  * Mirrors the backend selection logic in pdf_extraction/lib/vision_client.py:
- *   - If SILICONFLOW_API_KEY is set  → SiliconFlow (OpenAI-compatible)
+ *   - If a SiliconFlow key is set    → SiliconFlow (OpenAI-compatible)
  *   - Else if GEMINI_API_KEY is set  → Gemini native API
  *   - Else throws
+ *
+ * There is one SiliconFlow account behind this project, but it was configured
+ * under two names: the web app reads SILICONFLOW_API_KEY, while the Python
+ * extraction scripts (scripts/v3-run-corpus-batch.py,
+ * scripts/v3-siliconflow-qwen3-vl-test.py) read V3_OPENAI_API_KEY — a generic
+ * name for what those scripts then pin to api.siliconflow.cn and Qwen3-VL.
+ * SILICONFLOW_API_KEY is the canonical name; V3_OPENAI_API_KEY is accepted as
+ * an alias so a deployment that only ever set the pipeline variable gets
+ * working handwriting OCR instead of a silent fallback to text-only grading.
+ *
+ * The alias is honoured only when the pipeline is actually pointed at
+ * SiliconFlow. If V3_OPENAI_CHAT_COMPLETIONS_URL names some other provider,
+ * that key belongs to that provider and must not be sent to SiliconFlow.
  *
  * Unlike the Python pipeline (which extracts structured JSON from PDF pages),
  * this module is purpose-built for one task: OCR a single image of a student's
@@ -12,10 +25,32 @@
  * grader. Returns null on failure so callers can fall back to text-only input.
  */
 
-const SILICONFLOW_KEY = process.env.SILICONFLOW_API_KEY || "";
-const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+/** Host every SiliconFlow request goes to; also what makes the alias safe. */
+const SILICONFLOW_HOST = "api.siliconflow.cn";
 
-const SF_BASE = "https://api.siliconflow.cn/v1/chat/completions";
+/**
+ * The SiliconFlow key, under either of its two names.
+ *
+ * Read on each call rather than at module load so that a process which
+ * populates the environment late (and the tests) sees the same answer the
+ * request path will.
+ */
+export function siliconflowKey(): string {
+  const direct = process.env.SILICONFLOW_API_KEY;
+  if (direct) return direct;
+
+  const pipelineEndpoint = process.env.V3_OPENAI_CHAT_COMPLETIONS_URL;
+  if (pipelineEndpoint && !pipelineEndpoint.includes(SILICONFLOW_HOST)) return "";
+
+  return process.env.V3_OPENAI_API_KEY || "";
+}
+
+/** Read lazily for the same reason as the SiliconFlow key above. */
+function geminiKey(): string {
+  return process.env.GEMINI_API_KEY || "";
+}
+
+const SF_BASE = `https://${SILICONFLOW_HOST}/v1/chat/completions`;
 const SF_MODEL = process.env.VISION_MODEL || "Qwen/Qwen3-VL-32B-Instruct";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
@@ -25,8 +60,8 @@ const GEMINI_API_BASE =
 export type VisionBackend = "siliconflow" | "gemini";
 
 export function getVisionBackend(): VisionBackend | null {
-  if (SILICONFLOW_KEY) return "siliconflow";
-  if (GEMINI_KEY) return "gemini";
+  if (siliconflowKey()) return "siliconflow";
+  if (geminiKey()) return "gemini";
   return null;
 }
 
@@ -191,7 +226,7 @@ async function callSiliconFlow(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SILICONFLOW_KEY}`,
+          Authorization: `Bearer ${siliconflowKey()}`,
         },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(timeout),
@@ -249,7 +284,7 @@ async function callGemini(
     },
   };
 
-  const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+  const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${geminiKey()}`;
 
   const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
 

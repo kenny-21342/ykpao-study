@@ -35,6 +35,19 @@ from pdf_extraction.v3.pipeline import PipelineConfig, PipelineResult, run_docum
 
 SILICONFLOW_ENDPOINT = "https://api.siliconflow.cn/v1/chat/completions"
 QWEN_MODEL = "Qwen/Qwen3-VL-32B-Instruct"
+
+def _siliconflow_api_key() -> str:
+    """
+    The project's one SiliconFlow key, under either of the two names it has.
+
+    These scripts have always read V3_OPENAI_API_KEY — a generic name for what
+    is pinned below to api.siliconflow.cn and Qwen3-VL. The web app and
+    pdf_extraction/lib/vision_client.py read SILICONFLOW_API_KEY, which is the
+    canonical name. Accept both so one key in the environment serves the whole
+    project; V3_OPENAI_API_KEY still wins where both are set.
+    """
+    return os.environ.get("V3_OPENAI_API_KEY") or os.environ.get("SILICONFLOW_API_KEY", "")
+
 CHECKPOINT_INTERVAL = 100
 SUPPORTED_DOCUMENT_TYPES = {"question_paper", "mark_scheme"}
 
@@ -50,10 +63,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-free-gib", type=float, default=2.0)
     args = parser.parse_args(argv)
 
-    api_key = os.environ.get("V3_OPENAI_API_KEY", "")
+    api_key = _siliconflow_api_key()
     if not api_key.strip():
         print(
-            "V3_OPENAI_API_KEY is missing from this process environment; no provider calls were made",
+            "V3_OPENAI_API_KEY (or SILICONFLOW_API_KEY) is missing from this process "
+            "environment; no provider calls were made",
             file=sys.stderr,
         )
         return 2
@@ -234,7 +248,7 @@ def _append_ledger(path: Path, record: dict[str, Any]) -> None:
 
 def _safe_error(error: Exception) -> str:
     message = str(error).replace("\n", " ")[:4000]
-    api_key = os.environ.get("V3_OPENAI_API_KEY", "")
+    api_key = _siliconflow_api_key()
     return message.replace(api_key, "[REDACTED]") if api_key else message
 
 

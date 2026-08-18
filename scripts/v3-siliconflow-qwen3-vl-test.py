@@ -27,6 +27,19 @@ from pdf_extraction.v3.pipeline import PipelineConfig, _build_bundle, _normalize
 
 SILICONFLOW_ENDPOINT = "https://api.siliconflow.cn/v1/chat/completions"
 QWEN_MODEL = "Qwen/Qwen3-VL-32B-Instruct"
+
+def _siliconflow_api_key() -> str:
+    """
+    The project's one SiliconFlow key, under either of the two names it has.
+
+    These scripts have always read V3_OPENAI_API_KEY — a generic name for what
+    is pinned below to api.siliconflow.cn and Qwen3-VL. The web app and
+    pdf_extraction/lib/vision_client.py read SILICONFLOW_API_KEY, which is the
+    canonical name. Accept both so one key in the environment serves the whole
+    project; V3_OPENAI_API_KEY still wins where both are set.
+    """
+    return os.environ.get("V3_OPENAI_API_KEY") or os.environ.get("SILICONFLOW_API_KEY", "")
+
 SOURCE_PDF = ROOT / "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_s23_qp_12.pdf"
 EXACT_TRANSCRIPTIONS = {
     "1": (
@@ -55,9 +68,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--work-dir", type=Path)
     args = parser.parse_args(argv)
 
-    api_key = os.environ.get("V3_OPENAI_API_KEY", "")
+    api_key = _siliconflow_api_key()
     if not api_key.strip():
-        print("V3_OPENAI_API_KEY is required and must be supplied only in the process environment", file=sys.stderr)
+        print(
+            "V3_OPENAI_API_KEY (or SILICONFLOW_API_KEY) is required and must be "
+            "supplied only in the process environment",
+            file=sys.stderr,
+        )
         return 2
     endpoint = os.environ.get("V3_OPENAI_CHAT_COMPLETIONS_URL", SILICONFLOW_ENDPOINT).rstrip("/")
     model = os.environ.get("V3_OPENAI_MODEL", QWEN_MODEL)
