@@ -17,8 +17,6 @@ export const KEY_PREFIX = {
   extractedImages: 'extracted_images',
   /** Images scraped for STEP questions. */
   stepImages: 'step-images',
-  /** V3 corpus assets, content-addressed by sha256. */
-  v3Assets: 'v3/assets',
 } as const;
 
 export class InvalidStorageKeyError extends Error {

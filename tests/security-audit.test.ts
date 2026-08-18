@@ -18,9 +18,6 @@ test('every HTML injection site has a sanitization or generated-output boundary'
     ['app/components/FormattedMessage.tsx', /sanitizeHtml\(renderMarkdownWithMath/],
     ['app/components/ResourceLibrary.tsx', /sanitizeHtml\(note\.content\)/],
     ['app/components/RichContent.tsx', /sanitizeHtml\(root\.innerHTML\)/],
-    // This is a client-only KaTeX render with throwOnError and no user HTML
-    // interpolation; it does not consume arbitrary stored markup.
-    ['app/v3/components/QuestionDocumentRenderer.tsx', /katex\.renderToString\([\s\S]*throwOnError: true/],
   ];
 
   for (const [relative, boundary] of cases) {
@@ -107,12 +104,7 @@ test('each asset route wires the session gate ahead of object storage', async ()
   }
 });
 
-test('admin and V3 route segments are protected server-side', async () => {
+test('the admin route segment is protected server-side', async () => {
   const adminLayout = await readFile(join(root, 'app/admin/layout.tsx'), 'utf8');
-  const v3Layout = await readFile(join(root, 'app/v3/layout.tsx'), 'utf8');
-  const v3Http = await readFile(join(root, 'lib/v3/http.ts'), 'utf8');
   assert.match(adminLayout, /requireAdmin\(\)/);
-  assert.match(v3Layout, /requireAdmin\(\)/);
-  assert.match(v3Http, /requireAdmin\(\)/);
-  assert.match(v3Http, /status: 403/);
 });

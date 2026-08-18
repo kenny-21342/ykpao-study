@@ -353,7 +353,7 @@ export default function SmartEduPlatform() {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
 
-      // app/admin/layout.tsx and app/v3/layout.tsx redirect here with
+      // app/admin/layout.tsx redirects here with
       // ?admin=forbidden when a non-admin reaches an admin route. Nothing used
       // to read it, so those users were silently bounced to the dashboard with
       // no idea why the link they clicked did nothing.

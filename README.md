@@ -65,10 +65,6 @@ They are created by hand at the bottom of the baseline migration. **Never run
 what it plans to drop**, and re-append that block if the baseline is ever
 regenerated.
 
-There is a second, independent datasource for the V3 question corpus
-(`prisma/v3/schema.prisma`, configured by `prisma/v3.config.ts`). It is an
-internal tool: the whole `/v3` route segment requires an admin session.
-
 ---
 
 ## Scripts
@@ -76,7 +72,7 @@ internal tool: the whole `/v3` route segment requires an admin session.
 | Command | What it does |
 |---|---|
 | `npm run dev` / `npm run build` | Develop / production build (Turbopack) |
-| `npm test` | Every suite — Node, V3, personalization, catalogue, and the Python `bank`/`question_images` suites |
+| `npm test` | Every suite — Node, personalization, catalogue, and the Python `bank`/`question_images` suites |
 | `npm run lint` | ESLint over the app (Next 16 no longer lints during `build`) |
 | `npm run sw:build` | Regenerates `public/sw.js` with a fresh cache version |
 | `npm run icons:build` | Regenerates the PWA PNG icons from `public/icon.svg` |
@@ -140,8 +136,7 @@ legitimately has none of those.
 ### Object storage
 
 Bulk assets — past-paper PDFs (~17 GB), uploads, extracted diagrams, STEP
-images, V3 corpus assets — are read and written through `lib/storage/`, which
-has two drivers:
+images — are read and written through `lib/storage/`, which has two drivers:
 
 | `STORAGE_DRIVER` | Backend | Use |
 |---|---|---|
@@ -245,9 +240,8 @@ app/                Next.js App Router — routes, API handlers, components
   api/              ~90 route handlers
   components/       Shared client components
   admin/            Admin console (gated by requireAdmin)
-  v3/               Internal corpus review tool (admin only)
 lib/                Server-side helpers: auth, prisma, ai, rate limiting, env
-prisma/             Main schema + migrations; v3/ holds the corpus datasource
+prisma/             Main schema + migrations
 scripts/            Build steps, one-off migrations, indexing
 tests/              Node (`*.test.ts`) and Python (`bank/`, `question_images/`) suites
 docs/               Pipeline documentation

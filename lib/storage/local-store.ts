@@ -18,7 +18,6 @@ import type {
  *   uploads/…           -> public/uploads/…
  *   extracted_images/…  -> public/extracted_images/…
  *   step-images/…       -> public/step-images/…
- *   v3/assets/…         -> data/v3/assets/…
  *
  * This driver cannot issue signed URLs; `signedGetUrl` returns null and callers
  * stream the bytes instead.
@@ -30,7 +29,6 @@ const PREFIX_ROOTS: Array<{ prefix: string; dir: string }> = [
   { prefix: KEY_PREFIX.uploads, dir: 'public/uploads' },
   { prefix: KEY_PREFIX.extractedImages, dir: 'public/extracted_images' },
   { prefix: KEY_PREFIX.stepImages, dir: 'public/step-images' },
-  { prefix: KEY_PREFIX.v3Assets, dir: 'data/v3/assets' },
 ];
 
 const CONTENT_TYPES = new Map<string, string>([

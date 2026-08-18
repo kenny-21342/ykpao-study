@@ -43,7 +43,7 @@ test('assertSafeKey accepts ordinary keys', () => {
     'uploads/images/9f6d.png',
     'papers/my_raw_pdfs/igcse/physics-0625/0625_w21_qp_63.pdf',
     'extracted_images/9702_s2024_2v1_q3.png',
-    'v3/assets/' + 'a'.repeat(64) + '.png',
+    'extracted_images/' + 'a'.repeat(64) + '.png',
   ]) {
     assert.equal(assertSafeKey(key), key);
   }

@@ -11,7 +11,7 @@
  *
  * Options:
  *   --prefix <name>   Sync only one tree (papers, uploads, extracted_images,
- *                     step-images, v3-assets). Repeatable.
+ *                     step-images). Repeatable.
  *   --dry-run         List what would be uploaded; transfer nothing.
  *   --force           Re-upload objects that are already present.
  *   --concurrency <n> Parallel uploads (default 8).
@@ -36,7 +36,6 @@ const TREES = [
   { name: 'uploads', dir: 'public/uploads', prefix: 'uploads' },
   { name: 'extracted_images', dir: 'public/extracted_images', prefix: 'extracted_images' },
   { name: 'step-images', dir: 'public/step-images', prefix: 'step-images' },
-  { name: 'v3-assets', dir: 'data/v3/assets', prefix: 'v3/assets' },
 ];
 
 /**
