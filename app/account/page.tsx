@@ -332,7 +332,7 @@ export default function AccountSettingsPage() {
 
           {isOAuth ? (
             <p className="text-sm text-gray-400">
-              You signed in with a social account (Google/Microsoft). Password management is not available.
+              You signed in with a social account (Google). Password management is not available.
             </p>
           ) : (
             <>

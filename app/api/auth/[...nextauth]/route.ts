@@ -2,8 +2,6 @@ import NextAuth from "next-auth"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import GitHubProvider from "next-auth/providers/github"
-import AzureADProvider from "next-auth/providers/azure-ad"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcrypt"
@@ -40,23 +38,6 @@ const googleConfig =
     ? {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      }
-    : null
-
-const azureConfig =
-  process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET
-    ? {
-        clientId: process.env.AZURE_AD_CLIENT_ID,
-        clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
-        tenantId: process.env.AZURE_AD_TENANT_ID || "common",
-      }
-    : null
-
-const githubConfig =
-  process.env.GITHUB_ID && process.env.GITHUB_SECRET
-    ? {
-        clientId: process.env.GITHUB_ID,
-        clientSecret: process.env.GITHUB_SECRET,
       }
     : null
 
@@ -120,8 +101,6 @@ export const authOptions = {
       }
     }),
     ...(googleConfig ? [GoogleProvider(googleConfig)] : []),
-    ...(azureConfig ? [AzureADProvider(azureConfig)] : []),
-    ...(githubConfig ? [GitHubProvider(githubConfig)] : []),
   ],
   session: {
     strategy: "jwt",
