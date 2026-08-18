@@ -241,7 +241,7 @@ lib/                Server-side helpers: auth, prisma, ai, rate limiting, env
 prisma/             Main schema + migrations; v3/ holds the corpus datasource
 scripts/            Build steps, one-off migrations, indexing
 tests/              Node (`*.test.ts`) and Python (`bank/`, `question_images/`) suites
-docs/               Pipeline documentation; docs/archive/ holds superseded status notes
+docs/               Pipeline documentation
 pdf_extraction/     Python extraction pipeline (not deployed)
 ```
 
