@@ -21,7 +21,10 @@ model User {
   updatedAt     DateTime  @updatedAt
   onboardedAt   DateTime? // null = hasn't completed the welcome wizard yet
   unlocks       String[]  @default([]) // easter-egg unlocks, e.g. ["competition"]
-  syncToken     String? // long-lived bearer token for BetterNotes iPad sync
+  // Orphaned: the BetterNotes sync layer that minted and read this was
+  // removed. Kept only so no migration drops a column that still holds data;
+  // dropping it (and the index below) is the owner's call.
+  syncToken     String?
 
   accounts                Account[]
   sessions                Session[]
@@ -64,8 +67,7 @@ model User {
   aiProposals             AIActionProposal[]
   ragDocuments            RagDocument[]
 
-  // lib/sync-auth.ts looks a user up by syncToken on every iPad sync request.
-  // Without this the lookup is a sequential scan of the whole users table.
+  // Orphaned alongside syncToken above; nothing queries this index any more.
   @@index([syncToken])
   @@map("users")
 }

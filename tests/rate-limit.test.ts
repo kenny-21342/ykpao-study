@@ -126,10 +126,7 @@ test('every paid AI route checks the shared per-user allowance', async () => {
   assert.deepEqual(missing, [], `AI routes without the spend guard: ${missing.join(', ')}`);
 });
 
-test('login and signup keep both IP and account throttles on durable limiters', async () => {
-  const token = await readFile(join(root, 'app/api/auth/token/route.ts'), 'utf8');
+test('signup keeps its per-IP throttle on the durable limiter', async () => {
   const signup = await readFile(join(root, 'app/api/auth/signup/route.ts'), 'utf8');
-  assert.match(token, /strictLimiter\.check\(`token:\$\{ip\}`\)/);
-  assert.match(token, /strictLimiter\.check\(`token-account:\$\{parsed\.email\.toLowerCase\(\)\}`\)/);
   assert.match(signup, /strictLimiter\.check\(`signup:\$\{ip\}`\)/);
 });
