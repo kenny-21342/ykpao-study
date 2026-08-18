@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
@@ -10,21 +10,52 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('every HTML injection site has a sanitization or generated-output boundary', async () => {
-  const cases: Array<[string, RegExp]> = [
-    ['app/announcements/page.tsx', /sanitizeHtml\(a\.body\)/],
-    ['app/components/AnnouncementBanner.tsx', /sanitizeHtml\(a\.body\)/],
-    ['app/components/CompetitionVault.tsx', /sanitizeHtml\(selected\.body\)/],
-    ['app/components/FormattedMessage.tsx', /sanitizeHtml\(renderMarkdownWithMath/],
-    ['app/components/ResourceLibrary.tsx', /sanitizeHtml\(note\.content\)/],
-    ['app/components/RichContent.tsx', /sanitizeHtml\(root\.innerHTML\)/],
-  ];
+/** Every `.ts`/`.tsx` file under `dir`, recursively. */
+async function sourceFiles(dir: string): Promise<string[]> {
+  const found: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await sourceFiles(full)));
+    else if (/\.tsx?$/.test(entry.name)) found.push(full);
+  }
+  return found;
+}
 
-  for (const [relative, boundary] of cases) {
-    const source = await readFile(join(root, relative), 'utf8');
-    assert.match(source, /dangerouslySetInnerHTML/, `${relative} is no longer an audited sink`);
+/**
+ * Injection sites whose boundary is something other than `sanitizeHtml` — a
+ * value the app generated itself rather than untrusted stored markup. Adding
+ * an entry here is a deliberate audit decision, so the list is deliberately
+ * awkward to extend: it must name the file and the boundary that replaces
+ * sanitisation.
+ */
+const GENERATED_OUTPUT_SINKS: Array<[string, RegExp]> = [];
+
+/**
+ * Discovery-based rather than a fixed list. The previous version enumerated
+ * the sinks by hand, which meant a NEW unsanitised `dangerouslySetInnerHTML`
+ * anywhere in `app/` was invisible to this suite — and deleting an audited
+ * file silently shrank the audit instead of failing.
+ */
+test('every HTML injection site has a sanitization or generated-output boundary', async () => {
+  const boundaries = new Map(GENERATED_OUTPUT_SINKS);
+  const sinks: string[] = [];
+
+  for (const file of await sourceFiles(join(root, 'app'))) {
+    const source = await readFile(file, 'utf8');
+    if (!source.includes('dangerouslySetInnerHTML')) continue;
+
+    const relative = file.slice(root.length + 1);
+    sinks.push(relative);
+
+    const boundary = boundaries.get(relative) ?? /sanitizeHtml\(/;
     assert.match(source, boundary, `${relative} must keep its output boundary`);
   }
+
+  // A sink count of zero would pass every assertion above vacuously.
+  assert.ok(sinks.length > 0, 'found no dangerouslySetInnerHTML sites — the walk is broken');
+
+  const stale = [...boundaries.keys()].filter((file) => !sinks.includes(file));
+  assert.deepEqual(stale, [], `exempted files that are no longer sinks: ${stale.join(', ')}`);
 });
 
 /**
@@ -106,5 +137,19 @@ test('each asset route wires the session gate ahead of object storage', async ()
 
 test('the admin route segment is protected server-side', async () => {
   const adminLayout = await readFile(join(root, 'app/admin/layout.tsx'), 'utf8');
-  assert.match(adminLayout, /requireAdmin\(\)/);
+  assert.match(adminLayout, /requireAdmin\(\)/, 'app/admin/layout.tsx must gate the segment');
+
+  // The layout only covers the pages. Every admin API route is reachable
+  // directly, so each one has to make the check itself.
+  const routes = (await sourceFiles(join(root, 'app/api/admin'))).filter((file) =>
+    file.endsWith('route.ts'),
+  );
+  assert.ok(routes.length > 0, 'found no admin API routes — the walk is broken');
+
+  for (const file of routes) {
+    const relative = file.slice(root.length + 1);
+    const source = await readFile(file, 'utf8');
+    assert.match(source, /requireAdmin\(\)/, `${relative} must call requireAdmin()`);
+    assert.match(source, /status: 403/, `${relative} must refuse a non-admin with 403`);
+  }
 });
