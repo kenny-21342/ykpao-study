@@ -28,7 +28,11 @@ test('every HTML injection site has a sanitization or generated-output boundary'
 
 test('uploads are session-gated before object storage is touched', async () => {
   const source = await readFile(join(root, 'app/uploads/[...path]/route.ts'), 'utf8');
-  assert.match(source, /getServerSession\(authOptions\)/);
+  // Was getServerSession(authOptions). getSessionUser() is the strictly
+  // stronger gate: same proof of sign-in, plus the ban check and the
+  // credential-fingerprint check that revokes sessions after a password reset.
+  // Uploads are student work, so it has to be the strong one.
+  assert.match(source, /getSessionUser\(\)/);
   assert.match(source, /status: 401/);
   assert.match(source, /serveStoredObject/);
 });

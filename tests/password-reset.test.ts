@@ -564,3 +564,62 @@ test('the request page cannot imply whether the address existed', async () => {
   assert.match(src, /If that email belongs to an account/);
   assert.doesNotMatch(src, /No account found|we couldn't find/i);
 });
+
+// ---------------------------------------------------------------------------
+// The chokepoint is only a chokepoint if everything actually goes through it
+// ---------------------------------------------------------------------------
+
+/**
+ * getSessionUser() is where bans and credential-fingerprint revocation are
+ * enforced. A route that calls getServerSession(authOptions) itself gets an
+ * authenticated session object with none of those checks applied — so "a
+ * password reset signs every device out" quietly stops being true for that
+ * route, and no test of the reset flow itself would notice.
+ *
+ * Six routes were in exactly that state when this was written (dashboard,
+ * ai/check-answer, attempts, practice, practice/ocr, upload), plus
+ * app/uploads/** and the session fallback in lib/sync-auth.ts. The property is
+ * pinned here rather than left to review because the failure is invisible:
+ * every one of those routes behaved correctly for signed-in users.
+ */
+test('lib/auth.ts is the only place that reads the session directly', async () => {
+  const { readdir } = await import('node:fs/promises');
+
+  // Deleted on the remove-dead-code branch; listed so this test does not fail
+  // on a merge ordering we do not control. Entries that no longer exist are
+  // simply never visited.
+  const allowed = new Set([
+    'lib/auth.ts',
+    'app/api/chat/route.ts',
+    'app/api/ai/chat/route.ts',
+  ]);
+
+  const offenders: string[] = [];
+
+  for (const dir of ['app', 'lib']) {
+    const entries = await readdir(join(root, dir), {
+      recursive: true,
+      withFileTypes: true,
+    });
+
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+
+      // parentPath is absolute; make it repo-relative with forward slashes.
+      const full = join(entry.parentPath, entry.name);
+      const relative = full.slice(root.length + 1).split('\\').join('/');
+      if (allowed.has(relative)) continue;
+
+      const source = stripComments(await readFile(full, 'utf8'));
+      if (/getServerSession\s*\(/.test(source)) offenders.push(relative);
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'these read the session without going through getSessionUser(), so bans and ' +
+      'password-reset revocation do not apply to them — call getSessionUser() instead',
+  );
+});

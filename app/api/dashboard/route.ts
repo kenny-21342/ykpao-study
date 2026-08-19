@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSessionUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resolveCourseScope } from '@/lib/course-scope'
 import { LearnerContextError } from '@/lib/learner-context'
@@ -16,8 +15,12 @@ import { LearnerContextError } from '@/lib/learner-context'
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
+    // getSessionUser() rather than getServerSession(): it is the chokepoint
+    // that enforces bans and credential-fingerprint revocation, so reading the
+    // session directly would leave this route answering to a device holding a
+    // password that has since been reset.
+    const user = await getSessionUser()
+    const userId = user?.id
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -1,6 +1,5 @@
 import { serveStoredObject } from '@/lib/storage/serve';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,8 +16,11 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return new Response('Unauthorized', { status: 401 });
+  // getSessionUser(), not getServerSession(): these are student uploads, so the
+  // gate has to honour bans and credential-fingerprint revocation like every
+  // other authenticated route.
+  const user = await getSessionUser();
+  if (!user) return new Response('Unauthorized', { status: 401 });
 
   const { path } = await params;
   return serveStoredObject(['uploads', ...path]);

@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import crypto from 'node:crypto';
 
@@ -35,10 +34,13 @@ export async function getSyncUser(req?: Request): Promise<{
   }
 
   // ---- 2. Fall back to NextAuth session ----
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return null;
-  return prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, email: true, name: true },
-  });
+  // Via getSessionUser(), not getServerSession(): this path previously resolved
+  // the session straight to a user row, which skipped both the ban check the
+  // Bearer branch above already performs (`banned: false`) and the credential
+  // fingerprint. A banned student, or one whose password had been reset out
+  // from under a stolen session, could still reach the sync endpoints from a
+  // browser — the one client that does not need a syncToken.
+  const user = await getSessionUser();
+  if (!user) return null;
+  return { id: user.id, email: user.email, name: user.name };
 }

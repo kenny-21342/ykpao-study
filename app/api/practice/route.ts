@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
@@ -17,16 +16,15 @@ export const dynamic = 'force-dynamic';
  */
 export const maxDuration = 60;
 
-async function getUser() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return null;
-  return prisma.user.findUnique({ where: { email: session.user.email } });
-}
+// This route used to carry its own copy of getSessionUser() that resolved the
+// session to a user row but skipped the ban and credential-fingerprint checks.
+// The duplicate is gone: lib/auth.ts is the single chokepoint, so a password
+// reset revokes access here too.
 
 // POST: submit an answer, grade it with AI, persist, return feedback
 export async function POST(req: NextRequest) {
   try {
-    const user = await getUser();
+    const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -192,7 +190,7 @@ ${gradedAnswer}`;
 // GET: history for the signed-in user
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUser();
+    const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
