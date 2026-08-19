@@ -63,11 +63,55 @@ model User {
   aiConversations         AIConversation[]
   aiProposals             AIActionProposal[]
   ragDocuments            RagDocument[]
+  aiCredential            UserAiCredential?
 
   // lib/sync-auth.ts looks a user up by syncToken on every iPad sync request.
   // Without this the lookup is a sequential scan of the whole users table.
   @@index([syncToken])
   @@map("users")
+}
+
+/// Bring-your-own-key AI credentials for one user.
+///
+/// The platform no longer pays for students' AI usage, so every AI feature
+/// resolves a credential here first. A row can exist for either of two
+/// independent reasons, which is why almost every column is nullable:
+///
+///  1. The student saved their own key/endpoint/models (`encryptedApiKey` set).
+///  2. An admin granted them the shared server key (`sharedKeyAccess` true).
+///
+/// `encryptedApiKey` is an AES-256-GCM envelope from lib/credential-crypto.ts,
+/// never plaintext. `keyHint` is the last four characters, the only part ever
+/// sent to a client.
+model UserAiCredential {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  /// AES-256-GCM envelope ("v1.<iv>.<tag>.<ciphertext>"). Never plaintext.
+  encryptedApiKey String?
+  /// Last four characters of the key, for display only.
+  keyHint         String?
+  /// OpenAI-compatible base URL, e.g. "https://api.deepseek.com/v1".
+  baseUrl         String?
+  /// Model used for chat, grading, hints, exam generation.
+  textModel       String?
+  /// Multimodal model used for handwriting OCR. Optional: text-only setups are
+  /// supported, with vision features explicitly reported as unavailable.
+  visionModel     String?
+
+  /// Admin-granted fallback to the owner's server key. Costs the owner money,
+  /// so this path keeps the monthly spend cap.
+  sharedKeyAccess    Boolean   @default(false)
+  sharedKeyGrantedBy String?
+  sharedKeyGrantedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sharedKeyAccess])
+  @@map("user_ai_credentials")
 }
 
 model AIConversation {

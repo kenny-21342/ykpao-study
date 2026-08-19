@@ -1,0 +1,391 @@
+// Relative, extension-bearing imports (the convention lib/env.ts already
+// uses) so this module is loadable by the plain-node test runner as well as by
+// Next — the resolution rules below are worth testing without a database.
+import { decryptSecret, isCredentialEncryptionConfigured } from './credential-crypto.ts';
+
+/**
+ * Per-user resolution of AI credentials — the single place that decides
+ * whether an AI feature is on, off, or partially on for a given account.
+ *
+ * The platform used to call Anthropic/DeepSeek/Gemini/SiliconFlow with the
+ * owner's server keys behind a monthly spend cap. It no longer pays for
+ * students' usage, so the model is bring-your-own-key:
+ *
+ *   1. The user's own key, endpoint and model names, if they saved any.
+ *   2. Otherwise the owner's shared server key — but ONLY for accounts an
+ *      admin has explicitly granted, for demos and for students who genuinely
+ *      cannot obtain a key of their own.
+ *   3. Otherwise AI is off, and every entry point says so in words the student
+ *      can act on.
+ *
+ * There is deliberately no general fallback to step 2: an ungranted account
+ * with no key of its own gets the disabled state, never the owner's bill.
+ *
+ * Nothing here is provider-specific. Students will point this at OpenAI,
+ * DeepSeek, SiliconFlow, OpenRouter and school proxies alike, so the only
+ * assumption made is the one the codebase already relies on — an
+ * OpenAI-compatible `/chat/completions` endpoint. The one exception is the
+ * owner's own Gemini key, which predates this and still uses the native API.
+ */
+
+export type AiCredentialSource = 'user' | 'shared';
+
+export type TextCredential = {
+  source: AiCredentialSource;
+  apiKey: string;
+  /** Fully-qualified chat-completions URL. */
+  endpoint: string;
+  model: string;
+};
+
+export type VisionCredential = {
+  source: AiCredentialSource;
+  /**
+   * How to shape the request. User-supplied endpoints are always treated as
+   * OpenAI-compatible; `gemini` only ever arises from the owner's server key.
+   */
+  provider: 'openai-compatible' | 'gemini';
+  apiKey: string;
+  endpoint: string;
+  model: string;
+};
+
+/** What the settings UI and the admin console need to render the state. */
+export type AiCredentialStatus = {
+  hasOwnKey: boolean;
+  sharedKeyAccess: boolean;
+  sharedKeyAvailable: boolean;
+  source: AiCredentialSource | null;
+  textEnabled: boolean;
+  visionEnabled: boolean;
+  keyHint: string | null;
+  baseUrl: string | null;
+  textModel: string | null;
+  visionModel: string | null;
+  encryptionConfigured: boolean;
+  /** True when a stored key exists but cannot be opened with the current key. */
+  keyUndecryptable: boolean;
+};
+
+// ---------------------------------------------------------------------------
+// Endpoint normalisation
+// ---------------------------------------------------------------------------
+
+/**
+ * Turn whatever a student pasted into a chat-completions URL.
+ *
+ * They will paste all three of these, and all three must work:
+ *   https://api.deepseek.com                     -> …/v1/chat/completions
+ *   https://api.deepseek.com/v1                  -> …/v1/chat/completions
+ *   https://api.deepseek.com/v1/chat/completions -> unchanged
+ */
+export function toChatCompletionsUrl(baseUrl: string): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '');
+  if (/\/chat\/completions$/i.test(trimmed)) return trimmed;
+  if (/\/v\d+[a-z0-9]*$/i.test(trimmed)) return `${trimmed}/chat/completions`;
+  return `${trimmed}/v1/chat/completions`;
+}
+
+/**
+ * Reject anything that is not a plain https endpoint before it is stored.
+ *
+ * http:// would put the student's bearer token on the wire in clear, and any
+ * other scheme is either a typo or an attempt to make the server fetch
+ * something local.
+ */
+export function validateBaseUrl(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') return null;
+  if (!url.hostname || url.hostname === 'localhost') return null;
+  return url.toString().replace(/\/+$/, '');
+}
+
+// ---------------------------------------------------------------------------
+// The owner's shared server key
+// ---------------------------------------------------------------------------
+
+/**
+ * The shared text credential, from the same env vars the platform used before
+ * BYOK. Reachable only by accounts an admin granted; it still spends the
+ * owner's money and therefore still passes the monthly cap.
+ */
+export function sharedTextCredential(): TextCredential | null {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) return null;
+  return {
+    source: 'shared',
+    apiKey,
+    endpoint:
+      process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions',
+    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+  };
+}
+
+/** The shared vision credential — SiliconFlow first, then Gemini, as before. */
+export function sharedVisionCredential(): VisionCredential | null {
+  const siliconflow = process.env.SILICONFLOW_API_KEY;
+  if (siliconflow) {
+    return {
+      source: 'shared',
+      provider: 'openai-compatible',
+      apiKey: siliconflow,
+      endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
+      model: process.env.VISION_MODEL || 'Qwen/Qwen3-VL-32B-Instruct',
+    };
+  }
+  const gemini = process.env.GEMINI_API_KEY;
+  if (gemini) {
+    return {
+      source: 'shared',
+      provider: 'gemini',
+      apiKey: gemini,
+      endpoint:
+        process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com/v1beta',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    };
+  }
+  return null;
+}
+
+/** True when the owner has a server key at all, for the admin console. */
+export function isSharedAiConfigured(): boolean {
+  return sharedTextCredential() !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Resolution
+// ---------------------------------------------------------------------------
+
+export type ResolvedAi = {
+  text: TextCredential | null;
+  vision: VisionCredential | null;
+  status: AiCredentialStatus;
+};
+
+export type CredentialRow = {
+  encryptedApiKey: string | null;
+  keyHint: string | null;
+  baseUrl: string | null;
+  textModel: string | null;
+  visionModel: string | null;
+  sharedKeyAccess: boolean;
+};
+
+function emptyStatus(): AiCredentialStatus {
+  return {
+    hasOwnKey: false,
+    sharedKeyAccess: false,
+    sharedKeyAvailable: isSharedAiConfigured(),
+    source: null,
+    textEnabled: false,
+    visionEnabled: false,
+    keyHint: null,
+    baseUrl: null,
+    textModel: null,
+    visionModel: null,
+    encryptionConfigured: isCredentialEncryptionConfigured(),
+    keyUndecryptable: false,
+  };
+}
+
+/**
+ * Resolve everything about a user's AI access in one database round trip.
+ *
+ * Callers that only need a gate should use `requireTextAi` / `requireVisionAi`
+ * below; this is for the settings and admin surfaces that render the state.
+ */
+export async function resolveAiCredentials(userId: string): Promise<ResolvedAi> {
+  let row: CredentialRow | null = null;
+  try {
+    const { prisma } = await import('./prisma.ts');
+    row = await prisma.userAiCredential.findUnique({
+      where: { userId },
+      select: {
+        encryptedApiKey: true,
+        keyHint: true,
+        baseUrl: true,
+        textModel: true,
+        visionModel: true,
+        sharedKeyAccess: true,
+      },
+    });
+  } catch (error) {
+    // The table is created by a hand-written migration the owner applies
+    // separately; until then, treat AI as off rather than 500-ing every route.
+    console.error('[ai-credentials] lookup failed for user %s:', userId, error);
+    return { text: null, vision: null, status: emptyStatus() };
+  }
+
+  return resolveFromRow(row, userId);
+}
+
+/**
+ * The resolution rules themselves, as a pure function of the stored row.
+ *
+ * Split out from the query so the three-way order (own key → admin-granted
+ * shared key → off) can be tested without a database, which is exactly where
+ * a regression would be most expensive: silently falling back to the owner's
+ * key for an ungranted student is a bill, not a bug report.
+ */
+export function resolveFromRow(row: CredentialRow | null, userId = 'unknown'): ResolvedAi {
+  const status = emptyStatus();
+
+  if (!row) return { text: null, vision: null, status };
+
+  status.sharedKeyAccess = row.sharedKeyAccess;
+  status.keyHint = row.keyHint;
+  status.baseUrl = row.baseUrl;
+  status.textModel = row.textModel;
+  status.visionModel = row.visionModel;
+
+  // ---- 1. the user's own key ----
+  if (row.encryptedApiKey && row.baseUrl && row.textModel) {
+    status.hasOwnKey = true;
+    let apiKey: string;
+    try {
+      apiKey = decryptSecret(row.encryptedApiKey);
+    } catch (error) {
+      // Almost always a rotated CREDENTIAL_ENCRYPTION_KEY. Surface it as a
+      // distinct state so the settings page can tell the student to re-enter
+      // the key, instead of silently pretending they never saved one.
+      console.error('[ai-credentials] could not decrypt stored key for user %s:', userId, error);
+      status.keyUndecryptable = true;
+      return { text: null, vision: null, status };
+    }
+
+    const endpoint = toChatCompletionsUrl(row.baseUrl);
+    const text: TextCredential = {
+      source: 'user',
+      apiKey,
+      endpoint,
+      model: row.textModel,
+    };
+    const vision: VisionCredential | null = row.visionModel
+      ? {
+          source: 'user',
+          provider: 'openai-compatible',
+          apiKey,
+          endpoint,
+          model: row.visionModel,
+        }
+      : null;
+
+    status.source = 'user';
+    status.textEnabled = true;
+    status.visionEnabled = vision !== null;
+    return { text, vision, status };
+  }
+
+  // ---- 2. an admin-granted share of the owner's key ----
+  if (row.sharedKeyAccess) {
+    const text = sharedTextCredential();
+    const vision = sharedVisionCredential();
+    if (text) {
+      status.source = 'shared';
+      status.textEnabled = true;
+      status.visionEnabled = vision !== null;
+      return { text, vision, status };
+    }
+  }
+
+  // ---- 3. off ----
+  return { text: null, vision: null, status };
+}
+
+// ---------------------------------------------------------------------------
+// Gates
+// ---------------------------------------------------------------------------
+
+export const AI_DISABLED_MESSAGE =
+  'AI features are switched off for this account because no API key is configured. ' +
+  'Open Account Settings → AI Provider and add your own API key, API endpoint and ' +
+  'model name to turn them back on, or ask an administrator for shared access.';
+
+export const AI_KEY_UNDECRYPTABLE_MESSAGE =
+  'Your saved API key could not be read (the server’s encryption key has changed). ' +
+  'Open Account Settings → AI Provider and enter your API key again.';
+
+/**
+ * Deliberately specific, per the one rule students will actually hit: a key
+ * that only names a text model. Naming the exact features that stop working —
+ * and the ones that keep working — is the difference between a student fixing
+ * their settings and a student assuming the app is broken.
+ */
+export function visionDisabledMessage(textModel: string | null): string {
+  const model = textModel ? `“${textModel}”` : 'a text-only model';
+  return (
+    `Handwriting OCR needs a vision-capable (multimodal) model, and your AI Provider ` +
+    `settings only name ${model}, which cannot read images. Photographing or ` +
+    `hand-drawing an answer, and anything else that reads a picture, is unavailable — ` +
+    `typing your answer still works, and so do tutoring, hints, grading and mock exams. ` +
+    `To enable it, add a vision model name (for example gpt-4o-mini, ` +
+    `Qwen/Qwen3-VL-32B-Instruct or gemini-2.0-flash — it must be one your endpoint ` +
+    `serves) under Account Settings → AI Provider.`
+  );
+}
+
+export type AiDenial = {
+  ok: false;
+  /** 503: the feature is off for this account, not a transient server fault. */
+  status: number;
+  error: string;
+  reason: 'no-credentials' | 'key-undecryptable' | 'no-vision-model';
+};
+
+export type AiGrant<T> = { ok: true; credential: T; source: AiCredentialSource };
+
+function denyFromStatus(status: AiCredentialStatus): AiDenial {
+  if (status.keyUndecryptable) {
+    return {
+      ok: false,
+      status: 503,
+      error: AI_KEY_UNDECRYPTABLE_MESSAGE,
+      reason: 'key-undecryptable',
+    };
+  }
+  return { ok: false, status: 503, error: AI_DISABLED_MESSAGE, reason: 'no-credentials' };
+}
+
+/** Gate for every text completion: chat, hints, grading, exam generation. */
+export async function requireTextAi(
+  userId: string,
+): Promise<AiGrant<TextCredential> | AiDenial> {
+  return gateText(await resolveAiCredentials(userId));
+}
+
+/** The text decision, as a pure function — see `resolveFromRow`. */
+export function gateText(resolved: ResolvedAi): AiGrant<TextCredential> | AiDenial {
+  const { text, status } = resolved;
+  if (!text) return denyFromStatus(status);
+  return { ok: true, credential: text, source: text.source };
+}
+
+/** Gate for handwriting OCR and anything else that must read an image. */
+export async function requireVisionAi(
+  userId: string,
+): Promise<AiGrant<VisionCredential> | AiDenial> {
+  return gateVision(await resolveAiCredentials(userId));
+}
+
+/** The vision decision, as a pure function — see `resolveFromRow`. */
+export function gateVision(resolved: ResolvedAi): AiGrant<VisionCredential> | AiDenial {
+  const { text, vision, status } = resolved;
+  if (vision) return { ok: true, credential: vision, source: vision.source };
+  // A working text credential with no vision model is the interesting case:
+  // the account is not "AI off", it is "AI on, vision missing", and it needs
+  // its own message.
+  if (text) {
+    return {
+      ok: false,
+      status: 503,
+      error: visionDisabledMessage(status.textModel),
+      reason: 'no-vision-model',
+    };
+  }
+  return denyFromStatus(status);
+}
