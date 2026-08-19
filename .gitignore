@@ -60,6 +60,7 @@ public/uploads/
 
 # Copied from node_modules by npm run pdf:worker (runs on predev/prebuild)
 /public/pdf.worker.min.mjs
+/public/pdfjs/
 
 # Generated from scripts/sw-template.js by npm run sw:build (predev/prebuild).
 # Edit the template, never this file.

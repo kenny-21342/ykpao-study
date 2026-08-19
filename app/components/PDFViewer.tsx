@@ -2,6 +2,16 @@
 
 import { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import type { ComponentProps } from 'react';
+
+// Derived from react-pdf's own callback rather than imported from 'pdfjs-dist'.
+// The repo resolves two different pdfjs-dist versions -- react-pdf pins a
+// nested copy (5.x) while the top level is 6.x -- and their PDFDocumentProxy
+// types are not assignable to each other. Taking the type from the component
+// that hands us the value keeps it correct through either version bump.
+type PDFDocumentProxy = Parameters<
+  NonNullable<ComponentProps<typeof Document>['onLoadSuccess']>
+>[0];
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, List, X } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -12,11 +22,20 @@ import 'react-pdf/dist/Page/TextLayer.css';
 // on v4+, which left every document stuck on "Loading PDF...".
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
-// Enable caching and optimization
+// Served from public/ for the same reason as the worker above, and kept in
+// sync by the same script. These were previously fetched from unpkg.com at
+// render time, which put a third-party CDN on the critical path of every PDF:
+// cmaps decode non-Latin and embedded-font text, so an unpkg outage degrades
+// papers to missing glyphs rather than failing loudly, and a strict CSP blocks
+// them outright.
+//
+// Defined at module scope, not inline: react-pdf re-runs document loading
+// whenever the `options` prop is a new object reference, so an inline literal
+// would reload the PDF on every render.
 const pdfOptions = {
-  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapUrl: '/pdfjs/cmaps/',
   cMapPacked: true,
-  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+  standardFontDataUrl: '/pdfjs/standard_fonts/',
   disableAutoFetch: false,
   disableStream: false,
   isEvalSupported: false,
@@ -40,13 +59,21 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
   const [showChapters, setShowChapters] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    // Detect chapters in background (non-blocking). The page count must be
-    // passed in explicitly: detectChapters closes over the `numPages` *state*,
-    // which is still 0 in this render, so the text-scanning fallback used to
-    // loop `Math.min(0, 50)` times and never find anything.
-    setTimeout(() => detectChapters(numPages), 100);
+  function onDocumentLoadSuccess(pdf: PDFDocumentProxy) {
+    setNumPages(pdf.numPages);
+    // Detect chapters in background (non-blocking). The loaded document is
+    // passed in rather than re-fetched: this callback already receives the
+    // PDFDocumentProxy that <Document> downloaded, and calling
+    // pdfjs.getDocument(fileUrl) again downloaded the whole file a second
+    // time. With the S3 driver the bytes come from a presigned R2 URL served
+    // `Cache-Control: private, no-store`, so the browser could not reuse the
+    // first copy and every paper cost two full multi-megabyte downloads.
+    //
+    // The page count comes off the proxy for the same reason it was once
+    // passed explicitly: `numPages` state is still 0 in this render, so the
+    // text-scanning fallback would loop `Math.min(0, 50)` times and find
+    // nothing.
+    setTimeout(() => detectChapters(pdf), 100);
   }
 
   function onDocumentLoadError(error: Error) {
@@ -55,12 +82,9 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
     setLoadError(error.message || 'Failed to load PDF file. The file may be corrupted or the URL has expired.');
   }
 
-  const detectChapters = async (totalPages: number) => {
+  const detectChapters = async (pdf: PDFDocumentProxy) => {
     try {
-      // Load the PDF document
-      const loadingTask = pdfjs.getDocument(fileUrl);
-      const pdf = await loadingTask.promise;
-
+      const totalPages = pdf.numPages;
       const detectedChapters: Chapter[] = [];
 
       // Check PDF outline (table of contents)
