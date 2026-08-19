@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, Check, Eye, Loader2, Save, Sparkles, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Eye, Loader2, Plug, Save, Sparkles, Trash2, XCircle } from 'lucide-react';
 
 /**
  * Bring-your-own-key settings.
@@ -15,7 +15,13 @@ import { AlertCircle, Check, Eye, Loader2, Save, Sparkles, Trash2 } from 'lucide
  *  - Text and vision are separate capabilities. A student who names only a
  *    text model has a working account with handwriting OCR switched off, and
  *    is told exactly that rather than being left to discover it.
+ *
+ * The "Test my key" button makes one minimal completion against the student's
+ * OWN key — never the shared platform key, or a broken key would appear to
+ * pass for anyone holding an admin grant. It tests the text model only.
  */
+
+type TestResult = { ok: boolean; message: string; model?: string | null };
 
 type Credentials = {
   hasOwnKey: boolean;
@@ -39,6 +45,9 @@ export default function AiProviderPanel() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [textModel, setTextModel] = useState('');
@@ -46,6 +55,9 @@ export default function AiProviderPanel() {
 
   const apply = (credentials: Credentials) => {
     setState(credentials);
+    // A result describes the key that was tested; once the saved settings
+    // change it is no longer about anything on screen.
+    setTestResult(null);
     setBaseUrl(credentials.baseUrl ?? '');
     setTextModel(credentials.textModel ?? '');
     setVisionModel(credentials.visionModel ?? '');
@@ -109,6 +121,29 @@ export default function AiProviderPanel() {
       setError(e instanceof Error ? e.message : 'Could not remove');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * One cheap probe of the saved credential. The route refuses to fall back to
+   * the platform key, so a failure here really is this student's key.
+   */
+  const testKey = async () => {
+    setTesting(true);
+    setTestResult(null);
+    setError(null);
+    try {
+      const res = await fetch('/api/account/ai-credentials/test', { method: 'POST' });
+      const data = await res.json();
+      setTestResult({
+        ok: Boolean(data.ok),
+        message: data.message || data.error || (res.ok ? 'Your key works.' : 'The test failed.'),
+        model: data.model ?? null,
+      });
+    } catch {
+      setTestResult({ ok: false, message: 'Could not reach the server to run the test.' });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -263,16 +298,64 @@ export default function AiProviderPanel() {
               )}
               {saving ? 'Saving…' : saved ? 'Saved!' : 'Save AI settings'}
             </button>
+            {/* Enabled only when a key of this student's own is stored — the
+                test deliberately has nothing to fall back on. */}
+            <button
+              onClick={testKey}
+              disabled={testing || saving || !state?.hasOwnKey}
+              title={state?.hasOwnKey ? undefined : 'Save your own API key first'}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-white dark:hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
+              {testing ? 'Testing…' : 'Test my key'}
+            </button>
             {state?.hasOwnKey && (
               <button
                 onClick={remove}
-                disabled={saving}
+                disabled={saving || testing}
                 className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
               >
                 <Trash2 className="w-3 h-3" /> Remove my key
               </button>
             )}
           </div>
+
+          {testResult && (
+            <div
+              role="status"
+              className={`rounded-xl border p-3 flex items-start gap-2 ${
+                testResult.ok
+                  ? 'bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                  : 'bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              }`}
+            >
+              {testResult.ok ? (
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-1">
+                <p
+                  className={`text-sm ${
+                    testResult.ok
+                      ? 'text-green-800 dark:text-green-200'
+                      : 'text-red-700 dark:text-red-300'
+                  }`}
+                >
+                  {testResult.message}
+                </p>
+                {/* Said every time, pass or fail: a green tick above covers the
+                    text model only. Checking the vision model would mean
+                    uploading a real image and paying for a real OCR call. */}
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  This tested your text model{testResult.model ? ` (${testResult.model})` : ''} only.
+                  {visionModel.trim()
+                    ? ` Your vision model (${visionModel.trim()}) was not tested — handwriting OCR needs a real image, so it is only exercised the first time you photograph your working.`
+                    : ' You have no vision model set, so handwriting OCR stays unavailable either way.'}
+                </p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>

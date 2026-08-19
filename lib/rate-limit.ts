@@ -130,6 +130,12 @@ export function rateLimit({ intervalMs, max, onError = 'closed' }: LimiterOpts):
 // call behind it costs money.
 export const aiLimiter = rateLimit({ intervalMs: 60_000, max: 20 });
 
+// "Test my key": one outbound request to a user-supplied https endpoint per
+// press. Tighter than the AI limiter because it is a user-directed fetch and
+// therefore an SSRF-amplification and free-proxy surface, and because nobody
+// needs to check the same key twenty times a minute.
+export const keyTestLimiter = rateLimit({ intervalMs: 60_000, max: 5 });
+
 // Password verification and account creation. Deliberately tight — five
 // attempts per minute per IP (and, for login, per account).
 export const strictLimiter = rateLimit({ intervalMs: 60_000, max: 5 });

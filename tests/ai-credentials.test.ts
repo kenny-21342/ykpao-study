@@ -35,6 +35,9 @@ const {
 const { resolveFromRow, gateText, gateVision, toChatCompletionsUrl, validateBaseUrl } =
   await import('../lib/ai-credentials.ts');
 
+const { resolveOwnTextCredential, probeTextCredential, sanitizeProviderMessage } =
+  await import('../lib/ai-key-test.ts');
+
 // ---------------------------------------------------------------------------
 // Encryption at rest
 // ---------------------------------------------------------------------------
@@ -343,4 +346,196 @@ test('the status object never contains the plaintext key', () => {
       'the status object is returned to the client and must not carry the secret',
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+// "Test my key" — the one path that must not fall back to anything
+// ---------------------------------------------------------------------------
+
+/**
+ * The regression these guard against is a false pass. A student whose key is
+ * wrong, but who happens to hold an admin grant, must see the test FAIL — if
+ * the probe quietly used the owner's key instead, the button would go green
+ * and the student would keep hitting the same broken key in every feature.
+ */
+
+// The dangerous shape: granted the owner's key, but nothing of their own.
+// Declared as a variable rather than inline because `OwnKeyRow` does not
+// contain `sharedKeyAccess` at all — passing it inline is a type error, which
+// is itself part of the no-fallback guarantee.
+const grantedWithNoOwnKey = {
+  encryptedApiKey: null,
+  baseUrl: null,
+  textModel: null,
+  sharedKeyAccess: true,
+};
+
+test('the key test refuses an account that has no key of its own', () => {
+  withSharedKey(() => {
+    for (const row of [
+      null,
+      { encryptedApiKey: null, baseUrl: null, textModel: null },
+      grantedWithNoOwnKey,
+    ]) {
+      const resolved = resolveOwnTextCredential(row);
+      assert.equal(resolved.ok, false, 'there is nothing of the user\u2019s own to test');
+      assert.equal(resolved.ok === false && resolved.reason, 'no-own-key');
+    }
+  });
+});
+
+test('a grant cannot make the key test resolve the owner\u2019s key', () => {
+  withSharedKey(() => {
+    const granted = {
+      encryptedApiKey: null,
+      keyHint: null,
+      baseUrl: null,
+      textModel: null,
+      visionModel: null,
+      sharedKeyAccess: true,
+    };
+
+    // The feature resolver DOES fall back — proving the shared key is really
+    // present in the environment for this assertion to be meaningful.
+    assert.equal(resolveFromRow(granted).text?.apiKey, 'sk-owner-server-key');
+
+    // The key test, given the same row, resolves nothing.
+    const resolved = resolveOwnTextCredential(granted);
+    assert.equal(resolved.ok, false);
+    assert.equal(
+      JSON.stringify(resolved).includes('sk-owner-server-key'),
+      false,
+      'the owner\u2019s key must not appear anywhere in the refusal',
+    );
+  });
+});
+
+test('the key test uses the user\u2019s own key even when a shared key exists', () => {
+  withSharedKey(() => {
+    // Own key AND a grant: the own key must win, so the test is honest.
+    const bothRow = { ...ownKeyRow(), sharedKeyAccess: true };
+    const resolved = resolveOwnTextCredential(bothRow);
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.ok === true && resolved.credential.apiKey, 'sk-student-own-key');
+    assert.equal(resolved.ok === true && resolved.credential.source, 'user');
+    assert.equal(
+      resolved.ok === true && resolved.credential.endpoint,
+      'https://api.deepseek.com/v1/chat/completions',
+    );
+  });
+});
+
+test('an incomplete or unreadable own key is refused rather than tested', () => {
+  withSharedKey(() => {
+    const incomplete = resolveOwnTextCredential(ownKeyRow({ textModel: null }));
+    assert.equal(incomplete.ok === false && incomplete.reason, 'incomplete');
+
+    const junk = resolveOwnTextCredential(ownKeyRow({ encryptedApiKey: 'v1.AAAA.BBBB.CCCC' }));
+    assert.equal(junk.ok === false && junk.reason, 'key-undecryptable');
+  });
+});
+
+// --- the probe itself, against a stubbed fetch (never a real provider) ------
+
+const TEST_CREDENTIAL = {
+  source: 'user' as const,
+  apiKey: 'sk-probe-key-0123456789abcdef',
+  endpoint: 'https://api.example.com/v1/chat/completions',
+  model: 'test-model',
+};
+
+function stubFetch(
+  handler: (url: string, init: RequestInit) => { status: number; body: string },
+) {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const impl = (async (url: unknown, init: unknown) => {
+    const request = { url: String(url), init: (init ?? {}) as RequestInit };
+    calls.push(request);
+    const { status, body } = handler(request.url, request.init);
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => body,
+      json: async () => JSON.parse(body),
+    } as unknown as Response;
+  }) as unknown as typeof fetch;
+  return { impl, calls };
+}
+
+test('a successful probe is one minimal completion to the user\u2019s endpoint', async () => {
+  const { impl, calls } = stubFetch(() => ({
+    status: 200,
+    body: JSON.stringify({ choices: [{ message: { content: 'p' } }] }),
+  }));
+
+  const result = await probeTextCredential(TEST_CREDENTIAL, { fetchImpl: impl });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 200);
+
+  assert.equal(calls.length, 1, 'exactly one provider call, and no retries');
+  assert.equal(calls[0].url, TEST_CREDENTIAL.endpoint);
+  const headers = calls[0].init.headers as Record<string, string>;
+  assert.equal(headers.Authorization, `Bearer ${TEST_CREDENTIAL.apiKey}`);
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.equal(body.max_tokens, 1, 'the probe must stay as cheap as possible');
+  assert.equal(body.model, 'test-model');
+});
+
+test('a rejected key reports the provider\u2019s reason and fails', async () => {
+  const { impl } = stubFetch(() => ({
+    status: 401,
+    body: JSON.stringify({ error: { message: 'Authentication Fails, Your api key is invalid' } }),
+  }));
+
+  const result = await probeTextCredential(TEST_CREDENTIAL, { fetchImpl: impl });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 401);
+  assert.match(result.message, /rejected the key/i);
+  assert.match(result.message, /Authentication Fails/);
+});
+
+test('a provider error that echoes the key back has it redacted', async () => {
+  const { impl } = stubFetch(() => ({
+    status: 400,
+    body: JSON.stringify({
+      error: { message: `Bad request for Bearer ${TEST_CREDENTIAL.apiKey} on model test-model` },
+    }),
+  }));
+
+  const result = await probeTextCredential(TEST_CREDENTIAL, { fetchImpl: impl });
+  assert.equal(result.ok, false);
+  assert.ok(
+    !result.message.includes(TEST_CREDENTIAL.apiKey),
+    'the decrypted key must never be echoed back to the client',
+  );
+  assert.match(result.message, /\[redacted\]/);
+});
+
+test('the sanitiser removes fragments of the key, not just the whole thing', () => {
+  const key = 'sk-abcdefgh-middle-12345678';
+  const cleaned = sanitizeProviderMessage(
+    `invalid key sk-abcdef\u0000gh... suffix 12345678 here`,
+    key,
+  );
+  assert.ok(!cleaned.includes('12345678'), 'the tail of the key must not survive');
+  assert.ok(!/[\u0000-\u001f]/.test(cleaned), 'control characters are stripped');
+});
+
+test('a 200 that is not an OpenAI-compatible completion is not a pass', async () => {
+  const { impl } = stubFetch(() => ({ status: 200, body: '<html>captive portal</html>' }));
+  const result = await probeTextCredential(TEST_CREDENTIAL, { fetchImpl: impl });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /OpenAI-compatible/i);
+});
+
+test('an unreachable endpoint fails with a fixed message, not the raw error', async () => {
+  const impl = (async () => {
+    throw new Error('getaddrinfo ENOTFOUND api.example.com secret-internal-detail');
+  }) as unknown as typeof fetch;
+
+  const result = await probeTextCredential(TEST_CREDENTIAL, { fetchImpl: impl });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, null);
+  assert.ok(!result.message.includes('secret-internal-detail'));
+  assert.match(result.message, /Could not reach your endpoint/);
 });
