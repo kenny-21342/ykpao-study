@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import type { GradeResult } from '@/types/ai';
@@ -25,8 +24,11 @@ const Body = z.object({
 
 /** POST /api/ai/check-answer — grade a student answer with DeepSeek. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  // getSessionUser() rather than getServerSession(): it is the chokepoint that
+  // enforces bans and credential-fingerprint revocation. That matters more here
+  // than on a read-only route — this one spends money per call.
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const allowance = await checkAiAllowance(session.user.id);
+  const allowance = await checkAiAllowance(user.id);
   if (!allowance.allowed) {
     return NextResponse.json(
       { error: allowance.message },
@@ -78,7 +80,7 @@ ${answer}`;
     const clampedScore = Math.max(0, Math.min(max, Number(result.score) || 0));
 
     await recordUsage({
-      userId: session.user.id,
+      userId: user.id,
       feature: 'practice-grade',
       tokensOut: 800, // rough estimate
     });

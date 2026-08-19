@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { getStorage, KEY_PREFIX } from '@/lib/storage';
@@ -34,8 +33,13 @@ const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 type UploadKind = 'image' | 'file';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  // getSessionUser() rather than getServerSession(): it is the chokepoint that
+  // enforces bans and credential-fingerprint revocation. The gate was on
+  // `session.user.email` purely as a proof of sign-in — nothing downstream uses
+  // the address — so resolving the row instead costs one query and closes the
+  // hole where a banned or reset-away session could still upload.
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

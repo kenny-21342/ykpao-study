@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +17,12 @@ const Body = z.object({
  * this endpoint targets the Question model.
  */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  // getSessionUser() rather than getServerSession(): it is the chokepoint that
+  // enforces bans and credential-fingerprint revocation, so reading the session
+  // directly would let a device holding a reset-away password keep writing
+  // attempts to the account.
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
 
   const attempt = await prisma.questionAttempt.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       questionId: parsed.questionId,
       answer: parsed.answer,
       timeSpent: parsed.timeSpent ?? 0,
