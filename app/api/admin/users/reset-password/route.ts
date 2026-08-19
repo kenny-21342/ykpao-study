@@ -83,9 +83,10 @@ export async function POST(req: NextRequest) {
     // Shown to the admin once and never stored in plaintext.
     temporaryPassword,
     email: target.email,
-    // Sessions use a stateless JWT, so any device already signed in as this
-    // user stays signed in until its token expires. Surfaced so the admin can
-    // decide whether a ban/unban cycle is also warranted.
-    existingSessionsRevoked: false,
+    // Sessions are stateless JWTs, but each one carries a fingerprint of the
+    // password hash it was issued against, and getSessionUser() re-checks it
+    // on every request — so changing the hash above signs every existing
+    // device out. See lib/password-reset.ts.
+    existingSessionsRevoked: true,
   });
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -172,7 +172,14 @@ export default function AccountSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       setPwdSaved(true);
-      setTimeout(() => setPwdSaved(false), 2000);
+      // Changing the password invalidates every session issued against the old
+      // one — including this tab's. That is the point (a stolen session must
+      // not survive a password change), but it means staying here would leave
+      // the user clicking around a page that is quietly no longer signed in.
+      // So end the session deliberately and send them back to sign in.
+      setTimeout(() => {
+        void signOut({ callbackUrl: '/auth/login' });
+      }, 1500);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to change password');
     } finally {
@@ -374,7 +381,7 @@ export default function AccountSettingsPage() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingPwd ? <Loader2 className="w-4 h-4 animate-spin" /> : pwdSaved ? <Check className="w-4 h-4" /> : null}
-                {savingPwd ? 'Updating…' : pwdSaved ? 'Password Changed!' : 'Change Password'}
+                {savingPwd ? 'Updating…' : pwdSaved ? 'Password changed — signing you out…' : 'Change Password'}
               </button>
             </>
           )}

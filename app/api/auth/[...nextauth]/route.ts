@@ -6,6 +6,7 @@ import GitHubProvider from "next-auth/providers/github"
 import AzureADProvider from "next-auth/providers/azure-ad"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
+import { credentialFingerprint } from "@/lib/password-reset"
 import bcrypt from "bcrypt"
 
 // NextAuth v4 otherwise falls back to NEXTAUTH_URL (or localhost:3000).
@@ -172,6 +173,25 @@ export const authOptions = {
           token.role = dbUser.role
         }
       }
+
+      // Bind this token to the password it was issued against, so a password
+      // reset invalidates it. lib/password-reset.ts explains why this and not
+      // the token's own `iat` (NextAuth re-issues `iat` on every session read,
+      // so a stolen cookie would refresh itself past any cutoff).
+      //
+      // Only filled in when ABSENT: on first sign-in, and once for tokens
+      // issued before this existed. It is deliberately never refreshed for a
+      // token that already has one — a *stale* fingerprint is precisely the
+      // signal getSessionUser() checks, and re-deriving it here would let any
+      // stolen session heal itself by calling update().
+      if (token.cfp === undefined && token.id) {
+        const cred = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { password: true },
+        })
+        token.cfp = credentialFingerprint(cred?.password)
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -183,6 +203,9 @@ export const authOptions = {
         session.user.email = (token.email as string | undefined) ?? session.user.email
         session.user.image = (token.picture as string | undefined) ?? session.user.image
         session.user.role = (token.role as string | undefined) ?? 'student'
+        // Opaque (HMAC-keyed) — carried so getSessionUser() can reject a
+        // session issued against a password that has since been changed.
+        session.user.cfp = token.cfp as string | undefined
       }
       return session
     }
