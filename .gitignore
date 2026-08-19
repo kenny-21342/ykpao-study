@@ -101,3 +101,9 @@ public/uploads/
 
 # Stray screenshot
 /IMG_9878.PNG
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/e2e/.auth/
