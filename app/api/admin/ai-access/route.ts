@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, isAdminUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isSharedAiConfigured } from '@/lib/ai-credentials';
+import { parsePositiveInt } from '@/lib/query-params';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,25 +25,73 @@ const Body = z.object({
   granted: z.boolean(),
 });
 
-/** GET /api/admin/ai-access — who currently holds a grant. */
-export async function GET() {
+/**
+ * GET /api/admin/ai-access?q=&granted=&page=&pageSize=
+ *
+ * Two things at once, because the console screen needs both:
+ *  - `grants`: every account that currently holds a grant, regardless of the
+ *    search filter, so the admin can always see the full liability.
+ *  - `users`: one searchable, paginated page of the directory decorated with
+ *    its grant state, since the school has far too many students to render in
+ *    one list.
+ *
+ * No secret is read here. `encryptedApiKey` is selected only to derive a
+ * `hasOwnKey` boolean and is never returned.
+ */
+export async function GET(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const rows = await prisma.userAiCredential.findMany({
-    where: { sharedKeyAccess: true },
-    select: {
-      userId: true,
-      sharedKeyGrantedAt: true,
-      sharedKeyGrantedBy: true,
-      // Presence of a personal key only — never the key, never the hint's
-      // source. Admins get to see that a student is self-sufficient, nothing
-      // more.
-      encryptedApiKey: true,
-      user: { select: { name: true, email: true } },
-    },
-    orderBy: { sharedKeyGrantedAt: 'desc' },
-  });
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get('q')?.trim() ?? '';
+  const grantedOnly = searchParams.get('granted') === '1';
+  const page = parsePositiveInt(searchParams.get('page'), 1);
+  const pageSize = parsePositiveInt(searchParams.get('pageSize'), 20, 100);
+
+  const where: Record<string, unknown> = {};
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: 'insensitive' } },
+      { email: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+  if (grantedOnly) where.aiCredential = { is: { sharedKeyAccess: true } };
+
+  const credentialSelect = {
+    sharedKeyAccess: true,
+    sharedKeyGrantedAt: true,
+    sharedKeyGrantedBy: true,
+    // Presence of a personal key only — never the key, never the hint's
+    // source. Admins get to see that a student is self-sufficient, nothing
+    // more.
+    encryptedApiKey: true,
+    textModel: true,
+  } as const;
+
+  const [rows, users, total] = await Promise.all([
+    prisma.userAiCredential.findMany({
+      where: { sharedKeyAccess: true },
+      select: { userId: true, ...credentialSelect, user: { select: { name: true, email: true } } },
+      orderBy: { sharedKeyGrantedAt: 'desc' },
+    }),
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        banned: true,
+        createdAt: true,
+        aiCredential: { select: credentialSelect },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.user.count({ where }),
+  ]);
 
   return NextResponse.json({
     sharedKeyConfigured: isSharedAiConfigured(),
@@ -54,6 +103,25 @@ export async function GET() {
       grantedBy: row.sharedKeyGrantedBy,
       hasOwnKey: Boolean(row.encryptedApiKey),
     })),
+    users: users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      image: u.image,
+      role: u.role,
+      banned: u.banned,
+      createdAt: u.createdAt,
+      effectiveAdmin: isAdminUser({ role: u.role, email: u.email }),
+      sharedKeyAccess: Boolean(u.aiCredential?.sharedKeyAccess),
+      grantedAt: u.aiCredential?.sharedKeyGrantedAt ?? null,
+      grantedBy: u.aiCredential?.sharedKeyGrantedBy ?? null,
+      hasOwnKey: Boolean(u.aiCredential?.encryptedApiKey),
+      textModel: u.aiCredential?.textModel ?? null,
+    })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
   });
 }
 

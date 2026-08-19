@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, ShieldCheck, Megaphone, BookOpen,
-  FolderOpen, Activity, ArrowLeft, Menu, X,
+  FolderOpen, Activity, ArrowLeft, Menu, X, Wallet,
 } from 'lucide-react';
 import AdminDashboard from './sections/AdminDashboard';
 import UserManagement from './sections/UserManagement';
@@ -12,10 +12,12 @@ import ContentModeration from './sections/ContentModeration';
 import AnnouncementManager from './sections/AnnouncementManager';
 import ResourceManager from './sections/ResourceManager';
 import SystemMonitor from './sections/SystemMonitor';
+import AiAccessManager from './sections/AiAccessManager';
 
 type Section =
   | 'dashboard'
   | 'users'
+  | 'ai-access'
   | 'moderation'
   | 'announcements'
   | 'resources'
@@ -24,6 +26,7 @@ type Section =
 const NAV: { key: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'users', label: 'Users', icon: Users },
+  { key: 'ai-access', label: 'AI Access', icon: Wallet },
   { key: 'moderation', label: 'Moderation', icon: ShieldCheck },
   { key: 'announcements', label: 'Announcements', icon: Megaphone },
   { key: 'resources', label: 'Resources', icon: FolderOpen },
@@ -115,6 +118,7 @@ export default function AdminPanel() {
         <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
           {section === 'dashboard' && <AdminDashboard />}
           {section === 'users' && <UserManagement />}
+          {section === 'ai-access' && <AiAccessManager />}
           {section === 'moderation' && <ContentModeration />}
           {section === 'announcements' && <AnnouncementManager />}
           {section === 'resources' && <ResourceManager />}
