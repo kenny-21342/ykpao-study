@@ -1,9 +1,19 @@
 import { DeepSeekMessage, DeepSeekResponse } from '@/types/ai';
+import type { TextCredential } from '@/lib/ai-credentials';
 
-const API_KEY = process.env.DEEPSEEK_API_KEY;
-const API_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions';
-const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-
+/**
+ * Provider-agnostic chat client.
+ *
+ * This module no longer holds a key of its own. Under bring-your-own-key the
+ * caller resolves a `TextCredential` per user (lib/ai-credentials.ts) and
+ * passes it in, so the endpoint, model and bearer token all vary per request.
+ * The shape of the request is the OpenAI-compatible `/chat/completions` one
+ * that DeepSeek, SiliconFlow, OpenRouter and most school proxies all speak.
+ *
+ * The class name `DeepSeekError` is kept — it is the error type every route
+ * already catches and re-serialises, and renaming it would touch far more
+ * code than it is worth. Its messages are provider-neutral.
+ */
 export class DeepSeekError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -11,10 +21,6 @@ export class DeepSeekError extends Error {
     this.status = status;
     this.name = 'DeepSeekError';
   }
-}
-
-export function isAIConfigured() {
-  return Boolean(API_KEY);
 }
 
 /**
@@ -36,6 +42,11 @@ const DEFAULT_BUDGET_MS = Number(process.env.AI_REQUEST_BUDGET_MS || 45_000);
 const DEFAULT_MAX_ATTEMPTS = 2;
 
 export type ChatOptions = {
+  /**
+   * Whose key pays for this call, where to send it, and which model to ask
+   * for. Required: there is no ambient server key to fall back to.
+   */
+  credential: TextCredential;
   temperature?: number;
   maxTokens?: number;
   jsonResponse?: boolean;
@@ -56,13 +67,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function chat(
   messages: DeepSeekMessage[],
-  options: ChatOptions = {}
+  options: ChatOptions
 ): Promise<string> {
-  if (!API_KEY) {
-    throw new DeepSeekError('DeepSeek API key is not configured (DEEPSEEK_API_KEY)', 503);
-  }
-
   const {
+    credential,
     temperature = 0.7,
     maxTokens = 2000,
     jsonResponse = false,
@@ -71,8 +79,15 @@ export async function chat(
     signal,
   } = options;
 
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) {
+    throw new DeepSeekError(
+      'No AI credentials were supplied for this request. Add an API key in Account Settings → AI Provider.',
+      503,
+    );
+  }
+
   const body: Record<string, unknown> = {
-    model: MODEL,
+    model: credential.model,
     messages,
     temperature,
     max_tokens: maxTokens,
@@ -83,7 +98,7 @@ export async function chat(
 
   const deadline = Date.now() + Math.max(1_000, budgetMs);
   const attempts = Math.max(1, maxAttempts);
-  let lastError: DeepSeekError = new DeepSeekError('DeepSeek request was not attempted', 503);
+  let lastError: DeepSeekError = new DeepSeekError('The AI request was not attempted', 503);
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const remaining = deadline - Date.now();
@@ -101,11 +116,11 @@ export async function chat(
     const timer = setTimeout(() => controller.abort(), attemptMs);
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(credential.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${credential.apiKey}`,
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -117,11 +132,22 @@ export async function chat(
         // operators; never let it reach the client, since several routes return
         // `error.message` verbatim.
         const detail = await res.text();
-        console.error(`DeepSeek request failed (${res.status}):`, detail.slice(0, 2000));
+        console.error(
+          `AI request failed (${res.status}) [source=${credential.source}]:`,
+          detail.slice(0, 2000),
+        );
         lastError = new DeepSeekError(
           res.status === 429
             ? 'The AI service is rate-limited right now. Please try again in a moment.'
-            : `DeepSeek request failed (${res.status})`,
+            : res.status === 401 || res.status === 403
+              ? credential.source === 'user'
+                ? 'Your AI provider rejected your API key (401/403). Check the key and endpoint in Account Settings → AI Provider.'
+                : 'The shared AI key was rejected by the provider. Please tell an administrator.'
+              : res.status === 404
+                ? credential.source === 'user'
+                  ? `Your AI endpoint returned 404 for model “${credential.model}”. Check the API endpoint and model name in Account Settings → AI Provider.`
+                  : 'The AI endpoint returned 404.'
+                : `The AI provider returned an error (${res.status})`,
           res.status
         );
         if (!isRetryableStatus(res.status)) throw lastError;
@@ -129,7 +155,7 @@ export async function chat(
         const data = (await res.json()) as DeepSeekResponse;
         const content = data.choices?.[0]?.message?.content;
         if (content) return content;
-        lastError = new DeepSeekError('DeepSeek returned an empty response', 502);
+        lastError = new DeepSeekError('The AI provider returned an empty response', 502);
       }
     } catch (err) {
       if (err instanceof DeepSeekError) throw err;
@@ -139,7 +165,7 @@ export async function chat(
         throw new DeepSeekError('The request was cancelled', 499);
       }
       const timedOut = err instanceof Error && err.name === 'AbortError';
-      console.error('DeepSeek request error:', timedOut ? `timed out after ${attemptMs}ms` : err);
+      console.error('AI request error:', timedOut ? `timed out after ${attemptMs}ms` : err);
       lastError = timedOut
         ? new DeepSeekError(
             'The AI service did not respond in time. Please try again.',
@@ -163,7 +189,7 @@ export async function chat(
 
 export async function chatJSON<T = unknown>(
   messages: DeepSeekMessage[],
-  options: Omit<ChatOptions, 'jsonResponse'> = {}
+  options: Omit<ChatOptions, 'jsonResponse'>
 ): Promise<T> {
   const raw = await chat(messages, { ...options, jsonResponse: true });
   try {
@@ -174,7 +200,7 @@ export async function chatJSON<T = unknown>(
     if (start !== -1 && end !== -1) {
       return JSON.parse(raw.slice(start, end + 1)) as T;
     }
-    throw new DeepSeekError('DeepSeek did not return valid JSON', 502);
+    throw new DeepSeekError('The AI provider did not return valid JSON', 502);
   }
 }
 

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
+import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
+import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
-import { transcribeHandwriting, isVisionConfigured } from '@/lib/vision';
+import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
@@ -68,7 +69,24 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const allowance = await checkAiAllowance(user.id, { requests: MAX_EXAM_ITEMS });
+    // Grading a whole paper is the most expensive thing the app does, so both
+    // gates run before anything is read: credentials first (is AI on for this
+    // account at all?), then the allowance.
+    const access = await requireTextAi(user.id);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error, reason: access.reason, aiDisabled: true },
+        { status: access.status }
+      );
+    }
+    // Vision is optional here: a text-only key still grades typed answers, and
+    // any attached photo is reported as skipped rather than silently dropped.
+    const visionAccess = await requireVisionAi(user.id);
+
+    const allowance = await checkAiAllowance(user.id, {
+      requests: MAX_EXAM_ITEMS,
+      source: access.source,
+    });
     if (!allowance.allowed) {
       return NextResponse.json(
         { error: allowance.message },
@@ -87,13 +105,6 @@ export async function POST(
     if (exam.status === 'completed') {
       return NextResponse.json({ error: 'This mock exam has already been submitted' }, { status: 409 });
     }
-    if (!isAIConfigured()) {
-      return NextResponse.json(
-        { error: 'AI service not configured (DEEPSEEK_API_KEY missing)' },
-        { status: 503 }
-      );
-    }
-
     const body = (await req.json()) ?? {};
     const answers: Record<string, string> = body.answers ?? {};
     const images: Record<string, string> = body.images ?? {};
@@ -163,9 +174,9 @@ export async function POST(
         // the text-only grader sees the full working.
         let answer = rawAnswer;
         let answerImageUrl: string | null = null;
-        if (imageUrl && isVisionConfigured()) {
+        if (imageUrl && visionAccess.ok) {
           try {
-            const transcript = await transcribeHandwriting(imageUrl);
+            const transcript = await transcribeHandwriting(imageUrl, visionAccess.credential);
             if (transcript && transcript.trim()) {
               answer = rawAnswer
                 ? `${rawAnswer}\n\n[Transcribed from handwritten work]\n${transcript.trim()}`
@@ -232,6 +243,7 @@ export async function POST(
               },
             ],
             {
+              credential: access.credential,
               temperature: 0.2,
               maxTokens: 1200,
               // Grading fans out: MAX_EXAM_ITEMS items at GRADING_CONCURRENCY
@@ -300,6 +312,7 @@ export async function POST(
             userId: user.id,
             feature: 'mock-exam-grade',
             tokensOut: 800,
+            model: access.credential.model,
           });
 
           return score;
@@ -378,6 +391,10 @@ export async function POST(
           weaknesses: i.weaknesses,
         })),
       },
+      // Only ever set when the student attached photos and their credentials
+      // name no vision model: the paper was graded, the pictures were not read.
+      aiNotice:
+        !visionAccess.ok && Object.keys(images).length > 0 ? visionAccess.error : null,
     });
   } catch (error) {
     console.error('Mock exam submit failed:', error);

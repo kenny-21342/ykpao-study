@@ -3,7 +3,8 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chat, isAIConfigured } from '@/lib/ai';
+import { chat } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { retrieveContext } from '@/lib/rag';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
@@ -193,15 +194,16 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const allowance = await checkAiAllowance(user.id);
+  const access = await requireTextAi(user.id);
+  if (!access.ok) {
+    return NextResponse.json(
+      { error: access.error, reason: access.reason, aiDisabled: true, conversationId: conversation.id },
+      { status: access.status }
+    );
+  }
+  const allowance = await checkAiAllowance(user.id, { source: access.source });
   if (!allowance.allowed) {
     return NextResponse.json({ error: allowance.message, conversationId: conversation.id }, { status: 429 });
-  }
-  if (!isAIConfigured()) {
-    return NextResponse.json(
-      { error: 'AI is not configured. Set DEEPSEEK_API_KEY to use this feature.', conversationId: conversation.id },
-      { status: 503 }
-    );
   }
 
   // ---- Step 1: Retrieve relevant context ----
@@ -306,6 +308,7 @@ FORMATTING RULES:
   // ---- Step 4: Call the LLM ----
   try {
     const answer = await chat(messages, {
+      credential: access.credential,
       temperature: 0.4,
       maxTokens: 2000,
     });
@@ -314,6 +317,7 @@ FORMATTING RULES:
       userId: user.id,
       feature: 'rag-chat',
       tokensOut: Math.ceil(answer.length / 4),
+      model: access.credential.model,
     });
 
     let proposal;

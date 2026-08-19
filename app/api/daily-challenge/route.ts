@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isAIConfigured, chatJSON } from '@/lib/ai';
+import { chatJSON } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -126,13 +127,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Grading a daily challenge is an LLM call.
-  const allowance = await checkAiAllowance(user.id);
-  if (!allowance.allowed) {
-    return NextResponse.json(
-      { error: allowance.message },
-      { status: 429 }
-    );
+  // Grading a daily challenge is an LLM call, but it is not what the endpoint
+  // is *for*: the attempt is recorded either way, once per day. So a student
+  // with no AI credentials still gets to submit — they simply get the
+  // ungraded path plus an explanation, rather than a 503 that would cost them
+  // their one attempt of the day.
+  const access = await requireTextAi(user.id);
+  if (access.ok) {
+    const allowance = await checkAiAllowance(user.id, { source: access.source });
+    if (!allowance.allowed) {
+      return NextResponse.json(
+        { error: allowance.message },
+        { status: 429 }
+      );
+    }
   }
 
   let parsed;
@@ -168,7 +176,9 @@ export async function POST(req: NextRequest) {
   let isCorrect: boolean | null = null;
   let feedback = '';
 
-  if (isAIConfigured()) {
+  let aiNotice: string | null = access.ok ? null : access.error;
+
+  if (access.ok) {
     try {
       const result = await chatJSON<{ score: number; feedback: string }>(
         [
@@ -185,15 +195,16 @@ export async function POST(req: NextRequest) {
               `Student answer:\n${parsed.answer}\n\nReturn JSON only.`,
           },
         ],
-        { temperature: 0.2, maxTokens: 600 }
+        { credential: access.credential, temperature: 0.2, maxTokens: 600 }
       );
       score = Math.max(0, Math.min(question.marks, Math.round(result.score)));
       isCorrect = score >= Math.ceil(question.marks * 0.5);
       feedback = result.feedback ?? '';
-      await recordUsage({ userId: user.id, feature: 'daily-challenge', tokensOut: 400 });
+      await recordUsage({ userId: user.id, feature: 'daily-challenge', tokensOut: 400, model: access.credential.model });
     } catch (err) {
       // AI grading failed — record the attempt ungraded so the user isn't blocked.
       console.error('Daily challenge grading failed:', err);
+      aiNotice = 'Your answer was recorded, but the AI marker could not be reached, so it is unscored.';
     }
   }
 
@@ -208,5 +219,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ok: true, attempt, feedback, marks: question.marks });
+  return NextResponse.json({ ok: true, attempt, feedback, marks: question.marks, aiNotice });
 }

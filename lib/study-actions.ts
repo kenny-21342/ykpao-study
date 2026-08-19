@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { addDays, endOfDay, plainText, startOfDay } from '@/lib/learning';
 import { createPredictedPaper } from '@/lib/predicted-paper';
+import { requireTextAi } from '@/lib/ai-credentials';
 
 export type StudyActionType = 'study-week' | 'todo-plan' | 'daily-practice' | 'mock-exam' | 'predicted-paper' | 'materials';
 
@@ -387,8 +388,13 @@ export async function runStudyAction(input: { userId: string; action: StudyActio
 
   if (input.action === 'predicted-paper') {
     if (!preferredSubjectCode) throw new Error('Pick a subject before generating a predicted paper.');
+    // The only branch of this function that spends an AI call, so the
+    // credential is resolved here rather than being demanded by every caller.
+    const access = await requireTextAi(input.userId);
+    if (!access.ok) throw new Error(access.error);
     const predicted = await createPredictedPaper({
       userId: input.userId,
+      credential: access.credential,
       subjectCode: preferredSubjectCode,
       title: 'Predicted practice paper',
       difficulty: 'mixed',

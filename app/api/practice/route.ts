@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
+import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
+import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
-import { transcribeHandwriting, isVisionConfigured } from '@/lib/vision';
+import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { parsePositiveInt } from '@/lib/query-params';
@@ -31,13 +32,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const allowance = await checkAiAllowance(user.id, { requests: 2 });
-    if (!allowance.allowed) {
-      return NextResponse.json(
-        { error: allowance.message },
-        { status: 429 }
-      );
+    // Submitting an answer is not only an AI call — the attempt is persisted
+    // and feeds the review queue and the weakness model — so a student with no
+    // AI credentials still gets to submit. They get an ungraded attempt and an
+    // explanation instead of a 503 that would lose their work.
+    const textAccess = await requireTextAi(user.id);
+    if (textAccess.ok) {
+      const allowance = await checkAiAllowance(user.id, {
+        requests: 2,
+        source: textAccess.source,
+      });
+      if (!allowance.allowed) {
+        return NextResponse.json(
+          { error: allowance.message },
+          { status: 429 }
+        );
+      }
     }
+    const aiNotices: string[] = [];
+    if (!textAccess.ok) aiNotices.push(textAccess.error);
     const { questionId, answer, timeSpent, drawing, image } = (await req.json()) ?? {};
     if (!questionId || answer == null) {
       return NextResponse.json({ error: 'questionId and answer are required' }, { status: 400 });
@@ -81,9 +94,14 @@ export async function POST(req: NextRequest) {
     let answerImageUrl: string | null = null;
     let gradedAnswer = String(answer);
 
-    if (answerImage && isVisionConfigured()) {
+    // Vision is resolved separately: a text-only key must still grade a typed
+    // answer, and must say plainly why the attached photo was ignored.
+    const visionAccess = answerImage ? await requireVisionAi(user.id) : null;
+    if (visionAccess && !visionAccess.ok) aiNotices.push(visionAccess.error);
+
+    if (answerImage && visionAccess?.ok) {
       try {
-        const transcription = await transcribeHandwriting(answerImage);
+        const transcription = await transcribeHandwriting(answerImage, visionAccess.credential);
         if (transcription && transcription.trim()) {
           gradedAnswer = gradedAnswer.trim()
             ? `${gradedAnswer.trim()}\n\n[Transcribed from handwritten work]\n${transcription.trim()}`
@@ -95,6 +113,7 @@ export async function POST(req: NextRequest) {
             userId: user.id,
             feature: 'ocr-transcribe',
             tokensOut: Math.min(2048, Math.ceil(transcription.length / 4)),
+            model: visionAccess.credential.model,
           });
         }
       } catch (ocrErr) {
@@ -103,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     let grade: Partial<GradeResult> = {};
-    if (isAIConfigured()) {
+    if (textAccess.ok) {
       try {
         const userContent = `Grade the student's answer against the markscheme.
 
@@ -118,16 +137,22 @@ ${gradedAnswer}`;
             { role: 'system', content: SYSTEM_PROMPTS.grader },
             { role: 'user', content: userContent },
           ],
-          { temperature: 0.2, maxTokens: 1500 }
+          { credential: textAccess.credential, temperature: 0.2, maxTokens: 1500 }
         );
 
         await recordUsage({
           userId: user.id,
           feature: 'practice-grade',
           tokensOut: 800,
+          model: textAccess.credential.model,
         });
       } catch (err) {
         console.error('Grading failed:', err);
+        aiNotices.push(
+          err instanceof Error && err.message
+            ? err.message
+            : 'The AI marker could not be reached, so this attempt is unscored.',
+        );
       }
     }
 
@@ -179,6 +204,7 @@ ${gradedAnswer}`;
       markSchemeQuestionId: markschemeId,
       reviewItemCreated: isCorrect === false,
       reviewQueueCount,
+      aiNotices,
     });
   } catch (error) {
     console.error('Error saving attempt:', error);

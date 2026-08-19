@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chat, isAIConfigured } from '@/lib/ai';
+import { chat } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,14 @@ const LEVEL_RULES: Record<number, string> = {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const allowance = await checkAiAllowance(user.id);
+  const access = await requireTextAi(user.id);
+  if (!access.ok) {
+    return NextResponse.json(
+      { error: access.error, reason: access.reason, aiDisabled: true },
+      { status: access.status },
+    );
+  }
+  const allowance = await checkAiAllowance(user.id, { source: access.source });
   if (!allowance.allowed) return NextResponse.json({ error: allowance.message }, { status: 429 });
 
   let body: z.infer<typeof HintBody>;
@@ -36,10 +44,6 @@ export async function POST(req: Request) {
     body = HintBody.parse(await req.json());
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid hint request' }, { status: 400 });
-  }
-
-  if (!isAIConfigured()) {
-    return NextResponse.json({ error: 'AI is not configured. Set DEEPSEEK_API_KEY to use hints.' }, { status: 503 });
   }
 
   const question = await prisma.pastPaperQuestion.findUnique({
@@ -83,8 +87,8 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
     const hint = await chat([
       { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
       { role: 'user', content: prompt },
-    ], { temperature: 0.25, maxTokens: 600 });
-    await recordUsage({ userId: user.id, feature: 'progressive-hint', tokensOut: Math.ceil(hint.length / 4) });
+    ], { credential: access.credential, temperature: 0.25, maxTokens: 600 });
+    await recordUsage({ userId: user.id, feature: 'progressive-hint', tokensOut: Math.ceil(hint.length / 4), model: access.credential.model });
     return NextResponse.json({ hint, level: body.level, maxLevel: 3, grounded: Boolean(markscheme) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Hint generation failed' }, { status: 500 });

@@ -141,6 +141,18 @@ type AiAllowance =
 type AiAllowanceOptions = {
   /** Number of paid provider calls this request can fan out into. */
   requests?: number;
+  /**
+   * Whose key pays for the call.
+   *
+   * 'shared' — the owner's server key, reached only by an admin-granted
+   * account. Still the owner's money, so the monthly dollar cap still applies.
+   *
+   * 'user' — the student's own bring-your-own key. Their provider bills them
+   * directly and enforces its own limits, so the owner's dollar cap is not
+   * theirs to spend. The per-minute limiter still applies: it protects this
+   * platform's function budget and database, not the owner's wallet.
+   */
+  source?: 'user' | 'shared';
 };
 
 const MICRO_USD_PER_USD = 1_000_000;
@@ -240,6 +252,9 @@ export async function checkAiAllowance(
       message: 'Too many AI requests. Please wait a minute and try again.',
     };
   }
+
+  // A user's own key never touches the owner's monthly budget.
+  if (options.source === 'user') return { allowed: true };
 
   const monthly = await reserveMonthlyAiSpend(userId, options.requests ?? 1);
   if (monthly === 'budget') {

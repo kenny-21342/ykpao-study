@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { chat, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
+import { chat, SYSTEM_PROMPTS } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -25,14 +26,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!isAIConfigured()) {
+  // Bring-your-own-key: the user's own credentials, or a shared key an admin
+  // granted them, or the feature is off for this account.
+  const access = await requireTextAi(session.user.id);
+  if (!access.ok) {
     return NextResponse.json(
-      { error: 'AI service not configured (DEEPSEEK_API_KEY missing)' },
-      { status: 503 }
+      { error: access.error, reason: access.reason, aiDisabled: true },
+      { status: access.status }
     );
   }
 
-  const allowance = await checkAiAllowance(session.user.id);
+  const allowance = await checkAiAllowance(session.user.id, { source: access.source });
   if (!allowance.allowed) {
     return NextResponse.json(
       { error: allowance.message },
@@ -62,13 +66,14 @@ export async function POST(request: Request) {
         { role: 'system', content: SYSTEM_PROMPTS.tutor },
         { role: 'user', content: userContent },
       ],
-      { temperature: 0.7, maxTokens: 2000 }
+      { credential: access.credential, temperature: 0.7, maxTokens: 2000 }
     );
 
     await recordUsage({
       userId: session.user.id,
       feature: 'ai-chat',
       tokensOut: Math.ceil(aiMessage.length / 4),
+      model: access.credential.model,
     });
 
     return NextResponse.json({ message: aiMessage });

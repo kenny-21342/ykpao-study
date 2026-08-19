@@ -1,38 +1,26 @@
 /**
  * Vision LLM client for transcribing handwritten student work to text.
  *
- * Mirrors the backend selection logic in pdf_extraction/lib/vision_client.py:
- *   - If SILICONFLOW_API_KEY is set  → SiliconFlow (OpenAI-compatible)
- *   - Else if GEMINI_API_KEY is set  → Gemini native API
- *   - Else throws
+ * Under bring-your-own-key this module holds no key of its own. The caller
+ * resolves a `VisionCredential` for the signed-in user (lib/ai-credentials.ts)
+ * and passes it in. Two request shapes are supported:
+ *
+ *   - `openai-compatible` — every user-supplied endpoint, plus the owner's
+ *     SiliconFlow key. One `/chat/completions` call with an `image_url` part.
+ *   - `gemini` — only ever reached through the owner's shared server key,
+ *     which predates BYOK and uses the native generateContent API.
+ *
+ * A user who supplied only a text model has no vision credential at all; the
+ * route gate (`requireVisionAi`) turns that into a specific, actionable
+ * message rather than a silent fallback. Callers that treat OCR as an
+ * enhancement still get `null` on a failed call and grade the typed answer.
  *
  * Unlike the Python pipeline (which extracts structured JSON from PDF pages),
  * this module is purpose-built for one task: OCR a single image of a student's
- * handwritten answer and return plain text/LaTeX suitable for the DeepSeek
- * grader. Returns null on failure so callers can fall back to text-only input.
+ * handwritten answer and return plain text/LaTeX suitable for the text grader.
  */
 
-const SILICONFLOW_KEY = process.env.SILICONFLOW_API_KEY || "";
-const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
-
-const SF_BASE = "https://api.siliconflow.cn/v1/chat/completions";
-const SF_MODEL = process.env.VISION_MODEL || "Qwen/Qwen3-VL-32B-Instruct";
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-const GEMINI_API_BASE =
-  process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta";
-
-export type VisionBackend = "siliconflow" | "gemini";
-
-export function getVisionBackend(): VisionBackend | null {
-  if (SILICONFLOW_KEY) return "siliconflow";
-  if (GEMINI_KEY) return "gemini";
-  return null;
-}
-
-export function isVisionConfigured() {
-  return getVisionBackend() !== null;
-}
+import type { VisionCredential } from "@/lib/ai-credentials";
 
 const TRANSCRIBE_SYSTEM = `You transcribe handwritten student work from a photo into clean, gradeable text.
 
@@ -153,7 +141,8 @@ async function resolveImage(
   return null;
 }
 
-async function callSiliconFlow(
+async function callOpenAiCompatible(
+  credential: VisionCredential,
   resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
   opts: RetryOpts = {}
 ): Promise<string | null> {
@@ -166,7 +155,7 @@ async function callSiliconFlow(
       : resolved.url;
 
   const payload = {
-    model: SF_MODEL,
+    model: credential.model,
     messages: [
       { role: "system", content: TRANSCRIBE_SYSTEM },
       {
@@ -187,11 +176,11 @@ async function callSiliconFlow(
     const timeout = attemptTimeout(deadline);
     if (timeout === null) return null;
     try {
-      const res = await fetch(SF_BASE, {
+      const res = await fetch(credential.endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SILICONFLOW_KEY}`,
+          Authorization: `Bearer ${credential.apiKey}`,
         },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(timeout),
@@ -220,6 +209,7 @@ async function callSiliconFlow(
 }
 
 async function callGemini(
+  credential: VisionCredential,
   resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
   opts: RetryOpts = {}
 ): Promise<string | null> {
@@ -249,7 +239,7 @@ async function callGemini(
     },
   };
 
-  const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+  const url = `${credential.endpoint.replace(/\/+$/, "")}/models/${credential.model}:generateContent?key=${credential.apiKey}`;
 
   const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
 
@@ -289,19 +279,29 @@ async function callGemini(
 /**
  * Transcribe an image of handwritten student work into text.
  *
- * Accepts a data URL, a server-relative file URL (under public/), or an
- * https URL. Returns the transcription as plain markdown + LaTeX, or null
- * if no vision backend is configured or the call fails.
+ * Accepts a data URL, a server-relative file URL (under the uploads prefix),
+ * or an https URL. Returns the transcription as plain markdown + LaTeX, or
+ * null if the image cannot be resolved or the provider call fails.
+ *
+ * The credential is mandatory — whether the user has vision at all is decided
+ * upstream by `requireVisionAi`, so that "you have no vision model" can be
+ * reported as a specific message instead of arriving here as a null.
  *
  * Callers should fall back to text-only grading when this returns null.
  */
-export async function transcribeHandwriting(imageInput: string): Promise<string | null> {
-  const backend = getVisionBackend();
-  if (!backend) return null;
+export async function transcribeHandwriting(
+  imageInput: string,
+  credential: VisionCredential,
+): Promise<string | null> {
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
 
   const resolved = await resolveImage(imageInput);
   if (!resolved) return null;
 
-  if (backend === "siliconflow") return callSiliconFlow(resolved);
-  return callGemini(resolved);
+  if (credential.provider === "gemini") return callGemini(credential, resolved);
+  return callOpenAiCompatible(credential, resolved, {
+    // A user-supplied endpoint is far likelier to be a typo than the owner's
+    // pinned SiliconFlow one, so do not spend the whole budget retrying it.
+    maxRetries: credential.source === "user" ? 2 : 5,
+  });
 }
