@@ -135,12 +135,14 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* There is no self-service reset yet (no mail provider is
-                configured), so point students at the person who can actually
-                help rather than leaving them stuck. */}
-            <p className="text-xs text-gray-500 -mt-2">
-              Forgot your password? Ask a teacher or administrator to reset it for you.
-            </p>
+            <div className="-mt-2 text-right">
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm text-green-600 font-medium hover:text-green-700 transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
