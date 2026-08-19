@@ -44,7 +44,20 @@ export type S3Config = {
   signedUrlTtlSeconds: number;
 };
 
+/**
+ * Per-request ceiling. 30s suits a serverless handler, which must answer well
+ * inside the platform's own function timeout. Bulk migration is the opposite
+ * case: `scripts/storage-sync.mjs` pushes multi-megabyte PDFs from a home
+ * connection, where a single PUT legitimately outlasts 30s, so that script
+ * raises this via STORAGE_REQUEST_TIMEOUT_MS rather than failing files that
+ * would have finished. Only the sync path should set it.
+ */
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+function requestTimeoutMs(): number {
+  const raw = Number(process.env.STORAGE_REQUEST_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TIMEOUT_MS;
+}
 
 export class S3ObjectStore implements ObjectStore {
   readonly kind = 's3' as const;
@@ -102,7 +115,7 @@ export class S3ObjectStore implements ObjectStore {
       method,
       headers,
       body: body ? new Uint8Array(body) : undefined,
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      signal: AbortSignal.timeout(requestTimeoutMs()),
       // Bodies are already fully in memory; no need for duplex streaming.
       cache: 'no-store',
     });
