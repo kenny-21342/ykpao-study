@@ -29,3 +29,17 @@ gold-set/
 # Python pipeline tooling; the web app never imports it.
 scripts/__pycache__/
 tests/
+
+# Local-only working data, none of it tracked in git and none of it read by
+# the deployed app. Left in place these dominated the upload — .next alone is
+# 828 MB, and Vercel rebuilds it server-side anyway — which is what was
+# aborting the deploy long before any file-count limit came into it.
+.next/
+data/
+backups/
+.venv-bank/
+.venv/
+generated/
+papers.db
+extract.db
+IMG_9878.PNG
