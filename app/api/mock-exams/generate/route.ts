@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chatJSON, isAIConfigured, SYSTEM_PROMPTS, DeepSeekError } from '@/lib/ai';
+import { chatJSON, SYSTEM_PROMPTS, DeepSeekError } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createPredictedPaper } from '@/lib/predicted-paper';
 import type { MockExamPlan } from '@/types/ai';
@@ -25,7 +26,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const allowance = await checkAiAllowance(user.id);
+    // Resolve credentials before any of the expensive bank queries: a student
+    // with AI switched off should be told so immediately, not after a scan of
+    // the question bank.
+    const access = await requireTextAi(user.id);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error, reason: access.reason, aiDisabled: true },
+        { status: access.status }
+      );
+    }
+
+    const allowance = await checkAiAllowance(user.id, { source: access.source });
     if (!allowance.allowed) {
       return NextResponse.json(
         { error: allowance.message },
@@ -70,12 +82,6 @@ export async function POST(req: Request) {
     const resolvedSubjectCode = learnerContext.activeCourse?.scopes.find((scope) => !subjectCode || scope.subjectCode === subjectCode)?.subjectCode
       ?? learnerContext.activeCourse?.scopes[0]?.subjectCode;
     if (!resolvedSubjectCode) return NextResponse.json({ error: 'The selected course needs a curriculum mapping before an exam can be generated.' }, { status: 409 });
-    if (!isAIConfigured()) {
-      return NextResponse.json(
-        { error: 'AI service not configured (DEEPSEEK_API_KEY missing)' },
-        { status: 503 }
-      );
-    }
 
     const subject = await prisma.subject.findUnique({ where: { code: resolvedSubjectCode } });
     if (!subject) {
@@ -85,6 +91,7 @@ export async function POST(req: Request) {
     if (mode === 'predicted') {
       const predicted = await createPredictedPaper({
         userId: user.id,
+        credential: access.credential,
         subjectCode: resolvedSubjectCode,
         topics,
         totalMarks,
@@ -98,6 +105,7 @@ export async function POST(req: Request) {
         userId: user.id,
         feature: 'mock-exam-generate',
         tokensOut: 1500,
+        model: access.credential.model,
       });
       return NextResponse.json({ exam: predicted.exam, prediction: predicted.prediction, resolvedCourse: learnerContext.activeCourse });
     }
@@ -166,7 +174,7 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
           { role: 'system', content: SYSTEM_PROMPTS.examGenerator },
           { role: 'user', content: userContent },
         ],
-        { temperature: 0.4, maxTokens: 2000 }
+        { credential: access.credential, temperature: 0.4, maxTokens: 2000 }
       );
     } catch (err) {
       if (err instanceof DeepSeekError) {
@@ -179,6 +187,7 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
       userId: user.id,
       feature: 'mock-exam-generate',
       tokensOut: 1500,
+      model: access.credential.model,
     });
 
     // Flatten the AI plan into a list of { questionId, sectionTitle, order }

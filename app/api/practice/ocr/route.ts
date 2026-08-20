@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { transcribeHandwriting, isVisionConfigured, getVisionBackend } from '@/lib/vision';
+import { transcribeHandwriting } from '@/lib/vision';
+import { requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -34,20 +35,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const allowance = await checkAiAllowance(user.id);
+    // Vision is the one capability a bring-your-own-key user can be missing
+    // while everything else works, so the denial carries its own reason code
+    // and a message naming exactly what is and is not available.
+    const access = await requireVisionAi(user.id);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error, reason: access.reason, configured: false, aiDisabled: true },
+        { status: access.status }
+      );
+    }
+
+    const allowance = await checkAiAllowance(user.id, { source: access.source });
     if (!allowance.allowed) {
       return NextResponse.json(
         { error: allowance.message },
         { status: 429 }
-      );
-    }
-    if (!isVisionConfigured()) {
-      return NextResponse.json(
-        {
-          error: 'Vision OCR is not configured. Set SILICONFLOW_API_KEY or GEMINI_API_KEY.',
-          configured: false,
-        },
-        { status: 503 }
       );
     }
 
@@ -72,13 +75,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const text = await transcribeHandwriting(image);
+    const text = await transcribeHandwriting(image, access.credential);
 
     await recordUsage({
       userId: user.id,
       feature: 'ocr-transcribe',
       tokensOut: Math.min(2048, Math.ceil((text?.length ?? 0) / 4)),
-      model: getVisionBackend() ?? 'vision',
+      model: access.credential.model,
     });
 
     if (!text) {
@@ -88,7 +91,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text, questionContext, backend: getVisionBackend() });
+    return NextResponse.json({ text, questionContext, backend: access.credential.model });
   } catch (error) {
     console.error('OCR transcription error:', error);
     return NextResponse.json(

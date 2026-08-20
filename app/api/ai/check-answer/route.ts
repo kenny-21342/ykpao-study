@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
-import { chatJSON, isAIConfigured, SYSTEM_PROMPTS } from '@/lib/ai';
+import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
+import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import type { GradeResult } from '@/types/ai';
 
@@ -32,14 +33,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!isAIConfigured()) {
+  const access = await requireTextAi(user.id);
+  if (!access.ok) {
     return NextResponse.json(
-      { error: 'AI service not configured (DEEPSEEK_API_KEY missing)' },
-      { status: 503 }
+      { error: access.error, reason: access.reason, aiDisabled: true },
+      { status: access.status }
     );
   }
 
-  const allowance = await checkAiAllowance(user.id);
+  const allowance = await checkAiAllowance(user.id, { source: access.source });
   if (!allowance.allowed) {
     return NextResponse.json(
       { error: allowance.message },
@@ -73,7 +75,7 @@ ${answer}`;
         { role: 'system', content: SYSTEM_PROMPTS.grader },
         { role: 'user', content: userContent },
       ],
-      { temperature: 0.2, maxTokens: 1500 }
+      { credential: access.credential, temperature: 0.2, maxTokens: 1500 }
     );
 
     const max = marks ?? result.maxScore ?? 1;
@@ -83,6 +85,7 @@ ${answer}`;
       userId: user.id,
       feature: 'practice-grade',
       tokensOut: 800, // rough estimate
+      model: access.credential.model,
     });
 
     return NextResponse.json({

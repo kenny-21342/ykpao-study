@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 
-import { getVisionBackend, siliconflowKey } from '../lib/vision.ts';
+import { sharedVisionCredential, siliconflowKey } from '../lib/ai-credentials.ts';
+
+/**
+ * Both moved from lib/vision.ts to lib/ai-credentials.ts under bring-your-own-
+ * key: vision.ts no longer holds a key of its own, so the owner's shared
+ * credential is resolved alongside every other credential. The behaviour under
+ * test is unchanged — which variable is consulted, and when the alias is safe.
+ */
+/** The backend the owner's shared key selects, or null if it selects none. */
+function sharedVisionProvider(): string | null {
+  return sharedVisionCredential()?.provider ?? null;
+}
 
 /**
  * The project has one SiliconFlow account under two variable names: the web
@@ -42,13 +53,13 @@ afterEach(() => {
 test('the canonical variable is used when set', () => {
   setEnv({ SILICONFLOW_API_KEY: 'canonical-sentinel' });
   assert.equal(siliconflowKey(), 'canonical-sentinel');
-  assert.equal(getVisionBackend(), 'siliconflow');
+  assert.equal(sharedVisionProvider(), 'openai-compatible');
 });
 
 test('the pipeline variable is accepted as an alias', () => {
   setEnv({ V3_OPENAI_API_KEY: 'pipeline-sentinel' });
   assert.equal(siliconflowKey(), 'pipeline-sentinel');
-  assert.equal(getVisionBackend(), 'siliconflow');
+  assert.equal(sharedVisionProvider(), 'openai-compatible');
 });
 
 test('the canonical variable wins when both are set', () => {
@@ -64,7 +75,7 @@ test('the alias is ignored when the pipeline points at another provider', () => 
     V3_OPENAI_CHAT_COMPLETIONS_URL: 'https://api.openai.com/v1/chat/completions',
   });
   assert.equal(siliconflowKey(), '');
-  assert.equal(getVisionBackend(), null);
+  assert.equal(sharedVisionProvider(), null);
 });
 
 test('the alias survives an explicit SiliconFlow endpoint', () => {
@@ -78,5 +89,5 @@ test('the alias survives an explicit SiliconFlow endpoint', () => {
 test('no key at all leaves vision unconfigured', () => {
   setEnv({});
   assert.equal(siliconflowKey(), '');
-  assert.equal(getVisionBackend(), null);
+  assert.equal(sharedVisionProvider(), null);
 });

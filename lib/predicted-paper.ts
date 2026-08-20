@@ -1,4 +1,5 @@
 import { chatJSON } from '@/lib/ai';
+import type { TextCredential } from '@/lib/ai-credentials';
 import { plainText } from '@/lib/learning';
 import { prisma } from '@/lib/prisma';
 import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
@@ -50,6 +51,11 @@ export type PredictedPaperResult = {
 
 export type PredictedPaperOptions = {
   userId: string;
+  /**
+   * Whose key pays for the plan. Resolved by the caller so this stays a pure
+   * library function — there is no server key to fall back to.
+   */
+  credential: TextCredential;
   subjectCode: string;
   topics?: string[];
   totalMarks?: number;
@@ -307,7 +313,7 @@ Candidate questions:
 ${JSON.stringify(catalogue)}`,
       },
     ],
-    { temperature: 0.35, maxTokens: 3000 }
+    { credential: input.credential, temperature: 0.35, maxTokens: 3000 }
   );
 
   const candidateIds = new Set(candidates.map((question) => question.id));

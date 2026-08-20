@@ -9,6 +9,7 @@ import {
   Camera, Image as ImageIcon, Trash2,
 } from 'lucide-react';
 import CoursesGoalsPanel from './CoursesGoalsPanel';
+import AiProviderPanel from './AiProviderPanel';
 
 export default function AccountSettingsPage() {
   const { data: session, status, update } = useSession();
@@ -329,6 +330,8 @@ export default function AccountSettingsPage() {
         </div>
 
         <CoursesGoalsPanel />
+
+        <AiProviderPanel />
 
         {/* Password section */}
         <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-2xl p-6 space-y-4">
