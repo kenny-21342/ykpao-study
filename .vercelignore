@@ -1,0 +1,31 @@
+# Bulk asset trees. These are served from object storage in production, not
+# from the deployment bundle — see lib/storage/. Uploading them would push the
+# deployment past Vercel's 15,000-file limit (pdf_extraction/ alone is ~16,000
+# files / 12 GB) and cost minutes per deploy for bytes nothing would read.
+#
+# This is safe ONLY because production runs STORAGE_DRIVER=s3. The app refuses
+# to boot in production with the local driver (assertStorageConfigured in
+# lib/storage/index.ts), so a deploy that lost the bucket config fails loudly
+# at startup rather than serving 404s for every past paper and diagram.
+#
+# Upload their contents with: npm run storage:sync
+pdf_extraction/
+public/uploads/
+public/extracted_images/
+public/step-images/
+
+# Generated at build time by `npm run pdf:worker` (prebuild), so shipping the
+# local copies would only risk staleness.
+public/pdfjs/
+public/pdf.worker.min.mjs
+
+# Test artefacts and browser automation output.
+e2e/
+test-results/
+playwright-report/
+blob-report/
+gold-set/
+
+# Python pipeline tooling; the web app never imports it.
+scripts/__pycache__/
+tests/
