@@ -13,7 +13,10 @@ type Course = {
   scopes?: Array<{ subjectCode: string }>;
 };
 
-const LEVELS = ['All', 'IGCSE', 'A Level', 'IB', 'AP', 'Other'];
+// Only levels the course catalogue actually carries. AP and Other were listed
+// here but had no catalogue entries behind them, so selecting either showed an
+// empty picker; add them back alongside their courses, not before.
+const LEVELS = ['All', 'IGCSE', 'A Level', 'IB'];
 
 export default function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
