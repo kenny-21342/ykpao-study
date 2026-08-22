@@ -20,6 +20,11 @@
  *
  * Existing objects are skipped by default after a HEAD, so an interrupted run
  * resumes cheaply. ~13,000 PDFs at 6.5 GB take a while; this is expected.
+ *
+ * Objects past STORAGE_MULTIPART_THRESHOLD_MB (32 MiB by default) are uploaded
+ * in parts by the s3 driver, with each part retried on its own. Nothing here
+ * has to opt in; it matters because the corpus contains a few very large
+ * scanned bundles that no single PUT over a home connection ever finished.
  */
 
 import { readdir, stat, readFile } from 'node:fs/promises';

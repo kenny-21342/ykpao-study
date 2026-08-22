@@ -1,10 +1,17 @@
 /**
- * Just enough XML reading for S3's ListObjectsV2 response.
+ * Just enough XML reading and writing for the S3 responses this app sees.
  *
- * A full XML parser would be a dependency for one well-known, flat response
- * shape. The fields extracted here are `<Key>`, `<IsTruncated>` and
- * `<NextContinuationToken>`; anything else in the document is ignored.
+ * A full XML parser would be a dependency for a handful of well-known, flat
+ * response shapes. What is handled here is ListObjectsV2 (`<Key>`,
+ * `<IsTruncated>`, `<NextContinuationToken>`), the multipart-upload handshake
+ * (`<UploadId>`, and the `<CompleteMultipartUpload>` document sent back), and
+ * S3's `<Error>` envelope; anything else in a document is ignored.
  */
+
+export type S3Error = {
+  code?: string;
+  message?: string;
+};
 
 export type ListObjectsResult = {
   keys: string[];
@@ -42,6 +49,16 @@ function allTagText(xml: string, tag: string): string[] {
   return values;
 }
 
+/** Escape a value for inclusion in an XML text node. */
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export const XMLParser = {
   parseListObjects(xml: string): ListObjectsResult {
     // `<Key>` appears inside `<Contents>` entries only; `<CommonPrefixes>` uses
@@ -52,4 +69,41 @@ export const XMLParser = {
       nextContinuationToken: firstTagText(xml, 'NextContinuationToken'),
     };
   },
+
+  /** The `UploadId` from a CreateMultipartUpload response, if present. */
+  parseUploadId(xml: string): string | undefined {
+    return firstTagText(xml, 'UploadId')?.trim();
+  },
+
+  /**
+   * S3's error envelope.
+   *
+   * Worth extracting even on a 2xx: CompleteMultipartUpload may answer 200 and
+   * then put an `<Error>` in the body, because the connection is held open
+   * while the parts are assembled and the status line has already been sent.
+   * Treating that response as success is how a multipart upload silently
+   * produces no object.
+   */
+  parseError(xml: string): S3Error | undefined {
+    if (!/<Error[\s>]/.test(xml)) return undefined;
+    return {
+      code: firstTagText(xml, 'Code')?.trim(),
+      message: firstTagText(xml, 'Message')?.trim(),
+    };
+  },
 };
+
+/** Build the CompleteMultipartUpload request body from the uploaded parts. */
+export function buildCompleteMultipartUploadXml(
+  parts: ReadonlyArray<{ partNumber: number; eTag: string }>
+): string {
+  const entries = [...parts]
+    .sort((a, b) => a.partNumber - b.partNumber)
+    .map(
+      (part) =>
+        `<Part><PartNumber>${part.partNumber}</PartNumber>` +
+        `<ETag>${escapeXml(part.eTag)}</ETag></Part>`
+    )
+    .join('');
+  return `<CompleteMultipartUpload>${entries}</CompleteMultipartUpload>`;
+}
