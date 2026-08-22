@@ -51,7 +51,11 @@ export default function LoginPage() {
       });
 
       if (!result?.ok || result.error) {
-        setError('Invalid email or password');
+        setError(
+          result?.error === 'RateLimited'
+            ? 'Too many sign-in attempts. Please wait a minute and try again.'
+            : 'Invalid email or password'
+        );
         setLoading(false);
         return;
       }

@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { credentialFingerprint } from "@/lib/password-reset"
+import { strictLimiter } from "@/lib/rate-limit"
 import bcrypt from "bcrypt"
 
 // NextAuth v4 otherwise falls back to NEXTAUTH_URL (or localhost:3000).
@@ -61,9 +62,32 @@ export const authOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           return null
+        }
+
+        // Throttle before the database lookup and before bcrypt, which is
+        // deliberately slow and is the expensive half of an attempt.
+        //
+        // Both keys are always checked, and neither depends on whether the
+        // account exists, so this cannot be used to enumerate addresses. The
+        // per-IP key stops one host spraying many accounts; the per-account
+        // key stops a distributed attack converging on one account, which the
+        // IP key alone would miss entirely.
+        const ip = String(req?.headers?.["x-forwarded-for"] ?? "unknown")
+          .split(",")[0]
+          .trim()
+        const normalisedEmail = credentials.email.trim().toLowerCase()
+        const [ipAllowed, accountAllowed] = await Promise.all([
+          strictLimiter.check(`login-ip:${ip}`),
+          strictLimiter.check(`login-email:${normalisedEmail}`),
+        ])
+        if (!ipAllowed || !accountAllowed) {
+          // Distinguishable from a bad password on purpose: a locked-out
+          // student needs to know waiting will help. `signIn` surfaces this
+          // as `result.error`, which the login page maps to a message.
+          throw new Error("RateLimited")
         }
 
         // Signup stores addresses lowercased, so the lookup must be
