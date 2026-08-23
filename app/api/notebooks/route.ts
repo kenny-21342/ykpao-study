@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     if (error instanceof LearnerContextError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Failed to list notebooks:', error);
+    await reportError(error, { routePath: '/api/notebooks', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list notebooks' },
       { status: 500 }
@@ -135,6 +137,7 @@ export async function POST(req: Request) {
     return NextResponse.json(notebook, { status: 201 });
   } catch (error) {
     console.error('Failed to create notebook:', error);
+    await reportError(error, { routePath: '/api/notebooks', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create notebook' },
       { status: 500 }

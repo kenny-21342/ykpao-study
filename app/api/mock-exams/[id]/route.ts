@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to fetch mock exam:', error);
+    await reportError(error, { routePath: '/api/mock-exams/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch mock exam' },
       { status: 500 }
@@ -128,6 +130,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete mock exam:', error);
+    await reportError(error, { routePath: '/api/mock-exams/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete mock exam' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { getStorage, KEY_PREFIX, publicPathFromKey } from '@/lib/storage';
+import { reportError } from '@/lib/error-reporting';
 
 /**
  * List the extracted diagram images belonging to one past paper.
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ images: keys.map(publicPathFromKey) });
   } catch (error: unknown) {
     console.error('[api/images] failed to list extracted images:', error);
+    await reportError(error, { routePath: '/api/images', source: 'route' });
     return NextResponse.json({ error: 'Failed to list images' }, { status: 500 });
   }
 }

@@ -6,6 +6,7 @@ import { indexSharedNote, refreshRagIndex } from '@/lib/rag-index';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     if (error instanceof LearnerContextError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Failed to list shared notes:', error);
+    await reportError(error, { routePath: '/api/shared-notes', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list shared notes' },
       { status: 500 }
@@ -153,6 +155,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {
     console.error('Failed to create shared note:', error);
+    await reportError(error, { routePath: '/api/shared-notes', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create shared note' },
       { status: 500 }

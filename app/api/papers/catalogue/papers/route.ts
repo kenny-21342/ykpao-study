@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { groupIntoInstances } from '@/lib/paper-catalogue';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ instances: groupIntoInstances(rows) });
   } catch (error) {
     console.error('Failed to load papers:', error);
+    await reportError(error, { routePath: '/api/papers/catalogue/papers', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to load papers' },
       { status: 500 },

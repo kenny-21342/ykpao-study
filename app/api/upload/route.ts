@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { getStorage, KEY_PREFIX } from '@/lib/storage';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest) {
     // Never echo the underlying error: it carries storage keys, bucket names
     // and filesystem paths.
     console.error('[api/upload] failed:', error);
+    await reportError(error, { routePath: '/api/upload', source: 'route' });
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }

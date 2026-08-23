@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     if (error instanceof LearnerContextError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Failed to list mock exams:', error);
+    await reportError(error, { routePath: '/api/mock-exams', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list mock exams' },
       { status: 500 }

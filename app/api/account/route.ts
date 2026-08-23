@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch account:', error);
+    await reportError(error, { routePath: '/api/account', source: 'route' });
     return NextResponse.json({ error: 'Failed to fetch account' }, { status: 500 });
   }
 }
@@ -118,6 +120,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   } catch (error) {
     console.error('Failed to update account:', error);
+    await reportError(error, { routePath: '/api/account', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update account' },
       { status: 500 }

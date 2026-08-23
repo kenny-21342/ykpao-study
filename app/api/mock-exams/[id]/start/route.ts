@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,7 @@ export async function POST(
     });
   } catch (error) {
     console.error('Failed to start mock exam:', error);
+    await reportError(error, { routePath: '/api/mock-exams/[id]/start', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to start mock exam' },
       { status: 500 }

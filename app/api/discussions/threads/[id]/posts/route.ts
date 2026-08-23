@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createNotifications } from '@/lib/notifications';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,6 +123,7 @@ export async function POST(
     }, { status: 201 });
   } catch (error) {
     console.error('Failed to create post:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]/posts', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create post' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { reportError } from '@/lib/error-reporting';
 import {
   curriculumId,
   curriculumLabel,
@@ -137,6 +138,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ curricula, subjects, years, sessions });
   } catch (error) {
     console.error('Failed to load paper catalogue:', error);
+    await reportError(error, { routePath: '/api/papers/catalogue', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to load catalogue' },
       { status: 500 },

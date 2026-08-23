@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch usage:', error);
+    await reportError(error, { routePath: '/api/usage', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch usage' },
       { status: 500 }

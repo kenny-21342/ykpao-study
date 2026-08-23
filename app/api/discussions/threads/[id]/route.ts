@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser, isModerator } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +89,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to fetch thread:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]', source: 'route' });
     return NextResponse.json({ error: 'Failed to fetch thread' }, { status: 500 });
   }
 }
@@ -118,6 +120,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete thread:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete thread' },
       { status: 500 }
@@ -160,6 +163,7 @@ export async function PATCH(
     return NextResponse.json({ thread });
   } catch (error) {
     console.error('Failed to moderate thread:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update thread' },
       { status: 500 }

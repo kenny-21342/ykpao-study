@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { DISCUSSION_LABEL_SLUGS } from '@/lib/discussion-labels';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to list threads:', error);
+    await reportError(error, { routePath: '/api/discussions/threads', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list threads' },
       { status: 500 }
@@ -127,6 +129,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ thread }, { status: 201 });
   } catch (error) {
     console.error('Failed to create thread:', error);
+    await reportError(error, { routePath: '/api/discussions/threads', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create thread' },
       { status: 500 }

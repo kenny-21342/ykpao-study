@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
 import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,7 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
     await recordUsage({ userId: user.id, feature: 'progressive-hint', tokensOut: Math.ceil(hint.length / 4), model: access.credential.model });
     return NextResponse.json({ hint, level: body.level, maxLevel: 3, grounded: Boolean(markscheme) });
   } catch (error) {
+    await reportError(error, { routePath: '/api/ai/hint', source: 'route' });
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Hint generation failed' }, { status: 500 });
   }
 }

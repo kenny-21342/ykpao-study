@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to list notifications:', error);
+    await reportError(error, { routePath: '/api/notifications', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list notifications' },
       { status: 500 }
@@ -99,6 +101,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true, updated: r.count });
   } catch (error) {
     console.error('Failed to mark notifications as read:', error);
+    await reportError(error, { routePath: '/api/notifications', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to mark notifications' },
       { status: 500 }

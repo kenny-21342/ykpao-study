@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { indexSchoolResource, refreshRagIndex } from '@/lib/rag-index';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,7 @@ export async function GET(
     return NextResponse.json({ resource });
   } catch (error) {
     console.error('Failed to fetch school resource:', error);
+    await reportError(error, { routePath: '/api/school-resources/[id]', source: 'route' });
     return NextResponse.json({ error: 'Failed to fetch resource' }, { status: 500 });
   }
 }
@@ -70,6 +72,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete school resource:', error);
+    await reportError(error, { routePath: '/api/school-resources/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete resource' },
       { status: 500 }

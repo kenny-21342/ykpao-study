@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser, isModerator } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,7 @@ export async function PATCH(
     });
   } catch (error) {
     console.error('Failed to edit post:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]/posts/[postId]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to edit post' },
       { status: 500 }
@@ -88,6 +90,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete post:', error);
+    await reportError(error, { routePath: '/api/discussions/threads/[id]/posts/[postId]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete post' },
       { status: 500 }

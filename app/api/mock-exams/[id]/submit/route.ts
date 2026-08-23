@@ -8,6 +8,7 @@ import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -398,6 +399,7 @@ export async function POST(
     });
   } catch (error) {
     console.error('Mock exam submit failed:', error);
+    await reportError(error, { routePath: '/api/mock-exams/[id]/submit', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to submit mock exam' },
       { status: 500 }

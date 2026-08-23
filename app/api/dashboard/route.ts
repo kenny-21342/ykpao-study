@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { reportError } from '@/lib/error-reporting'
 import { getSessionUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resolveCourseScope } from '@/lib/course-scope'
@@ -174,6 +175,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     console.error('Error fetching dashboard data:', error)
+    await reportError(error, { routePath: '/api/dashboard', source: 'route' })
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 })
   }
 }

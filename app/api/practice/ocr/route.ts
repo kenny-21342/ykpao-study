@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { transcribeHandwriting } from '@/lib/vision';
 import { requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text, questionContext, backend: access.credential.model });
   } catch (error) {
     console.error('OCR transcription error:', error);
+    await reportError(error, { routePath: '/api/practice/ocr', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'OCR transcription failed' },
       { status: 500 }

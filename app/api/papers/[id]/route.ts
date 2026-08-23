@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { reportError } from '@/lib/error-reporting';
 import {
   curriculumId,
   curriculumLabel,
@@ -93,6 +94,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to load paper:', error);
+    await reportError(error, { routePath: '/api/papers/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to load paper' },
       { status: 500 },

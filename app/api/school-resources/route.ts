@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { indexSchoolResource, refreshRagIndex } from '@/lib/rag-index';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Failed to list school resources:', error);
+    await reportError(error, { routePath: '/api/school-resources', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list resources' },
       { status: 500 }
@@ -185,6 +187,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ resource }, { status: 201 });
   } catch (error) {
     console.error('Failed to create school resource:', error);
+    await reportError(error, { routePath: '/api/school-resources', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create resource' },
       { status: 500 }

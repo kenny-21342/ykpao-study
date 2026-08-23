@@ -17,6 +17,7 @@ import {
 } from '@/lib/ai-conversations';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import type { DeepSeekMessage } from '@/types/ai';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -397,6 +398,7 @@ FORMATTING RULES:
     });
   } catch (err) {
     console.error('RAG chat failed:', err);
+    await reportError(err, { routePath: '/api/ai/rag-chat', source: 'route' });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'AI request failed', conversationId: conversation.id },
       { status: 500 }

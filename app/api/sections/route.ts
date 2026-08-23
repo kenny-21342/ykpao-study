@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
     return NextResponse.json(section, { status: 201 });
   } catch (error) {
     console.error('Failed to create section:', error);
+    await reportError(error, { routePath: '/api/sections', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create section' },
       { status: 500 }

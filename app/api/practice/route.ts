@@ -8,6 +8,7 @@ import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -206,6 +207,7 @@ ${gradedAnswer}`;
     });
   } catch (error) {
     console.error('Error saving attempt:', error);
+    await reportError(error, { routePath: '/api/practice', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to save attempt' },
       { status: 500 }
@@ -248,6 +250,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching attempts:', error);
+    await reportError(error, { routePath: '/api/practice', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch attempts' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,7 @@ export async function GET() {
   });
   } catch (err) {
     console.error('[admin/stats] error:', err);
+    await reportError(err, { routePath: '/api/admin/stats', source: 'route' });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 },

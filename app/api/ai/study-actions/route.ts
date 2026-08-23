@@ -7,6 +7,7 @@ import { appendConversationMessage, ensureConversation, setConversationCourse } 
 import { createAIActionProposal } from '@/lib/ai-proposals';
 import { corpusCoverageForIntent, planCopilotQuery } from '@/lib/copilot-query';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,7 @@ export async function POST(req: Request) {
       content: `I could not complete that action: ${message}`,
       actionType: body.action,
     });
+    await reportError(error, { routePath: '/api/ai/study-actions', source: 'route' });
     return NextResponse.json({ error: message, conversationId: conversation.id }, { status: 500 });
   }
 }

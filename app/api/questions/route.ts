@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -228,6 +229,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Database error:', error);
+    await reportError(error, { routePath: '/api/questions', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Database error' },
       { status: 500 }

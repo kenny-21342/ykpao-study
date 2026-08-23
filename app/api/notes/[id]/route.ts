@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { indexNote, refreshRagIndex } from '@/lib/rag-index';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,7 @@ export async function GET(
     return NextResponse.json({ ...accessible.note, _role: accessible.role });
   } catch (error) {
     console.error('Failed to fetch note:', error);
+    await reportError(error, { routePath: '/api/notes/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch note' },
       { status: 500 }
@@ -102,6 +104,7 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Failed to update note:', error);
+    await reportError(error, { routePath: '/api/notes/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update note' },
       { status: 500 }
@@ -135,6 +138,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to delete note:', error);
+    await reportError(error, { routePath: '/api/notes/[id]', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete note' },
       { status: 500 }

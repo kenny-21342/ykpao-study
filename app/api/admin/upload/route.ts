@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { getStorage, KEY_PREFIX } from '@/lib/storage';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
     // The underlying error carries storage keys and bucket names; log it,
     // return a fixed message.
     console.error('[api/admin/upload] failed:', err);
+    await reportError(err, { routePath: '/api/admin/upload', source: 'route' });
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }

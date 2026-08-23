@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { DISCUSSION_LABELS, DISCUSSION_LABEL_SLUGS } from '@/lib/discussion-labels';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to list forums:', error);
+    await reportError(error, { routePath: '/api/discussions/forums', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to list forums' },
       { status: 500 }

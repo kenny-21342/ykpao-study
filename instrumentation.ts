@@ -44,6 +44,15 @@ export async function onRequestError(
       ? String((error as { digest: unknown }).digest)
       : undefined;
 
+  // The reporter writes through Prisma, which the Edge runtime cannot load --
+  // the same reason `register()` above returns early there. Only `proxy.ts`
+  // runs on Edge, so this trades recording proxy errors (which still reach the
+  // platform log) for keeping Prisma out of the Edge bundle entirely.
+  if (process.env.NEXT_RUNTIME !== 'nodejs') {
+    console.error('[request-error/edge] %s %s:', request.method, request.path, error);
+    return;
+  }
+
   try {
     const { reportError } = await import('./lib/error-reporting.ts');
     await reportError(error, {

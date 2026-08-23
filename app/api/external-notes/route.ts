@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { aiLimiter } from '@/lib/rate-limit';
 import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // cache for 1 hour
@@ -439,6 +440,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ notes, total: notes.length });
   } catch (error) {
     console.error('Failed to fetch external notes:', error);
+    await reportError(error, { routePath: '/api/external-notes', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch external notes' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,7 @@ export async function PUT(
     return NextResponse.json({ ok: true, saved: entries.length });
   } catch (error) {
     console.error('Failed to save exam progress:', error);
+    await reportError(error, { routePath: '/api/mock-exams/[id]/progress', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to save progress' },
       { status: 500 }
