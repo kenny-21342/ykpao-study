@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, SYSTEM_PROMPTS, DeepSeekError } from '@/lib/ai';
@@ -13,11 +13,30 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing. Generates and validates a whole paper: several LLM calls per request.
+ * regardless of what the request is doing.
  */
 export const maxDuration = 60;
 
 const MAX_CANDIDATES = 60;
+
+/**
+ * Wall-clock budget for the selection call, which runs in `after()` once the
+ * response is already sent. Nothing is waiting on it, so it can use most of
+ * `maxDuration` rather than the 45s default in lib/ai.ts -- that default
+ * exists to leave a synchronous route time to answer, and this route has
+ * already answered.
+ */
+const SELECTION_BUDGET_MS = 50_000;
+
+/**
+ * One attempt, not two.
+ *
+ * `chat()` splits its budget across attempts (60% to the first), so two tries
+ * would give this call 30s and then 20s. The observed failure is a single slow
+ * completion, not a flaky one, and 50s in one attempt clears it where neither
+ * half would. A student can retry from the UI; a truncated retry helps nobody.
+ */
+const SELECTION_ATTEMPTS = 1;
 
 export async function POST(req: Request) {
   try {
@@ -167,89 +186,140 @@ ${JSON.stringify(catalogue)}
 
 Return JSON matching the schema. Group selected questions into 1-3 sections by theme.`;
 
-    let plan: MockExamPlan;
-    try {
-      plan = await chatJSON<MockExamPlan>(
-        [
-          { role: 'system', content: SYSTEM_PROMPTS.examGenerator },
-          { role: 'user', content: userContent },
-        ],
-        { credential: access.credential, temperature: 0.4, maxTokens: 2000 }
-      );
-    } catch (err) {
-      if (err instanceof DeepSeekError) {
-        return NextResponse.json({ error: err.message }, { status: err.status });
-      }
-      throw err;
-    }
-
-    await recordUsage({
-      userId: user.id,
-      feature: 'mock-exam-generate',
-      tokensOut: 1500,
-      model: access.credential.model,
-    });
-
-    // Flatten the AI plan into a list of { questionId, sectionTitle, order }
-    const flatItems: Array<{ questionId: number; sectionTitle: string; order: number }> = [];
-    let order = 0;
-    for (const section of plan.sections ?? []) {
-      for (const qid of section.questionIds ?? []) {
-        // `targetCount` is only a hint in the prompt — the model routinely
-        // returns more. Enforce the ceiling here, or the exam is created at a
-        // size that can never be submitted.
-        if (flatItems.length >= MAX_EXAM_ITEMS) break;
-        if (pool.some((p) => p.id === qid)) {
-          flatItems.push({
-            questionId: qid,
-            sectionTitle: section.title || 'Section A',
-            order: order++,
-          });
-        }
-      }
-      if (flatItems.length >= MAX_EXAM_ITEMS) break;
-    }
-
-    if (flatItems.length === 0) {
-      return NextResponse.json(
-        { error: 'AI failed to pick any valid questions. Try again or adjust filters.' },
-        { status: 422 }
-      );
-    }
-
-    const computedMarks = await prisma.pastPaperQuestion.aggregate({
-      where: { id: { in: flatItems.map((i) => i.questionId) } },
-      _sum: { marks: true },
-    });
-
-    const examTitle = title || plan.title || `${subject.name} Mock Exam`;
+    // The paper row is created empty and filled in afterwards. Selecting the
+    // questions is one LLM call over the whole candidate catalogue, and on a
+    // slow provider day it outlasts any budget a request can wait for -- in
+    // production it was returning 504 at ~46s for every size of paper,
+    // including three questions. Answering now and finishing in `after()`
+    // turns that from a dead request into a paper that is visibly still
+    // being built, and gives the call most of `maxDuration` instead of the
+    // slice a waiting client can afford.
     const exam = await prisma.mockExam.create({
       data: {
         userId: user.id,
-        title: examTitle,
-        description: plan.description || `AI-generated mock exam in ${subject.name}.`,
+        title: title || `${subject.name} Mock Exam`,
+        description: `Choosing questions for your ${subject.name} paper…`,
         subjectCode: subject.code,
-        durationMinutes: plan.durationMinutes || durationMinutes,
-        totalMarks: computedMarks._sum.marks ?? totalMarks,
+        durationMinutes,
+        // Filled in from the real questions once they are chosen.
+        totalMarks: 0,
         topics,
         difficulty,
-        items: {
-          create: flatItems.map((item) => ({
-            questionId: item.questionId,
-            sectionTitle: item.sectionTitle,
-            order: item.order,
-          })),
-        },
+        status: 'generating',
       },
       include: { items: true },
     });
 
-    return NextResponse.json({ exam, resolvedCourse: learnerContext.activeCourse });
+    after(async () => {
+      try {
+        const plan = await chatJSON<MockExamPlan>(
+          [
+            { role: 'system', content: SYSTEM_PROMPTS.examGenerator },
+            { role: 'user', content: userContent },
+          ],
+          {
+            credential: access.credential,
+            temperature: 0.4,
+            maxTokens: 2000,
+            budgetMs: SELECTION_BUDGET_MS,
+            maxAttempts: SELECTION_ATTEMPTS,
+          }
+        );
+
+        await recordUsage({
+          userId: user.id,
+          feature: 'mock-exam-generate',
+          tokensOut: 1500,
+          model: access.credential.model,
+        });
+
+        // Flatten the AI plan into a list of { questionId, sectionTitle, order }
+        const flatItems: Array<{ questionId: number; sectionTitle: string; order: number }> = [];
+        let order = 0;
+        for (const section of plan.sections ?? []) {
+          for (const qid of section.questionIds ?? []) {
+            // `targetCount` is only a hint in the prompt -- the model routinely
+            // returns more. Enforce the ceiling here, or the exam is created at
+            // a size that can never be submitted.
+            if (flatItems.length >= MAX_EXAM_ITEMS) break;
+            if (pool.some((candidate) => candidate.id === qid)) {
+              flatItems.push({
+                questionId: qid,
+                sectionTitle: section.title || 'Section A',
+                order: order++,
+              });
+            }
+          }
+          if (flatItems.length >= MAX_EXAM_ITEMS) break;
+        }
+
+        if (flatItems.length === 0) {
+          await failGeneration(
+            exam.id,
+            'The AI did not pick any valid questions. Try again, or widen the topics.'
+          );
+          return;
+        }
+
+        const computedMarks = await prisma.pastPaperQuestion.aggregate({
+          where: { id: { in: flatItems.map((item) => item.questionId) } },
+          _sum: { marks: true },
+        });
+
+        await prisma.mockExam.update({
+          where: { id: exam.id },
+          data: {
+            title: title || plan.title || `${subject.name} Mock Exam`,
+            description: plan.description || `AI-generated mock exam in ${subject.name}.`,
+            durationMinutes: plan.durationMinutes || durationMinutes,
+            totalMarks: computedMarks._sum.marks ?? totalMarks,
+            status: 'generated',
+            generationError: null,
+            items: {
+              create: flatItems.map((item) => ({
+                questionId: item.questionId,
+                sectionTitle: item.sectionTitle,
+                order: item.order,
+              })),
+            },
+          },
+        });
+      } catch (err) {
+        // Nothing is waiting on this callback, so an unhandled throw would
+        // leave the paper stuck on "generating" forever with no explanation.
+        console.error('Mock exam generation failed for %s:', exam.id, err);
+        await failGeneration(
+          exam.id,
+          err instanceof DeepSeekError
+            ? err.message
+            : 'Generating this paper failed. Please try again.'
+        );
+      }
+    });
+
+    // 202: the paper exists, its questions do not yet. The client polls
+    // GET /api/mock-exams/[id] until `status` leaves 'generating'.
+    return NextResponse.json(
+      { exam, resolvedCourse: learnerContext.activeCourse },
+      { status: 202 }
+    );
   } catch (error) {
     console.error('Mock exam generation failed:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate mock exam' },
       { status: 500 }
     );
+  }
+}
+
+/** Mark a paper as failed, without letting the bookkeeping throw in turn. */
+async function failGeneration(examId: string, message: string) {
+  try {
+    await prisma.mockExam.update({
+      where: { id: examId },
+      data: { status: 'failed', generationError: message },
+    });
+  } catch (err) {
+    console.error('Could not record generation failure for %s:', examId, err);
   }
 }

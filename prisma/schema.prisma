@@ -619,7 +619,12 @@ model MockExam {
   totalMarks      Int
   topics          String[]
   difficulty      String    @default("mixed")
-  status          String    @default("generated") // generated | in_progress | completed
+  // generating | generated | failed | in_progress | completed
+  // `generating` means the paper exists but its questions are still being
+  // chosen in the background; the client polls until it leaves that state.
+  status          String    @default("generated")
+  /// Why generation failed, shown to the student. Null unless status=failed.
+  generationError String?
   startedAt       DateTime?
   submittedAt     DateTime?
   score           Float?

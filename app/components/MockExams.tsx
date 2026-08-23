@@ -15,7 +15,7 @@ const FormattedMessage = dynamic(() => import('./FormattedMessage'), { ssr: fals
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
 // ----------------------------- Types -----------------------------
-type ExamStatus = 'generated' | 'in_progress' | 'completed';
+type ExamStatus = 'generating' | 'generated' | 'failed' | 'in_progress' | 'completed';
 
 type ExamListItem = {
   id: string;
@@ -65,6 +65,8 @@ type ExamDetail = {
   difficulty: string;
   topics: string[];
   status: ExamStatus;
+  /** Set only when status is 'failed'. */
+  generationError?: string | null;
   score: number | null;
   startedAt: string | null;
   submittedAt: string | null;
@@ -82,6 +84,14 @@ type View =
 
 // ----------------------------- Helpers -----------------------------
 const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
+  generating: {
+    label: 'Building…',
+    cls: 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+  },
+  failed: {
+    label: 'Failed',
+    cls: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+  },
   generated: {
     label: 'Ready',
     cls: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -792,10 +802,19 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   const latestAnswers = useRef<Record<string, string>>({});
   latestAnswers.current = answers;
 
-  // Load exam detail
+  // Load exam detail, re-polling while the paper is still being built.
+  //
+  // Generation is asynchronous: POST /generate answers 202 with the paper row
+  // created but empty, then fills in the questions in the background. Reading
+  // once would show a paper with no questions and start its timer against it.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Comfortably past the server's own 50s selection budget, so a paper is
+    // only called stuck once the server has certainly stopped working on it.
+    const deadline = Date.now() + 90_000;
+
+    const load = async () => {
       try {
         const res = await fetch(`/api/mock-exams/${examId}`);
         if (!res.ok) throw new Error('Failed to load exam');
@@ -803,6 +822,22 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
         if (cancelled) return;
         const detail: ExamDetail = data.exam;
         setExam(detail);
+        setLoading(false);
+
+        if (detail.status === 'generating') {
+          if (Date.now() > deadline) {
+            setError('This paper is taking longer than expected. Try generating it again.');
+            return;
+          }
+          timer = setTimeout(load, 2_000);
+          return;
+        }
+
+        if (detail.status === 'failed') {
+          setError(detail.generationError ?? 'Generating this paper failed. Please try again.');
+          return;
+        }
+
         setSecondsLeft(detail.durationMinutes * 60);
         // Pre-fill any existing answers
         const existing: Record<string, string> = {};
@@ -811,17 +846,26 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
         }
         setAnswers(existing);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load exam');
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Failed to load exam');
+          setLoading(false);
+        }
       }
-    })();
-    return () => { cancelled = true; };
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [examId]);
 
   // Start the exam once (server-side marker)
   useEffect(() => {
-    if (startedRef.current || !exam) return;
+    // Not while the questions are still being chosen, and not for a paper that
+    // failed to generate -- starting either would run the clock on nothing.
+    if (!exam || exam.status === 'generating' || exam.status === 'failed') return;
+    if (startedRef.current) return;
     startedRef.current = true;
     fetch(`/api/mock-exams/${examId}/start`, { method: 'POST' }).catch(() => {});
   }, [exam, examId]);
@@ -917,6 +961,25 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
     return (
       <div className="h-full p-8">
         <ErrorBanner message={error ?? 'Exam not found'} onRetry={onExit} />
+      </div>
+    );
+  }
+
+  if (exam.status === 'generating') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <Loader2 className="w-7 h-7 animate-spin text-green-600" />
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Building your paper…</p>
+        <p className="max-w-sm text-sm text-gray-600 dark:text-gray-400">
+          Choosing questions from the bank. This usually takes under a minute, and
+          the timer does not start until the paper is ready.
+        </p>
+        <button
+          onClick={onExit}
+          className="mt-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Back to exams
+        </button>
       </div>
     );
   }
