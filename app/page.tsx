@@ -231,6 +231,14 @@ export default function SmartEduPlatform() {
 
   const user = session?.user;
   const isAuthenticated = status === 'authenticated';
+  /**
+   * NextAuth reports 'loading' until it has resolved the session, and treating
+   * that as signed-out is how a signed-in student is shown "Sign in to save
+   * your progress", called "Student", and offered Sign In / Create Account for
+   * the first seconds of every load. It is what made a working Google login
+   * look broken. Anything that says "you are signed out" has to wait for this.
+   */
+  const isSessionLoading = status === 'loading';
   const userInitials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? 'YS';
@@ -734,7 +742,19 @@ export default function SmartEduPlatform() {
 
         {/* User Account Section */}
         <div className={`${sidebarCollapsed ? 'px-2 py-4' : 'p-4'} border-t border-white/30 dark:border-white/10`}>
-          {isAuthenticated ? (
+          {isSessionLoading ? (
+            // A placeholder, not the signed-out buttons: offering "Sign In" to
+            // someone who is already signed in is the whole bug.
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3 px-3'} py-3`}>
+              <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+              {!sidebarCollapsed && (
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-2.5 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+                </div>
+              )}
+            </div>
+          ) : isAuthenticated ? (
             <div className="relative">
               <button
                 onClick={() => setIsAccountOpen(!isAccountOpen)}
@@ -902,7 +922,11 @@ export default function SmartEduPlatform() {
             <div className="mx-auto max-w-7xl space-y-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome back, {user?.name?.split(' ')[0] ?? 'Student'}!</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    {isSessionLoading
+                      ? 'Welcome back!'
+                      : `Welcome back, ${user?.name?.split(' ')[0] ?? 'Student'}!`}
+                  </h1>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">One next step, then the next.</p>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
@@ -929,8 +953,12 @@ export default function SmartEduPlatform() {
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Next step</p>
-                    <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{dashboardFocus.title}</h2>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{dashboardFocus.body}</p>
+                    <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {isSessionLoading ? 'Getting your dashboard ready…' : dashboardFocus.title}
+                    </h2>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      {isSessionLoading ? 'One moment.' : dashboardFocus.body}
+                    </p>
                     {isAuthenticated && learningOverview && (
                       <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
                         <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 dark:border-gray-700 dark:bg-gray-800">
@@ -946,7 +974,7 @@ export default function SmartEduPlatform() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {dashboardFocus.primaryHref ? (
+                    {isSessionLoading ? null : dashboardFocus.primaryHref ? (
                       <Link
                         href={dashboardFocus.primaryHref}
                         className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
@@ -967,7 +995,7 @@ export default function SmartEduPlatform() {
                 </div>
 
                 <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {dashboardFocus.shortcuts.map((shortcut) => {
+                  {(isSessionLoading ? [] : dashboardFocus.shortcuts).map((shortcut) => {
                     const Icon = shortcut.icon;
                     return (
                       <button
