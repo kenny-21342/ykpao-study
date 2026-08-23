@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 /**
  * The pure half of error reporting: what a stored error may contain, and how
  * two occurrences of one bug are recognised as the same bug.
@@ -38,8 +36,16 @@ export function fingerprintOf(message: string, routePath: string | undefined): s
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<uuid>')
     .replace(/\bc[a-z0-9]{20,}\b/gi, '<cuid>')
     .replace(/\d+/g, '<n>');
-  return createHash('sha256')
-    .update(`${routePath ?? ''}\n${normalised}`)
-    .digest('hex')
-    .slice(0, 16);
+  // FNV-1a rather than a crypto hash: this only has to group identical bugs,
+  // and `instrumentation.ts` is bundled for the Edge runtime as well, where
+  // `node:crypto` does not exist.
+  const input = `${routePath ?? ''}\n${normalised}`;
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < input.length; i++) {
+    const c = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x85ebca6b) >>> 0;
+  }
+  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
 }
