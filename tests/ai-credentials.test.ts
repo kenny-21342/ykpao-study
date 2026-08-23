@@ -539,3 +539,56 @@ test('an unreachable endpoint fails with a fixed message, not the raw error', as
   assert.ok(!result.message.includes('secret-internal-detail'));
   assert.match(result.message, /Could not reach your endpoint/);
 });
+
+// ---------------------------------------------------------------------------
+// SSRF: "test my key" makes the server fetch a user-supplied URL, so the host
+// is checked before the endpoint is ever stored.
+// ---------------------------------------------------------------------------
+
+test('validateBaseUrl rejects loopback, private ranges and cloud metadata', () => {
+  const blocked = [
+    'https://localhost/v1',
+    'https://LOCALHOST/v1',
+    'https://api.localhost/v1',
+    'https://box.internal/v1',
+    'https://printer.local/v1',
+    'https://127.0.0.1/v1',
+    'https://127.1.2.3/v1',
+    'https://0.0.0.0/v1',
+    'https://10.0.0.5/v1',
+    'https://172.16.0.1/v1',
+    'https://172.31.255.254/v1',
+    'https://192.168.1.1/v1',
+    'https://100.64.0.1/v1',
+    // The one that matters most: cloud instance metadata.
+    'https://169.254.169.254/latest/meta-data/',
+    'https://[::1]/v1',
+    'https://[fd00::1]/v1',
+    'https://[fe80::1]/v1',
+    'https://[::ffff:127.0.0.1]/v1',
+    // Exotic IPv4 spellings the URL parser normalises to 127.0.0.1.
+    'https://2130706433/v1',
+    'https://0177.0.0.1/v1',
+  ];
+  for (const url of blocked) {
+    assert.equal(validateBaseUrl(url), null, `should reject ${url}`);
+  }
+});
+
+test('validateBaseUrl still accepts real provider endpoints', () => {
+  for (const url of [
+    'https://api.deepseek.com/v1',
+    'https://api.siliconflow.cn/v1/chat/completions',
+    'https://api.openai.com/v1',
+    // 172.32 is outside the private block; 192.169 likewise.
+    'https://172.32.0.1/v1',
+    'https://192.169.0.1/v1',
+  ]) {
+    assert.ok(validateBaseUrl(url), `should accept ${url}`);
+  }
+});
+
+test('validateBaseUrl still rejects non-https', () => {
+  assert.equal(validateBaseUrl('http://api.deepseek.com/v1'), null);
+  assert.equal(validateBaseUrl('file:///etc/passwd'), null);
+});

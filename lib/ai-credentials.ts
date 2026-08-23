@@ -86,12 +86,76 @@ export function toChatCompletionsUrl(baseUrl: string): string {
   return `${trimmed}/v1/chat/completions`;
 }
 
+/** Host suffixes that only ever name something inside the network. */
+const PRIVATE_HOST_SUFFIXES = ['.localhost', '.local', '.internal', '.localdomain'];
+
+/**
+ * True if `hostname` is a literal address inside the machine or its network.
+ *
+ * The URL parser has already normalised the exotic IPv4 spellings for us --
+ * `2130706433` and `0177.0.0.1` both arrive here as `127.0.0.1` -- so matching
+ * on the dotted-quad is enough for those.
+ */
+function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host) return true;
+
+  if (host === 'localhost') return true;
+  if (PRIVATE_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) return true;
+
+  // IPv6, including the IPv4-mapped form (::ffff:127.0.0.1).
+  if (host.includes(':')) {
+    if (host === '::1' || host === '::') return true;
+    // fc00::/7 unique-local, fe80::/10 link-local.
+    if (/^f[cd][0-9a-f]{2}:/.test(host)) return true;
+    if (/^fe[89ab][0-9a-f]:/.test(host)) return true;
+    // IPv4-mapped addresses arrive in either spelling: the URL parser rewrites
+    // `::ffff:127.0.0.1` to `::ffff:7f00:1`, so the hex form has to be decoded
+    // back to a dotted quad or loopback walks straight through.
+    const dotted = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(host);
+    if (dotted) return isPrivateHost(dotted[1]);
+    const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(host);
+    if (hex) {
+      const high = Number.parseInt(hex[1], 16);
+      const low = Number.parseInt(hex[2], 16);
+      return isPrivateHost(
+        `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`
+      );
+    }
+    return false;
+  }
+
+  const quad = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!quad) return false;
+  const [a, b] = [Number(quad[1]), Number(quad[2])];
+
+  if (a === 0) return true;                        // 0.0.0.0/8 "this host"
+  if (a === 10) return true;                       // private
+  if (a === 127) return true;                      // loopback
+  if (a === 169 && b === 254) return true;         // link-local, incl. cloud metadata
+  if (a === 172 && b >= 16 && b <= 31) return true; // private
+  if (a === 192 && b === 168) return true;         // private
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  return false;
+}
+
 /**
  * Reject anything that is not a plain https endpoint before it is stored.
  *
  * http:// would put the student's bearer token on the wire in clear, and any
  * other scheme is either a typo or an attempt to make the server fetch
  * something local.
+ *
+ * The host check matters because "test my key" makes the server fetch a URL
+ * the user supplies. Blocking only the string "localhost" left 127.0.0.1,
+ * [::1], 10.0.0.5, 192.168.1.1 and -- worst -- 169.254.169.254, the cloud
+ * metadata address, all reachable.
+ *
+ * This blocks literals, which is where the bar belongs for a stored setting.
+ * It is NOT a complete SSRF defence: a public hostname that resolves to a
+ * private address, or one that changes its answer between this check and the
+ * fetch, still gets through. Closing that needs the resolved IP to be checked
+ * at request time and redirects refused, at the point of the fetch.
  */
 export function validateBaseUrl(raw: string): string | null {
   let url: URL;
@@ -101,7 +165,7 @@ export function validateBaseUrl(raw: string): string | null {
     return null;
   }
   if (url.protocol !== 'https:') return null;
-  if (!url.hostname || url.hostname === 'localhost') return null;
+  if (!url.hostname || isPrivateHost(url.hostname)) return null;
   return url.toString().replace(/\/+$/, '');
 }
 
