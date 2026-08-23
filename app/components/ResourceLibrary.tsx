@@ -486,6 +486,10 @@ function CommunityNotesView({ scope }: { scope: 'enrolled' | 'all' }) {
       if (activeTag) params.set('tag', activeTag);
       params.set('scope', scope);
       const res = await fetch(`/api/shared-notes?${params}`);
+      // 401 is not a failure, it is the answer: the library is for signed-in
+      // members. Reporting it as a load error tells the visitor the page is
+      // broken when it is working exactly as intended.
+      if (res.status === 401) throw new Error('Sign in to browse community notes.');
       if (!res.ok) throw new Error('Failed to load shared notes');
       const data = await res.json();
       setNotes(data.notes ?? []);
@@ -924,6 +928,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       params.set('limit', String(limit));
       params.set('scope', scope);
       const res = await fetch(`/api/school-resources?${params}`);
+      if (res.status === 401) throw new Error('Sign in to browse school resources.');
       if (!res.ok) throw new Error('Failed to load resources');
       const data = await res.json() as ResourcePageResponse;
       const nextTotalPages = Math.max(1, data.totalPages ?? 1);

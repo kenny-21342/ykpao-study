@@ -27,7 +27,17 @@ export async function GET(req: NextRequest) {
     const sort = SORT_FIELDS.has(sortField as SortField) ? (sortField as SortField) : 'createdAt';
     const order = searchParams.get('order') === 'asc' ? 'asc' : 'desc';
     const user = await getSessionUser();
-    const courseScope = await resolveCourseScope({ userId: user?.id, scope: searchParams.get('scope'), courseId: searchParams.get('courseId') });
+    // `resolveCourseScope` is a preference filter and says so -- it resolves
+    // "enrolled" vs "all" without changing authorization, so it answers
+    // `effectiveScope: 'all'` for a caller with no user id. That is correct for
+    // what it does and wrong as the only thing between an anonymous request and
+    // every row. Authorization belongs here, ahead of it. The `q` filter also matches
+    // uploader name and email, so an open listing let anyone test whether an
+    // address had an account here.
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const courseScope = await resolveCourseScope({ userId: user.id, scope: searchParams.get('scope'), courseId: searchParams.get('courseId') });
 
     const searchConditions: Prisma.SchoolResourceWhereInput[] = q ? [
       { title: { contains: q, mode: 'insensitive' } },

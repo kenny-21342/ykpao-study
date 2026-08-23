@@ -22,7 +22,16 @@ export async function GET(req: NextRequest) {
     const page = parsePositiveInt(searchParams.get('page'), 1);
     const limit = parsePositiveInt(searchParams.get('limit'), 24, 50);
     const user = await getSessionUser();
-    const courseScope = await resolveCourseScope({ userId: user?.id, scope: searchParams.get('scope'), courseId: searchParams.get('courseId') });
+    // `resolveCourseScope` is a preference filter and says so -- it resolves
+    // "enrolled" vs "all" without changing authorization, so it answers
+    // `effectiveScope: 'all'` for a caller with no user id. That is correct for
+    // what it does and wrong as the only thing between an anonymous request and
+    // every row. Authorization belongs here, ahead of it. `visibility: 'public'` means
+    // public to the school, not public to the internet.
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const courseScope = await resolveCourseScope({ userId: user.id, scope: searchParams.get('scope'), courseId: searchParams.get('courseId') });
 
     const where = {
       visibility: 'public' as const,
