@@ -27,21 +27,34 @@ export async function register() {
 /**
  * Server-side error reporting hook.
  *
- * There is no error-reporting service wired up yet, so this logs in a single
- * consistent shape rather than leaving errors scattered across handler-specific
- * console calls. Point it at a real provider when one is chosen.
+ * Next calls this for every error it catches on the server, which makes it the
+ * one place worth wiring: no handler has to remember to report anything. See
+ * lib/error-reporting.ts for where it goes.
+ *
+ * Imported lazily so the Edge runtime -- which has no Prisma -- never pulls it
+ * in, and so a failure to load the reporter cannot take down the server.
  */
 export async function onRequestError(
   error: unknown,
   request: { path: string; method: string },
   context: { routerKind: string; routePath: string; routeType: string }
 ) {
-  console.error(
-    '[request-error] %s %s (%s %s):',
-    request.method,
-    request.path,
-    context.routerKind,
-    context.routeType,
-    error
-  );
+  const digest =
+    typeof error === 'object' && error !== null && 'digest' in error
+      ? String((error as { digest: unknown }).digest)
+      : undefined;
+
+  try {
+    const { reportError } = await import('./lib/error-reporting.ts');
+    await reportError(error, {
+      path: request.path,
+      method: request.method,
+      routePath: context.routePath,
+      routeType: context.routeType,
+      digest,
+      source: 'request',
+    });
+  } catch (err) {
+    console.error('[request-error] reporter unavailable:', err, error);
+  }
 }

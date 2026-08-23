@@ -1517,3 +1517,26 @@ model RateLimit {
   @@index([resetAt])
   @@map("rate_limits")
 }
+
+/// Server-side errors, captured by `onRequestError` in instrumentation.ts and
+/// by `reportError()` for work that runs outside a request (background jobs).
+/// There is no third-party error service; this table is the record.
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  /// Stable hash of message + route, so repeats of one bug group together.
+  fingerprint String
+  message     String
+  stack       String?
+  /// React's error digest, when the error came through a render.
+  digest      String?
+  path        String?
+  method      String?
+  routePath   String?
+  routeType   String?
+  source      String   @default("request")
+
+  @@index([createdAt])
+  @@index([fingerprint])
+  @@map("error_events")
+}

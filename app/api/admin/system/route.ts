@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
     cost7d,
     topUsersByCost,
     tableCounts,
+    errorGroups,
+    latestErrors,
   ] = await Promise.all([
     prisma.usageRecord.groupBy({
       by: ['model'],
@@ -38,7 +40,7 @@ export async function GET(req: NextRequest) {
       _count: true,
       orderBy: { _count: { feature: 'desc' } },
     }),
-    0, // placeholder — errors tracked separately if ever added
+    prisma.errorEvent.count({ where: { createdAt: { gte: twentyFourHoursAgo } } }),
     prisma.usageRecord.count({ where: { createdAt: { gte: twentyFourHoursAgo } } }),
     prisma.usageRecord.aggregate({ _sum: { cost: true } }),
     prisma.usageRecord.aggregate({ where: { createdAt: { gte: sevenDaysAgo } }, _sum: { cost: true } }),
@@ -59,6 +61,24 @@ export async function GET(req: NextRequest) {
       { name: 'schoolResources', count: prisma.schoolResource.count() },
       { name: 'pastPaperAttempts', count: prisma.pastPaperAttempt.count() },
     ].map(async (t) => ({ name: t.name, count: await t.count }))),
+    // Grouped so one repeating bug reads as one row, not two hundred.
+    prisma.errorEvent.groupBy({
+      by: ['fingerprint'],
+      where: { createdAt: { gte: sevenDaysAgo } },
+      _count: true,
+      _max: { createdAt: true },
+      orderBy: { _count: { fingerprint: 'desc' } },
+      take: 20,
+    }),
+    prisma.errorEvent.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        fingerprint: true, message: true, path: true, method: true,
+        routePath: true, source: true, createdAt: true,
+      },
+    }),
   ]);
 
   // Resolve top users' emails.
@@ -99,5 +119,16 @@ export async function GET(req: NextRequest) {
       totalMB: Math.round((totalStorageBytes / (1024 * 1024)) * 100) / 100,
     },
     tables: tableCounts,
+    errors: {
+      last24h: errors24h,
+      // One entry per distinct bug in the last 7 days, most frequent first.
+      groups: errorGroups.map((g) => ({
+        fingerprint: g.fingerprint,
+        count: g._count,
+        lastSeen: g._max.createdAt,
+        message: latestErrors.find((e) => e.fingerprint === g.fingerprint)?.message ?? null,
+      })),
+      recent: latestErrors,
+    },
   });
 }

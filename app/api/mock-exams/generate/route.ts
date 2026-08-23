@@ -8,6 +8,7 @@ import { createPredictedPaper } from '@/lib/predicted-paper';
 import type { MockExamPlan } from '@/types/ai';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
+import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -287,7 +288,14 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
       } catch (err) {
         // Nothing is waiting on this callback, so an unhandled throw would
         // leave the paper stuck on "generating" forever with no explanation.
-        console.error('Mock exam generation failed for %s:', exam.id, err);
+        // `onRequestError` never sees this: the response was sent long ago, so
+        // background work has to report itself.
+        await reportError(err, {
+          path: `/api/mock-exams/generate (${exam.id})`,
+          method: 'POST',
+          routePath: '/api/mock-exams/generate',
+          source: 'mock-exam-generation',
+        });
         await failGeneration(
           exam.id,
           err instanceof DeepSeekError
