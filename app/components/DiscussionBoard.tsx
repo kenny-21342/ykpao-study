@@ -551,9 +551,10 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void }) {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
-  // Mirrors the server's isModerator(): admins and teachers moderate.
-  const canModerate =
-    session?.user?.role === 'admin' || session?.user?.role === 'teacher';
+  // Resolved by the server in the session callback, not re-derived here: a
+  // bootstrap admin (ADMIN_EMAILS) has role 'student', so comparing role
+  // strings hid moderation from someone the server lets moderate.
+  const canModerate = session?.user?.canModerate ?? false;
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [labels, setLabels] = useState<LabelMeta[]>([]);
   const [loading, setLoading] = useState(true);

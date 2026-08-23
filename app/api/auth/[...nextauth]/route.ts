@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { credentialFingerprint } from "@/lib/password-reset"
+import { isAdminUser, isModerator } from "@/lib/roles"
 import { strictLimiter } from "@/lib/rate-limit"
 import bcrypt from "bcrypt"
 
@@ -206,6 +207,15 @@ export const authOptions = {
         session.user.email = (token.email as string | undefined) ?? session.user.email
         session.user.image = (token.picture as string | undefined) ?? session.user.image
         session.user.role = (token.role as string | undefined) ?? 'student'
+        // Resolve authority here rather than letting clients infer it from
+        // `role`. Admin can come from the ADMIN_EMAILS allowlist instead of the
+        // role column, so a bootstrap admin's role reads 'student' and every
+        // `role === 'admin'` check in the UI was false for someone the server
+        // treats as a full admin -- the admin console link and all moderation
+        // controls were hidden from them.
+        const bearer = { role: session.user.role, email: session.user.email }
+        session.user.isAdmin = isAdminUser(bearer)
+        session.user.canModerate = isModerator(bearer)
         // Opaque (HMAC-keyed) — carried so getSessionUser() can reject a
         // session issued against a password that has since been changed.
         session.user.cfp = token.cfp as string | undefined

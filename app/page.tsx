@@ -783,7 +783,7 @@ export default function SmartEduPlatform() {
                         <BarChart3 className="w-4 h-4" />
                         <span>Usage & API Credits</span>
                       </a>
-                      {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      {user?.isAdmin && (
                         <a
                           href="/admin"
                           className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
