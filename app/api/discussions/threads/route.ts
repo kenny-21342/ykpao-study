@@ -9,7 +9,16 @@ export const dynamic = 'force-dynamic';
 
 // GET /api/discussions/threads?category=&page=&limit=&q=
 // subjectId filter is still supported for backward compatibility.
+//
+// Signed-in only, like every other read on this board. Thread rows carry the
+// author's name, id and avatar alongside the post body, so an open listing
+// published who was saying what to anyone who asked.
 export async function GET(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const subjectId = searchParams.get('subjectId');

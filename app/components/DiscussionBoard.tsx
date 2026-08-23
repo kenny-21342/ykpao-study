@@ -138,6 +138,7 @@ export default function DiscussionBoard({
   pendingThreadId?: string | null;
   onThreadOpened?: () => void;
 }) {
+  const { status } = useSession();
   const [view, setView] = useState<View>({ name: 'threads' });
 
   // Auto-open a thread when pendingThreadId is set (from notification click).
@@ -167,12 +168,45 @@ export default function DiscussionBoard({
           </div>
         </div>
 
-        {view.name === 'threads' && (
+        {/*
+          The board is signed-in only. Checking here keeps a signed-out visitor
+          from firing reads that can only 401 and then showing them a failure
+          banner, which reads as the board being broken rather than private.
+
+          'loading' deliberately does not fall through to the signed-out
+          branch: a signed-in user must never be shown a "sign in" prompt while
+          their session is still resolving.
+        */}
+        {status === 'loading' && (
+          <div className="flex items-center justify-center py-16 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading…
+          </div>
+        )}
+
+        {status === 'unauthenticated' && (
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-12 text-center">
+            <MessagesSquare className="w-10 h-10 mx-auto text-gray-400" />
+            <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Sign in to join the discussion
+            </h3>
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
+              The board is open to signed-in members of the school community.
+            </p>
+            <a
+              href="/auth/login"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-green-700"
+            >
+              Sign in
+            </a>
+          </div>
+        )}
+
+        {status === 'authenticated' && view.name === 'threads' && (
           <ThreadsView
             onOpen={(threadId) => setView({ name: 'thread', threadId })}
           />
         )}
-        {view.name === 'thread' && (
+        {status === 'authenticated' && view.name === 'thread' && (
           <ThreadView
             threadId={view.threadId}
             onBack={() => setView({ name: 'threads' })}

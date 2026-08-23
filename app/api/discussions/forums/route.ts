@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { DISCUSSION_LABELS, DISCUSSION_LABEL_SLUGS } from '@/lib/discussion-labels';
 
@@ -13,8 +14,17 @@ export const dynamic = 'force-dynamic';
  * the canonical list of predefined labels (see lib/discussion-labels.ts) plus
  * any legacy free-text categories still present in the DB so the UI can render
  * a filter cloud that covers both.
+ *
+ * Signed-in only. The board is for the school community, and the counts and
+ * legacy category names here describe what is being discussed, so they are not
+ * public either.
  */
 export async function GET() {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const [threadCount, postCount, lastActivity, usedCategories] = await Promise.all([
       prisma.discussionThread.count(),
