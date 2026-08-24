@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { reportError } from '@/lib/error-reporting';
-import { taughtSubjectCodes } from '@/lib/course-catalog';
+import { publishedSubjectCodes } from '@/lib/course-catalog';
 import {
   curriculumId,
   curriculumLabel,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // no student here sits. `COURSE_CATALOG` is the single definition of that,
     // so the browser follows it rather than keeping a second list in sync.
     const subjectRows = await prisma.subject.findMany({
-      where: { papers: { some: {} }, code: { in: [...taughtSubjectCodes()] } },
+      where: { papers: { some: {} }, code: { in: [...publishedSubjectCodes()] } },
       select: {
         code: true,
         name: true,

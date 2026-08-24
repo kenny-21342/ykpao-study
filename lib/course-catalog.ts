@@ -60,28 +60,28 @@ const ib = (
 });
 
 /**
- * The courses YK Pao School teaches, and the only ones the site publishes.
+ * Everything the site publishes.
  *
- * Confirmed against the school syllabus on 24 Aug 2026. Two rules follow from
- * that and are easy to break by accident:
+ * Mostly the YK Pao syllabus, confirmed 24 Aug 2026, plus Cambridge A Level,
+ * which the school does not teach and which is kept on purpose anyway. Two
+ * rules, both easy to break by accident:
  *
  * 1. Every entry must name a `subjects.code` that exists, or the course
  *    onboards a student into an empty dashboard.
- * 2. Nothing may be listed that the school does not teach. A Level is not
- *    offered here at all, and several IB subjects in the database are retired
- *    syllabuses or were never on the timetable.
+ * 2. Removing a course is close to irreversible in practice. No paper data is
+ *    deleted, but the sources these came from are now gated, so anything
+ *    dropped here cannot simply be re-collected.
  *
- * Deliberately absent, and why:
- *   - All Cambridge A Level (9709, 9702, 9708, 9231, 9608, 9618). Not taught.
+ * Absent on purpose:
  *   - IB Chinese A: Literature. The school teaches Chinese A Language and
  *     Literature only.
  *   - IB ITGS and IB Further Mathematics. Not on the timetable.
  *   - IB Mathematics and Mathematical Studies, History Route 1 and Route 2,
  *     Nature of Science, Brazilian Social Studies. Retired or vestigial.
  *
- * Taught but not yet ingested, so they cannot be listed until papers exist:
- *   IGCSE 0475, 0606, 0450, 0400 (Art & Design), 0411 (Drama), 0410 (Music),
- *   0413 (PE); IB Chinese B, English B, Visual Arts, Theatre.
+ * On the syllabus but not yet ingested, so they cannot be listed until papers
+ * exist: IGCSE 0475, 0606, 0450, 0400 (Art & Design), 0411 (Drama),
+ * 0410 (Music), 0413 (PE); IB Chinese B, English B, Visual Arts, Theatre.
  */
 export const COURSE_CATALOG: CatalogCourse[] = [
   // ---- Cambridge IGCSE, as taught (10 of the 17 on the syllabus) ----
@@ -95,6 +95,20 @@ export const COURSE_CATALOG: CatalogCourse[] = [
   cambridge('Economics', 'ECON-IG', 'Economics', 'IGCSE', '0455'),
   cambridge('Computer Science', 'CS-IG', 'Computer Science', 'IGCSE', '0478'),
   cambridge('Chinese First Language', 'CHIN-LANG-IG', 'Chinese', 'IGCSE', '0509'),
+
+  // ---- Cambridge A Level ----
+  // Not taught at the school. Kept deliberately: the corpus was collected on
+  // purpose, it is in active personal use, and the source it came from is now
+  // behind a bot challenge, so removing it is effectively permanent.
+  cambridge('Mathematics', 'MATH-AL', 'Mathematics', 'A Level', '9709'),
+  cambridge('Physics', 'PHYS-AL', 'Physics', 'A Level', '9702'),
+  cambridge('Economics', 'ECON-AL', 'Economics', 'A Level', '9708'),
+  cambridge('Further Mathematics', 'FMATH-AL', 'Mathematics', 'A Level', '9231'),
+  // Two live syllabuses: 9618 is current, 9608 was examined through 2021 but
+  // still has 309 papers worth practising, so both appear and the names
+  // disambiguate them.
+  cambridge('Computer Science (9618)', 'CS-AL', 'Computer Science', 'A Level', '9618'),
+  cambridge('Computer Science (9608, retired)', 'CS-9608-AL', 'Computer Science', 'A Level', '9608'),
 
   // ---- IB Diploma, as taught (18 of the 22 on the syllabus) ----
   ib('Biology', 'BIO-IB', 'Biology', 'ib-biology'),
@@ -118,14 +132,15 @@ export const COURSE_CATALOG: CatalogCourse[] = [
 ];
 
 /**
- * The `subjects.code` values this school actually teaches.
+ * The `subjects.code` values the site publishes.
  *
- * The catalogue is the single definition of "a course we teach", so the paper
+ * The catalogue is the single definition of what exists here, so the paper
  * browser filters on this rather than showing every subject that happens to
- * have rows. Without it the browser advertises A Level and retired IB
- * syllabuses that no student here sits.
+ * have rows -- which is what surfaced the retired IB syllabuses nobody sits.
+ * Named for what it is: published, not taught. A Level is published and not
+ * taught.
  */
-export function taughtSubjectCodes(): Set<string> {
+export function publishedSubjectCodes(): Set<string> {
   return new Set(
     COURSE_CATALOG.flatMap((entry) => entry.scopes.map((scope) => scope.subjectCode)),
   );
