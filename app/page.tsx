@@ -9,6 +9,7 @@ import FloatingAIAssistant from './components/FloatingAIAssistant';
 import OnboardingWizard from './components/OnboardingWizard';
 import QuestionsDatabase from './components/QuestionsDatabase';
 import MockExams from './components/MockExams';
+import { FEATURE_READINESS, isFeatureVisible } from '@/lib/feature-readiness';
 import DiscussionBoard from './components/DiscussionBoard';
 import NotificationBell from './components/NotificationBell';
 import StudyCoach from './components/StudyCoach';
@@ -691,14 +692,17 @@ export default function SmartEduPlatform() {
             <span className={sidebarNavLabelClass}>Study</span>
           </button>
 
-          <button
-            onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
-            title="Practice"
-            className={sidebarNavItemClass(activeTab === 'practice')}
-          >
-            <Database className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Practice</span>
-          </button>
+          {isFeatureVisible('question-bank') && (
+            <button
+              onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
+              title="Practice"
+              className={sidebarNavItemClass(activeTab === 'practice')}
+            >
+              <Database className="w-5 h-5" />
+              <span className={sidebarNavLabelClass}>Practice</span>
+              <NavBadge feature="question-bank" collapsed={sidebarCollapsed} />
+            </button>
+          )}
 
           {/* Past papers is its own route rather than a tab, because the PDF
               viewer at /papers/[id] navigates away from the shell anyway. */}
@@ -721,14 +725,17 @@ export default function SmartEduPlatform() {
             <span className={sidebarNavLabelClass}>Materials</span>
           </button>
 
-          <button
-            onClick={() => openRoute({ tab: 'mock-exams' })}
-            title="Mock Exams"
-            className={sidebarNavItemClass(activeTab === 'mock-exams')}
-          >
-            <ClipboardList className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Mock Exams</span>
-          </button>
+          {isFeatureVisible('mock-exams') && (
+            <button
+              onClick={() => openRoute({ tab: 'mock-exams' })}
+              title="Mock Exams"
+              className={sidebarNavItemClass(activeTab === 'mock-exams')}
+            >
+              <ClipboardList className="w-5 h-5" />
+              <span className={sidebarNavLabelClass}>Mock Exams</span>
+              <NavBadge feature="mock-exams" collapsed={sidebarCollapsed} />
+            </button>
+          )}
 
           <button
             onClick={() => openRoute({ tab: 'discussions' })}
@@ -1179,6 +1186,19 @@ export default function SmartEduPlatform() {
       )}
     </div>
     </ScreenContextProvider>
+  );
+}
+
+// The "Preview" chip on a sidebar entry whose feature is not finished. Hidden
+// when the sidebar is collapsed, where there is no room for it and the title
+// attribute is the only affordance anyway.
+function NavBadge({ feature, collapsed }: { feature: keyof typeof FEATURE_READINESS; collapsed: boolean }) {
+  const readiness = FEATURE_READINESS[feature];
+  if (readiness.state !== 'preview' || collapsed) return null;
+  return (
+    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+      {readiness.badge}
+    </span>
   );
 }
 

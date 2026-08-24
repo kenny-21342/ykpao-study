@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, PenTool, Lightbulb, Loader2, Brain, AlertCircle } from 'lucide-react';
 import FormattedMessage from '../components/FormattedMessage';
 import UnlockWidget from './UnlockWidget';
+import PreviewNotice from './PreviewNotice';
 import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
 
@@ -664,6 +665,9 @@ export default function QuestionsDatabase({
             Practice mode: pick a question, write your answer, and submit for AI grading + feedback. Sign in to track progress.
           </p>
         )}
+        {/* The vault is separate content, so the bank's readiness notice does
+            not apply there. */}
+        {!showVault && <PreviewNotice feature="question-bank" className="mt-3" />}
       </div>
 
       {/* Competition vault view (replaces the past-paper body when active) */}

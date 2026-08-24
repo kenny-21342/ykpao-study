@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import NoticeDialog from './NoticeDialog';
+import PreviewNotice from './PreviewNotice';
 import toast from 'react-hot-toast';
 import {
   ClipboardList, Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
@@ -193,6 +194,7 @@ export default function MockExams() {
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        <PreviewNotice feature="mock-exams" />
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -565,6 +567,8 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
             </p>
           </div>
         </div>
+
+        <PreviewNotice feature="mock-exams" />
 
         {/* Wizard steps indicator */}
         <div className="flex items-center gap-2 text-sm">
