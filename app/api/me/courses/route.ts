@@ -4,15 +4,13 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getLearnerContext } from '@/lib/learner-context';
 import { ensureCourseCatalog } from '@/lib/course-catalog';
+import { CoursePreferenceFields, describeValidationError } from '@/lib/course-preferences';
 
 export const dynamic = 'force-dynamic';
 
 const CoursePreference = z.object({
   courseId: z.string().min(1).max(100),
-  targetGrade: z.string().trim().max(20).nullable().optional(),
-  examDate: z.string().date().nullable().optional(),
-  currentLevel: z.string().trim().max(80).nullable().optional(),
-  recentResult: z.string().trim().max(120).nullable().optional(),
+  ...CoursePreferenceFields,
   personalizationEnabled: z.boolean().optional(),
 });
 
@@ -41,7 +39,10 @@ export async function PUT(req: Request) {
   try {
     body = Body.parse(await req.json());
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid courses' }, { status: 400 });
+    // Never `error.message` on a ZodError: that is the serialised issue
+    // array, and a student who left an exam date blank was shown the raw
+    // regex for eight courses at once.
+    return NextResponse.json({ error: describeValidationError(error) }, { status: 400 });
   }
   const ids = body.courses.map((course) => course.courseId);
   if (new Set(ids).size !== ids.length) return NextResponse.json({ error: 'A course can only be included once.' }, { status: 400 });

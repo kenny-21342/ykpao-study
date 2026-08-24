@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureCourseCatalog } from '@/lib/course-catalog';
+import { CoursePreferenceFields } from '@/lib/course-preferences';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +50,8 @@ const Body = z.object({
   courseIds: z.array(z.string()).optional(),
   courses: z.array(z.object({
     courseId: z.string().min(1),
-    targetGrade: z.string().trim().max(20).nullable().optional(),
-    examDate: z.string().date().nullable().optional(),
+    targetGrade: CoursePreferenceFields.targetGrade,
+    examDate: CoursePreferenceFields.examDate,
   })).optional(),
   name: z.string().trim().min(1).max(100).optional(),
 });
