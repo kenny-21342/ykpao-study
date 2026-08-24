@@ -72,6 +72,11 @@ export async function GET(
         difficulty: exam.difficulty,
         topics: exam.topics,
         status: exam.status,
+        // The client polls this route while a paper is generating and shows
+        // this when it fails. Leaving it out of the projection meant every
+        // failure surfaced as the generic fallback message instead of the
+        // reason the server actually recorded.
+        generationError: exam.generationError,
         score: exam.score,
         startedAt: exam.startedAt,
         submittedAt: exam.submittedAt,

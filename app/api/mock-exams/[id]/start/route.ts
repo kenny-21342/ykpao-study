@@ -25,6 +25,23 @@ export async function POST(
       return NextResponse.json({ error: 'Mock exam not found' }, { status: 404 });
     }
 
+    // Only a paper that is ready may be started. Writing 'in_progress' over
+    // 'generating' would race the background job that is still choosing the
+    // questions -- whichever wrote last would win -- and starting a 'failed'
+    // paper would present an empty exam as a real one.
+    if (exam.status === 'generating') {
+      return NextResponse.json(
+        { error: 'This paper is still being prepared.' },
+        { status: 409 },
+      );
+    }
+    if (exam.status === 'failed') {
+      return NextResponse.json(
+        { error: exam.generationError ?? 'This paper could not be generated.' },
+        { status: 409 },
+      );
+    }
+
     const updated = await prisma.mockExam.update({
       where: { id },
       data: {

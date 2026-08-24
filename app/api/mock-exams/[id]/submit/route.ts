@@ -106,6 +106,21 @@ export async function POST(
     if (exam.status === 'completed') {
       return NextResponse.json({ error: 'This mock exam has already been submitted' }, { status: 409 });
     }
+    // A paper still being built, or one whose questions were never chosen, is
+    // not a paper. Accepting a submit for either flipped it to 'completed' and
+    // hid the fact that generation had broken.
+    if (exam.status === 'generating') {
+      return NextResponse.json(
+        { error: 'This paper is still being prepared. Try again in a moment.' },
+        { status: 409 },
+      );
+    }
+    if (exam.status === 'failed') {
+      return NextResponse.json(
+        { error: exam.generationError ?? 'This paper could not be generated. Generate a new one.' },
+        { status: 409 },
+      );
+    }
     const body = (await req.json()) ?? {};
 
     /**
