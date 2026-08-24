@@ -14,12 +14,29 @@ import { canonicalRedirectUrl } from '@/lib/canonical-host';
  * (In Next 16 this file is `proxy.ts`; `middleware.ts` is the deprecated name
  * for the same convention.)
  */
+/** True if `value` carries a NUL, encoded or raw. */
+function hasNulByte(value: string): boolean {
+  if (value.includes('\0')) return true;
+  if (/%00/i.test(value)) return true;
+  try {
+    return decodeURIComponent(value).includes('\0');
+  } catch {
+    // A malformed escape sequence is not our concern here; the route can
+    // reject it on its own terms.
+    return false;
+  }
+}
+
 export function proxy(request: NextRequest) {
   // A NUL byte has no legitimate use in a URL, and Postgres rejects one that
   // reaches a text column -- `?pageId=%00` surfaced as an unhandled 500 with a
   // raw driver message. Refusing it once here beats sanitising every string
   // parameter in every handler.
-  if (request.nextUrl.pathname.includes('\0') || request.nextUrl.search.includes('\0')) {
+  //
+  // Both spellings have to be checked. `nextUrl` keeps the percent-encoding,
+  // so a literal-NUL test alone silently passes `%00` straight through -- which
+  // is exactly what the first version of this did.
+  if (hasNulByte(request.nextUrl.pathname) || hasNulByte(request.nextUrl.search)) {
     return NextResponse.json({ error: 'Malformed request' }, { status: 400 });
   }
 
