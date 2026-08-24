@@ -107,8 +107,49 @@ export async function POST(
       return NextResponse.json({ error: 'This mock exam has already been submitted' }, { status: 409 });
     }
     const body = (await req.json()) ?? {};
+
+    /**
+     * A submission is one-way: it marks the paper completed, and every later
+     * attempt gets a 409. So a malformed body must not be treated as "the
+     * student answered nothing" -- `body.answers ?? {}` did exactly that, and
+     * a wrong-shaped payload silently scored a real paper zero with no way
+     * back. Reproduced by accident while testing: sending an array instead of
+     * an object completed a 12-question paper at 0 with no answers stored.
+     *
+     * An empty object is still allowed. Submitting with nothing written is a
+     * real thing that happens when the timer runs out, and refusing it would
+     * trap the student in an exam they cannot hand in.
+     */
+    const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+      typeof value === 'object' && value !== null && !Array.isArray(value);
+
+    if (body.answers !== undefined && !isPlainRecord(body.answers)) {
+      return NextResponse.json(
+        { error: 'Expected `answers` to be an object keyed by exam item id.' },
+        { status: 400 },
+      );
+    }
+    if (body.images !== undefined && !isPlainRecord(body.images)) {
+      return NextResponse.json(
+        { error: 'Expected `images` to be an object keyed by exam item id.' },
+        { status: 400 },
+      );
+    }
+
     const answers: Record<string, string> = body.answers ?? {};
     const images: Record<string, string> = body.images ?? {};
+
+    // Keys that match no item mean the client and the server disagree about
+    // this paper. Completing it on that basis is how an exam gets scored zero
+    // for a reason nobody can see afterwards.
+    const itemIds = new Set(exam.items.map((item) => item.id));
+    const submittedKeys = [...Object.keys(answers), ...Object.keys(images)];
+    if (submittedKeys.length > 0 && !submittedKeys.some((key) => itemIds.has(key))) {
+      return NextResponse.json(
+        { error: 'None of the submitted answers match a question on this paper.' },
+        { status: 400 },
+      );
+    }
 
     // Fetch full item data + markscheme for grading
     const items = await prisma.mockExamItem.findMany({
