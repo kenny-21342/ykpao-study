@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resolveCourseScope } from '@/lib/course-scope'
 import { LearnerContextError } from '@/lib/learner-context'
+import { isFeaturePreview } from '@/lib/feature-readiness'
 
 /**
  * Aggregated dashboard stats for the signed-in user.
@@ -167,7 +168,11 @@ export async function GET(req: NextRequest) {
       nudges: [
         ...(dueReviews > 0 ? [{ type: 'reviews', count: dueReviews, label: `${dueReviews} review${dueReviews === 1 ? '' : 's'} due`, action: 'review' }] : []),
         ...(pendingOldTasks > 0 ? [{ type: 'stalled', count: pendingOldTasks, label: `${pendingOldTasks} plan item${pendingOldTasks === 1 ? '' : 's'} stalled`, action: 'plan' }] : []),
-        ...(newIndexedMaterial > 0 ? [{ type: 'corpus', count: newIndexedMaterial, label: `${newIndexedMaterial} new question-bank item${newIndexedMaterial === 1 ? '' : 's'} available`, action: 'practice' }] : []),
+        // Suppressed while the bank is a preview. Advertising how fast it is
+        // growing is a recommendation to go and use it, and the client cannot
+        // soften this one by re-pointing it at Past Papers — the label is
+        // about the bank itself.
+        ...(newIndexedMaterial > 0 && !isFeaturePreview('question-bank') ? [{ type: 'corpus', count: newIndexedMaterial, label: `${newIndexedMaterial} new question-bank item${newIndexedMaterial === 1 ? '' : 's'} available`, action: 'practice' }] : []),
       ],
     })
   } catch (error) {

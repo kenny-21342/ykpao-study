@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react
 import { useSession, signOut } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from './components/ThemeToggle';
 import FloatingAIAssistant from './components/FloatingAIAssistant';
 import OnboardingWizard from './components/OnboardingWizard';
 import QuestionsDatabase from './components/QuestionsDatabase';
 import MockExams from './components/MockExams';
-import { FEATURE_READINESS, isFeatureVisible } from '@/lib/feature-readiness';
+import { FEATURE_READINESS, isFeaturePreview, isFeatureVisible } from '@/lib/feature-readiness';
 import DiscussionBoard from './components/DiscussionBoard';
 import NotificationBell from './components/NotificationBell';
 import StudyCoach from './components/StudyCoach';
@@ -190,6 +191,29 @@ export default function SmartEduPlatform() {
     // hidden behind the overlay on a phone.
     setIsMobileNavOpen(false);
   }, []);
+
+  // While the question bank is a preview, the dashboard stops *recommending*
+  // it: every "here is something to go and do" control points at Past Papers,
+  // which is complete, instead. The Practice entrance in the sidebar stays —
+  // this changes what the dashboard suggests, not what is reachable.
+  const bankIsPreview = isFeaturePreview('question-bank');
+  const router = useRouter();
+  const openPracticeOrPapers = useCallback(() => {
+    if (bankIsPreview) {
+      setIsMobileNavOpen(false);
+      router.push('/papers');
+      return;
+    }
+    openRoute({ tab: 'practice', practiceMode: 'browse' });
+  }, [bankIsPreview, router, openRoute]);
+  // Memoised because it is a dependency of the dashboard-focus memo below; a
+  // fresh object each render would recompute that on every keystroke.
+  const practiceShortcut = useMemo(
+    () => (bankIsPreview
+      ? { label: 'Past Papers', icon: Library, action: openPracticeOrPapers }
+      : { label: 'Practice', icon: Database, action: openPracticeOrPapers }),
+    [bankIsPreview, openPracticeOrPapers],
+  );
 
   // Escape closes the mobile navigation drawer.
   useEffect(() => {
@@ -517,7 +541,7 @@ export default function SmartEduPlatform() {
         primaryLabel: 'Sign in',
         primaryHref: '/auth/login',
         shortcuts: [
-          { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+          practiceShortcut,
           { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
         ],
       };
@@ -536,7 +560,7 @@ export default function SmartEduPlatform() {
         primaryAction: () => openRoute({ tab: 'study', studyView: 'review' }),
         shortcuts: [
           { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
-          { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+          practiceShortcut,
           { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
           { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
         ],
@@ -552,14 +576,17 @@ export default function SmartEduPlatform() {
         primaryAction: () => openRoute({ tab: 'study', studyView: 'today' }),
         shortcuts: [
           { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
-          { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+          practiceShortcut,
           { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
           { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
         ],
       };
     }
 
-    if (nextQuestion) {
+    // Skipped while the bank is a preview: making a half-extracted question the
+    // single headline next step is the strongest recommendation the dashboard
+    // makes, and the one least worth making right now.
+    if (nextQuestion && !bankIsPreview) {
       return {
         title: 'Practice your weakest topic',
         body: `${nextQuestion.topic} · ${nextQuestion.subject}`,
@@ -567,7 +594,7 @@ export default function SmartEduPlatform() {
         primaryAction: () => openRoute({ tab: 'practice', questionId: nextQuestion.questionId, practiceMode: 'practice' }),
         shortcuts: [
           { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'plan' }) },
-          { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+          practiceShortcut,
           { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
           { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
         ],
@@ -581,12 +608,12 @@ export default function SmartEduPlatform() {
       primaryAction: () => openRoute({ tab: 'study', studyView: 'today' }),
       shortcuts: [
         { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
-        { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+        practiceShortcut,
         { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
         { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
       ],
     };
-  }, [isAuthenticated, learningOverview, openRoute]);
+  }, [isAuthenticated, learningOverview, openRoute, practiceShortcut, bankIsPreview]);
 
   // Collapsing is a desktop-only affordance. While the mobile drawer is open
   // it is always shown expanded, so the labels don't stay `sr-only` inside a
@@ -947,7 +974,7 @@ export default function SmartEduPlatform() {
               {stats?.nudges && stats.nudges.length > 0 && (
                 <section className="flex flex-wrap gap-2" aria-label="Study updates">
                   {stats.nudges.map((nudge) => (
-                    <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openRoute({ tab: 'practice', practiceMode: 'browse' })} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
+                    <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openPracticeOrPapers()} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
                       {nudge.type === 'reviews' ? <Brain className="h-4 w-4 text-emerald-600" /> : nudge.type === 'stalled' ? <Calendar className="h-4 w-4 text-amber-600" /> : <Database className="h-4 w-4 text-blue-600" />}
                       {nudge.label}
                       <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
@@ -1055,10 +1082,10 @@ export default function SmartEduPlatform() {
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Keep the streak moving from here.</p>
                     </div>
                     <button
-                      onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
+                      onClick={openPracticeOrPapers}
                       className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                     >
-                      Practice
+                      {practiceShortcut.label}
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -1067,7 +1094,7 @@ export default function SmartEduPlatform() {
                       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-gray-500 dark:border-gray-800 dark:bg-gray-950/40">
                         <BookMarked className="h-10 w-10 opacity-40" />
                         <p className="mt-3 text-sm font-medium">No activity yet</p>
-                        <p className="mt-1 text-xs">Answer a few questions to fill this in.</p>
+                        <p className="mt-1 text-xs">{bankIsPreview ? 'Open a past paper to get started.' : 'Answer a few questions to fill this in.'}</p>
                       </div>
                     ) : (
                       recentActivity.map((a, idx) => (
@@ -1100,7 +1127,7 @@ export default function SmartEduPlatform() {
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       {[
                         { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
-                        { label: 'Practice', icon: Database, action: () => openRoute({ tab: 'practice', practiceMode: 'browse' }) },
+                        practiceShortcut,
                         { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
                         { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
                       ].map((item) => {
