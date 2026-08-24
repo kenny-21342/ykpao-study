@@ -79,9 +79,11 @@ const ib = (
  *   - IB Mathematics and Mathematical Studies, History Route 1 and Route 2,
  *     Nature of Science, Brazilian Social Studies. Retired or vestigial.
  *
- * On the syllabus but not yet ingested, so they cannot be listed until papers
- * exist: IGCSE 0475, 0606, 0450, 0400 (Art & Design), 0411 (Drama),
- * 0410 (Music), 0413 (PE); IB Chinese B, English B, Visual Arts, Theatre.
+ * Still absent, and why:
+ *   - IB Chinese B and English B. Papers exist; the archive the IB corpus came
+ *     from did not contain them.
+ *   - IB Visual Arts and Theatre. Group 6 arts subjects are assessed by
+ *     portfolio and performance -- there is no written paper to ingest.
  */
 export const COURSE_CATALOG: CatalogCourse[] = [
   // ---- Cambridge IGCSE, as taught (10 of the 17 on the syllabus) ----
@@ -95,6 +97,16 @@ export const COURSE_CATALOG: CatalogCourse[] = [
   cambridge('Economics', 'ECON-IG', 'Economics', 'IGCSE', '0455'),
   cambridge('Computer Science', 'CS-IG', 'Computer Science', 'IGCSE', '0478'),
   cambridge('Chinese First Language', 'CHIN-LANG-IG', 'Chinese', 'IGCSE', '0509'),
+  // Ingested 24 Aug 2026 from papacambridge, completing the IGCSE syllabus.
+  cambridge('Literature in English', 'ENG-LIT-IG', 'English', 'IGCSE', '0475'),
+  cambridge('Additional Mathematics', 'ADD-MATH-IG', 'Mathematics', 'IGCSE', '0606'),
+  cambridge('Business Studies', 'BUS-IG', 'Business', 'IGCSE', '0450'),
+  cambridge('Drama', 'DRAMA-IG', 'Drama', 'IGCSE', '0411'),
+  cambridge('Music', 'MUSIC-IG', 'Music', 'IGCSE', '0410'),
+  cambridge('Physical Education', 'PE-IG', 'Physical Education', 'IGCSE', '0413'),
+  // Art & Design stops at 2019: syllabus 0400 was replaced by a newer code,
+  // so 27 papers is the complete run rather than a partial download.
+  cambridge('Art & Design', 'ART-IG', 'Art & Design', 'IGCSE', '0400'),
 
   // ---- Cambridge A Level ----
   // Not taught at the school. Kept deliberately: the corpus was collected on
