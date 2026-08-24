@@ -15,6 +15,14 @@ import { canonicalRedirectUrl } from '@/lib/canonical-host';
  * for the same convention.)
  */
 export function proxy(request: NextRequest) {
+  // A NUL byte has no legitimate use in a URL, and Postgres rejects one that
+  // reaches a text column -- `?pageId=%00` surfaced as an unhandled 500 with a
+  // raw driver message. Refusing it once here beats sanitising every string
+  // parameter in every handler.
+  if (request.nextUrl.pathname.includes('\0') || request.nextUrl.search.includes('\0')) {
+    return NextResponse.json({ error: 'Malformed request' }, { status: 400 });
+  }
+
   if (process.env.VERCEL_ENV !== 'production') return NextResponse.next();
 
   const target = canonicalRedirectUrl(request.url, process.env.NEXTAUTH_URL);

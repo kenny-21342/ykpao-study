@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { reportError } from '@/lib/error-reporting';
+import { parseEntityId } from '@/lib/query-params';
 import {
   curriculumId,
   curriculumLabel,
@@ -26,8 +27,10 @@ export async function GET(
   }
 
   const { id } = await params;
-  const paperId = Number.parseInt(id, 10);
-  if (!Number.isInteger(paperId) || paperId <= 0) {
+  // `parseEntityId` also rejects values too large for the column: a finite
+  // 1e20 passes Number.isInteger and then fails inside Prisma as a 500.
+  const paperId = parseEntityId(id);
+  if (paperId === null) {
     return NextResponse.json({ error: 'Invalid paper id' }, { status: 400 });
   }
 

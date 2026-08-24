@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { parsePagination, parsePositiveInt } from '../lib/query-params.ts';
+import { MAX_INT4, parseEntityId, parsePagination, parsePositiveInt } from '../lib/query-params.ts';
 
 test('non-numeric input falls back instead of producing NaN', () => {
   // The bug this guards against: Math.max(1, parseInt('abc', 10)) is NaN,
@@ -43,4 +43,34 @@ test('parsePagination caps limit and never yields a negative skip', () => {
   assert.equal(page, 1);
   assert.equal(limit, 50);
   assert.equal(skip, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Out-of-range integers. `?page=99999999999999999999` parses to a finite 1e20,
+// passes every Number.isFinite check, and then fails inside Prisma — a 500 on
+// input anyone can type into the address bar.
+// ---------------------------------------------------------------------------
+
+test('a huge page number is clamped, not passed through', () => {
+  assert.equal(parsePositiveInt('99999999999999999999', 1), MAX_INT4);
+  assert.equal(parsePositiveInt(String(MAX_INT4 + 1), 1), MAX_INT4);
+});
+
+test('skip stays inside int4 even at the largest page', () => {
+  const params = new URLSearchParams({ page: '99999999999999999999', limit: '20' });
+  const { skip, page } = parsePagination(params);
+  assert.ok(skip <= MAX_INT4, `skip ${skip} exceeds int4`);
+  assert.ok(page >= 1);
+});
+
+test('parseEntityId rejects what the column cannot hold', () => {
+  assert.equal(parseEntityId('99999999999999999999'), null);
+  assert.equal(parseEntityId(String(MAX_INT4 + 1)), null);
+  assert.equal(parseEntityId('0'), null);
+  assert.equal(parseEntityId('-3'), null);
+  assert.equal(parseEntityId('abc'), null);
+  assert.equal(parseEntityId(null), null);
+  // And still accepts a real id.
+  assert.equal(parseEntityId('2576'), 2576);
+  assert.equal(parseEntityId(String(MAX_INT4)), MAX_INT4);
 });
