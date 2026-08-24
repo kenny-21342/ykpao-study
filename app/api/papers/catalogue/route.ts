@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { reportError } from '@/lib/error-reporting';
+import { taughtSubjectCodes } from '@/lib/course-catalog';
 import {
   curriculumId,
   curriculumLabel,
@@ -48,8 +49,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 1 -- curricula, with a paper count each.
+    //
+    // Restricted to what the school teaches. The database also holds A Level
+    // and several retired IB syllabuses; listing them would advertise courses
+    // no student here sits. `COURSE_CATALOG` is the single definition of that,
+    // so the browser follows it rather than keeping a second list in sync.
     const subjectRows = await prisma.subject.findMany({
-      where: { papers: { some: {} } },
+      where: { papers: { some: {} }, code: { in: [...taughtSubjectCodes()] } },
       select: {
         code: true,
         name: true,

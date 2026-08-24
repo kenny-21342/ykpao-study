@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { groupIntoInstances } from '@/lib/paper-catalogue';
 import { reportError } from '@/lib/error-reporting';
+import { taughtSubjectCodes } from '@/lib/course-catalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,12 @@ export async function GET(request: NextRequest) {
       { error: 'Invalid filters', issues: error instanceof z.ZodError ? error.issues : undefined },
       { status: 400 },
     );
+  }
+
+  // Same restriction as the browse cascade. Filtering only the menu would
+  // still serve an untaught subject to anyone who typed its code.
+  if (!taughtSubjectCodes().has(query.subject)) {
+    return NextResponse.json({ error: 'Unknown subject' }, { status: 404 });
   }
 
   try {
