@@ -17,6 +17,8 @@ export const KEY_PREFIX = {
   extractedImages: 'extracted_images',
   /** Images scraped for STEP questions. */
   stepImages: 'step-images',
+  /** Nightly database snapshots written by /api/cron/backup. */
+  backups: 'backups',
 } as const;
 
 export class InvalidStorageKeyError extends Error {
