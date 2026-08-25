@@ -35,8 +35,6 @@ export interface GradeResult {
 export interface MockExamPlan {
   title: string;
   description: string;
-  durationMinutes: number;
-  totalMarks: number;
   sections: Array<{
     title: string;
     questionIds: number[];

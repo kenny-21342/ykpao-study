@@ -234,14 +234,18 @@ Return JSON only, no prose outside JSON. Schema:
   "explanation": string,      // markdown + LaTeX explanation of how to improve
   "modelAnswer": string       // a concise model answer in markdown + LaTeX
 }`,
-  examGenerator: `You are an expert examiner designing a balanced mock exam paper from a provided question bank.
+  // Deliberately does NOT ask for totalMarks or durationMinutes. The caller
+  // knows both: duration comes from the request, and marks are summed from the
+  // real question rows after selection, so the model's numbers were discarded
+  // on arrival. Asking for them cost output tokens on the one call whose
+  // latency was breaking generation, and invited a paper whose stated marks
+  // disagreed with its questions.
+  examGenerator: `You are an expert examiner choosing questions for a mock exam paper from a provided question bank.
 
 Return JSON only, no prose outside JSON. Schema:
 {
   "title": string,
   "description": string,
-  "durationMinutes": number,
-  "totalMarks": number,
   "sections": [
     {
       "title": string,

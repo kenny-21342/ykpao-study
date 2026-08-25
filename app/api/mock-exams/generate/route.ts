@@ -8,6 +8,7 @@ import { createPredictedPaper } from '@/lib/predicted-paper';
 import type { MockExamPlan } from '@/types/ai';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
+import { buildSelectionPrompt, MAX_CANDIDATES } from '@/lib/mock-exam-prompt';
 import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
@@ -17,8 +18,6 @@ export const dynamic = 'force-dynamic';
  * regardless of what the request is doing.
  */
 export const maxDuration = 60;
-
-const MAX_CANDIDATES = 60;
 
 /**
  * Wall-clock budget for the selection call, which runs in `after()` once the
@@ -151,17 +150,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compose a compact catalogue for the AI to choose from
-    const catalogue = pool.map((q) => ({
+    // One line per candidate, carrying the stored topic label instead of a
+    // longer slice of question text -- see lib/mock-exam-prompt.ts for the
+    // measurements behind that.
+    const candidates = pool.map((q) => ({
       id: q.id,
       year: q.paper.year,
-      session: q.paper.session,
-      paperNumber: q.paper.paperNumber,
-      number: q.number,
-      part: q.part,
-      subPart: q.subPart,
       marks: q.marks,
-      preview: q.content.slice(0, 220),
+      topic: q.topic,
+      content: q.content,
     }));
 
     // `questionCount` comes straight from the request body. Clamp it to what a
@@ -174,18 +171,16 @@ export async function POST(req: Request) {
         : Math.max(4, Math.min(20, Math.round(totalMarks / 6)));
     const targetCount = Math.max(1, Math.min(MAX_EXAM_ITEMS, requestedCount));
 
-    const userContent = `Design a mock exam paper.
-
-Subject: ${subject.name} (${subject.code})
-Target total marks: ${totalMarks}
-Duration (minutes): ${durationMinutes}
-Difficulty: ${difficulty}
-${topics.length ? `Topics to focus on: ${topics.join(', ')}\n` : ''}Approximate number of questions: ${targetCount}
-
-Pick ONLY from this question bank (use the provided ids):
-${JSON.stringify(catalogue)}
-
-Return JSON matching the schema. Group selected questions into 1-3 sections by theme.`;
+    const userContent = buildSelectionPrompt({
+      subjectName: subject.name,
+      subjectCode: subject.code,
+      totalMarks,
+      durationMinutes,
+      difficulty,
+      topics,
+      targetCount,
+      candidates,
+    });
 
     // The paper row is created empty and filled in afterwards. Selecting the
     // questions is one LLM call over the whole candidate catalogue, and on a
@@ -221,7 +216,10 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
           {
             credential: access.credential,
             temperature: 0.4,
-            maxTokens: 2000,
+            // The reply is a title, a sentence, and up to twelve ids in one
+            // to three sections. 2000 was room to ramble on the single call
+            // whose latency was breaking generation.
+            maxTokens: 700,
             budgetMs: SELECTION_BUDGET_MS,
             maxAttempts: SELECTION_ATTEMPTS,
           }
@@ -272,7 +270,7 @@ Return JSON matching the schema. Group selected questions into 1-3 sections by t
           data: {
             title: title || plan.title || `${subject.name} Mock Exam`,
             description: plan.description || `AI-generated mock exam in ${subject.name}.`,
-            durationMinutes: plan.durationMinutes || durationMinutes,
+            durationMinutes,
             totalMarks: computedMarks._sum.marks ?? totalMarks,
             status: 'generated',
             generationError: null,
