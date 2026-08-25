@@ -8,9 +8,11 @@ than duplicates, and anything already done is cheap to pass over again.
 """
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from .run import run_corpus
@@ -48,6 +50,42 @@ def already_done() -> set[str]:
     return {row[0] for row in rows}
 
 
+LOCK = Path(__file__).resolve().parent / ".corpus_run.lock"
+
+
+@contextmanager
+def single_writer():
+    """Refuse to start while another chunk is running.
+
+    SQLite takes one writer. A second chunk started before the first finished
+    lost every write it attempted — 1,489 "database is locked" errors and 44
+    papers processed in twenty minutes — and the papers it failed on simply
+    went back into the queue, so the damage was wasted time rather than lost
+    data. Checking the progress count is not enough: it says what has been
+    written, not whether something is still writing.
+    """
+    if LOCK.exists():
+        try:
+            holder = int(LOCK.read_text().strip())
+        except ValueError:
+            holder = None
+        if holder is not None:
+            try:
+                os.kill(holder, 0)      # signal 0 only tests for existence
+            except ProcessLookupError:
+                pass                    # stale lock from a killed run
+            else:
+                raise SystemExit(
+                    f"another corpus run is active (pid {holder}). "
+                    f"Wait for it, or remove {LOCK} if you are sure it is gone."
+                )
+    LOCK.write_text(str(os.getpid()))
+    try:
+        yield
+    finally:
+        LOCK.unlink(missing_ok=True)
+
+
 def main() -> int:
     papers = collect()
     total = len(papers)
@@ -77,14 +115,15 @@ def main() -> int:
     def log(message: str) -> None:
         print(f"[{time.time() - started:8.0f}s] {message}", flush=True)
 
-    stats = run_corpus(
-        papers,
-        db_path=DB,
-        asset_root=ASSETS,
-        use_model=False,
-        progress_every=100,
-        log=log,
-    )
+    with single_writer():
+        stats = run_corpus(
+            papers,
+            db_path=DB,
+            asset_root=ASSETS,
+            use_model=False,
+            progress_every=100,
+            log=log,
+        )
 
     print(
         f"\ndone in {stats.seconds / 60:.1f} min: "
