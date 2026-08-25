@@ -97,9 +97,77 @@ class DetectorAndRegionTests(unittest.TestCase):
             self.assertTrue(any(region.erase_bboxes for region in first.regions))
             labelled = next(
                 line for line in evidence.pages[0].lines
-                if line.response_erase_bbox and line.text.startswith("adaptation")
+                if line.response_erase_bboxes and line.text.startswith("adaptation")
             )
-            self.assertGreater(labelled.response_erase_bbox[0], labelled.bbox[0] + 35)  # type: ignore[index]
+            rule = labelled.response_erase_bboxes[0]
+            self.assertGreater(rule[0], labelled.bbox[0] + 35)
+            # The word before the rule must survive it. Measuring the rule from
+            # Helvetica metrics used to overshoot and clip the last letters.
+            word_width = fitz.get_text_length("adaptation", fontsize=10)
+            self.assertGreaterEqual(rule[0], labelled.bbox[0] + word_width - 1.0)
+
+            marked = next(
+                line for line in evidence.pages[0].lines
+                if line.response_erase_bboxes and line.text.rstrip().endswith("[4]")
+            )
+            # A mark allocation printed at the end of a rule keeps its space.
+            self.assertLess(marked.response_erase_bboxes[0][2], marked.bbox[2] - 8.0)
+
+    def test_prose_in_the_header_band_is_not_mistaken_for_a_paper_code(self) -> None:
+        """A question stem that continues onto a new page must survive.
+
+        The paper-code pattern used to be case-insensitive, so "a 5000 metre
+        race" and "than 100 years" both matched it. Any stem unlucky enough to
+        start a page was erased whole, which silently made the question
+        unanswerable in the bank.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "header-band.pdf"
+            document = fitz.open()
+            page = document.new_page(width=595, height=842)
+            page.insert_text((72, 60), "0625/42/O/N/19", fontsize=9)
+            page.insert_text((72, 74), "(c) The athlete then ran a 5000 metre race.", fontsize=11)
+            page.insert_text((50, 300), "1 State the first answer.", fontsize=11)
+            document.save(path)
+            document.close()
+
+            pages = extract_document_evidence(path).pages
+            stem = next(line for line in pages[0].lines if "5000" in line.text)
+            self.assertIsNone(stem.furniture_reason)
+            code = next(line for line in pages[0].lines if line.text.startswith("0625/"))
+            self.assertEqual(code.furniture_reason, "paper_code")
+
+    def test_a_rule_never_eats_the_words_on_either_side_of_it(self) -> None:
+        """Rule boxes come from glyph positions, not from font-metric guesses.
+
+        The line is set in Courier on purpose. The old code estimated where the
+        dots began by measuring the text before them in Helvetica, so it only
+        landed correctly when the page happened to be set in Helvetica too — on
+        a real CAIE paper it drifted, erasing "mi" from "minutes".
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "rule-bounds.pdf"
+            document = fitz.open()
+            page = document.new_page(width=595, height=842)
+            page.insert_text(
+                (72, 100),
+                "It takes " + "." * 30 + " minutes to cool.",
+                fontsize=11,
+                fontname="cour",
+            )
+            document.save(path)
+            document.close()
+
+            page_evidence = extract_document_evidence(path).pages[0]
+            line = next(line for line in page_evidence.lines if "minutes" in line.text)
+            self.assertEqual(len(line.response_erase_bboxes), 1)
+            rule = line.response_erase_bboxes[0]
+
+            words = fitz.open(path)[0].get_text("words")
+            takes = next(word for word in words if word[4] == "takes")
+            minutes = next(word for word in words if word[4] == "minutes")
+            self.assertGreaterEqual(rule[0], takes[2])
+            self.assertLessEqual(rule[2], minutes[0])
 
     def test_sequence_gap_is_quarantined(self) -> None:
         with TemporaryDirectory() as directory:
