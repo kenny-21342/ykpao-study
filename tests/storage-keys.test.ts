@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import {
   assertSafeKey,
   isSafeKey,
+  bankAssetKey,
   keyFromPublicPath,
   paperKey,
   publicPathFromKey,
@@ -63,6 +64,24 @@ test('paperKey returns null rather than throwing on a hostile stored path', () =
   for (const stored of ['../../.env', '/etc/passwd', '', 'a/../../../b', 'x\0y']) {
     assert.equal(paperKey(stored), null, `accepted: ${stored}`);
   }
+});
+
+test('bankAssetKey shards by digest and rejects anything that is not one', () => {
+  const digest = 'a'.repeat(64);
+  assert.equal(bankAssetKey(digest), `bank_assets/aa/${digest}.png`);
+  assert.ok(isSafeKey(bankAssetKey(digest)!));
+
+  // The value comes from a database column, so a malformed one must resolve to
+  // "unavailable" rather than a key that escapes the prefix.
+  for (const bad of ['', 'not-a-digest', '../../etc/passwd', 'A'.repeat(64), 'a'.repeat(63)]) {
+    assert.equal(bankAssetKey(bad), null, bad);
+  }
+});
+
+test('bank_assets is a servable public prefix', () => {
+  const digest = 'b'.repeat(64);
+  const key = bankAssetKey(digest)!;
+  assert.equal(keyFromPublicPath(`/${key}`), key);
 });
 
 test('keyFromPublicPath decodes before validating', () => {

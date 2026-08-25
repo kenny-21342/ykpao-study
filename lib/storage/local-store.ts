@@ -29,6 +29,7 @@ const PREFIX_ROOTS: Array<{ prefix: string; dir: string }> = [
   { prefix: KEY_PREFIX.uploads, dir: 'public/uploads' },
   { prefix: KEY_PREFIX.extractedImages, dir: 'public/extracted_images' },
   { prefix: KEY_PREFIX.stepImages, dir: 'public/step-images' },
+  { prefix: KEY_PREFIX.bankAssets, dir: 'public/bank_assets' },
 ];
 
 const CONTENT_TYPES = new Map<string, string>([

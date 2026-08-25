@@ -97,6 +97,8 @@ public/uploads/
 /data/question-images-v1/
 /public/extracted_images/
 /public/step-images/
+# Question-bank crops, written here by the local storage driver.
+/public/bank_assets/
 
 # Local scrape cache (contains absolute paths from the dev machine)
 /.download_cache.json

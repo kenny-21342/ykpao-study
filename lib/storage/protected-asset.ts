@@ -6,6 +6,11 @@
  * thousands of database rows and embedded in stored note HTML. The paths must
  * therefore stay exactly as they are — only who may read them changes.
  *
+ * `/bank_assets/**` is newer and has no such history, but belongs here for the
+ * same reason: it is the question-bank crops, cut straight out of copyrighted
+ * past papers. Its keys are sha256 digests, so they are unguessable — which is
+ * not a permission check either.
+ *
  * All three carry material that is private to the cohort: student uploads,
  * diagrams cropped out of copyrighted past papers, and worked-solution imagery
  * for STEP questions. UUID and paper-stem filenames make them hard to guess,
@@ -25,7 +30,7 @@
 export type AssetSession = { user?: { id?: string | null } | null } | null;
 
 /** Storage prefixes that may be served through this gate. */
-export type AssetPrefix = 'uploads' | 'extracted_images' | 'step-images';
+export type AssetPrefix = 'uploads' | 'extracted_images' | 'step-images' | 'bank_assets';
 
 export type ProtectedAssetDeps = {
   /** Reads the current session. Injected so tests can drive the gate directly. */

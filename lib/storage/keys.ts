@@ -17,6 +17,8 @@ export const KEY_PREFIX = {
   extractedImages: 'extracted_images',
   /** Images scraped for STEP questions. */
   stepImages: 'step-images',
+  /** Question-bank crops and figures, content-addressed by sha256. */
+  bankAssets: 'bank_assets',
   /** Nightly database snapshots written by /api/cron/backup. */
   backups: 'backups',
 } as const;
@@ -94,6 +96,22 @@ export function paperKey(storedPath: string): string | null {
 }
 
 /**
+ * Object key for one question-bank asset, from its sha256.
+ *
+ * Content-addressed, so the key is derivable and needs no column of its own,
+ * re-uploading is idempotent, and two questions sharing a diagram share the
+ * object. The two-character shard keeps any one prefix listing manageable —
+ * the corpus runs to millions of crops.
+ *
+ * Returns null for anything that is not a hex digest, because the value comes
+ * from the database and a malformed row should render as "unavailable".
+ */
+export function bankAssetKey(sha256: string): string | null {
+  if (typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) return null;
+  return `${KEY_PREFIX.bankAssets}/${sha256.slice(0, 2)}/${sha256}.png`;
+}
+
+/**
  * Map a public URL path such as `/uploads/images/x.png` to its object key.
  * Returns null when the path is not one of the storage-backed prefixes.
  */
@@ -104,6 +122,7 @@ export function keyFromPublicPath(publicPath: string): string | null {
     KEY_PREFIX.uploads,
     KEY_PREFIX.extractedImages,
     KEY_PREFIX.stepImages,
+    KEY_PREFIX.bankAssets,
   ];
   if (!allowed.includes(prefix)) return null;
 
