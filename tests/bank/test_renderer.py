@@ -12,6 +12,7 @@ import fitz
 from pdf_extraction.bank.renderer import (
     MIN_FIGURE_AREA,
     MIN_FIGURE_SIDE,
+    _content_bounds,
     render_strips_and_assets,
 )
 from pdf_extraction.bank.spans import (
@@ -20,6 +21,56 @@ from pdf_extraction.bank.spans import (
     RootSpan,
     detect_root_spans,
 )
+
+
+class RotatedPageTests(unittest.TestCase):
+    """Mark schemes are portrait pages carrying /Rotate 90.
+
+    ``page.rect`` and ``get_pixmap`` describe the rotated page, but
+    ``get_text``, ``get_drawings`` and ``get_image_rects`` all describe the
+    unrotated one. Mixing them trimmed every strip to the unrotated width,
+    which on a real mark scheme cut off the Marks column.
+    """
+
+    def _rotated_page(self, directory: Path) -> Path:
+        pdf_path = directory / "rotated.pdf"
+        document = fitz.open()
+        page = document.new_page(width=595, height=842)
+        # Near the foot of the unrotated page, which is the right-hand edge
+        # once the page is turned — where the Marks column lives.
+        page.insert_text((60, 60), "Question", fontsize=11)
+        page.insert_text((60, 780), "B1", fontsize=11)
+        page.set_rotation(90)
+        document.save(pdf_path)
+        document.close()
+        return pdf_path
+
+    def test_content_bounds_are_measured_in_the_rendered_space(self) -> None:
+        with TemporaryDirectory() as directory:
+            pdf_path = self._rotated_page(Path(directory))
+            with fitz.open(pdf_path) as document:
+                page = document[0]
+                self.assertEqual(page.rotation, 90)
+                bounds = _content_bounds(page)
+                self.assertIsNotNone(bounds)
+                self.assertLessEqual(bounds.x1, page.rect.x1 + 1)
+                self.assertLessEqual(bounds.y1, page.rect.y1 + 1)
+                # The rendered page is landscape, so its content bounds must be
+                # too. Unmapped coordinates come back portrait — that is the
+                # shape of the bug, and it is what trims the strip too narrow.
+                self.assertGreater(bounds.width, bounds.height)
+
+    def test_a_full_width_clip_survives_the_content_trim(self) -> None:
+        """The trim must not eat the far edge of a landscape strip."""
+        with TemporaryDirectory() as directory:
+            pdf_path = self._rotated_page(Path(directory))
+            with fitz.open(pdf_path) as document:
+                page = document[0]
+                clip = fitz.Rect(0, 0, page.rect.width, page.rect.height)
+                trimmed = clip & _content_bounds(page)
+                # "B1" sits near the right edge; before the fix the trim
+                # stopped around x=595 and dropped it.
+                self.assertGreater(trimmed.x1, 700)
 
 
 class RendererTests(unittest.TestCase):
