@@ -37,7 +37,7 @@ from typing import Any, Callable, Iterable
 
 from . import store
 from .qa import ISSUE_NUMBERING_GAP, SEVERITY_MEDIUM, ReviewFlag, RunLedger
-from .qa import create_ledger_key, run_qa_checks
+from .qa import create_ledger_key, run_crop_checks, run_qa_checks
 from .renderer import RenderedSpan, render_strips_and_assets
 from .spans import detect_root_spans
 from .store import parse_caie_filename
@@ -217,6 +217,21 @@ def prepare_document(
     stats.assets += len(render.assets)
 
     store.clear_paper_flags(connection, paper_id)
+
+    # Crop QA runs here, on geometry, because the crop is the product in
+    # crop-first mode and there may never be a transcription to check.
+    crop_flags: list[ReviewFlag] = []
+    for span in spans.spans:
+        rendered_span = render.span_for(span.root_number)
+        if rendered_span is None:
+            continue
+        crop_flags.extend(run_crop_checks(
+            pdf_path, span, rendered_span, spans.doc_type, paper_id))
+    if crop_flags:
+        store.record_flags(
+            connection, question_id=None, paper_id=paper_id, flags=crop_flags)
+        stats.flags += len(crop_flags)
+
     if spans.numbering_gaps:
         store.record_flags(
             connection,

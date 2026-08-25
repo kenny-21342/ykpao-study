@@ -169,6 +169,26 @@ class DetectorAndRegionTests(unittest.TestCase):
             self.assertGreaterEqual(rule[0], takes[2])
             self.assertLessEqual(rule[2], minutes[0])
 
+    def test_ocr_rules_are_measured_from_tesseract_word_boxes(self) -> None:
+        """Scanned pages were the last place still guessing at rule position."""
+        from pdf_extraction.question_images.evidence import _rule_bboxes_from_words
+
+        words = [
+            {"text": "State", "left": "100", "top": "200", "width": "60", "height": "20"},
+            {"text": ".........", "left": "170", "top": "205", "width": "300", "height": "10"},
+            {"text": "[2]", "left": "480", "top": "200", "width": "30", "height": "20"},
+        ]
+        boxes = _rule_bboxes_from_words(words, 0.5)
+        self.assertEqual(len(boxes), 1)
+        rule = boxes[0]
+        # Measured off the dots alone: neither neighbour is touched.
+        self.assertGreaterEqual(rule[0], 100 * 0.5 + 60 * 0.5)
+        self.assertLessEqual(rule[2], 480 * 0.5)
+
+        # No rule on the line means "no measurement", not "an empty rule" —
+        # the caller falls back rather than erasing a guessed rectangle.
+        self.assertIsNone(_rule_bboxes_from_words(words[:1], 0.5))
+
     def test_sequence_gap_is_quarantined(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "gap.pdf"

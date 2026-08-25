@@ -445,8 +445,42 @@ def _ocr_page(
         right = max(int(word["left"]) + int(word["width"]) for word in words) * scale
         bottom = max(int(word["top"]) + int(word["height"]) for word in words) * scale
         bbox = (left, top, right, bottom)
-        result.append(_make_line(digest, page_number, bbox, text, "tesseract", bottom - top, False, "ocr"))
+        result.append(_make_line(
+            digest, page_number, bbox, text, "tesseract", bottom - top, False, "ocr",
+            rule_bboxes=_rule_bboxes_from_words(words, scale),
+        ))
     return sorted(result, key=lambda item: (item.bbox[1], item.bbox[0]))
+
+
+def _rule_bboxes_from_words(
+    words: list[dict[str, str]],
+    scale: float,
+) -> tuple[tuple[float, float, float, float], ...] | None:
+    """Answer-rule boxes on an OCR'd line, from Tesseract's own word boxes.
+
+    Scanned papers used to be the one place still measuring the rule against
+    Helvetica metrics — the estimate that clipped "minutes" down to "nutes" on
+    native pages. Tesseract reports a box per word, and a rule OCRs as a word of
+    dots, so the same measured approach works here.
+
+    Returns ``None`` when no word on the line reads as a rule, which leaves the
+    caller free to fall back: OCR frequently mangles a dotted rule into
+    something else entirely, and guessing beats erasing the wrong thing.
+    """
+    boxes: list[tuple[float, float, float, float]] = []
+    for word in words:
+        text = str(word.get("text", ""))
+        if len(text) < _MIN_RULE_CHARS or not RULE_ONLY_WORD.fullmatch(text):
+            continue
+        left = int(word["left"]) * scale
+        top = int(word["top"]) * scale
+        boxes.append((
+            left,
+            top,
+            left + int(word["width"]) * scale,
+            top + int(word["height"]) * scale,
+        ))
+    return tuple(boxes) or None
 
 
 def _page_needs_ocr(page: PageEvidence) -> bool:
@@ -474,6 +508,8 @@ def _response_erase_bbox(
 
 _RULE_CHARS = frozenset(".·_…\u2024\u2027")
 _MIN_RULE_CHARS = 5
+# A whole OCR word that is nothing but rule characters.
+RULE_ONLY_WORD = re.compile(r"[.\u00b7_\u2026\u2024\u2027]+")
 
 
 def _span_text(span: dict) -> str:

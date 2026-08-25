@@ -12,6 +12,11 @@ QA checks include:
 - Model confidence below threshold
 - No mark scheme paired (soft - resource booklets legitimately have none)
 - Body suspiciously short relative to span height
+- The crop itself: does it start at the question number, does it still show
+  the marks, is page furniture visible, did an erase box eat real words
+
+The crop checks run in phase A, on geometry alone, because in crop-first mode
+the image *is* the product and there may be no transcription to check at all.
 
 The run ledger enables resumable long runs by recording which work items
 completed successfully. Keyed on (source_sha256 + span + model + prompt version).
@@ -39,6 +44,11 @@ ISSUE_SUSPICIOUS_LENGTH = "suspicious_length"
 ISSUE_FIGURE_UNCITED = "figure_uncited"
 ISSUE_FIGURE_CITATION_OFFSET = "figure_citation_offset"
 ISSUE_FIGURE_CITATION_ORDER = "figure_citation_order"
+ISSUE_CROP_MISSING_NUMBER = "crop_missing_number"
+ISSUE_CROP_NO_MARKS = "crop_no_marks"
+ISSUE_CROP_FURNITURE = "crop_furniture"
+ISSUE_CROP_ERASED_TEXT = "crop_erased_text"
+ISSUE_CROP_EMPTY = "crop_empty"
 
 # Severity levels
 SEVERITY_LOW = "low"
@@ -146,6 +156,220 @@ def run_qa_checks(
         )
 
     return flags
+
+
+# ---------------------------------------------------------------------------
+# Crop checks — geometry only, no transcription required
+# ---------------------------------------------------------------------------
+
+# Marks are printed as "[3]" on a question paper and as CAIE codes on a mark
+# scheme. Either proves the crop reached the edge of the content.
+_CROP_MARKS = re.compile(r"\[\s*\d+\s*\]|\b(?:D?[MABC]\d|SC\b|FT\b|OE\b)")
+_CROP_FURNITURE = re.compile(
+    r"\u00a9\s*UCLES|Page \d+ of \d+|\[\s*Turn over|PUBLISHED|"
+    r"Cambridge (?:IGCSE|Assessment)|\d{4}/\d\d/[A-Z]/[A-Z]/\d\d"
+)
+# A word made only of answer-rule characters, which an erase box is meant to
+# remove. Anything else it removes is content.
+_CROP_RULE_ONLY = re.compile(r"^[.\u2026_\-\s]*$")
+_CROP_INTENDED_ERASE = re.compile(
+    r"^(?:\d{1,3}|\u00a9|UCLES|\d{4}|\[?Turn|over\]?|\[|\]"
+    r"|\d{4}/\d\d/[A-Z]/[A-Z]/\d\d"
+    r"|DO|NOT|WRITE|IN|THIS|MARGIN|MARG"
+    r"|Permission|to|reproduce|items|where|third-party|owned"
+    r"|material|is|protected|by|copyright|included|Every|reasonable|effort"
+    r"|Cambridge|International|Assessment|Education|www\.[\w.]+"
+    r"|.{1,2})$"
+)
+_CROP_BARCODE = re.compile(r"^[^\x00-\x7F]{6,}$")
+# Below this many erased content words the loss is a stray label, not a stem.
+_CROP_ERASED_WORD_LIMIT = 3
+# How far inside the grid's right edge a crop may stop before the Marks column
+# is at risk. The column itself is roughly 40pt wide.
+_MARKS_COLUMN_SLACK = 12.0
+
+
+def run_crop_checks(
+    pdf_path,
+    span,
+    rendered_span,
+    doc_type: str,
+    paper_id: int | None,
+    question_id: int | None = None,
+) -> list["ReviewFlag"]:
+    """Check the rendered crop against the page it was cut from.
+
+    This is what protects a crop-first bank. Everything else in this module
+    reads a transcription, which in crop-only mode does not exist; these read
+    the strips and the PDF text layer directly.
+
+    Import is local so the module keeps working for callers that never render.
+    """
+    import fitz
+
+    flags: list[ReviewFlag] = []
+    root = rendered_span.root_number
+
+    if not rendered_span.strips:
+        return [ReviewFlag(
+            question_id=question_id, paper_id=paper_id,
+            issue_type=ISSUE_CROP_EMPTY, severity=SEVERITY_HIGH,
+            message=f"Question {root} rendered no strips",
+            evidence={"root_number": root},
+        )]
+
+    # Erase boxes live on the stage-one regions, not on the rendered strip.
+    erase_by_page: dict[int, tuple] = {}
+    for region in span.regions:
+        erase_by_page.setdefault(region.page, ())
+        erase_by_page[region.page] += tuple(region.erase_bboxes)
+
+    visible: list[str] = []
+    erased: list[str] = []
+    with fitz.open(pdf_path) as document:
+        for strip in rendered_span.strips:
+            if not 1 <= strip.page <= document.page_count:
+                continue
+            page = document[strip.page - 1]
+            kept, casualties = _crop_words(
+                page, strip.bbox, erase_by_page.get(strip.page, ()))
+            visible.append(kept)
+            erased.extend(casualties)
+
+    body = "\n".join(visible)
+
+    if doc_type != "ms" and not re.match(rf"^\s*(?:\d{{1,3}}[\s,]*)?{root}\b", body.strip()):
+        flags.append(ReviewFlag(
+            question_id=question_id, paper_id=paper_id,
+            issue_type=ISSUE_CROP_MISSING_NUMBER, severity=SEVERITY_MEDIUM,
+            message=f"Crop for question {root} does not begin at its number",
+            evidence={"root_number": root, "head": body.strip()[:80]},
+        ))
+
+    # A question paper prints "[3]"; a mark scheme's Marks column is often bare
+    # integers, indistinguishable from any other number in the answer text. So
+    # the paper is checked by text and the mark scheme by geometry: does the
+    # crop actually reach the right-hand edge of the grid. That is the check
+    # that would have caught the rotation bug, which trimmed exactly that
+    # column off every rotated mark scheme.
+    if doc_type == "ms":
+        flags.extend(_check_marks_column(
+            pdf_path, rendered_span, paper_id, question_id, root))
+    elif not _CROP_MARKS.search(body):
+        flags.append(ReviewFlag(
+            question_id=question_id, paper_id=paper_id,
+            issue_type=ISSUE_CROP_NO_MARKS, severity=SEVERITY_MEDIUM,
+            message=f"No mark allocation visible in the crop for question {root}",
+            evidence={"root_number": root},
+        ))
+
+    leak = _CROP_FURNITURE.search(body)
+    if leak:
+        flags.append(ReviewFlag(
+            question_id=question_id, paper_id=paper_id,
+            issue_type=ISSUE_CROP_FURNITURE, severity=SEVERITY_LOW,
+            message=f"Page furniture visible in the crop for question {root}",
+            evidence={"root_number": root, "match": leak.group(0)[:60]},
+        ))
+
+    # Only question papers erase anything that could be content. A mark
+    # scheme's erase boxes come from _ms_furniture, which by construction only
+    # covers the bands above and below the grid, so every word they remove is
+    # furniture and checking them would flag the running header every time.
+    lost = (
+        [word for word in erased if len(re.sub(r"[^A-Za-z]", "", word)) >= 3]
+        if doc_type != "ms" else []
+    )
+    if len(lost) >= _CROP_ERASED_WORD_LIMIT:
+        flags.append(ReviewFlag(
+            question_id=question_id, paper_id=paper_id,
+            issue_type=ISSUE_CROP_ERASED_TEXT, severity=SEVERITY_HIGH,
+            message=f"An erase box covered {len(lost)} words of question {root}",
+            evidence={"root_number": root, "words": lost[:10]},
+        ))
+
+    return flags
+
+
+def _check_marks_column(
+    pdf_path,
+    rendered_span,
+    paper_id: int | None,
+    question_id: int | None,
+    root: int,
+) -> list["ReviewFlag"]:
+    """Does a mark-scheme crop reach the right edge of its grid?
+
+    find_tables reports display coordinates, the same space the strip is
+    clipped in, so the two are directly comparable.
+    """
+    import fitz
+
+    with fitz.open(pdf_path) as document:
+        for strip in rendered_span.strips:
+            if not 1 <= strip.page <= document.page_count:
+                continue
+            page = document[strip.page - 1]
+            try:
+                tables = page.find_tables().tables
+            except Exception:
+                continue
+            if not tables:
+                continue
+            grid_right = max(float(table.bbox[2]) for table in tables)
+            if strip.bbox[2] < grid_right - _MARKS_COLUMN_SLACK:
+                return [ReviewFlag(
+                    question_id=question_id, paper_id=paper_id,
+                    issue_type=ISSUE_CROP_NO_MARKS, severity=SEVERITY_HIGH,
+                    message=(
+                        f"Crop for question {root} stops short of the grid, "
+                        "so the Marks column is cut off"
+                    ),
+                    evidence={
+                        "root_number": root, "page": strip.page,
+                        "crop_right": round(strip.bbox[2], 1),
+                        "grid_right": round(grid_right, 1),
+                    },
+                )]
+    return []
+
+
+def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
+    """Text a reader would see in one strip, and the words the erase removed.
+
+    Word boxes come back in the unrotated page space while the strip is clipped
+    in display space, so both are mapped through the page's rotation before
+    being compared.
+    """
+    import fitz
+
+    matrix = page.rotation_matrix
+    rect = fitz.Rect(*clip)
+    erased = [fitz.Rect(*box) for box in erase_bboxes]
+
+    kept: list[tuple[float, float, str]] = []
+    casualties: list[str] = []
+    for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words"):
+        box = fitz.Rect(wx0, wy0, wx1, wy1) * matrix
+        if (box & rect).is_empty:
+            continue
+        area = box.get_area()
+        covered = 0.0
+        for erase in erased:
+            overlap = box & erase
+            if not overlap.is_empty and area:
+                covered = max(covered, overlap.get_area() / area)
+        if covered >= 0.30:
+            token = re.sub(r"[.\u2026_]{2,}\s*$", "", word) or word
+            if not _CROP_RULE_ONLY.match(word) \
+                    and not _CROP_INTENDED_ERASE.match(token) \
+                    and not _CROP_BARCODE.match(token):
+                casualties.append(token)
+            continue
+        kept.append((box.y0, box.x0, word))
+
+    kept.sort()
+    return " ".join(word for _, _, word in kept), casualties
 
 
 def _check_latex(
