@@ -326,6 +326,10 @@ def _render_strip(
             matrix=fitz.Matrix(scale, scale),
             clip=clip,
             alpha=False,
+            # Past papers are printed black on white; even their photographs
+            # are greyscale. Rendering in colour cost roughly twice the bytes
+            # for no information, which across the corpus is tens of GB.
+            colorspace=fitz.csGRAY,
         )
         data = pixmap.tobytes("png")
         width, height = pixmap.width, pixmap.height
@@ -537,7 +541,12 @@ def _crop_figure(
         return None
 
     scale = _capped_scale(rect, MAX_FIGURE_EDGE)
-    pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=rect, alpha=False)
+    # Greyscale for the same reason as the strips: these papers are printed
+    # black on white, and colour doubled the bytes for nothing.
+    pixmap = page.get_pixmap(
+        matrix=fitz.Matrix(scale, scale), clip=rect, alpha=False,
+        colorspace=fitz.csGRAY,
+    )
     if pixmap.width < 2 or pixmap.height < 2:
         return None
 

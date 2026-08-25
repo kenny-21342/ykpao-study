@@ -42,6 +42,10 @@ class PaperIdentity:
     paper_number: int
     variant: int
     doc_type: str
+    # IB only. CAIE papers carry neither, and both default away for them.
+    timezone: str | None = None
+    level: str | None = None
+    subject_name: str | None = None
 
     @property
     def session_name(self) -> str:
@@ -63,6 +67,85 @@ def parse_caie_filename(path: Path | str) -> PaperIdentity | None:
         variant=int(variant) if variant else 0,
         doc_type=match.group("doc_type").lower(),
     )
+
+
+# IB filenames name the subject, paper and level; the year and session live in
+# the directory above them. "Physics_paper_2__TZ2_SL.pdf" inside
+# ".../May 2016 Examination Session/..." is Physics, paper 2, timezone 2, SL.
+_IB_FILENAME = re.compile(
+    r"^(?P<subject>.+?)_paper_(?P<paper>\d)(?P<part>[AB])?"
+    r"(?P<rest>.*)$",
+    re.IGNORECASE,
+)
+_IB_SESSION_DIR = re.compile(
+    r"^(?P<session>May|November)\s+(?P<year>\d{4})", re.IGNORECASE
+)
+_IB_TIMEZONE = re.compile(r"\bTZ(?P<tz>\d)\b", re.IGNORECASE)
+_IB_LEVEL = re.compile(r"\b(HLSL|HL|SL)\b", re.IGNORECASE)
+# Anything that is not the question paper itself. A booklet is a companion
+# document: it carries sources or data, never numbered questions of its own.
+_IB_INSERT = re.compile(
+    r"(resource.booklet|question.booklet|text.booklet|source.booklet|case.study)",
+    re.IGNORECASE,
+)
+
+
+def parse_ib_path(path: Path | str) -> PaperIdentity | None:
+    """Read an IB past-paper path, or ``None`` if it is not one.
+
+    Unlike CAIE, the filename alone is not enough: the session and year are only
+    in the directory. Papers whose name has no ``_paper_N`` at all — 18 of the
+    4,077 — are not recognised and are skipped rather than guessed at.
+    """
+    path = Path(path)
+    match = _IB_FILENAME.match(path.stem)
+    if not match:
+        return None
+
+    session = year = None
+    for parent in path.parents:
+        found = _IB_SESSION_DIR.match(parent.name)
+        if found:
+            session = found.group("session").capitalize()
+            year = int(found.group("year"))
+            break
+    if session is None or year is None:
+        return None
+
+    # Underscores are word characters, so "__TZ2_SL" defeats \b. Normalise to
+    # spaces first and the boundaries behave.
+    rest = (match.group("rest") or "").replace("_", " ")
+    timezone = _IB_TIMEZONE.search(rest)
+    level = _IB_LEVEL.search(rest)
+    part = (match.group("part") or "").upper()
+
+    if _IB_INSERT.search(rest):
+        doc_type = "in"
+    elif "markscheme" in rest.lower():
+        doc_type = "ms"
+    else:
+        doc_type = "qp"
+
+    subject = re.sub(r"[^a-z0-9]+", "-", match.group("subject").lower()).strip("-")
+    return PaperIdentity(
+        code=subject,
+        board="IB",
+        year=year,
+        session=session,
+        paper_number=int(match.group("paper")),
+        # 1A and 1B are two halves of one paper, not two variants of it, but
+        # they are separate documents and need separate rows.
+        variant={"A": 1, "B": 2}.get(part, 0),
+        doc_type=doc_type,
+        timezone=f"TZ{timezone.group('tz')}" if timezone else None,
+        level=level.group(1).upper() if level else None,
+        subject_name=match.group("subject").replace("_", " ").strip(),
+    )
+
+
+def parse_paper_path(path: Path | str) -> PaperIdentity | None:
+    """Identify a past paper from either corpus."""
+    return parse_caie_filename(path) or parse_ib_path(path)
 
 
 def connect(db_path: Path | str) -> sqlite3.Connection:
@@ -130,11 +213,12 @@ def upsert_paper(
         INSERT INTO bank_papers
             (subject_id, board, year, session, paper_number, variant, timezone,
              doc_type, source_path, source_sha256, page_count, span_strategy, used_ocr)
-        VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             subject_id, identity.board, identity.year, identity.session,
-            identity.paper_number, identity.variant, identity.doc_type,
+            identity.paper_number, identity.variant, identity.timezone,
+            identity.doc_type,
             source_path, source_sha256, page_count, span_strategy, int(used_ocr),
         ),
     )

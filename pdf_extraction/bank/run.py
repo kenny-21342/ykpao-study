@@ -41,7 +41,7 @@ from .qa import SEVERITY_HIGH, SEVERITY_MEDIUM, ReviewFlag, RunLedger
 from .qa import create_ledger_key, run_crop_checks, run_qa_checks
 from .renderer import RenderedSpan, render_strips_and_assets
 from .spans import detect_root_spans
-from .store import parse_caie_filename
+from .store import parse_paper_path
 from .tag import PROMPT_VERSION as TAG_PROMPT_VERSION
 from .tag import tag_and_rate
 from .transcribe import PROMPT_VERSION as TRANSCRIBE_PROMPT_VERSION
@@ -171,7 +171,7 @@ def prepare_document(
     Everything here touches the database, so it stays on the calling thread.
     """
     pdf_path = Path(pdf_path)
-    identity = parse_caie_filename(pdf_path)
+    identity = parse_paper_path(pdf_path)
     if identity is None:
         raise ValueError(f"unrecognised filename: {pdf_path.name}")
 
@@ -186,8 +186,8 @@ def prepare_document(
         connection,
         board=identity.board,
         code=identity.code,
-        name=f"{identity.board} {identity.code}",
-        level="a-level" if identity.code.startswith("9") else "igcse",
+        name=identity.subject_name or f"{identity.board} {identity.code}",
+        level=identity.level or ("a-level" if identity.code.startswith("9") else "igcse"),
     )
     paper_id = store.upsert_paper(
         connection,
