@@ -50,11 +50,8 @@ def already_done() -> set[str]:
 
 def main() -> int:
     papers = collect()
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    if limit:
-        papers = papers[:limit]
-
     total = len(papers)
+
     done = already_done()
     if done:
         # Stored paths are relative to the repository root.
@@ -65,6 +62,14 @@ def main() -> int:
         ]
         print(f"resuming: {total - len(papers)} of {total} already cropped",
               flush=True)
+
+    # The argument is a chunk size, applied *after* the resume filter, so
+    # repeated bounded runs walk the corpus. Long single runs have twice been
+    # killed part way through; each chunk that finishes is progress that the
+    # next one skips.
+    chunk = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    if chunk:
+        papers = papers[:chunk]
 
     started = time.time()
     print(f"{len(papers)} documents -> {DB}", flush=True)
