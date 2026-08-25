@@ -280,9 +280,9 @@ def _render_strip(
 
     clip = fitz.Rect(
         max(page_rect.x0, x0 - STRIP_MARGIN_X),
-        max(page_rect.y0, y0 - STRIP_MARGIN_TOP),
+        max(page_rect.y0, y0 - _top_margin(page, y0)),
         min(page_rect.x1, x1 + STRIP_MARGIN_X),
-        min(page_rect.y1, y1 + STRIP_MARGIN_BOTTOM),
+        min(page_rect.y1, y1 + _bottom_margin(page, y1)),
     )
 
     # A mark-scheme span runs to the bottom of the page whenever its label is
@@ -552,6 +552,54 @@ def _crop_figure(
         height=pixmap.height,
         dpi=round(scale * 72.0),
     )
+
+
+def _top_margin(page: fitz.Page, top: float) -> float:
+    """How far a strip may reach above its region.
+
+    Stage one already pads a region away from its first line, and this margin
+    was added on top of that. Where a layout is tight the two together crossed
+    into the line above, and the crop opened on a row of clipped descenders —
+    "p y [ ]" above every even-numbered History question, thirteen essay
+    options to a page. The margin now stops at whatever is printed above.
+    """
+    matrix = page.rotation_matrix
+    nearest = 0.0
+    try:
+        for block in page.get_text("blocks"):
+            if len(block) < 5 or not str(block[4]).strip():
+                continue
+            bottom = (fitz.Rect(block[0], block[1], block[2], block[3]) * matrix).y1
+            if bottom <= top + 0.5:
+                nearest = max(nearest, bottom)
+    except Exception:
+        return STRIP_MARGIN_TOP
+    if nearest <= 0.0:
+        return STRIP_MARGIN_TOP
+    return max(0.0, min(STRIP_MARGIN_TOP, top - nearest))
+
+
+def _bottom_margin(page: fitz.Page, bottom: float) -> float:
+    """How far a strip may reach below its region.
+
+    The mirror of _top_margin. Unclamped it pulled the next question's opening
+    line into the crop, which on a History paper — thirteen essay options to a
+    page — meant every question ended by showing the start of the next.
+    """
+    matrix = page.rotation_matrix
+    nearest = None
+    try:
+        for block in page.get_text("blocks"):
+            if len(block) < 5 or not str(block[4]).strip():
+                continue
+            top = (fitz.Rect(block[0], block[1], block[2], block[3]) * matrix).y0
+            if top >= bottom - 0.5:
+                nearest = top if nearest is None else min(nearest, top)
+    except Exception:
+        return STRIP_MARGIN_BOTTOM
+    if nearest is None:
+        return STRIP_MARGIN_BOTTOM
+    return max(0.0, min(STRIP_MARGIN_BOTTOM, nearest - bottom))
 
 
 def _content_bounds(page: fitz.Page) -> fitz.Rect | None:

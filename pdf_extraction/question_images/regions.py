@@ -82,6 +82,14 @@ def _regions_for_root(
             continue
 
         lines = [line for line in page.lines if _inside(line.bbox, lower, upper)]
+        # A section heading belongs to the questions under it. Left in, it
+        # joined the cluster of whichever root came *before* it — so every
+        # History question ended with the next Depth Study's title. The root
+        # that owns a heading picks it up through section_heading_bbox above.
+        lines = [
+            line for line in lines
+            if not (next_root is not None and _introduces_next(line, lower))
+        ]
         visuals = [visual for visual in page.visuals if _inside(visual.bbox, lower, upper)]
         essential_lines = [line for line in lines if line.essential]
         essential_visuals = [visual for visual in visuals if visual.essential]
@@ -111,6 +119,27 @@ def _regions_for_root(
                 erase_bboxes=tuple(erase),
             ))
     return result, visual_count, mark_count, removed_count
+
+
+def _introduces_next(line: TextLine, lower: float) -> bool:
+    """A heading sitting below this root's start belongs to the root beneath it.
+
+    History papers put "DEPTH STUDY B: GERMANY, 1918-1945" between two essay
+    options. Falling inside the previous root's range, it joined that root's
+    cluster, so every question's crop ended with the next section's title.
+    evidence.section_label does not recognise these — it is tuned for the IB's
+    SIMPLIFIED/TRADITIONAL markers — so headings are identified here by their
+    typography instead: bold, capitalised, and not starting with a number.
+    """
+    if not line.bold or line.bbox[1] <= lower + 1.0:
+        return False
+    text = line.text.strip()
+    if not text or text[0].isdigit():
+        return False
+    letters = [character for character in text if character.isalpha()]
+    if len(letters) < 6:
+        return False
+    return sum(character.isupper() for character in letters) / len(letters) >= 0.8
 
 
 def _inside(bbox: tuple[float, float, float, float], lower: float, upper: float) -> bool:
@@ -149,10 +178,25 @@ def _cluster_bbox(
     y1 = max(item[0][3] for item in cluster)
     return (
         round(max(0.0, x0 - SOURCE_PADDING_POINTS), 3),
-        round(max(0.0, lower - SOURCE_PADDING_POINTS, y0 - SOURCE_PADDING_POINTS), 3),
+        round(max(0.0, lower - _top_padding(page, lower), y0 - _top_padding(page, y0)), 3),
         round(min(page.width, x1 + SOURCE_PADDING_POINTS), 3),
         round(min(page.height, upper - 2.0, y1 + SOURCE_PADDING_POINTS), 3),
     )
+
+
+def _top_padding(page: PageEvidence, top: float) -> float:
+    """How far a region may reach above its own first line.
+
+    The flat 12pt used here crossed into the line above whenever the layout was
+    tight, and the crop then opened with a row of clipped descenders — "p y [ ]"
+    at the top of every even-numbered History question, where thirteen essay
+    options share a page. Padding now stops at whatever is printed above.
+    """
+    above = [line.bbox[3] for line in page.lines if line.bbox[3] <= top + 0.5]
+    if not above:
+        return SOURCE_PADDING_POINTS
+    gap = top - max(above)
+    return max(0.0, min(SOURCE_PADDING_POINTS, gap))
 
 
 def _erase_boxes(
