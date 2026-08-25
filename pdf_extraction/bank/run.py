@@ -36,7 +36,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from . import store
-from .qa import ISSUE_NUMBERING_GAP, SEVERITY_MEDIUM, ReviewFlag, RunLedger
+from .qa import DEFAULT_CONFIDENCE_THRESHOLD, ISSUE_NUMBERING_GAP
+from .qa import SEVERITY_HIGH, SEVERITY_MEDIUM, ReviewFlag, RunLedger
 from .qa import create_ledger_key, run_crop_checks, run_qa_checks
 from .renderer import RenderedSpan, render_strips_and_assets
 from .spans import detect_root_spans
@@ -44,6 +45,10 @@ from .store import parse_caie_filename
 from .tag import PROMPT_VERSION as TAG_PROMPT_VERSION
 from .tag import tag_and_rate
 from .transcribe import PROMPT_VERSION as TRANSCRIBE_PROMPT_VERSION
+
+# Recorded on rows written without a model, so a later text pass can find the
+# questions that still need one.
+CROP_ONLY_VERSION = "crop-only-v1"
 from .transcribe import transcribe_question
 
 # SiliconFlow Qwen3-VL and DeepSeek list prices, USD per million tokens.
@@ -220,17 +225,13 @@ def prepare_document(
 
     # Crop QA runs here, on geometry, because the crop is the product in
     # crop-first mode and there may never be a transcription to check.
-    crop_flags: list[ReviewFlag] = []
+    crop_flags: dict[int, list[ReviewFlag]] = {}
     for span in spans.spans:
         rendered_span = render.span_for(span.root_number)
         if rendered_span is None:
             continue
-        crop_flags.extend(run_crop_checks(
-            pdf_path, span, rendered_span, spans.doc_type, paper_id))
-    if crop_flags:
-        store.record_flags(
-            connection, question_id=None, paper_id=paper_id, flags=crop_flags)
-        stats.flags += len(crop_flags)
+        crop_flags[span.root_number] = run_crop_checks(
+            pdf_path, span, rendered_span, spans.doc_type, paper_id)
 
     if spans.numbering_gaps:
         store.record_flags(
@@ -243,7 +244,24 @@ def prepare_document(
     connection.commit()
 
     if not use_model:
+        # Crop-first: the image is the product, so the rows are written here
+        # with no model involved. Without this the whole corpus could be
+        # rendered and still contain no questions.
+        _store_crops(
+            connection, spans, render, asset_ids, crop_flags,
+            paper_id=paper_id, run_id=run_id, stats=stats,
+        )
+        connection.commit()
         return []
+
+    # Phase B creates the rows, so the crop flags cannot be attached to a
+    # question yet; they are recorded against the paper.
+    paper_flags = [flag for flags in crop_flags.values() for flag in flags]
+    if paper_flags:
+        store.record_flags(
+            connection, question_id=None, paper_id=paper_id, flags=paper_flags)
+        stats.flags += len(paper_flags)
+    connection.commit()
 
     rendered = render.rendered_spans
     if max_questions is not None:
@@ -414,6 +432,103 @@ def _persist(
             item.rendered_span.root_number, result.vision_in, result.vision_out,
         )
     connection.commit()
+
+
+@dataclass(frozen=True)
+class _CropOnlyQuestion:
+    """Stands in for a transcription when the crop is the whole product.
+
+    store.upsert_question reads a handful of attributes off a transcription; a
+    crop-only run has none, so this supplies the same shape with the text
+    fields empty. Text arrives later without the row having to be recreated.
+    """
+
+    root_number: int
+    confidence: float
+    body_md: str = ""
+    parts: list = field(default_factory=list)
+    total_marks: int | None = None
+
+
+@dataclass(frozen=True)
+class _CropOnlyMarkScheme:
+    root_number: int
+    confidence: float
+    answer_md: str = ""
+    marking_points: list = field(default_factory=list)
+    total_marks: int | None = None
+    answer_letter: str | None = None
+
+
+def _crop_status(flags: list[ReviewFlag], confidence: float) -> str:
+    """Publish a crop unless something says a human should look first.
+
+    Furniture in the margin is cosmetic and rates around 7%, so blocking on it
+    would send a fifteenth of the corpus to a review queue nobody has time for.
+    A cut-off question number, a missing Marks column or an erased stem all
+    mean the image itself is wrong, and those hold the row back.
+    """
+    if confidence < DEFAULT_CONFIDENCE_THRESHOLD:
+        return "needs_review"
+    if any(flag.severity in (SEVERITY_HIGH, SEVERITY_MEDIUM) for flag in flags):
+        return "needs_review"
+    return "published"
+
+
+def _store_crops(
+    connection,
+    spans,
+    render,
+    asset_ids: dict[str, int],
+    crop_flags: dict[int, list[ReviewFlag]],
+    *,
+    paper_id: int,
+    run_id: str,
+    stats: RunStats,
+) -> None:
+    """Write one row per rendered question, with no model in the loop."""
+    for span in spans.spans:
+        rendered_span = render.span_for(span.root_number)
+        if rendered_span is None or not rendered_span.strips:
+            continue
+        flags = crop_flags.get(span.root_number, [])
+        status = _crop_status(flags, span.confidence)
+
+        if spans.doc_type == "ms":
+            owner_id = store.upsert_mark_scheme(
+                connection,
+                paper_id=paper_id,
+                transcription=_CropOnlyMarkScheme(
+                    root_number=span.root_number, confidence=span.confidence),
+                question_id=None,
+                run_id=run_id,
+                model="crop-only",
+                prompt_version=CROP_ONLY_VERSION,
+                status=status,
+                rendered_span=rendered_span,
+                asset_ids=asset_ids,
+            )
+            question_id = None
+        else:
+            owner_id = store.upsert_question(
+                connection,
+                paper_id=paper_id,
+                transcription=_CropOnlyQuestion(
+                    root_number=span.root_number, confidence=span.confidence),
+                rendered_span=rendered_span,
+                asset_ids=asset_ids,
+                run_id=run_id,
+                model="crop-only",
+                prompt_version=CROP_ONLY_VERSION,
+                status=status,
+            )
+            question_id = owner_id
+            stats.questions += 1
+
+        if flags:
+            store.record_flags(
+                connection, question_id=question_id, paper_id=paper_id, flags=flags)
+            stats.flags += len(flags)
 
 
 def _gap_flag(gaps: tuple[int, ...]) -> ReviewFlag:

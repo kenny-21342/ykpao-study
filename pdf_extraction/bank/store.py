@@ -236,6 +236,10 @@ def upsert_question(
         question_id = int(cursor.lastrowid)
 
     _link_question_assets(connection, question_id, rendered_span, asset_ids)
+    _link_strips(
+        connection, "bank_question_strips", "question_id",
+        question_id, rendered_span, asset_ids,
+    )
     if tagging is not None:
         _link_tags(connection, question_id, tagging)
     return question_id
@@ -261,6 +265,35 @@ def _link_question_assets(
             VALUES (?, ?, ?, ?)
             """,
             (question_id, asset_id, figure["id"], ordering),
+        )
+
+
+def _link_strips(
+    connection: sqlite3.Connection,
+    table: str,
+    owner_column: str,
+    owner_id: int,
+    rendered_span,
+    asset_ids: dict[str, int],
+) -> None:
+    """Record the whole crop in reading order.
+
+    Only strip 0 reaches bank_questions.screenshot_id, which is all a
+    transcription-first bank needed. Crop-first shows a student the strips
+    themselves, and 89% of questions have more than one.
+    """
+    connection.execute(f"DELETE FROM {table} WHERE {owner_column} = ?", (owner_id,))
+    for ordering, strip in enumerate(rendered_span.strips):
+        asset_id = asset_ids.get(strip.sha256)
+        if asset_id is None:
+            continue
+        connection.execute(
+            f"""
+            INSERT OR REPLACE INTO {table}
+                ({owner_column}, asset_id, ordering, page)
+            VALUES (?, ?, ?, ?)
+            """,
+            (owner_id, asset_id, ordering, strip.page),
         )
 
 
@@ -297,6 +330,8 @@ def upsert_mark_scheme(
     model: str,
     prompt_version: str,
     status: str,
+    rendered_span=None,
+    asset_ids: dict[str, int] | None = None,
 ) -> int:
     root_number = int(transcription.root_number)
     values = (
@@ -329,6 +364,7 @@ def upsert_mark_scheme(
             """,
             values + (mark_scheme_id,),
         )
+        _link_mark_scheme_strips(connection, mark_scheme_id, rendered_span, asset_ids)
         return mark_scheme_id
 
     cursor = connection.execute(
@@ -340,7 +376,28 @@ def upsert_mark_scheme(
         """,
         (paper_id, root_number) + values,
     )
-    return int(cursor.lastrowid)
+    mark_scheme_id = int(cursor.lastrowid)
+    _link_mark_scheme_strips(connection, mark_scheme_id, rendered_span, asset_ids)
+    return mark_scheme_id
+
+
+def _link_mark_scheme_strips(
+    connection: sqlite3.Connection,
+    mark_scheme_id: int,
+    rendered_span,
+    asset_ids: dict[str, int] | None,
+) -> None:
+    """Answers are read as crops too, so they need their strips recorded.
+
+    Optional because the multiple-choice answer-key path has no rendered span
+    at all — its answers are recovered from the text layer without rendering.
+    """
+    if rendered_span is None or asset_ids is None:
+        return
+    _link_strips(
+        connection, "bank_mark_scheme_strips", "mark_scheme_id",
+        mark_scheme_id, rendered_span, asset_ids,
+    )
 
 
 def record_answer_key(

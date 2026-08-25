@@ -139,6 +139,29 @@ CREATE TABLE IF NOT EXISTS bank_mark_scheme_assets (
     PRIMARY KEY (mark_scheme_id, placeholder)
 );
 
+-- The rendered crop, in reading order.
+--
+-- bank_questions.screenshot_id holds only the first strip, which is all a
+-- transcription-first bank ever needed. Measured over 490 questions, 89% render
+-- as two or more strips and one needs 29, so in crop-first mode that column
+-- shows a student the top fragment of nine questions in ten. These tables carry
+-- the whole crop; screenshot_id stays as a pointer to strip 0.
+CREATE TABLE IF NOT EXISTS bank_question_strips (
+    question_id INTEGER NOT NULL REFERENCES bank_questions(id) ON DELETE CASCADE,
+    asset_id    INTEGER NOT NULL REFERENCES bank_assets(id),
+    ordering    INTEGER NOT NULL,
+    page        INTEGER NOT NULL,
+    PRIMARY KEY (question_id, ordering)
+);
+
+CREATE TABLE IF NOT EXISTS bank_mark_scheme_strips (
+    mark_scheme_id INTEGER NOT NULL REFERENCES bank_mark_schemes(id) ON DELETE CASCADE,
+    asset_id       INTEGER NOT NULL REFERENCES bank_assets(id),
+    ordering       INTEGER NOT NULL,
+    page           INTEGER NOT NULL,
+    PRIMARY KEY (mark_scheme_id, ordering)
+);
+
 -- Syllabus-canonical topics, for filtering that matches the course outline.
 CREATE TABLE IF NOT EXISTS bank_topics (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
