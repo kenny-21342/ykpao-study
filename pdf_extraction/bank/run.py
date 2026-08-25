@@ -211,9 +211,16 @@ def prepare_document(
         return []
 
     if not spans.spans:
-        stats.errors.append(
-            {"file": pdf_path.name, "stage": "spans", "error": "no spans detected"}
-        )
+        # An insert is a data or resource booklet — a periodic table, a set of
+        # sources, a case study. It carries no numbered questions by design, so
+        # finding none is the correct outcome and recording it as an error only
+        # buries the failures that matter. 102 of them did exactly that in one
+        # chunk of the corpus run.
+        if doc_type != "in":
+            stats.errors.append(
+                {"file": pdf_path.name, "stage": "spans",
+                 "error": "no spans detected"}
+            )
         connection.commit()
         return []
 
