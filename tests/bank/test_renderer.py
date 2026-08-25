@@ -60,6 +60,58 @@ class RotatedPageTests(unittest.TestCase):
                 # shape of the bug, and it is what trims the strip too narrow.
                 self.assertGreater(bounds.width, bounds.height)
 
+    def test_an_erase_box_lands_where_the_display_coordinates_say(self) -> None:
+        """Erase boxes are in display space; draw_rect is not.
+
+        A mark scheme's running header is a wide, short band across the top of
+        the rendered page. Painted without converting to the page's own
+        coordinates it came out as a tall, narrow stripe down the answers
+        instead — the right area erased, ninety degrees out.
+        """
+        with TemporaryDirectory() as directory:
+            pdf_path = Path(directory) / "erase-rotated.pdf"
+            document = fitz.open()
+            page = document.new_page(width=595, height=842)
+            for offset in range(0, 700, 60):
+                page.insert_text((60, 80 + offset), "answer text on every line", fontsize=11)
+            page.set_rotation(90)
+            document.save(pdf_path)
+            document.close()
+
+            with fitz.open(pdf_path) as opened:
+                width, height = opened[0].rect.width, opened[0].rect.height
+
+            def render(erase: tuple[tuple[float, float, float, float], ...]) -> fitz.Pixmap:
+                spans = DocumentSpans(
+                    source_path=str(pdf_path), source_sha256="x", doc_type="ms",
+                    page_count=1, strategy="ms_table",
+                    spans=(RootSpan(root_number=1, regions=(PageRegion(
+                        page=1, bbox=(0.0, 0.0, width, height), erase_bboxes=erase,
+                    ),)),),
+                )
+                out = render_strips_and_assets(
+                    spans, pdf_path, Path(directory) / f"out{len(erase)}")
+                return fitz.open(out.span_for(1).strips[0].absolute_path)[0].get_pixmap()
+
+            plain = render(())
+            # A band across the top of the *rendered* page. It has to reach far
+            # enough down to touch the text, which lands at display y ~60
+            # because insert_text placed it at unrotated x = 60.
+            painted = render(((0.0, 0.0, width, 100.0),))
+            self.assertEqual((plain.width, plain.height), (painted.width, painted.height))
+
+            changed = [
+                y for y in range(0, plain.height, 3)
+                if any(
+                    plain.pixel(x, y) != painted.pixel(x, y)
+                    for x in range(0, plain.width, 3)
+                )
+            ]
+            self.assertTrue(changed, "the erase box painted nothing at all")
+            # A band changes a contiguous run of rows. Rotated ninety degrees it
+            # becomes a stripe down the page, touching every height instead.
+            self.assertLess(max(changed) - min(changed), plain.height * 0.6)
+
     def test_a_full_width_clip_survives_the_content_trim(self) -> None:
         """The trim must not eat the far edge of a landscape strip."""
         with TemporaryDirectory() as directory:

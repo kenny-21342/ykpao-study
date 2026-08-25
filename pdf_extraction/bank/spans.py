@@ -313,6 +313,8 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
     page_count = 0
     digest = file_sha256(path)
 
+    furniture: dict[int, tuple[tuple[float, float, float, float], ...]] = {}
+
     with fitz.open(path) as document:
         page_count = document.page_count
         for page_index, page in enumerate(document):
@@ -320,8 +322,10 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
             page_sizes[page_number] = (page.rect.width, page.rect.height)
             if len(page.get_text().strip()) >= _MIN_CONTENT_CHARS:
                 pages_with_content.add(page_number)
-            for table, question_column in _question_tables(page):
+            tables = _question_tables(page)
+            for table, question_column in tables:
                 rows.extend(_label_rows(table, question_column, page_number))
+            furniture[page_number] = _ms_furniture(page, [t for t, _ in tables])
 
     if not rows:
         return DocumentSpans(
@@ -333,7 +337,7 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
         )
 
     rows.sort(key=lambda row: (row[0], row[2]))
-    spans = _spans_from_rows(rows, page_sizes, pages_with_content)
+    spans = _spans_from_rows(rows, page_sizes, pages_with_content, furniture)
     return DocumentSpans(
         source_path=str(path),
         source_sha256=digest,
@@ -427,6 +431,12 @@ def _label_rows(
         if not match:
             continue
         top, bottom = row_boxes[row_index]
+        if not result:
+            # The first label in a grid takes the grid's own top edge, so the
+            # "Question | Answer | Marks" header comes with it. Starting at the
+            # row boundary instead sliced that header in half, and the header
+            # is what tells a reader which column the mark codes are in.
+            top = min(top, float(table.bbox[1]))
         result.append((
             page_number,
             int(match.group("number")),
@@ -435,6 +445,43 @@ def _label_rows(
             re.sub(r"\s+", "", label),
         ))
     return result
+
+
+def _ms_furniture(
+    page: fitz.Page,
+    tables: list[Any],
+) -> tuple[tuple[float, float, float, float], ...]:
+    """Running header and footer bands on one mark-scheme page.
+
+    A mark scheme's answers live inside the grid, so anything printed entirely
+    above the topmost grid or below the bottommost one is the running header
+    ("0610/51 Cambridge IGCSE - Mark Scheme PUBLISHED"), the copyright line, or
+    the page number. Mark-scheme regions previously carried no erase boxes at
+    all, so all of that appeared in the crop.
+
+    Both the table bboxes and the text blocks used here come back in display
+    coordinates via the same rotation mapping the renderer applies.
+    """
+    if not tables:
+        return ()
+    matrix = page.rotation_matrix
+    top = min(float(table.bbox[1]) for table in tables)
+    bottom = max(float(table.bbox[3]) for table in tables)
+
+    boxes: list[tuple[float, float, float, float]] = []
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return ()
+    for block in blocks:
+        if len(block) < 5 or not str(block[4]).strip():
+            continue
+        rect = fitz.Rect(block[0], block[1], block[2], block[3]) * matrix
+        if rect.is_empty:
+            continue
+        if rect.y1 <= top or rect.y0 >= bottom:
+            boxes.append((rect.x0 - 1, rect.y0 - 1, rect.x1 + 1, rect.y1 + 1))
+    return tuple(boxes)
 
 
 def _label_at(row: list[str | None], question_column: int) -> str:
@@ -472,6 +519,7 @@ def _spans_from_rows(
     rows: list[tuple[int, int, float, float, str]],
     page_sizes: dict[int, tuple[float, float]],
     pages_with_content: set[int],
+    furniture: dict[int, tuple[tuple[float, float, float, float], ...]],
 ) -> tuple[RootSpan, ...]:
     """Group labelled rows into one span per root question.
 
@@ -510,11 +558,17 @@ def _spans_from_rows(
             if number != page and number not in pages_with_content:
                 continue
             width, height = page_sizes.get(number, (595.0, 842.0))
-            y0 = max(0.0, top - 2.0) if number == page else 0.0
+            # No fudge below the row boundary: the 2pt that used to be
+            # subtracted here pulled the tail of the row above into the crop.
+            y0 = max(0.0, top) if number == page else 0.0
             y1 = end_top if (number == end_page and end_top is not None) else height
             if y1 - y0 < _MIN_REGION_HEIGHT:
                 continue
-            grouped[root].append(PageRegion(page=number, bbox=(0.0, y0, width, y1)))
+            grouped[root].append(PageRegion(
+                page=number,
+                bbox=(0.0, y0, width, y1),
+                erase_bboxes=furniture.get(number, ()),
+            ))
 
         if label not in parts[root]:
             parts[root].append(label)
@@ -546,6 +600,12 @@ def _merge_regions(regions: list[PageRegion]) -> list[PageRegion]:
                 max(box.bbox[2] for box in boxes),
                 max(box.bbox[3] for box in boxes),
             ),
+            # The merged region covers every row's area, so it must carry every
+            # row's erase boxes too; dropping them here left the running header
+            # and footer printed inside the crop.
+            erase_bboxes=tuple(sorted({
+                erase for box in boxes for erase in box.erase_bboxes
+            })),
         ))
     return result
 

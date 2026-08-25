@@ -308,11 +308,17 @@ def _render_strip(
         scratch = fitz.open()
         scratch.insert_pdf(page.parent, from_page=page.number, to_page=page.number)
         render_page = scratch[0]
+        # draw_rect works in the page's own unrotated coordinates, while every
+        # box reaching here is in the display space page.rect describes. On a
+        # rotated mark scheme the two differ by 90 degrees, so a header band
+        # painted without this conversion came out as a vertical stripe through
+        # the answers. derotation_matrix is the identity on an unrotated page.
+        derotate = render_page.derotation_matrix
         for box in region.erase_bboxes:
             rect = fitz.Rect(*box) & page_rect
             if rect.is_empty or rect.width < 1 or rect.height < 1:
                 continue
-            render_page.draw_rect(rect, color=None, fill=(1, 1, 1), overlay=True)
+            render_page.draw_rect(rect * derotate, color=None, fill=(1, 1, 1), overlay=True)
 
     try:
         scale = _capped_scale(clip, MAX_STRIP_EDGE)
