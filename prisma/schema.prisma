@@ -1323,6 +1323,7 @@ model BankQuestion {
 
   paper       BankPaper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
   screenshot  BankAsset?          @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
+  strips      BankQuestionStrip[]
   assets      BankQuestionAsset[]
   topics      BankQuestionTopic[]
   tags        BankQuestionTag[]
@@ -1354,6 +1355,7 @@ model BankMarkScheme {
 
   paper    BankPaper             @relation(fields: [paperId], references: [id], onDelete: Cascade)
   question BankQuestion          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  strips   BankMarkSchemeStrip[]
   assets   BankMarkSchemeAsset[]
 
   @@unique([paperId, rootNumber])
@@ -1377,8 +1379,43 @@ model BankAsset {
   screenshots      BankQuestion[]        @relation("QuestionScreenshot")
   questionAssets   BankQuestionAsset[]
   markSchemeAssets BankMarkSchemeAsset[]
+  questionStrips   BankQuestionStrip[]
+  markSchemeStrips BankMarkSchemeStrip[]
 
   @@map("bank_assets")
+}
+
+/// The rendered crop, in reading order.
+///
+/// screenshotId holds only the first strip, which is all a transcription-first
+/// bank needed. 89% of questions render as two or more strips, so in crop-first
+/// mode that column shows a student the top fragment of most questions.
+model BankQuestionStrip {
+  questionId Int
+  assetId    Int
+  ordering   Int
+  page       Int
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  asset    BankAsset    @relation(fields: [assetId], references: [id])
+
+  @@id([questionId, ordering])
+  @@index([assetId])
+  @@map("bank_question_strips")
+}
+
+model BankMarkSchemeStrip {
+  markSchemeId Int
+  assetId      Int
+  ordering     Int
+  page         Int
+
+  markScheme BankMarkScheme @relation(fields: [markSchemeId], references: [id], onDelete: Cascade)
+  asset      BankAsset      @relation(fields: [assetId], references: [id])
+
+  @@id([markSchemeId, ordering])
+  @@index([assetId])
+  @@map("bank_mark_scheme_strips")
 }
 
 model BankQuestionAsset {
