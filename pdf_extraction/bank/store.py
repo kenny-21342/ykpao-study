@@ -85,7 +85,19 @@ _IB_LEVEL = re.compile(r"\b(HLSL|HL|SL)\b", re.IGNORECASE)
 # Anything that is not the question paper itself. A booklet is a companion
 # document: it carries sources or data, never numbered questions of its own.
 _IB_INSERT = re.compile(
-    r"(resource.booklet|question.booklet|text.booklet|source.booklet|case.study)",
+    r"(resource.booklet|question.booklet|text.booklet|source.booklet"
+    r"|score.booklet|case.study)",
+    re.IGNORECASE,
+)
+
+
+# Some IB subjects number no papers at all. Music has one, called "the
+# listening paper", and its files read "Music___listening_paper_SL" or
+# "Music___HL_markscheme". Only the level distinguishes them. Matched after
+# the numbered form fails, and only when a level token is present, so it
+# cannot swallow a filename that simply looks unusual.
+_IB_UNNUMBERED = re.compile(
+    r"^(?P<subject>[A-Za-z][A-Za-z ]*?)\s\s+(?P<rest>.*\b(?:HLSL|HL|SL)\b.*)$",
     re.IGNORECASE,
 )
 
@@ -99,8 +111,14 @@ def parse_ib_path(path: Path | str) -> PaperIdentity | None:
     """
     path = Path(path)
     match = _IB_FILENAME.match(path.stem)
+    unnumbered = False
     if not match:
-        return None
+        # Underscores are word characters, so \b never fires against
+        # "paper_SL". Match on a space-normalised copy instead.
+        match = _IB_UNNUMBERED.match(path.stem.replace("_", " "))
+        if not match:
+            return None
+        unnumbered = True
 
     session = year = None
     for parent in path.parents:
@@ -117,7 +135,7 @@ def parse_ib_path(path: Path | str) -> PaperIdentity | None:
     rest = (match.group("rest") or "").replace("_", " ")
     timezone = _IB_TIMEZONE.search(rest)
     level = _IB_LEVEL.search(rest)
-    part = (match.group("part") or "").upper()
+    part = "" if unnumbered else (match.group("part") or "").upper()
 
     if _IB_INSERT.search(rest):
         doc_type = "in"
@@ -132,7 +150,9 @@ def parse_ib_path(path: Path | str) -> PaperIdentity | None:
         board="IB",
         year=year,
         session=session,
-        paper_number=int(match.group("paper")),
+        # A subject with one unnumbered paper is paper 1; the level tells the
+        # variants apart, and it is recorded separately.
+        paper_number=1 if unnumbered else int(match.group("paper")),
         # 1A and 1B are two halves of one paper, not two variants of it, but
         # they are separate documents and need separate rows.
         variant={"A": 1, "B": 2}.get(part, 0),
