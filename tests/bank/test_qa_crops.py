@@ -133,5 +133,54 @@ class CropCheckTests(unittest.TestCase):
             self.assertIn(ISSUE_CROP_NO_MARKS, issues)
 
 
+
+class PaperWideMarksTests(unittest.TestCase):
+    """A whole paper without marks is a multiple-choice paper, not 40 faults.
+
+    Multiple-choice papers print no per-question mark allocation. Flagging
+    each question individually put 75% of paper 1 and 45% of paper 2 into
+    review across the corpus, against 1-3% of the structured papers, and
+    pushed three quarters of the bank out of the merge.
+    """
+
+    @staticmethod
+    def _flag(root: int):
+        from pdf_extraction.bank.qa import SEVERITY_MEDIUM, ReviewFlag
+
+        return ReviewFlag(
+            question_id=None, paper_id=1, issue_type=ISSUE_CROP_NO_MARKS,
+            severity=SEVERITY_MEDIUM, message="", evidence={"root_number": root},
+        )
+
+    def test_a_paper_where_almost_nothing_shows_marks_keeps_none_of_the_flags(self):
+        from pdf_extraction.bank.run import _drop_paper_wide_marks_flag
+
+        flags = {root: [self._flag(root)] for root in range(1, 41)}
+        _drop_paper_wide_marks_flag(flags)
+        self.assertEqual(sum(len(value) for value in flags.values()), 0)
+
+    def test_a_structured_paper_keeps_its_flags(self):
+        """One question missing its marks is a crop that stopped short."""
+        from pdf_extraction.bank.run import _drop_paper_wide_marks_flag
+
+        flags = {root: [] for root in range(1, 11)}
+        flags[4] = [self._flag(4)]
+        _drop_paper_wide_marks_flag(flags)
+        self.assertEqual(len(flags[4]), 1)
+
+    def test_other_flags_on_a_multiple_choice_paper_survive(self):
+        """Only the marks flag is paper-wide; the rest still apply."""
+        from pdf_extraction.bank.qa import SEVERITY_HIGH, ReviewFlag
+        from pdf_extraction.bank.run import _drop_paper_wide_marks_flag
+
+        flags = {root: [self._flag(root)] for root in range(1, 41)}
+        erased = ReviewFlag(question_id=None, paper_id=1,
+                            issue_type="crop_erased_text", severity=SEVERITY_HIGH,
+                            message="", evidence={})
+        flags[7].append(erased)
+        _drop_paper_wide_marks_flag(flags)
+        self.assertEqual(flags[7], [erased])
+
+
 if __name__ == "__main__":
     unittest.main()
