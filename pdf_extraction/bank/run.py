@@ -36,7 +36,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from . import store
-from .qa import DEFAULT_CONFIDENCE_THRESHOLD, ISSUE_NUMBERING_GAP
+from .qa import DEFAULT_CONFIDENCE_THRESHOLD, ISSUE_CROP_NO_MARKS
+from .qa import ISSUE_NUMBERING_GAP
 from .qa import SEVERITY_HIGH, SEVERITY_MEDIUM, ReviewFlag, RunLedger
 from .qa import create_ledger_key, run_crop_checks, run_qa_checks
 from .renderer import RenderedSpan, render_strips_and_assets
@@ -232,6 +233,7 @@ def prepare_document(
             continue
         crop_flags[span.root_number] = run_crop_checks(
             pdf_path, span, rendered_span, spans.doc_type, paper_id)
+    _drop_paper_wide_marks_flag(crop_flags)
 
     if spans.numbering_gaps:
         store.record_flags(
@@ -458,6 +460,38 @@ class _CropOnlyMarkScheme:
     marking_points: list = field(default_factory=list)
     total_marks: int | None = None
     answer_letter: str | None = None
+
+
+# Above this share of a paper's questions showing no marks, the paper does not
+# print them at all rather than every crop being wrong.
+_NO_MARKS_PAPER_SHARE = 0.6
+
+
+def _drop_paper_wide_marks_flag(crop_flags: dict[int, list[ReviewFlag]]) -> None:
+    """A whole paper with no marks is a multiple-choice paper, not 40 faults.
+
+    Multiple-choice papers print no per-question mark allocation — each
+    question is worth one mark implicitly — so the marks check fired on every
+    question in them. Across the corpus that was 75% of paper 1 and 45% of
+    paper 2, against 1-3% of the structured papers, and it pushed three
+    quarters of the bank into review.
+
+    The check still earns its place on a structured paper, where a missing
+    "[3]" means the crop stopped short of the end of the question.
+    """
+    if not crop_flags:
+        return
+    flagged = [
+        root for root, flags in crop_flags.items()
+        if any(flag.issue_type == ISSUE_CROP_NO_MARKS for flag in flags)
+    ]
+    if len(flagged) < len(crop_flags) * _NO_MARKS_PAPER_SHARE:
+        return
+    for root in flagged:
+        crop_flags[root] = [
+            flag for flag in crop_flags[root]
+            if flag.issue_type != ISSUE_CROP_NO_MARKS
+        ]
 
 
 def _crop_status(flags: list[ReviewFlag], confidence: float) -> str:

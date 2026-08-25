@@ -187,6 +187,13 @@ _CROP_ERASED_WORD_LIMIT = 3
 # How far inside the grid's right edge a crop may stop before the Marks column
 # is at risk. The column itself is roughly 40pt wide.
 _MARKS_COLUMN_SLACK = 12.0
+# Where in the first strip the question number must appear. A number found
+# halfway down a long crop is part of the question, not its label — but on a
+# short crop a quarter of the height is less than one line of text, so there
+# is a floor of roughly two lines. A History essay question missed by 1.1 pt
+# without it.
+_CROP_NUMBER_BAND = 0.25
+_CROP_NUMBER_BAND_FLOOR = 36.0
 
 
 def run_crop_checks(
@@ -238,7 +245,8 @@ def run_crop_checks(
 
     body = "\n".join(visible)
 
-    if doc_type != "ms" and not re.match(rf"^\s*(?:\d{{1,3}}[\s,]*)?{root}\b", body.strip()):
+    if doc_type != "ms" and not _number_visible_at_top(
+            pdf_path, rendered_span, root):
         flags.append(ReviewFlag(
             question_id=question_id, paper_id=paper_id,
             issue_type=ISSUE_CROP_MISSING_NUMBER, severity=SEVERITY_MEDIUM,
@@ -289,6 +297,42 @@ def run_crop_checks(
         ))
 
     return flags
+
+
+def _number_visible_at_top(pdf_path, rendered_span, root: int) -> bool:
+    """Is the question's own number printed near the top of its crop?
+
+    Asked geometrically rather than by reading the extracted text in order.
+    Three different layouts defeated the text approach: a caption above the
+    question ("insert", or a filename in a Computer Science paper), the two
+    columns of a multiple-choice paper interleaving when sorted by
+    coordinate, and papers whose internal block order puts the stem before
+    the number. All three produced false positives on crops that were fine.
+    Position on the page does not care about any of that.
+    """
+    import fitz
+
+    if not rendered_span.strips:
+        return False
+    strip = rendered_span.strips[0]
+    with fitz.open(pdf_path) as document:
+        if not 1 <= strip.page <= document.page_count:
+            return False
+        page = document[strip.page - 1]
+        matrix = page.rotation_matrix
+        clip = fitz.Rect(*strip.bbox)
+        band = clip.y0 + max(clip.height * _CROP_NUMBER_BAND,
+                             _CROP_NUMBER_BAND_FLOOR)
+        wanted = str(root)
+        for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words"):
+            if word.strip(".)") != wanted:
+                continue
+            box = fitz.Rect(wx0, wy0, wx1, wy1) * matrix
+            if (box & clip).is_empty:
+                continue
+            if box.y0 <= band:
+                return True
+    return False
 
 
 def _check_marks_column(
@@ -347,9 +391,14 @@ def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
     rect = fitz.Rect(*clip)
     erased = [fitz.Rect(*box) for box in erase_bboxes]
 
-    kept: list[tuple[float, float, str]] = []
+    # Ordered by the PDF's own block/line/word structure rather than by
+    # coordinate. Sorting by (y, x) interleaves the columns of a two-column
+    # multiple-choice paper, so the question number ends up buried among the
+    # answer options of the column beside it and the crop reads as scrambled
+    # when it is perfectly fine.
+    kept: list[tuple[tuple[int, int, int], str]] = []
     casualties: list[str] = []
-    for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words"):
+    for wx0, wy0, wx1, wy1, word, *order in page.get_text("words"):
         box = fitz.Rect(wx0, wy0, wx1, wy1) * matrix
         if (box & rect).is_empty:
             continue
@@ -366,10 +415,12 @@ def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
                     and not _CROP_BARCODE.match(token):
                 casualties.append(token)
             continue
-        kept.append((box.y0, box.x0, word))
+        position = tuple(int(value) for value in order[:3]) if len(order) >= 3 \
+            else (0, 0, 0)
+        kept.append((position, word))
 
-    kept.sort()
-    return " ".join(word for _, _, word in kept), casualties
+    kept.sort(key=lambda item: item[0])
+    return " ".join(word for _, word in kept), casualties
 
 
 def _check_latex(
