@@ -44,6 +44,16 @@ def main():
     parser = argparse.ArgumentParser(description="Merge v4 SQLite → Neon Postgres")
     parser.add_argument("--source", default="pdf_extraction/bank/extract.db", help="Source SQLite file")
     parser.add_argument("--dry-run", action="store_true", help="Show counts without writing")
+    parser.add_argument(
+        "--include-flagged",
+        action="store_true",
+        help=(
+            "Also merge questions and mark schemes still marked needs_review. "
+            "By default only published rows go to production: a needs_review "
+            "row is one whose crop QA found the image itself wrong — a cut-off "
+            "question number, a missing Marks column, an erased stem."
+        ),
+    )
     args = parser.parse_args()
 
     source_path = Path(args.source)
@@ -60,6 +70,7 @@ def main():
     for table in [
         "bank_subjects", "bank_papers", "bank_questions", "bank_mark_schemes",
         "bank_assets", "bank_question_assets", "bank_mark_scheme_assets",
+        "bank_question_strips", "bank_mark_scheme_strips",
         "bank_topics", "bank_question_topics", "bank_tags", "bank_question_tags",
         "bank_review_flags", "bank_run_ledger"
     ]:
@@ -280,6 +291,14 @@ def main():
         FROM bank_questions
     """).fetchall()
 
+    if not args.include_flagged:
+        before = len(rows)
+        rows = [row for row in rows if row["status"] == "published"]
+        held = before - len(rows)
+        if held:
+            print(f"  holding back {held} questions still marked needs_review "
+                  f"(--include-flagged to merge them anyway)")
+
     question_id_map: dict[int, int] = {}
     skipped_q = 0
 
@@ -346,6 +365,13 @@ def main():
                confidence, status, run_id, model, prompt_version, created_at
         FROM bank_mark_schemes
     """).fetchall()
+
+    if not args.include_flagged:
+        before = len(rows)
+        rows = [row for row in rows if row["status"] == "published"]
+        held = before - len(rows)
+        if held:
+            print(f"  holding back {held} mark schemes still marked needs_review")
 
     ms_id_map: dict[int, int] = {}
     skipped_ms = 0
@@ -535,6 +561,37 @@ def main():
             """, (new_qid, new_aid, row["placeholder"], row["ordering"]))
     dst.commit()
     print(f"  ✓ {len(rows)} question assets")
+
+    # ---- Merge crop strips ----
+    #
+    # The whole crop, in reading order. screenshotId carries only strip 0,
+    # which for 89% of questions is the top fragment of the image a student
+    # is meant to read.
+    for table, owner_column, id_map, source_column in (
+        ("bank_question_strips", "questionId", question_id_map, "question_id"),
+        ("bank_mark_scheme_strips", "markSchemeId", ms_id_map, "mark_scheme_id"),
+    ):
+        print(f"Merging {table}...")
+        rows = src.execute(
+            f"SELECT {source_column}, asset_id, ordering, page FROM {table}"
+        ).fetchall()
+        written = 0
+        with dst.cursor() as cur:
+            for row in rows:
+                new_owner = id_map.get(row[source_column])
+                new_asset = asset_id_map.get(row["asset_id"])
+                # A strip whose owner was held back by the quality gate has
+                # nothing to attach to, and is skipped with it.
+                if not new_owner or not new_asset:
+                    continue
+                cur.execute(f"""
+                    INSERT INTO {table} ("{owner_column}", "assetId", ordering, page)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING
+                """, (new_owner, new_asset, row["ordering"], row["page"]))
+                written += 1
+        dst.commit()
+        print(f"  ✓ {written} of {len(rows)} strips")
 
     # ---- Merge mark scheme assets ----
     print("Merging bank_mark_scheme_assets...")
