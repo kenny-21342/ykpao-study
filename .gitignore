@@ -72,8 +72,19 @@ public/uploads/
 # they are served from object storage, not from the repo.
 # ---------------------------------------------------------------------------
 
-# Raw past-paper PDFs and extraction workspace (~17 GB)
-/pdf_extraction/
+# Raw past-paper PDFs and extraction workspace (~17 GB).
+#
+# The two packages below are the extraction pipeline itself — source, not
+# assets — and were being ignored along with the corpus they sit next to. That
+# left the only record of a fix in its tests. Everything else under here (the
+# PDFs, the SQLite stores, the v2/v3 one-off scripts) stays out.
+/pdf_extraction/*
+!/pdf_extraction/bank/
+!/pdf_extraction/question_images/
+/pdf_extraction/**/__pycache__/
+/pdf_extraction/**/*.db
+/pdf_extraction/**/*.db-shm
+/pdf_extraction/**/*.db-wal
 
 # SQLite extraction database, superseded by Postgres (75 MB)
 /papers.db

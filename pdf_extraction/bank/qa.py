@@ -1,0 +1,559 @@
+"""Stage 5 — QA flags, review queue, and run ledger.
+
+This stage implements advisory QA checks that never block writes but route
+questionable content to a review queue. Every question is written; checks only
+affect its status field.
+
+QA checks include:
+- Parts marks don't sum to total_marks
+- LaTeX spans fail KaTeX compilation
+- body_md references an asset id not in the inventory
+- Root numbers have gaps within a paper
+- Model confidence below threshold
+- No mark scheme paired (soft - resource booklets legitimately have none)
+- Body suspiciously short relative to span height
+
+The run ledger enables resumable long runs by recording which work items
+completed successfully. Keyed on (source_sha256 + span + model + prompt version).
+"""
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from contextlib import contextmanager
+from dataclasses import dataclass
+from hashlib import sha256
+from pathlib import Path
+from typing import Any, Iterator, Mapping, Sequence
+
+
+# QA check types
+ISSUE_MARKS_MISMATCH = "marks_mismatch"
+ISSUE_LATEX_INVALID = "latex_invalid"
+ISSUE_ASSET_REFERENCE = "asset_reference"
+ISSUE_NUMBERING_GAP = "numbering_gap"
+ISSUE_LOW_CONFIDENCE = "low_confidence"
+ISSUE_MISSING_MARK_SCHEME = "missing_mark_scheme"
+ISSUE_SUSPICIOUS_LENGTH = "suspicious_length"
+ISSUE_FIGURE_UNCITED = "figure_uncited"
+ISSUE_FIGURE_CITATION_OFFSET = "figure_citation_offset"
+ISSUE_FIGURE_CITATION_ORDER = "figure_citation_order"
+
+# Severity levels
+SEVERITY_LOW = "low"
+SEVERITY_MEDIUM = "medium"
+SEVERITY_HIGH = "high"
+
+# Status values
+STATUS_OPEN = "open"
+STATUS_RESOLVED = "resolved"
+STATUS_DISMISSED = "dismissed"
+
+
+# Confidence thresholds
+DEFAULT_CONFIDENCE_THRESHOLD = 0.7
+HIGH_CONFIDENCE_THRESHOLD = 0.9
+
+
+@dataclass(frozen=True)
+class ReviewFlag:
+    """A QA issue requiring human review."""
+
+    question_id: int | None
+    paper_id: int | None
+    issue_type: str
+    severity: str
+    message: str
+    evidence: dict[str, Any] | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "question_id": self.question_id,
+            "paper_id": self.paper_id,
+            "issue_type": self.issue_type,
+            "severity": self.severity,
+            "message": self.message,
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class LedgerEntry:
+    """A completed work item in the run ledger."""
+
+    work_key: str  # sha256(source + span + model + prompt)
+    stage: str  # transcribe | tag
+    source_sha256: str
+    root_number: int | None
+    status: str  # ok | failed
+    detail: str | None
+    input_tokens: int
+    output_tokens: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "work_key": self.work_key,
+            "stage": self.stage,
+            "source_sha256": self.source_sha256,
+            "root_number": self.root_number,
+            "status": self.status,
+            "detail": self.detail,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+        }
+
+
+def run_qa_checks(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+    confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+    figure_inventory: Sequence[Mapping[str, Any]] | None = None,
+) -> list[ReviewFlag]:
+    """Run all QA checks on a transcription and return any flags.
+
+    Args:
+        transcription: QuestionTranscription or MarkSchemeTranscription
+        paper_id: Database paper_id for this question
+        question_id: Database question_id (None for MS-only checks)
+        confidence_threshold: Minimum acceptable confidence
+        figure_inventory: the rendered span's figures, in the order they were
+            offered to the model. Omitted, the figure checks are skipped —
+            they cannot say anything useful without knowing what was on offer.
+
+    Returns:
+        List of ReviewFlag objects (empty if no issues)
+    """
+    flags: list[ReviewFlag] = []
+
+    # Check confidence
+    flags.extend(_check_confidence(transcription, paper_id, question_id, confidence_threshold))
+
+    # Check parts marks sum (questions only)
+    if hasattr(transcription, "parts") and hasattr(transcription, "total_marks"):
+        flags.extend(_check_parts_sum(transcription, paper_id, question_id))
+
+    # Check for suspiciously short body (questions only)
+    if hasattr(transcription, "body_md"):
+        flags.extend(_check_body_length(transcription, paper_id, question_id))
+
+    flags.extend(_check_latex(transcription, paper_id, question_id))
+
+    if figure_inventory is not None and hasattr(transcription, "body_md"):
+        flags.extend(
+            _check_figure_citations(transcription, paper_id, question_id, figure_inventory)
+        )
+
+    return flags
+
+
+def _check_latex(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+) -> list[ReviewFlag]:
+    """Flag mathematics still holding JSON escape damage.
+
+    A model that single-escapes ``\\frac`` yields a formfeed once the JSON is
+    decoded. Recovery handles the known cases; anything left is a formula that
+    would render as prose, which a reviewer needs to see.
+    """
+    from .transcribe import has_damaged_latex
+
+    body = getattr(transcription, "body_md", None) or getattr(transcription, "answer_md", "")
+    if body and has_damaged_latex(body):
+        return [ReviewFlag(
+            question_id=question_id,
+            paper_id=paper_id,
+            issue_type=ISSUE_LATEX_INVALID,
+            severity=SEVERITY_HIGH,
+            message="LaTeX contains control characters from JSON escape damage",
+            evidence={"sample": repr(body[:200])},
+        )]
+    return []
+
+
+def _check_confidence(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+    threshold: float,
+) -> list[ReviewFlag]:
+    """Check if confidence is below threshold."""
+    if transcription.confidence < threshold:
+        return [ReviewFlag(
+            question_id=question_id,
+            paper_id=paper_id,
+            issue_type=ISSUE_LOW_CONFIDENCE,
+            severity=SEVERITY_MEDIUM if transcription.confidence >= 0.5 else SEVERITY_HIGH,
+            message=f"Model confidence {transcription.confidence:.2f} below threshold {threshold:.2f}",
+            evidence={"confidence": transcription.confidence, "threshold": threshold},
+        )]
+    return []
+
+
+def _check_parts_sum(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+) -> list[ReviewFlag]:
+    """Check if part marks sum to total_marks."""
+    if not transcription.parts or transcription.total_marks is None:
+        return []
+
+    part_sum = sum(part.get("marks", 0) or 0 for part in transcription.parts if isinstance(part, dict))
+
+    if part_sum != transcription.total_marks:
+        return [ReviewFlag(
+            question_id=question_id,
+            paper_id=paper_id,
+            issue_type=ISSUE_MARKS_MISMATCH,
+            severity=SEVERITY_MEDIUM,
+            message=f"Part marks sum ({part_sum}) doesn't match total_marks ({transcription.total_marks})",
+            evidence={
+                "parts": transcription.parts,
+                "total_marks": transcription.total_marks,
+                "sum": part_sum,
+            },
+        )]
+    return []
+
+
+def _check_body_length(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+) -> list[ReviewFlag]:
+    """Check if body_md is suspiciously short relative to expected content."""
+    if not transcription.body_md:
+        return [ReviewFlag(
+            question_id=question_id,
+            paper_id=paper_id,
+            issue_type=ISSUE_SUSPICIOUS_LENGTH,
+            severity=SEVERITY_HIGH,
+            message="body_md is empty",
+            evidence={"body_length": 0},
+        )]
+
+    # Very short bodies with figures might indicate truncated transcription
+    body_len = len(transcription.body_md.strip())
+    has_figures = bool(transcription.figures_used)
+
+    # Only flag extremely short bodies (< 15 chars) without figures
+    if body_len < 15 and not has_figures:
+        return [ReviewFlag(
+            question_id=question_id,
+            paper_id=paper_id,
+            issue_type=ISSUE_SUSPICIOUS_LENGTH,
+            severity=SEVERITY_MEDIUM,
+            message=f"Body suspiciously short ({body_len} chars) with no figures",
+            evidence={"body_length": body_len},
+        )]
+
+    return []
+
+
+def create_ledger_key(
+    source_sha256: str,
+    root_number: int | None,
+    model: str,
+    prompt_version: str,
+    stage: str,
+) -> str:
+    """Create a unique work key for the run ledger.
+
+    The key combines all factors that would change the output, so a prompt or
+    model change re-runs only what it affects.
+    """
+    key_data = f"{source_sha256}:{root_number}:{model}:{prompt_version}:{stage}"
+    return sha256(key_data.encode()).hexdigest()
+
+
+class RunLedger:
+    """Per-question resume ledger for long-running extractions.
+
+    The ledger lives in the same SQLite file as the extraction store. Opening a
+    second connection to write it deadlocks against the store's open write
+    transaction — SQLite allows only one writer, so every ``record_success``
+    raised "database is locked" and the whole document was reported as failed
+    even though its questions had already been written. Pass the store's own
+    ``connection`` to share the single writer; ``db_path`` alone is still
+    supported for standalone use such as reporting.
+    """
+
+    def __init__(
+        self,
+        db_path: Path | str | None = None,
+        *,
+        connection: sqlite3.Connection | None = None,
+    ) -> None:
+        if db_path is None and connection is None:
+            raise ValueError("RunLedger requires either db_path or connection")
+        self.db_path = Path(db_path) if db_path is not None else None
+        self._shared = connection
+        self._ensure_schema()
+
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """Yield a usable connection, reusing the caller's when it has one.
+
+        When the connection is shared, the caller owns the transaction and this
+        must not commit; committing here would end the caller's transaction
+        early and defeat per-document atomicity.
+        """
+        if self._shared is not None:
+            yield self._shared
+            return
+        connection = sqlite3.connect(self.db_path, timeout=30.0)
+        try:
+            # Wait out a concurrent writer rather than failing immediately.
+            connection.execute("PRAGMA busy_timeout = 30000")
+            yield connection
+            connection.commit()
+        finally:
+            connection.close()
+
+    def _ensure_schema(self) -> None:
+        """Ensure the ledger table exists."""
+        with self._connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS bank_run_ledger (
+                    work_key TEXT PRIMARY KEY,
+                    stage TEXT NOT NULL,
+                    source_sha256 TEXT NOT NULL,
+                    root_number INTEGER,
+                    status TEXT NOT NULL,
+                    detail TEXT,
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_ledger_source
+                ON bank_run_ledger(source_sha256)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_ledger_status
+                ON bank_run_ledger(status, stage)
+            """)
+
+    def is_completed(self, work_key: str) -> bool:
+        """Check if a work item has already completed successfully."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT status FROM bank_run_ledger WHERE work_key = ?",
+                (work_key,),
+            )
+            row = cursor.fetchone()
+            return row is not None and row[0] == "ok"
+
+    def record_success(
+        self,
+        work_key: str,
+        stage: str,
+        source_sha256: str,
+        root_number: int | None,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> None:
+        """Record a successful completion."""
+        with self._connect() as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO bank_run_ledger
+                (work_key, stage, source_sha256, root_number, status,
+                 input_tokens, output_tokens)
+                VALUES (?, ?, ?, ?, 'ok', ?, ?)
+            """, (work_key, stage, source_sha256, root_number, input_tokens, output_tokens))
+
+    def record_failure(
+        self,
+        work_key: str,
+        stage: str,
+        source_sha256: str,
+        root_number: int | None,
+        detail: str,
+    ) -> None:
+        """Record a failed attempt."""
+        with self._connect() as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO bank_run_ledger
+                (work_key, stage, source_sha256, root_number, status, detail)
+                VALUES (?, ?, ?, ?, 'failed', ?)
+            """, (work_key, stage, source_sha256, root_number, detail))
+
+    def get_pending_work(
+        self,
+        stage: str,
+        source_sha256: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get work items that haven't completed yet."""
+        with self._connect() as conn:
+            if source_sha256:
+                cursor = conn.execute(
+                    """SELECT work_key, source_sha256, root_number, stage
+                       FROM bank_run_ledger
+                       WHERE stage = ? AND source_sha256 = ? AND status != 'ok'
+                       ORDER BY source_sha256, root_number""",
+                    (stage, source_sha256),
+                )
+            else:
+                cursor = conn.execute(
+                    """SELECT work_key, source_sha256, root_number, stage
+                       FROM bank_run_ledger
+                       WHERE stage = ? AND status != 'ok'
+                       ORDER BY source_sha256, root_number""",
+                    (stage,),
+                )
+            return [
+                {
+                    "work_key": row[0],
+                    "source_sha256": row[1],
+                    "root_number": row[2],
+                    "stage": row[3],
+                }
+                for row in cursor.fetchall()
+            ]
+
+    def get_statistics(self) -> dict[str, Any]:
+        """Get run statistics from the ledger."""
+        with self._connect() as conn:
+            # Total entries
+            total = conn.execute("SELECT COUNT(*) FROM bank_run_ledger").fetchone()[0]
+
+            # Status breakdown
+            status_counts = conn.execute("""
+                SELECT status, COUNT(*) FROM bank_run_ledger GROUP BY status
+            """).fetchall()
+
+            # Stage breakdown
+            stage_counts = conn.execute("""
+                SELECT stage, COUNT(*) FROM bank_run_ledger GROUP BY stage
+            """).fetchall()
+
+            # Token usage
+            tokens = conn.execute("""
+                SELECT SUM(input_tokens), SUM(output_tokens) FROM bank_run_ledger
+            """).fetchone()
+
+            return {
+                "total_entries": total,
+                "by_status": dict(status_counts),
+                "by_stage": dict(stage_counts),
+                "total_input_tokens": tokens[0] or 0,
+                "total_output_tokens": tokens[1] or 0,
+            }
+
+
+# A CAIE figure caption: "Fig. 3.1", "Fig 12.2". Tables are deliberately not
+# matched — a table is usually transcribed as HTML rather than cited as an
+# asset, so requiring a citation for one would flag correct work.
+_FIGURE_CAPTION = re.compile(r"\bFig\.?\s*(\d+\.\d+)")
+_ASSET_CITATION = re.compile(r"!\[[^\]]*\]\(asset:([A-Za-z0-9_-]+)\)")
+
+
+def _check_figure_citations(
+    transcription,
+    paper_id: int | None,
+    question_id: int | None,
+    figure_inventory: Sequence[Mapping[str, Any]],
+) -> list[ReviewFlag]:
+    """Catch figures that are missing, or cited as the wrong image.
+
+    A wrong citation is worse than a missing one: it renders confidently, and
+    nothing else in QA can see it. On 0620_s23_qp_41 Q3 all three citations
+    pointed at the wrong crop while confidence read 0.95 and every other check
+    passed, so the paper published a carbon dioxide diagram where the sodium
+    and oxygen configurations belonged.
+
+    Three signals, all advisory:
+
+    1.  The body names more figures than it cites. Either the model never
+        placed one, or post-processing stripped an id the inventory did not
+        contain — both leave the student reading about a picture that is not
+        there.
+    2.  Citations on a page skip that page's first figure but use a later one.
+        That is the shape an off-by-one leaves behind.
+    3.  Citations do not run down the page in the order the body uses them.
+    """
+    body = getattr(transcription, "body_md", "") or ""
+    flags: list[ReviewFlag] = []
+
+    cited_in_order: list[str] = []
+    for match in _ASSET_CITATION.finditer(body):
+        if match.group(1) not in cited_in_order:
+            cited_in_order.append(match.group(1))
+    cited = set(cited_in_order)
+
+    captions = {match.group(1) for match in _FIGURE_CAPTION.finditer(body)}
+
+    # 1. Named but not shown.
+    if len(captions) > len(cited):
+        flags.append(
+            ReviewFlag(
+                question_id=question_id,
+                paper_id=paper_id,
+                issue_type=ISSUE_FIGURE_UNCITED,
+                severity=SEVERITY_HIGH,
+                message=(
+                    f"body names {len(captions)} figure(s) but cites {len(cited)}: "
+                    "a referenced figure will be missing"
+                ),
+                evidence={
+                    "captions": sorted(captions),
+                    "cited": cited_in_order,
+                    "available": [str(figure.get("id")) for figure in figure_inventory],
+                },
+            )
+        )
+
+    if not cited:
+        return flags
+
+    order = {str(figure.get("id")): index for index, figure in enumerate(figure_inventory)}
+
+    # 2. Skipped the top of a page while using what sits below it.
+    by_page: dict[Any, list[str]] = {}
+    for figure in figure_inventory:
+        by_page.setdefault(figure.get("page"), []).append(str(figure.get("id")))
+
+    for page, ids in by_page.items():
+        used = [figure_id for figure_id in ids if figure_id in cited]
+        if not used or ids[0] in cited:
+            continue
+        flags.append(
+            ReviewFlag(
+                question_id=question_id,
+                paper_id=paper_id,
+                issue_type=ISSUE_FIGURE_CITATION_OFFSET,
+                severity=SEVERITY_MEDIUM,
+                message=(
+                    f"page {page}: cites {', '.join(used)} but not {ids[0]}, "
+                    "the first figure on the page — citations may be off by one"
+                ),
+                evidence={"page": page, "available": ids, "cited": used},
+            )
+        )
+
+    # 3. Cited out of reading order.
+    positions = [order[figure_id] for figure_id in cited_in_order if figure_id in order]
+    if positions != sorted(positions):
+        flags.append(
+            ReviewFlag(
+                question_id=question_id,
+                paper_id=paper_id,
+                issue_type=ISSUE_FIGURE_CITATION_ORDER,
+                severity=SEVERITY_MEDIUM,
+                message=(
+                    "figures are cited out of reading order: "
+                    f"{', '.join(cited_in_order)}"
+                ),
+                evidence={
+                    "cited": cited_in_order,
+                    "available": [str(figure.get("id")) for figure in figure_inventory],
+                },
+            )
+        )
+
+    return flags
