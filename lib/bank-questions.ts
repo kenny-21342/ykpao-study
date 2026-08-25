@@ -26,7 +26,7 @@ export type BankQuestionView = {
   pageStart: number | null;
   pageEnd: number | null;
   strips: BankStrip[];
-  markScheme: { id: number; strips: BankStrip[] } | null;
+  markScheme: { id: number; strips: BankStrip[]; answerLetter: string | null } | null;
 };
 
 export type BankPaperView = {
@@ -123,6 +123,9 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
             ? {
                 id: question.markScheme.id,
                 strips: toStrips(question.markScheme.strips),
+                // Multiple-choice keys are recovered from the text layer with
+                // no rendering at all, so they have a letter and no strips.
+                answerLetter: question.markScheme.answerLetter,
               }
             : null,
       }))

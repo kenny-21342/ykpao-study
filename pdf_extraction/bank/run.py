@@ -645,6 +645,14 @@ def run_corpus(
                     log(f"  {done}/{len(pending)} items  "
                         f"${stats.cost_usd:.3f}  {rate:,.0f}/h")
     finally:
+        # A question paper and its mark scheme are separate documents, so the
+        # pairing can only be made once both have been processed.
+        try:
+            linked = store.link_mark_schemes_to_questions(connection)
+            if linked:
+                log(f"  linked {linked} mark schemes to their questions")
+        except Exception as error:  # pragma: no cover - diagnostics only
+            log(f"  ! mark-scheme linking failed: {error}")
         connection.commit()
         connection.close()
 

@@ -171,7 +171,8 @@ export default function BankQuestionCard({ question }: { question: Question }) {
         />
       </div>
 
-      {question.markScheme && question.markScheme.strips.length > 0 && (
+      {question.markScheme &&
+        (question.markScheme.strips.length > 0 || question.markScheme.answerLetter) && (
         <div className="border-t border-gray-100 dark:border-gray-700">
           <button
             type="button"
@@ -188,11 +189,19 @@ export default function BankQuestionCard({ question }: { question: Question }) {
           </button>
           {showAnswer && (
             <div className="border-t border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40 sm:p-4">
-              <StripStack
-                strips={question.markScheme.strips}
-                alt={`Mark scheme for question ${question.rootNumber}`}
-                onZoom={() => setZoomed('markScheme')}
-              />
+              {question.markScheme.strips.length > 0 ? (
+                <StripStack
+                  strips={question.markScheme.strips}
+                  alt={`Mark scheme for question ${question.rootNumber}`}
+                  onZoom={() => setZoomed('markScheme')}
+                />
+              ) : (
+                // A multiple-choice key is a letter, not an image.
+                <p className="text-sm text-gray-700 dark:text-gray-200">
+                  Answer:{' '}
+                  <span className="font-semibold">{question.markScheme.answerLetter}</span>
+                </p>
+              )}
             </div>
           )}
         </div>

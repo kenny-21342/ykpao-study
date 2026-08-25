@@ -427,6 +427,55 @@ def record_answer_key(
     return written
 
 
+def link_mark_schemes_to_questions(connection: sqlite3.Connection) -> int:
+    """Pair each mark scheme with the question it answers.
+
+    A question paper and its mark scheme are separate documents and therefore
+    separate bank_papers rows, so nothing during a single document's processing
+    can make the link — it needs both sides present. Until this ran,
+    bank_mark_schemes.question_id was NULL for every row ever written, which
+    meant the mark scheme could never be shown next to its question.
+
+    Two papers are the same sitting when everything but doc_type matches.
+    Returns the number of rows newly linked.
+    """
+    cursor = connection.execute(
+        """
+        UPDATE bank_mark_schemes
+        SET question_id = (
+            SELECT q.id
+            FROM bank_questions q
+            JOIN bank_papers qp ON qp.id = q.paper_id
+            JOIN bank_papers mp ON mp.id = bank_mark_schemes.paper_id
+            WHERE qp.doc_type = 'qp'
+              AND qp.subject_id = mp.subject_id
+              AND qp.year = mp.year
+              AND qp.session = mp.session
+              AND qp.paper_number = mp.paper_number
+              AND qp.variant = mp.variant
+              AND IFNULL(qp.timezone, '') = IFNULL(mp.timezone, '')
+              AND q.root_number = bank_mark_schemes.root_number
+        )
+        WHERE question_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM bank_questions q
+            JOIN bank_papers qp ON qp.id = q.paper_id
+            JOIN bank_papers mp ON mp.id = bank_mark_schemes.paper_id
+            WHERE qp.doc_type = 'qp'
+              AND qp.subject_id = mp.subject_id
+              AND qp.year = mp.year
+              AND qp.session = mp.session
+              AND qp.paper_number = mp.paper_number
+              AND qp.variant = mp.variant
+              AND IFNULL(qp.timezone, '') = IFNULL(mp.timezone, '')
+              AND q.root_number = bank_mark_schemes.root_number
+          )
+        """
+    )
+    return cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
+
+
 def clear_paper_flags(connection: sqlite3.Connection, paper_id: int) -> None:
     """Drop a paper's open document-level flags before it is reprocessed.
 

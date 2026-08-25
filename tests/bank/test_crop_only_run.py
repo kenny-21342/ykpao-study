@@ -17,6 +17,28 @@ import fitz
 from pdf_extraction.bank.run import run_corpus
 
 
+def _mark_scheme(path: Path) -> None:
+    """A grid answering the two questions in _question_paper."""
+    document = fitz.open()
+    page = document.new_page(width=842, height=595)
+    columns = (60.0, 200.0, 620.0, 780.0)
+    top, height = 60.0, 40.0
+    for index in range(4):
+        page.draw_line((columns[0], top + height * index), (columns[-1], top + height * index))
+    page.insert_text((columns[0] + 4, top + 22), "Question", fontsize=11)
+    page.insert_text((columns[1] + 4, top + 22), "Answer", fontsize=11)
+    page.insert_text((columns[2] + 4, top + 22), "Marks", fontsize=11)
+    for index, (label, answer) in enumerate((("1", "the first answer"), ("2", "the second answer"))):
+        y = top + height * (index + 1)
+        page.insert_text((columns[0] + 4, y + 22), label, fontsize=11)
+        page.insert_text((columns[1] + 4, y + 22), answer, fontsize=11)
+        page.insert_text((columns[2] + 4, y + 22), "2", fontsize=11)
+    for x in columns:
+        page.draw_line((x, top), (x, top + height * 3))
+    document.save(path)
+    document.close()
+
+
 def _question_paper(path: Path) -> None:
     document = fitz.open()
     first = document.new_page(width=595, height=842)
@@ -84,6 +106,46 @@ class CropOnlyRunTests(unittest.TestCase):
                 "SELECT screenshot_id FROM bank_questions WHERE id = ?", (first["id"],)
             ).fetchone()[0]
             self.assertIsNotNone(screenshot)
+            connection.close()
+
+    def test_a_mark_scheme_is_paired_with_the_question_it_answers(self) -> None:
+        """The pairing needs both documents, so nothing during one can make it.
+
+        bank_mark_schemes.question_id was NULL for every row ever written until
+        this ran, which meant a mark scheme could never be shown beside its
+        question.
+        """
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            # Same sitting: everything but doc_type matches.
+            _question_paper(root / "0610_s23_qp_41.pdf")
+            _mark_scheme(root / "0610_s23_ms_41.pdf")
+
+            run_corpus(
+                [root / "0610_s23_qp_41.pdf", root / "0610_s23_ms_41.pdf"],
+                db_path=root / "bank.db",
+                asset_root=root / "assets",
+                use_model=False,
+                log=lambda message: None,
+            )
+
+            connection = sqlite3.connect(root / "bank.db")
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                """
+                SELECT m.root_number, m.question_id, q.root_number AS question_root
+                FROM bank_mark_schemes m
+                LEFT JOIN bank_questions q ON q.id = m.question_id
+                ORDER BY m.root_number
+                """
+            ).fetchall()
+            self.assertTrue(rows, "no mark schemes were stored")
+            for row in rows:
+                self.assertIsNotNone(
+                    row["question_id"],
+                    f"mark scheme {row['root_number']} was left unpaired",
+                )
+                self.assertEqual(row["root_number"], row["question_root"])
             connection.close()
 
     def test_no_model_run_spends_nothing(self) -> None:
