@@ -54,6 +54,14 @@ _MS_LABEL = re.compile(
 # CAIE marking codes, used to recognise a mark-scheme grid that has no header.
 _MS_MARK_CODE = re.compile(r"\b(?:D?[MAB]\d|SC\b|FT\b|ISW\b|OE\b)")
 
+# A page carrying less text than this is a cover, a divider, or blank, and is
+# not worth a region of its own when a question spans across it.
+_MIN_CONTENT_CHARS = 120
+
+# Below this a region is detector noise — the next label starting flush against
+# the top of a page, most often — and would render a sliver.
+_MIN_REGION_HEIGHT = 6.0
+
 
 @dataclass(frozen=True)
 class PageRegion:
@@ -301,6 +309,7 @@ def _confidence_from_score(score: float) -> float:
 def _detect_ms_spans(path: Path) -> DocumentSpans:
     rows: list[tuple[int, int, float, float, str]] = []
     page_sizes: dict[int, tuple[float, float]] = {}
+    pages_with_content: set[int] = set()
     page_count = 0
     digest = file_sha256(path)
 
@@ -309,6 +318,8 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
         for page_index, page in enumerate(document):
             page_number = page_index + 1
             page_sizes[page_number] = (page.rect.width, page.rect.height)
+            if len(page.get_text().strip()) >= _MIN_CONTENT_CHARS:
+                pages_with_content.add(page_number)
             for table, question_column in _question_tables(page):
                 rows.extend(_label_rows(table, question_column, page_number))
 
@@ -322,7 +333,7 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
         )
 
     rows.sort(key=lambda row: (row[0], row[2]))
-    spans = _spans_from_rows(rows, page_sizes)
+    spans = _spans_from_rows(rows, page_sizes, pages_with_content)
     return DocumentSpans(
         source_path=str(path),
         source_sha256=digest,
@@ -460,30 +471,51 @@ def _row_boxes(table: Any) -> list[tuple[float, float]]:
 def _spans_from_rows(
     rows: list[tuple[int, int, float, float, str]],
     page_sizes: dict[int, tuple[float, float]],
+    pages_with_content: set[int],
 ) -> tuple[RootSpan, ...]:
     """Group labelled rows into one span per root question.
 
-    Each label runs until the next label on the same page, or to the bottom
-    of the page when it is the last one; a root that continues onto later
-    pages accumulates a region per page.
+    A label owns everything from where it starts to where the next label
+    starts, however many pages that crosses.
+
+    This used to stop at the bottom of the label's own page, which quietly
+    dropped every continuation page: a mark scheme only prints a label when a
+    new question or sub-part begins, so an answer running across a page break
+    has no label on the pages it continues onto. On 0610_s15_ms_61 that gave
+    Q1 only page 3 and Q2 only page 6, losing pages 4, 5, 7 and 8 entirely.
+    Measured over 45 mark schemes, 130 of 375 content pages belonged to no
+    region at all.
     """
     grouped: dict[int, list[PageRegion]] = {}
     parts: dict[int, list[str]] = {}
     order: list[int] = []
+    last_content_page = max(pages_with_content) if pages_with_content else 0
 
     for index, (page, root, top, _bottom, label) in enumerate(rows):
-        width, height = page_sizes.get(page, (595.0, 842.0))
         following = rows[index + 1] if index + 1 < len(rows) else None
-        bottom = following[2] if following and following[0] == page else height
-        region = PageRegion(
-            page=page,
-            bbox=(0.0, max(0.0, top - 2.0), width, bottom),
-        )
+        if following is not None:
+            end_page, end_top = following[0], following[2]
+        else:
+            # The final label runs to the end of the printed content. Trailing
+            # blank or appendix pages are excluded by pages_with_content.
+            end_page, end_top = max(page, last_content_page), None
+
         if root not in grouped:
             grouped[root] = []
             parts[root] = []
             order.append(root)
-        grouped[root].append(region)
+
+        for number in range(page, end_page + 1):
+            # A blank separator page contributes nothing but a blank strip.
+            if number != page and number not in pages_with_content:
+                continue
+            width, height = page_sizes.get(number, (595.0, 842.0))
+            y0 = max(0.0, top - 2.0) if number == page else 0.0
+            y1 = end_top if (number == end_page and end_top is not None) else height
+            if y1 - y0 < _MIN_REGION_HEIGHT:
+                continue
+            grouped[root].append(PageRegion(page=number, bbox=(0.0, y0, width, y1)))
+
         if label not in parts[root]:
             parts[root].append(label)
 

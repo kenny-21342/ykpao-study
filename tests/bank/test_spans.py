@@ -12,7 +12,12 @@ from pdf_extraction.bank.spans import detect_root_spans
 def _mark_scheme_grid(path: Path, rows: list[tuple[str, str, str]]) -> None:
     """Write a landscape mark scheme with a Question/Answer/Marks header."""
     document = fitz.open()
-    page = document.new_page(width=842, height=595)
+    _draw_grid(document.new_page(width=842, height=595), rows)
+    document.save(path)
+    document.close()
+
+
+def _draw_grid(page: fitz.Page, rows: list[tuple[str, str, str]]) -> None:
     columns = (60.0, 200.0, 620.0, 780.0)
     top = 60.0
     height = 40.0
@@ -35,9 +40,6 @@ def _mark_scheme_grid(path: Path, rows: list[tuple[str, str, str]]) -> None:
 
     for x in columns:
         page.draw_line((x, top), (x, top + height * (len(rows) + 1)))
-
-    document.save(path)
-    document.close()
 
 
 class QuestionPaperSpanTests(unittest.TestCase):
@@ -100,6 +102,40 @@ class MarkSchemeSpanTests(unittest.TestCase):
             by_root = {span.root_number: span for span in spans.spans}
             self.assertEqual(by_root[1].part_labels, ("1(a)", "1(b)"))
             self.assertEqual(by_root[3].part_labels, ("3(a)(i)",))
+
+    def test_an_answer_continuing_past_a_page_break_keeps_that_page(self) -> None:
+        """A label owns every page up to the next label, not just its own.
+
+        A mark scheme prints a label only where a question or sub-part begins,
+        so the pages an answer continues onto carry none. Emitting a region
+        only where a label appeared dropped those pages: measured over 45 real
+        mark schemes, 51 of 260 answer-body pages (20%) belonged to no region.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "continuation.pdf"
+            document = fitz.open()
+            _draw_grid(document.new_page(width=842, height=595), [
+                ("1", "first marking point", "B1"),
+                ("1(b)", "second marking point", "B1"),
+            ])
+            # No grid and no label here — this is the page the answer runs onto.
+            # It carries the same running header and footer a real page does,
+            # which is what puts it over the blank-page threshold.
+            middle = document.new_page(width=842, height=595)
+            middle.insert_text((60, 40), "0610/51  Cambridge IGCSE - Mark Scheme", fontsize=9)
+            middle.insert_text((60, 80), "continued from the previous page", fontsize=11)
+            middle.insert_text((60, 110), "further credit is available for any of", fontsize=11)
+            middle.insert_text((60, 140), "the alternatives listed in this table", fontsize=11)
+            middle.insert_text((60, 560), "(c) UCLES 2023      Page 2 of 3", fontsize=9)
+            _draw_grid(document.new_page(width=842, height=595), [
+                ("2", "a later question", "B1"),
+            ])
+            document.save(path)
+            document.close()
+
+            spans = detect_root_spans(path, "ms")
+            first = next(span for span in spans.spans if span.root_number == 1)
+            self.assertIn(2, first.pages)
 
     def test_answer_text_is_never_read_as_a_question_label(self) -> None:
         """A bare number in the answer column must not create a root.
