@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -198,3 +199,70 @@ class RendererTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FigureOrderingTests(unittest.TestCase):
+    """Figure ids must follow the page, not the detection pass that found them.
+
+    Regression for 0620_s23_qp_41 Q3, where Fig 3.1 was numbered `fig3`, Fig
+    3.2 `fig1` and Fig 3.3 `fig2` — because tables are detected before vector
+    clusters — and the model cited all three wrongly at 0.95 confidence.
+    """
+
+    def test_candidates_come_back_top_to_bottom(self):
+        from pdf_extraction.bank.renderer import _dedup
+
+        # Detection order: a table found first, then two clusters below and
+        # above it — exactly the shape that produced the bug.
+        candidates = [
+            {"bbox": (168.0, 362.0, 408.0, 442.0), "is_table": True},
+            {"bbox": (169.0, 640.0, 425.0, 735.0), "is_table": False},
+            {"bbox": (187.0, 135.0, 408.0, 231.0), "is_table": False},
+        ]
+        ordered = _dedup(candidates)
+        ordered.sort(key=lambda c: (round(c["bbox"][1], 1), round(c["bbox"][0], 1)))
+        self.assertEqual([c["bbox"][1] for c in ordered], [135.0, 362.0, 640.0])
+
+    def test_ties_on_y_break_left_to_right(self):
+        from pdf_extraction.bank.renderer import _dedup
+
+        candidates = [
+            {"bbox": (400.0, 200.0, 500.0, 300.0), "is_table": False},
+            {"bbox": (100.0, 200.0, 200.0, 300.0), "is_table": False},
+        ]
+        ordered = _dedup(candidates)
+        ordered.sort(key=lambda c: (round(c["bbox"][1], 1), round(c["bbox"][0], 1)))
+        self.assertEqual([c["bbox"][0] for c in ordered], [100.0, 400.0])
+
+
+class FigureInventoryTests(unittest.TestCase):
+    def test_ordinals_restart_on_each_page(self):
+        from pdf_extraction.bank.transcribe import _ordinals_by_page
+
+        figures = [
+            {"id": "fig1", "page": 4},
+            {"id": "fig2", "page": 4},
+            {"id": "fig3", "page": 4},
+            {"id": "fig4", "page": 5},
+        ]
+        self.assertEqual(_ordinals_by_page(figures), [1, 2, 3, 1])
+
+    def test_inventory_tells_the_model_where_each_figure_sits(self):
+        from pdf_extraction.bank.transcribe import _build_user_text
+
+        class Span:
+            root_number = 3
+            page_start = 4
+            page_end = 5
+            strips = (object(), object())
+            figures = (
+                {"id": "fig1", "page": 4, "kind": "figure"},
+                {"id": "fig2", "page": 4, "kind": "table"},
+            )
+
+        payload = json.loads(_build_user_text(Span(), "qp"))
+        self.assertEqual(
+            [(f["id"], f["page"], f["order_on_page"]) for f in payload["figure_inventory"]],
+            [("fig1", 4, 1), ("fig2", 4, 2)],
+        )
+        self.assertIn("reading order down each page", payload["instructions"])
