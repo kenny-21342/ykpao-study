@@ -121,7 +121,7 @@ def main() -> int:
             db_path=DB,
             asset_root=ASSETS,
             use_model=False,
-            progress_every=100,
+            progress_every=25,
             log=log,
         )
 
