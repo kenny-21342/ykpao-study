@@ -82,6 +82,8 @@ public/uploads/
 !/pdf_extraction/bank/
 !/pdf_extraction/question_images/
 /pdf_extraction/**/__pycache__/
+__pycache__/
+*.pyc
 /pdf_extraction/**/*.db
 /pdf_extraction/**/*.db-shm
 /pdf_extraction/**/*.db-wal
