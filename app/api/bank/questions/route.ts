@@ -75,6 +75,10 @@ export async function GET(request: NextRequest) {
       year: intParam(searchParams.get('year')),
       session: searchParams.get('session') || null,
       paperNumber: intParam(searchParams.get('paper')),
+      topic: searchParams.get('topic') || null,
+      // Only a signed-in user has bookmarks; for anyone else the filter is a
+      // no-op rather than an empty list, which would look like a broken page.
+      bookmarkedBy: searchParams.get('bookmarked') === '1' && user ? user.id : null,
       page: parsePositiveInt(searchParams.get('page'), 1),
       limit: parsePositiveInt(searchParams.get('limit'), 20, 100),
     });

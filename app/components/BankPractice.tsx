@@ -17,7 +17,7 @@
  * `AssistancePanel`.
  */
 import { useEffect, useState } from 'react';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
 
@@ -26,6 +26,7 @@ type Filters = {
   years: number[];
   sessions: string[];
   paperNumbers: number[];
+  topics: string[];
 };
 
 type Summary = {
@@ -47,7 +48,7 @@ type Summary = {
 
 type FullQuestion = BankQuestionView & { paper: Summary['paper'] };
 
-const EMPTY_FILTERS: Filters = { subjects: [], years: [], sessions: [], paperNumbers: [] };
+const EMPTY_FILTERS: Filters = { subjects: [], years: [], sessions: [], paperNumbers: [], topics: [] };
 
 /** "s" and "w" are how the corpus stores it; neither is what to show. */
 function sessionLabel(session: string): string {
@@ -148,6 +149,10 @@ export default function BankPractice() {
    * when it holds tens of thousands.
    */
   const [scope, setScope] = useState<'enrolled' | 'all'>('enrolled');
+  const [topic, setTopic] = useState('');
+  const [onlyBookmarked, setOnlyBookmarked] = useState(false);
+  /** Ids the signed-in user has starred, so a list row can draw a filled star. */
+  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
 
   const [questions, setQuestions] = useState<Summary[]>([]);
   const [total, setTotal] = useState(0);
@@ -156,6 +161,15 @@ export default function BankPractice() {
 
   const [selected, setSelected] = useState<FullQuestion | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    // Signed-out users simply have none; a 401 here is not an error worth
+    // surfacing, it just means no stars are drawn.
+    fetch('/api/bank/bookmarks')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setBookmarked(new Set<number>(data.questionIds ?? [])))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     fetch(`/api/bank/questions?action=filters&scope=${scope}`)
@@ -177,6 +191,8 @@ export default function BankPractice() {
     if (year) params.set('year', year);
     if (session) params.set('session', session);
     if (paperNumber) params.set('paper', paperNumber);
+    if (topic) params.set('topic', topic);
+    if (onlyBookmarked) params.set('bookmarked', '1');
 
     (async () => {
       try {
@@ -203,7 +219,7 @@ export default function BankPractice() {
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope]);
+  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -212,6 +228,41 @@ export default function BankPractice() {
     setPage(1);
     setSelected(null);
     setListLoading(true);
+  };
+
+  /**
+   * Star or unstar, updating the set before the request returns.
+   *
+   * A star is a one-tap action on a list of images; waiting for a round trip
+   * to fill it in reads as the tap not registering. If the request fails the
+   * change is put back, so the UI never claims something the server rejected.
+   */
+  const toggleBookmark = async (id: number) => {
+    const wasBookmarked = bookmarked.has(id);
+    setBookmarked((current) => {
+      const next = new Set(current);
+      if (wasBookmarked) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+    try {
+      const res = wasBookmarked
+        ? await fetch(`/api/bank/bookmarks?questionId=${id}`, { method: 'DELETE' })
+        : await fetch('/api/bank/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId: id }),
+          });
+      if (!res.ok) throw new Error('rejected');
+    } catch {
+      setBookmarked((current) => {
+        const next = new Set(current);
+        if (wasBookmarked) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
   };
 
   const openQuestion = async (id: number) => {
@@ -242,9 +293,25 @@ export default function BankPractice() {
         >
           ← Back to questions
         </button>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {selected.paper.subject} · {paperLabel(selected.paper)}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {selected.paper.subject} · {paperLabel(selected.paper)}
+          </p>
+          <button
+            type="button"
+            onClick={() => toggleBookmark(selected.id)}
+            aria-pressed={bookmarked.has(selected.id)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <Star
+              className={`h-3.5 w-3.5 ${
+                bookmarked.has(selected.id) ? 'fill-amber-400 text-amber-400' : ''
+              }`}
+              aria-hidden="true"
+            />
+            {bookmarked.has(selected.id) ? 'Starred' : 'Star'}
+          </button>
+        </div>
         <BankQuestionCard question={selected} />
           <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <AssistancePanel question={selected} />
@@ -281,6 +348,27 @@ export default function BankPractice() {
             {option === 'enrolled' ? 'My courses' : 'All subjects'}
           </button>
         ))}
+        <button
+          type="button"
+          aria-pressed={onlyBookmarked}
+          onClick={() => {
+            setOnlyBookmarked((current) => !current);
+            setPage(1);
+            setSelected(null);
+            setListLoading(true);
+          }}
+          className={`ml-1 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
+            onlyBookmarked
+              ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
+              : 'text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          <Star
+            className={`h-3.5 w-3.5 ${onlyBookmarked ? 'fill-amber-400 text-amber-400' : ''}`}
+            aria-hidden="true"
+          />
+          Starred
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -328,6 +416,23 @@ export default function BankPractice() {
             <option key={option} value={option}>Paper {option}</option>
           ))}
         </select>
+        {/* Hidden while the bank has no topics at all, rather than offered as
+          * a dropdown that filters everything down to nothing. Tagging is part
+          * of the model pass a crop-only run skips, so this appears on its own
+          * once that has run. */}
+        {filters.topics.length > 0 && (
+          <select
+            aria-label="Topic"
+            value={topic}
+            onChange={(e) => changeFilter(setTopic)(e.target.value)}
+            className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 sm:col-span-4"
+          >
+            <option value="">All topics</option>
+            {filters.topics.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -349,12 +454,19 @@ export default function BankPractice() {
 
       <ul className="space-y-2">
         {questions.map((question) => (
-          <li key={question.id}>
+          <li
+            key={question.id}
+            // The star is its own control, so the row cannot be one big
+            // button -- a button inside a button is invalid and the inner one
+            // stops responding. The row is a container; the open action and
+            // the star are siblings inside it.
+            className="flex items-center rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-gray-700/40"
+          >
             <button
               type="button"
               onClick={() => openQuestion(question.id)}
               disabled={detailLoading}
-              className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left hover:border-blue-300 hover:bg-blue-50/40 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-gray-700/40"
+              className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left disabled:opacity-60"
             >
               {question.thumbnail && (
                 // Decorative: the text beside it already names the question.
@@ -382,6 +494,24 @@ export default function BankPractice() {
                   Mark scheme
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleBookmark(question.id)}
+              aria-pressed={bookmarked.has(question.id)}
+              aria-label={
+                bookmarked.has(question.id)
+                  ? `Remove star from question ${question.rootNumber}`
+                  : `Star question ${question.rootNumber}`
+              }
+              className="shrink-0 self-stretch px-3 text-gray-400 hover:text-amber-500"
+            >
+              <Star
+                className={`h-4 w-4 ${
+                  bookmarked.has(question.id) ? 'fill-amber-400 text-amber-400' : ''
+                }`}
+                aria-hidden="true"
+              />
             </button>
           </li>
         ))}

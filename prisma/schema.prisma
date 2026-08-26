@@ -33,6 +33,7 @@ model User {
   questionAttempts        QuestionAttempt[]
   bookmarks               Bookmark[]
   pastPaperBookmarks      PastPaperBookmark[]
+  bankQuestionBookmarks   BankQuestionBookmark[]
   studySessions           StudySession[]
   sharedNotes             SharedNote[]
   noteComments            NoteComment[]
@@ -1321,20 +1322,43 @@ model BankQuestion {
   promptVersion       String?
   createdAt           DateTime @default(now())
 
-  paper       BankPaper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  screenshot  BankAsset?          @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
+  paper       BankPaper              @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  screenshot  BankAsset?             @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
   strips      BankQuestionStrip[]
   assets      BankQuestionAsset[]
   topics      BankQuestionTopic[]
   tags        BankQuestionTag[]
   reviewFlags BankReviewFlag[]
   markScheme  BankMarkScheme?
+  bookmarks   BankQuestionBookmark[]
 
   @@unique([paperId, rootNumber])
   @@index([paperId])
   @@index([status])
   @@index([difficulty])
   @@map("bank_questions")
+}
+
+// Star/bookmark for a crop-first bank question.
+//
+// A third bookmark table, because there are three question tables and a
+// foreign key can only point at one of them: `Bookmark` targets the legacy
+// Question, `PastPaperBookmark` the transcribed PastPaperQuestion, and this
+// the BankQuestion a student actually browses. Merging them would mean giving
+// up referential integrity on all three.
+model BankQuestionBookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId Int
+  note       String? // optional user memo
+  createdAt  DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@map("bank_question_bookmarks")
 }
 
 model BankMarkScheme {

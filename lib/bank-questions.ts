@@ -217,6 +217,16 @@ export type BankFilters = {
   years: number[];
   sessions: string[];
   paperNumbers: number[];
+  /**
+   * Topics that actually have published questions behind them.
+   *
+   * Empty for now, and the UI hides the control when it is: topics come from
+   * the pipeline's tagging stage, which needs the model pass a crop-only run
+   * skips, so `bank_topics` holds no rows at all. Offering a dropdown that
+   * filters 68,849 questions down to nothing would be worse than offering
+   * nothing. It lights up on its own once tagging has run.
+   */
+  topics: string[];
 };
 
 export type BankQuestionSummary = {
@@ -278,7 +288,7 @@ function toBankSubjectCodes(catalogCodes: string[]): string[] {
 export async function listBankFilters(subjectCodes: string[] | null): Promise<BankFilters> {
   const where = publishedQuestionPaperWhere(subjectCodes);
 
-  const [subjects, years, sessions, paperNumbers] = await Promise.all([
+  const [subjects, years, sessions, paperNumbers, topics] = await Promise.all([
     prisma.bankSubject.findMany({
       where: { papers: { some: where } },
       orderBy: [{ name: 'asc' }, { level: 'asc' }],
@@ -294,6 +304,11 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
       where, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
       select: { paperNumber: true },
     }),
+    prisma.bankTopic.findMany({
+      where: { questions: { some: { question: { status: 'published' } } } },
+      orderBy: { name: 'asc' },
+      select: { name: true },
+    }),
   ]);
 
   return {
@@ -307,6 +322,7 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
     years: years.map((row) => row.year),
     sessions: sessions.map((row) => row.session),
     paperNumbers: paperNumbers.map((row) => row.paperNumber),
+    topics: topics.map((row) => row.name),
   };
 }
 
@@ -322,6 +338,9 @@ export async function listBankQuestions(options: {
   year?: number | null;
   session?: string | null;
   paperNumber?: number | null;
+  topic?: string | null;
+  /** When set, only questions this user has starred. */
+  bookmarkedBy?: string | null;
   page?: number;
   limit?: number;
 }): Promise<{ questions: BankQuestionSummary[]; total: number; page: number; limit: number }> {
@@ -330,6 +349,10 @@ export async function listBankQuestions(options: {
 
   const where = {
     status: 'published',
+    ...(options.bookmarkedBy
+      ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
+      : {}),
+    ...(options.topic ? { topics: { some: { topic: { name: options.topic } } } } : {}),
     paper: {
       ...publishedQuestionPaperWhere(options.subjectCodes),
       ...(options.subjectId ? { subjectId: options.subjectId } : {}),
