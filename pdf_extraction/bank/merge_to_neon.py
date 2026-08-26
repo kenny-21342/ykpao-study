@@ -136,6 +136,31 @@ def main():
 
     dst = connect_dst()
 
+    def ensure_connection():
+        """Reconnect if the session died while we were not looking.
+
+        The asset stage holds one connection through a scan of 400,328 rows,
+        and Neon drops a session that has been quiet for long enough. The merge
+        then died at the next stage with "SSL connection has been closed
+        unexpectedly", after twenty-five minutes of work that all had to be
+        repeated. Every stage boundary checks first; the inserts either side of
+        it are ON CONFLICT DO NOTHING, so reconnecting costs nothing.
+        """
+        nonlocal dst
+        try:
+            with dst.cursor() as cur:
+                cur.execute("SELECT 1")
+            return
+        except Exception:
+            pass
+        try:
+            dst.close()
+        except Exception:
+            pass
+        dst = connect_dst()
+        print("  [DB] reconnected")
+
+
     def safe_rollback():
         """Roll back the failed statement without hiding why it failed.
 
@@ -198,6 +223,9 @@ def main():
                 self.written += len(batch)
             except Exception as batch_error:
                 safe_rollback()
+                # A dead session fails every row of the retry too, turning one
+                # dropped connection into a batch of identical errors.
+                ensure_connection()
                 print(f"\n  ⚠ {self.label}: batch failed ({batch_error}); retrying row by row")
                 for values in batch:
                     try:
@@ -276,6 +304,7 @@ def main():
     print(f"  ✓ {len(rows)} subjects ({len(subject_id_map)} mapped)")
 
     # ---- Merge papers ----
+    ensure_connection()
     print("Merging bank_papers...")
     rows = src.execute("""
         SELECT id, subject_id, board, year, session, paper_number, variant,
@@ -340,6 +369,7 @@ def main():
     print(f"  ✓ {len(rows)} papers ({len(paper_id_map)} mapped, {skipped_existing} already existed)")
 
     # ---- Merge assets ----
+    ensure_connection()
     print("Merging bank_assets...")
     rows = src.execute("""
         SELECT id, sha256, kind, relative_path, width, height, byte_size,
@@ -400,6 +430,7 @@ def main():
           f"{skipped_assets} already existed, {failed} failed)")
 
     # ---- Merge questions ----
+    ensure_connection()
     print("Merging bank_questions...")
     rows = src.execute("""
         SELECT id, paper_id, root_number, body_md, parts, total_marks,
@@ -474,6 +505,7 @@ def main():
           f"{skipped_q} already existed, {failed_q} failed)")
 
     # ---- Merge mark schemes ----
+    ensure_connection()
     print("Merging bank_mark_schemes...")
     rows = src.execute("""
         SELECT id, question_id, paper_id, root_number, answer_md,
@@ -549,6 +581,7 @@ def main():
           f"{failed_ms} failed)")
 
     # ---- Merge topics ----
+    ensure_connection()
     print("Merging bank_topics...")
     rows = src.execute('SELECT id, subject_id, code, name FROM bank_topics').fetchall()
 
@@ -591,6 +624,7 @@ def main():
     print(f"  ✓ {len(rows)} topics")
 
     # ---- Merge tags ----
+    ensure_connection()
     print("Merging bank_tags...")
     rows = src.execute('SELECT id, slug, label FROM bank_tags').fetchall()
 
@@ -628,6 +662,7 @@ def main():
     print(f"  ✓ {len(rows)} tags")
 
     # ---- Merge question topics junction ----
+    ensure_connection()
     print("Merging bank_question_topics...")
     rows = src.execute('SELECT question_id, topic_id, confidence FROM bank_question_topics').fetchall()
 
@@ -647,6 +682,7 @@ def main():
     print(f"  ✓ {len(rows)} question-topic links")
 
     # ---- Merge question tags junction ----
+    ensure_connection()
     print("Merging bank_question_tags...")
     rows = src.execute('SELECT question_id, tag_id, confidence FROM bank_question_tags').fetchall()
 
@@ -666,6 +702,7 @@ def main():
     print(f"  ✓ {len(rows)} question-tag links")
 
     # ---- Merge question assets ----
+    ensure_connection()
     print("Merging bank_question_assets...")
     rows = src.execute('SELECT question_id, asset_id, placeholder, ordering FROM bank_question_assets').fetchall()
 
@@ -719,6 +756,7 @@ def main():
         print(f"  ✓ {written} of {len(rows)} strips ({failed_strips} failed)")
 
     # ---- Merge mark scheme assets ----
+    ensure_connection()
     print("Merging bank_mark_scheme_assets...")
     rows = src.execute('SELECT mark_scheme_id, asset_id, placeholder, ordering FROM bank_mark_scheme_assets').fetchall()
 
@@ -740,6 +778,7 @@ def main():
     print(f"  ✓ {written} of {len(rows)} mark scheme assets ({failed_msa} failed)")
 
     # ---- Merge review flags ----
+    ensure_connection()
     print("Merging bank_review_flags...")
     rows = src.execute("""
         SELECT id, question_id, paper_id, issue_type, severity, message, evidence, status, created_at
@@ -766,6 +805,7 @@ def main():
     print(f"  ✓ {written} of {len(rows)} review flags ({failed_flags} failed)")
 
     # ---- Merge run ledger ----
+    ensure_connection()
     print("Merging bank_run_ledger...")
     rows = src.execute("""
         SELECT work_key, stage, source_sha256, root_number, status, detail,

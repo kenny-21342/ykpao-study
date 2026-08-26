@@ -124,6 +124,36 @@ def content_words(page, clip=None):
             yield box, word
 
 
+# A box is refused when this share of the words it covers are content.
+#
+# A single word blocking a whole box is too strict: the copyright notice is a
+# fixed sentence of ordinary English -- "... Education is part of ... has been
+# ... To avoid ..." -- so a word-by-word test refuses the band that erases it
+# and the notice stays printed in the crop. Judging the box by what it mostly
+# covers separates the two cases cleanly: a box over a lone constant is 100%
+# content, a misclassified stem line is nearly all content, and a copyright
+# band is mostly boilerplate.
+_CONTENT_SHARE = 0.5
+
+# The rest of the Cambridge copyright notice, which is ordinary English:
+# "Permission to reproduce items where third-party owned material protected by
+# copyright is included has been sought and cleared where possible."
+#
+# Deliberately used ONLY when judging whether a box is mostly boilerplate, and
+# never by is_content_token. The two answer different questions: the guard asks
+# "is this box erasing a notice or a question?", the check asks "did we lose
+# something a student needed?". Treating "is" or "the" as furniture in the
+# second would start hiding real losses, which is the bug this all began with.
+_NOTICE_WORDS = frozenset(
+    """
+    to is by the of and has been where items material sought cleared possible
+    made publisher trace holders any at in on for with that this it its as an
+    avoid issue disclosure answer-related information candidate live
+    examinations copyright part cambridge local school tests exams series
+    """.split()
+)
+
+
 def filter_erase_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
     """Split erase boxes into those safe to paint and those that would destroy content.
 
@@ -142,17 +172,25 @@ def filter_erase_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
     if not boxes:
         return [], []
 
-    rects = [fitz.Rect(*box) for box in boxes]
-    words = list(content_words(page))
+    matrix = page.rotation_matrix
+    every_word = [
+        (fitz.Rect(wx0, wy0, wx1, wy1) * matrix, word)
+        for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words")
+    ]
 
     kept, dropped = [], []
-    for box, rect in zip(boxes, rects):
-        casualty = next(
-            (word for word_box, word in words if coverage(word_box, [rect]) >= threshold),
-            None,
-        )
-        if casualty is None:
-            kept.append(box)
+    for box in boxes:
+        rect = fitz.Rect(*box)
+        covered = [
+            word for word_box, word in every_word
+            if coverage(word_box, [rect]) >= threshold
+        ]
+        content = [
+            word for word in covered
+            if is_content_token(word) and word.lower().strip('.,()') not in _NOTICE_WORDS
+        ]
+        if covered and len(content) / len(covered) > _CONTENT_SHARE:
+            dropped.append((box, content[0]))
         else:
-            dropped.append((box, casualty))
+            kept.append(box)
     return kept, dropped

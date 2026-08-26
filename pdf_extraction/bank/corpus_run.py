@@ -1,16 +1,29 @@
 #!/usr/bin/env python3
-"""Crop the whole corpus. No model calls, no spend.
+"""Crop the corpus, or one subject of it. No model calls, no spend.
 
     python3 -m pdf_extraction.bank.corpus_run
+    python3 -m pdf_extraction.bank.corpus_run --subject 0625
+    python3 -m pdf_extraction.bank.corpus_run --subject 0625 --force
+    python3 -m pdf_extraction.bank.corpus_run --chunk 500
 
 Resumable: bank_papers is keyed on source_path, so a re-run updates rather
 than duplicates, and anything already done is cheap to pass over again.
+
+--subject narrows the run to one syllabus code or IB subject slug, which is
+what makes re-rendering after an extraction fix affordable: Physics 0625 is
+886 papers and about half an hour, against roughly ten hours for all 14,193.
+
+--force turns off the resume filter. That filter asks whether a paper has ever
+been cropped, which is the right question for finishing an interrupted run and
+the wrong one for re-rendering papers whose crops need correcting -- without
+it, every already-cropped paper is skipped and the fix reaches nothing.
 """
 from __future__ import annotations
 
+import argparse
 import os
+import re
 import sqlite3
-import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,9 +35,26 @@ DB = Path(__file__).resolve().parent / "extract.db"
 ASSETS = Path(__file__).resolve().parent / "assets"
 
 
-def collect() -> list[Path]:
+def matches_subject(path: Path, subject: str) -> bool:
+    """Whether a PDF belongs to the named syllabus code or IB subject.
+
+    CAIE papers live under my_raw_pdfs/<level>/<name>-<code>/ and name their
+    code in the filename too (0625_s23_qp_41.pdf); IB papers sit under a
+    subject directory whose name is the slug. Matching on either the directory
+    or the filename covers both without a second source of truth.
+    """
+    wanted = subject.lower()
+    if any(wanted == part.lower() or part.lower().endswith(f"-{wanted}")
+           for part in path.parts):
+        return True
+    return bool(re.match(rf"{re.escape(wanted)}[_/]", path.name.lower()))
+
+
+def collect(subject: str | None = None) -> list[Path]:
     papers = sorted((ROOT / "my_raw_pdfs").rglob("*.pdf"))
     papers += sorted((ROOT / "IB PAST PAPERS - YEAR").rglob("*.pdf"))
+    if subject:
+        papers = [path for path in papers if matches_subject(path, subject)]
     skip = quarantined()
     if skip:
         repo = ROOT.parent
@@ -115,10 +145,25 @@ def single_writer():
 
 
 def main() -> int:
-    papers = collect()
-    total = len(papers)
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--subject", default=None,
+                        help="syllabus code (0625) or IB subject slug (biology)")
+    parser.add_argument("--chunk", type=int, default=0,
+                        help="stop after this many documents")
+    parser.add_argument("--force", action="store_true",
+                        help="re-render papers that were already cropped")
+    args = parser.parse_args()
 
-    done = already_done()
+    papers = collect(args.subject)
+    total = len(papers)
+    if args.subject:
+        print(f"subject {args.subject}: {total} documents", flush=True)
+        if not total:
+            print("nothing matched — check the code or slug", flush=True)
+            return 1
+
+    done = set() if args.force else already_done()
     if done:
         # Stored paths are relative to the repository root.
         repo = ROOT.parent
@@ -129,13 +174,11 @@ def main() -> int:
         print(f"resuming: {total - len(papers)} of {total} already cropped",
               flush=True)
 
-    # The argument is a chunk size, applied *after* the resume filter, so
-    # repeated bounded runs walk the corpus. Long single runs have twice been
-    # killed part way through; each chunk that finishes is progress that the
-    # next one skips.
-    chunk = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    if chunk:
-        papers = papers[:chunk]
+    # Applied *after* the resume filter, so repeated bounded runs walk the
+    # corpus. Long single runs have twice been killed part way through; each
+    # chunk that finishes is progress that the next one skips.
+    if args.chunk:
+        papers = papers[: args.chunk]
 
     started = time.time()
     print(f"{len(papers)} documents -> {DB}", flush=True)
