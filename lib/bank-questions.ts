@@ -9,6 +9,7 @@
  * Strips matter rather than `screenshotId`: that column holds only the first
  * one, which for 89% of questions is the top fragment of the image.
  */
+import { subjectNameForCode } from '@/lib/course-catalog';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
 
@@ -39,6 +40,42 @@ export type BankPaperView = {
   variant: number;
   questions: BankQuestionView[];
 };
+
+/**
+ * What a student should see for a subject.
+ *
+ * Two problems, both visible the moment the index lists 6,406 papers.
+ *
+ * The pipeline stores CAIE subjects as "CAIE 0625": it parses filenames, and a
+ * filename carries the syllabus code, not the subject. The course catalog maps
+ * code to name, so that is resolved here rather than by rebuilding the corpus.
+ * IB papers already carry a real name and keep it.
+ *
+ * And the same name covers several qualifications — Physics is both 0625 and
+ * 9702, History is IGCSE and IB — so without the level the list shows repeated
+ * identical entries with no way to tell them apart.
+ */
+function displaySubject(subject: {
+  name: string;
+  code: string;
+  level: string | null;
+  board: string;
+}): string {
+  const name = subjectNameForCode(subject.code) ?? subject.name;
+  const qualification = qualificationLabel(subject.board, subject.level);
+  return qualification ? `${name} (${qualification})` : name;
+}
+
+/** "igcse" and "HL" are how the pipeline stores it; neither is what to show. */
+function qualificationLabel(board: string, level: string | null): string | null {
+  if (board === 'IB') {
+    if (level === 'HL' || level === 'SL') return `IB ${level}`;
+    return 'IB';
+  }
+  if (level === 'igcse') return 'IGCSE';
+  if (level === 'a-level') return 'A Level';
+  return null;
+}
 
 type StripRow = {
   page: number;
@@ -104,7 +141,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
 
   return {
     id: paper.id,
-    subject: paper.subject.name,
+    subject: displaySubject(paper.subject),
     board: paper.board,
     year: paper.year,
     session: paper.session,
@@ -136,7 +173,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
 
 /** Papers that actually have published questions, newest sitting first. */
 export async function listBankPapers(limit = 100) {
-  return prisma.bankPaper.findMany({
+  const papers = await prisma.bankPaper.findMany({
     where: { docType: 'qp', questions: { some: { status: 'published' } } },
     orderBy: [{ year: 'desc' }, { paperNumber: 'asc' }, { variant: 'asc' }],
     take: limit,
@@ -146,8 +183,13 @@ export async function listBankPapers(limit = 100) {
       session: true,
       paperNumber: true,
       variant: true,
-      subject: { select: { name: true, code: true } },
+      subject: { select: { name: true, code: true, level: true, board: true } },
       _count: { select: { questions: true } },
     },
   });
+
+  return papers.map((paper) => ({
+    ...paper,
+    subject: { ...paper.subject, name: displaySubject(paper.subject) },
+  }));
 }

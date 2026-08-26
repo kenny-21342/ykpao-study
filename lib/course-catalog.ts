@@ -144,6 +144,24 @@ export const COURSE_CATALOG: CatalogCourse[] = [
 ];
 
 /**
+ * The human name for a syllabus code, or null when the catalog lacks it.
+ *
+ * The question bank stores CAIE subjects as "CAIE 0625": the extraction
+ * pipeline has only the filename to go on, and a filename carries the code, not
+ * the subject. Reading the name from here lets a student see "Physics" without
+ * the corpus being rebuilt. Codes outside the catalog — retired syllabuses, A
+ * Level subjects nobody is enrolled in — fall back to what was stored.
+ */
+export function subjectNameForCode(subjectCode: string): string | null {
+  for (const entry of COURSE_CATALOG) {
+    for (const scope of entry.scopes) {
+      if (scope.subjectCode === subjectCode) return entry.name;
+    }
+  }
+  return null;
+}
+
+/**
  * The `subjects.code` values the site publishes.
  *
  * The catalogue is the single definition of what exists here, so the paper
