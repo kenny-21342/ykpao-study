@@ -27,17 +27,45 @@ from pathlib import Path
 
 
 def load_db_url() -> str:
-    """Load DATABASE_URL from env or .env file."""
-    url = os.environ.get("DATABASE_URL", "")
-    if url:
-        return url
+    """The connection string for a bulk merge, preferring the direct endpoint.
+
+    Neon serves two endpoints: a pooled one (host contains "-pooler", PgBouncer
+    in front) and a direct one. The pooled endpoint is right for the web app,
+    which makes many short connections, and wrong for this script, which holds
+    one session open across hundreds of thousands of inserts -- PgBouncer drops
+    it partway through and the run dies with "SSL SYSCALL error: Operation
+    timed out". That is exactly how the first full run was lost.
+
+    So: DIRECT_DATABASE_URL wins if set. Otherwise DATABASE_URL is used, but if
+    it points at the pooler the host is rewritten to the direct one, which on
+    Neon is the same host without the "-pooler" suffix.
+    """
+    for name in ("DIRECT_DATABASE_URL", "DATABASE_URL"):
+        url = os.environ.get(name, "")
+        if url:
+            return _prefer_direct(url)
+
     env_path = Path(__file__).parent.parent.parent / ".env"
     if env_path.exists():
+        wanted = ("DIRECT_DATABASE_URL=", "DATABASE_URL=")
+        found: dict[str, str] = {}
         for line in env_path.read_text().splitlines():
             line = line.strip()
-            if line.startswith("DATABASE_URL="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
+            for prefix in wanted:
+                if line.startswith(prefix):
+                    found[prefix] = line.split("=", 1)[1].strip().strip('"').strip("'")
+        for prefix in wanted:
+            if prefix in found:
+                return _prefer_direct(found[prefix])
     raise RuntimeError("DATABASE_URL not found in env or .env")
+
+
+def _prefer_direct(url: str) -> str:
+    """Rewrite a Neon pooled URL to its direct equivalent."""
+    if "-pooler." not in url:
+        return url
+    print("  [DB] pooled endpoint detected; using the direct one for the bulk merge")
+    return url.replace("-pooler.", ".", 1)
 
 
 def main():
@@ -95,7 +123,7 @@ def main():
 
     # ---- Open destination (Postgres) ----
     import psycopg2
-    from psycopg2.extras import register_json
+    from psycopg2.extras import execute_values, register_json
 
     db_url = load_db_url()
     print(f"\nDestination: {db_url.split('@')[1].split('/')[0] if '@' in db_url else 'Neon'}...")
@@ -108,6 +136,87 @@ def main():
 
     dst = connect_dst()
 
+    def safe_rollback():
+        """Roll back the failed statement without hiding why it failed.
+
+        A per-row handler exists to report a bad row and carry on. But when the
+        failure *is* the connection dying, rollback() raises InterfaceError from
+        inside the handler -- so the traceback names the rollback and the real
+        cause (an SSL timeout, a dropped session) never reaches the log. That
+        masking cost a full merge run once already.
+        """
+        try:
+            dst.rollback()
+        except Exception:
+            pass
+
+
+    class BatchInserter:
+        """Insert rows a thousand at a time instead of one at a time.
+
+        Every insert used to be its own round trip to Neon. Measured against
+        the production endpoint that is 2-3 rows a second, so the ~900,000
+        rows of a full merge would have taken three to five days.
+
+        Worse, the large stages committed only after their entire loop, so
+        assets was a single transaction spanning 400,328 inserts and ~35
+        hours. Neon drops long-lived connections -- that is what killed an
+        earlier run -- and any such drop would have rolled back every row.
+
+        execute_values sends up to `size` rows per statement, and each batch
+        commits as it lands, so progress survives a failure and a re-run
+        resumes from it: every insert is ON CONFLICT DO NOTHING.
+
+        A batch that fails is retried row by row. One malformed row would
+        otherwise take 999 good ones down with it, and the per-row error
+        reporting is the only way to learn which row was bad.
+        """
+
+        def __init__(self, sql, label, total, size=1000):
+            self.sql = sql
+            self.label = label
+            self.total = total
+            self.size = size
+            self.pending = []
+            self.written = 0
+            self.failed = 0
+            self.seen = 0
+
+        def add(self, values):
+            self.pending.append(values)
+            if len(self.pending) >= self.size:
+                self.flush()
+
+        def flush(self):
+            if not self.pending:
+                return
+            batch, self.pending = self.pending, []
+            try:
+                with dst.cursor() as cur:
+                    execute_values(cur, self.sql, batch, page_size=len(batch))
+                dst.commit()
+                self.written += len(batch)
+            except Exception as batch_error:
+                safe_rollback()
+                print(f"\n  ⚠ {self.label}: batch failed ({batch_error}); retrying row by row")
+                for values in batch:
+                    try:
+                        with dst.cursor() as cur:
+                            execute_values(cur, self.sql, [values], page_size=1)
+                        dst.commit()
+                        self.written += 1
+                    except Exception as row_error:
+                        safe_rollback()
+                        self.failed += 1
+                        print(f"    ⚠ {self.label} row: {row_error}")
+            self.seen += len(batch)
+            if self.total:
+                print(f"  ...{self.seen}/{self.total} sent ({self.written} written)")
+
+        def finish(self):
+            self.flush()
+            return self.written, self.failed
+
     def execute_with_retry(cur_func, max_retries=3):
         """Execute a cursor operation with reconnection on network failure."""
         nonlocal dst
@@ -117,7 +226,7 @@ def main():
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
                 print(f"\n  [DB] connection lost ({e.__class__.__name__}), retry {attempt+1}/{max_retries}...")
                 try:
-                    dst.rollback()
+                    safe_rollback()
                 except Exception:
                     pass
                 try:
@@ -161,7 +270,7 @@ def main():
                     existing_subjects[key] = result[0]
             except Exception as e:
                 print(f"\n  ⚠ subject {row['code']}: {e}")
-                dst.rollback()
+                safe_rollback()
                 continue
     dst.commit()
     print(f"  ✓ {len(rows)} subjects ({len(subject_id_map)} mapped)")
@@ -212,7 +321,7 @@ def main():
                     new_subject_id, row["board"], row["year"], row["session"],
                     row["paper_number"], row["variant"], row["timezone"],
                     row["doc_type"], row["source_path"], row["source_sha256"],
-                    row["page_count"], row["span_strategy"], row["used_ocr"],
+                    row["page_count"], row["span_strategy"], bool(row["used_ocr"]),
                     row["created_at"],
                 ))
                 result = cur.fetchone()
@@ -220,8 +329,8 @@ def main():
                     paper_id_map[old_id] = result[0]
                     existing_papers[source_path] = result[0]
             except Exception as e:
-                print(f"\n  ⚠ paper {row['sourcePath']}: {e}")
-                dst.rollback()
+                print(f"\n  ⚠ paper {row['source_path']}: {e}")
+                safe_rollback()
                 continue
 
             if (i + 1) % 200 == 0:
@@ -247,39 +356,44 @@ def main():
         existing_assets = {row[1]: row[0] for row in cur.fetchall() if row[1]}
     print(f"  (found {len(existing_assets)} assets already in Postgres)")
 
+    # RETURNING id is what forced one round trip per row: it ties each new id
+    # to the row that produced it. Batched inserts cannot do that -- ON
+    # CONFLICT DO NOTHING returns only the rows it actually inserted, in no
+    # guaranteed order -- so the ids are recovered afterwards with a single
+    # SELECT over the natural key instead. sha256 is unique, so the mapping is
+    # exact.
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_assets
+            (sha256, kind, "relativePath", width, height, "byteSize",
+             "sourcePage", bbox, "sourceDpi", "createdAt")
+        VALUES %s
+        ON CONFLICT (sha256) DO NOTHING
+        """,
+        "asset", len(rows),
+    )
+    for row in rows:
+        if row["sha256"] in existing_assets:
+            asset_id_map[row["id"]] = existing_assets[row["sha256"]]
+            skipped_assets += 1
+            continue
+        batch.add((
+            row["sha256"], row["kind"], row["relative_path"], row["width"],
+            row["height"], row["byte_size"], row["source_page"],
+            row["bbox"], row["source_dpi"], row["created_at"],
+        ))
+    written, failed = batch.finish()
+
     with dst.cursor() as cur:
-        for row in rows:
-            old_id = row["id"]
-            sha256 = row["sha256"]
+        cur.execute('SELECT id, sha256 FROM bank_assets')
+        existing_assets = {r[1]: r[0] for r in cur.fetchall() if r[1]}
+    for row in rows:
+        new_id = existing_assets.get(row["sha256"])
+        if new_id:
+            asset_id_map[row["id"]] = new_id
 
-            if sha256 in existing_assets:
-                asset_id_map[old_id] = existing_assets[sha256]
-                skipped_assets += 1
-                continue
-
-            try:
-                cur.execute("""
-                    INSERT INTO bank_assets
-                        (sha256, kind, "relativePath", width, height, "byteSize",
-                         "sourcePage", bbox, "sourceDpi", "createdAt")
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (sha256) DO NOTHING
-                    RETURNING id
-                """, (
-                    sha256, row["kind"], row["relative_path"], row["width"],
-                    row["height"], row["byte_size"], row["source_page"],
-                    row["bbox"], row["source_dpi"], row["created_at"],
-                ))
-                result = cur.fetchone()
-                if result:
-                    asset_id_map[old_id] = result[0]
-                    existing_assets[sha256] = result[0]
-            except Exception as e:
-                print(f"\n  ⚠ asset {row['sha256'][:8]}...: {e}")
-                dst.rollback()
-                continue
-    dst.commit()
-    print(f"  ✓ {len(rows)} assets ({len(asset_id_map)} mapped, {skipped_assets} already existed)")
+    print(f"  ✓ {len(rows)} assets ({len(asset_id_map)} mapped, "
+          f"{skipped_assets} already existed, {failed} failed)")
 
     # ---- Merge questions ----
     print("Merging bank_questions...")
@@ -308,54 +422,52 @@ def main():
         existing_q = {(row[1], row[2]): row[0] for row in cur.fetchall()}
     print(f"  (found {len(existing_q)} questions already in Postgres)")
 
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_questions
+            ("paperId", "rootNumber", "bodyMd", parts, "totalMarks",
+             "screenshotId", "pageStart", "pageEnd", confidence, status,
+             difficulty, "difficultySource", "difficultyRationale",
+             "runId", model, "promptVersion", "createdAt")
+        VALUES %s
+        ON CONFLICT ("paperId", "rootNumber") DO NOTHING
+        """,
+        "question", len(rows),
+    )
+    wanted_keys = []
+    for row in rows:
+        new_paper_id = paper_id_map.get(row["paper_id"])
+        if not new_paper_id:
+            continue
+
+        q_key = (new_paper_id, row["root_number"])
+        wanted_keys.append((row["id"], q_key))
+        if q_key in existing_q:
+            question_id_map[row["id"]] = existing_q[q_key]
+            skipped_q += 1
+            continue
+
+        screenshot_id = asset_id_map.get(row["screenshot_id"]) if row["screenshot_id"] else None
+        batch.add((
+            new_paper_id, row["root_number"], row["body_md"], row["parts"],
+            row["total_marks"], screenshot_id, row["page_start"], row["page_end"],
+            row["confidence"], row["status"], row["difficulty"],
+            row["difficulty_source"], row["difficulty_rationale"],
+            row["run_id"], row["model"], row["prompt_version"], row["created_at"],
+        ))
+    written, failed_q = batch.finish()
+
+    # Recover the ids the batched inserts could not return, keyed on the
+    # (paperId, rootNumber) unique constraint.
     with dst.cursor() as cur:
-        for i, row in enumerate(rows):
-            old_id = row["id"]
-            old_paper_id = row["paper_id"]
-            new_paper_id = paper_id_map.get(old_paper_id)
-            if not new_paper_id:
-                continue
-
-            q_key = (new_paper_id, row["root_number"])
-            if q_key in existing_q:
-                question_id_map[old_id] = existing_q[q_key]
-                skipped_q += 1
-                continue
-
-            # Map screenshot asset if present
-            screenshot_id = asset_id_map.get(row["screenshot_id"]) if row["screenshot_id"] else None
-
-            try:
-                cur.execute("""
-                    INSERT INTO bank_questions
-                        ("paperId", "rootNumber", "bodyMd", parts, "totalMarks",
-                         "screenshotId", "pageStart", "pageEnd", confidence, status,
-                         difficulty, "difficultySource", "difficultyRationale",
-                         "runId", model, "promptVersion", "createdAt")
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT ("paperId", "rootNumber") DO NOTHING
-                    RETURNING id
-                """, (
-                    new_paper_id, row["root_number"], row["body_md"], row["parts"],
-                    row["total_marks"], screenshot_id, row["page_start"], row["page_end"],
-                    row["confidence"], row["status"], row["difficulty"],
-                    row["difficulty_source"], row["difficulty_rationale"],
-                    row["run_id"], row["model"], row["prompt_version"], row["created_at"],
-                ))
-                result = cur.fetchone()
-                if result:
-                    question_id_map[old_id] = result[0]
-                    existing_q[q_key] = result[0]
-            except Exception as e:
-                print(f"\n  ⚠ question Q{row['rootNumber']}: {e}")
-                dst.rollback()
-                continue
-
-            if (i + 1) % 1000 == 0:
-                dst.commit()
-                print(f"  ...{i+1}/{len(rows)} processed ({skipped_q} already existed)")
-    dst.commit()
-    print(f"  ✓ {len(rows)} questions ({len(question_id_map)} mapped, {skipped_q} already existed)")
+        cur.execute('SELECT id, "paperId", "rootNumber" FROM bank_questions')
+        existing_q = {(r[1], r[2]): r[0] for r in cur.fetchall()}
+    for old_id, q_key in wanted_keys:
+        new_id = existing_q.get(q_key)
+        if new_id:
+            question_id_map[old_id] = new_id
+    print(f"  ✓ {len(rows)} questions ({len(question_id_map)} mapped, "
+          f"{skipped_q} already existed, {failed_q} failed)")
 
     # ---- Merge mark schemes ----
     print("Merging bank_mark_schemes...")
@@ -381,50 +493,50 @@ def main():
         cur.execute('SELECT id, "paperId", "rootNumber" FROM bank_mark_schemes')
         existing_ms = {(row[1], row[2]): row[0] for row in cur.fetchall()}
 
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_mark_schemes
+            ("questionId", "paperId", "rootNumber", "answerMd",
+             "markingPoints", "totalMarks", "answerLetter",
+             confidence, status, "runId", model, "promptVersion", "createdAt")
+        VALUES %s
+        ON CONFLICT ("paperId", "rootNumber") DO NOTHING
+        """,
+        "mark scheme", len(rows),
+    )
+    wanted_ms = []
+    for row in rows:
+        new_question_id = question_id_map.get(row["question_id"])
+        if not new_question_id:
+            continue
+        new_paper_id = paper_id_map.get(row["paper_id"])
+        if not new_paper_id:
+            continue
+
+        ms_key = (new_paper_id, row["root_number"])
+        wanted_ms.append((row["id"], ms_key))
+        if ms_key in existing_ms:
+            ms_id_map[row["id"]] = existing_ms[ms_key]
+            skipped_ms += 1
+            continue
+
+        batch.add((
+            new_question_id, new_paper_id, row["root_number"], row["answer_md"],
+            row["marking_points"], row["total_marks"], row["answer_letter"],
+            row["confidence"], row["status"], row["run_id"],
+            row["model"], row["prompt_version"], row["created_at"],
+        ))
+    written, failed_ms = batch.finish()
+
     with dst.cursor() as cur:
-        for row in rows:
-            old_id = row["id"]
-            old_question_id = row["question_id"]
-            new_question_id = question_id_map.get(old_question_id)
-            if not new_question_id:
-                continue
-
-            old_paper_id = row["paper_id"]
-            new_paper_id = paper_id_map.get(old_paper_id)
-            if not new_paper_id:
-                continue
-
-            ms_key = (new_paper_id, row["root_number"])
-            if ms_key in existing_ms:
-                ms_id_map[old_id] = existing_ms[ms_key]
-                skipped_ms += 1
-                continue
-
-            try:
-                cur.execute("""
-                    INSERT INTO bank_mark_schemes
-                        ("questionId", "paperId", "rootNumber", "answerMd",
-                         "markingPoints", "totalMarks", "answerLetter",
-                         confidence, status, "runId", model, "promptVersion", "createdAt")
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT ("paperId", "rootNumber") DO NOTHING
-                    RETURNING id
-                """, (
-                    new_question_id, new_paper_id, row["root_number"], row["answer_md"],
-                    row["marking_points"], row["total_marks"], row["answer_letter"],
-                    row["confidence"], row["status"], row["run_id"],
-                    row["model"], row["prompt_version"], row["created_at"],
-                ))
-                result = cur.fetchone()
-                if result:
-                    ms_id_map[old_id] = result[0]
-                    existing_ms[ms_key] = result[0]
-            except Exception as e:
-                print(f"\n  ⚠ mark scheme Q{row['rootNumber']}: {e}")
-                dst.rollback()
-                continue
-    dst.commit()
-    print(f"  ✓ {len(rows)} mark schemes ({len(ms_id_map)} mapped, {skipped_ms} already existed)")
+        cur.execute('SELECT id, "paperId", "rootNumber" FROM bank_mark_schemes')
+        existing_ms = {(r[1], r[2]): r[0] for r in cur.fetchall()}
+    for old_id, ms_key in wanted_ms:
+        new_id = existing_ms.get(ms_key)
+        if new_id:
+            ms_id_map[old_id] = new_id
+    print(f"  ✓ {len(rows)} mark schemes ({len(ms_id_map)} mapped, "
+          f"{skipped_ms} already existed, {failed_ms} failed)")
 
     # ---- Merge topics ----
     print("Merging bank_topics...")
@@ -463,7 +575,7 @@ def main():
                     existing_topics[key] = result[0]
             except Exception as e:
                 print(f"\n  ⚠ topic {row['name']}: {e}")
-                dst.rollback()
+                safe_rollback()
                 continue
     dst.commit()
     print(f"  ✓ {len(rows)} topics")
@@ -500,7 +612,7 @@ def main():
                     existing_tags[slug] = result[0]
             except Exception as e:
                 print(f"\n  ⚠ tag {row['slug']}: {e}")
-                dst.rollback()
+                safe_rollback()
                 continue
     dst.commit()
     print(f"  ✓ {len(rows)} tags")
@@ -547,20 +659,22 @@ def main():
     print("Merging bank_question_assets...")
     rows = src.execute('SELECT question_id, asset_id, placeholder, ordering FROM bank_question_assets').fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_qid = question_id_map.get(row["question_id"])
-            new_aid = asset_id_map.get(row["asset_id"])
-            if not new_qid or not new_aid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_question_assets ("questionId", "assetId", placeholder, ordering)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_qid, new_aid, row["placeholder"], row["ordering"]))
-    dst.commit()
-    print(f"  ✓ {len(rows)} question assets")
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_question_assets ("questionId", "assetId", placeholder, ordering)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "question asset", len(rows),
+    )
+    for row in rows:
+        new_qid = question_id_map.get(row["question_id"])
+        new_aid = asset_id_map.get(row["asset_id"])
+        if not new_qid or not new_aid:
+            continue
+        batch.add((new_qid, new_aid, row["placeholder"], row["ordering"]))
+    written, failed_qa = batch.finish()
+    print(f"  ✓ {written} of {len(rows)} question assets ({failed_qa} failed)")
 
     # ---- Merge crop strips ----
     #
@@ -575,42 +689,45 @@ def main():
         rows = src.execute(
             f"SELECT {source_column}, asset_id, ordering, page FROM {table}"
         ).fetchall()
-        written = 0
-        with dst.cursor() as cur:
-            for row in rows:
-                new_owner = id_map.get(row[source_column])
-                new_asset = asset_id_map.get(row["asset_id"])
-                # A strip whose owner was held back by the quality gate has
-                # nothing to attach to, and is skipped with it.
-                if not new_owner or not new_asset:
-                    continue
-                cur.execute(f"""
-                    INSERT INTO {table} ("{owner_column}", "assetId", ordering, page)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT DO NOTHING
-                """, (new_owner, new_asset, row["ordering"], row["page"]))
-                written += 1
-        dst.commit()
-        print(f"  ✓ {written} of {len(rows)} strips")
+        batch = BatchInserter(
+            f"""
+            INSERT INTO {table} ("{owner_column}", "assetId", ordering, page)
+            VALUES %s
+            ON CONFLICT DO NOTHING
+            """,
+            "strip", len(rows),
+        )
+        for row in rows:
+            new_owner = id_map.get(row[source_column])
+            new_asset = asset_id_map.get(row["asset_id"])
+            # A strip whose owner was held back by the quality gate has
+            # nothing to attach to, and is skipped with it.
+            if not new_owner or not new_asset:
+                continue
+            batch.add((new_owner, new_asset, row["ordering"], row["page"]))
+        written, failed_strips = batch.finish()
+        print(f"  ✓ {written} of {len(rows)} strips ({failed_strips} failed)")
 
     # ---- Merge mark scheme assets ----
     print("Merging bank_mark_scheme_assets...")
     rows = src.execute('SELECT mark_scheme_id, asset_id, placeholder, ordering FROM bank_mark_scheme_assets').fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_ms_id = ms_id_map.get(row["mark_scheme_id"])
-            new_aid = asset_id_map.get(row["asset_id"])
-            if not new_ms_id or not new_aid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_mark_scheme_assets ("markSchemeId", "assetId", placeholder, ordering)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_ms_id, new_aid, row["placeholder"], row["ordering"]))
-    dst.commit()
-    print(f"  ✓ {len(rows)} mark scheme assets")
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_mark_scheme_assets ("markSchemeId", "assetId", placeholder, ordering)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "mark scheme asset", len(rows),
+    )
+    for row in rows:
+        new_ms_id = ms_id_map.get(row["mark_scheme_id"])
+        new_aid = asset_id_map.get(row["asset_id"])
+        if not new_ms_id or not new_aid:
+            continue
+        batch.add((new_ms_id, new_aid, row["placeholder"], row["ordering"]))
+    written, failed_msa = batch.finish()
+    print(f"  ✓ {written} of {len(rows)} mark scheme assets ({failed_msa} failed)")
 
     # ---- Merge review flags ----
     print("Merging bank_review_flags...")
@@ -619,20 +736,24 @@ def main():
         FROM bank_review_flags
     """).fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_qid = question_id_map.get(row["question_id"]) if row["question_id"] else None
-            new_pid = paper_id_map.get(row["paper_id"]) if row["paper_id"] else None
-            if not new_qid and not new_pid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_review_flags ("questionId", "paperId", "issueType", severity, message, evidence, status, "createdAt")
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_qid, new_pid, row["issue_type"], row["severity"], row["message"], row["evidence"], row["status"], row["created_at"]))
-    dst.commit()
-    print(f"  ✓ {len(rows)} review flags")
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_review_flags
+            ("questionId", "paperId", "issueType", severity, message, evidence, status, "createdAt")
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "review flag", len(rows),
+    )
+    for row in rows:
+        new_qid = question_id_map.get(row["question_id"]) if row["question_id"] else None
+        new_pid = paper_id_map.get(row["paper_id"]) if row["paper_id"] else None
+        if not new_qid and not new_pid:
+            continue
+        batch.add((new_qid, new_pid, row["issue_type"], row["severity"],
+                   row["message"], row["evidence"], row["status"], row["created_at"]))
+    written, failed_flags = batch.finish()
+    print(f"  ✓ {written} of {len(rows)} review flags ({failed_flags} failed)")
 
     # ---- Merge run ledger ----
     print("Merging bank_run_ledger...")

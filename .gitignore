@@ -121,3 +121,8 @@ public/uploads/
 /playwright-report/
 /blob-report/
 /e2e/.auth/
+
+# Extracted crop images: 400,328 files, 15.7 GB. They live in object storage
+# (uploaded by scripts/upload-bank-assets.ts) and are rebuilt by the extraction
+# pipeline, so they must never enter git history.
+/pdf_extraction/bank/assets/

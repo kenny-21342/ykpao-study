@@ -31,6 +31,7 @@ type Args = {
   limit: number | null;
   all: boolean;
   concurrency: number;
+  skipHead: boolean;
 };
 
 type AssetRow = { sha256: string; relative_path: string };
@@ -73,11 +74,13 @@ function parseArgs(argv: string[]): Args {
     dryRun: false,
     limit: null,
     all: false,
-    concurrency: 20,
+    concurrency: 12,
+    skipHead: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     if (flag === '--dry-run') args.dryRun = true;
+    else if (flag === '--skip-head') args.skipHead = true;
     else if (flag === '--all') args.all = true;
     else if (flag === '--db') args.db = argv[++i];
     else if (flag === '--assets') args.assets = argv[++i];
@@ -122,6 +125,29 @@ async function main(): Promise<void> {
     );
   };
 
+  /**
+   * Retry a network call that failed for a reason worth retrying.
+   *
+   * R2 is a remote host and 217k requests will meet transient failures however
+   * healthy the link is; the first run died on a single connect timeout that
+   * escaped a worker and rejected the whole pool. Backoff is exponential so a
+   * brief outage does not turn into a burst of retries against a host already
+   * struggling.
+   */
+  async function withRetry<T>(what: string, run: () => Promise<T>): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        return await run();
+      } catch (error) {
+        lastError = error;
+        if (attempt === 4) break;
+        await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+      }
+    }
+    throw new Error(`${what}: ${(lastError as Error)?.message ?? lastError}`);
+  }
+
   async function handle(row: AssetRow): Promise<void> {
     const key = bankAssetKey(row.sha256);
     if (!key) {
@@ -132,8 +158,22 @@ async function main(): Promise<void> {
     }
 
     // Content-addressed, so an object already there is byte-identical.
-    if (await store.head(key)) {
-      counts.skipped += 1;
+    // Wrapped like every other network call: an unguarded head() was what
+    // brought down the first run.
+    //
+    // --skip-head goes straight to the PUT. Measured round-trip to R2 is ~1.4s,
+    // so on a bulk run into an empty bucket the check costs more wall-clock
+    // than the upload it is trying to avoid; and because the key is the
+    // content digest, re-PUTting writes identical bytes. Worth keeping for
+    // top-up runs later, where most rows really are already there.
+    if (!args.skipHead) try {
+      if (await withRetry('head', () => store.head(key))) {
+        counts.skipped += 1;
+        return;
+      }
+    } catch (error) {
+      console.error(`  ! ${row.sha256.slice(0, 12)}: ${(error as Error).message}`);
+      counts.failed += 1;
       return;
     }
 
@@ -155,7 +195,7 @@ async function main(): Promise<void> {
 
     try {
       const body = await readFile(file);
-      await store.put(key, body, { contentType: 'image/png' });
+      await withRetry('put', () => store.put(key, body, { contentType: 'image/png' }));
       counts.uploaded += 1;
       counts.bytes += body.byteLength;
     } catch (error) {
@@ -173,7 +213,14 @@ async function main(): Promise<void> {
     async () => {
       while (next < rows.length) {
         const row = rows[next++];
-        await handle(row);
+        try {
+          await handle(row);
+        } catch (error) {
+          // A worker must never reject: Promise.all would abandon the other
+          // workers mid-flight and lose the run.
+          console.error(`  ! ${row.sha256?.slice(0, 12)}: ${(error as Error).message}`);
+          counts.failed += 1;
+        }
         report();
       }
     }

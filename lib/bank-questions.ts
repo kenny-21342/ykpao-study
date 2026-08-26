@@ -28,6 +28,21 @@ export type BankQuestionView = {
   pageEnd: number | null;
   strips: BankStrip[];
   markScheme: { id: number; strips: BankStrip[]; answerLetter: string | null } | null;
+  /**
+   * Whether a transcription exists for this question.
+   *
+   * The crop-only corpus run produced 68,849 published questions at no model
+   * cost, and every one of them has an empty `bodyMd`: the strips are the
+   * question. Transcription is a separate, paid pass that fills `bodyMd` in
+   * later, subject by subject.
+   *
+   * Everything that reasons over a question rather than displaying it — hints,
+   * AI grading, search — needs that text and cannot work without it. So the
+   * features are gated on this flag and hidden when it is false, rather than
+   * offered and then failing on an empty prompt. As transcription lands, they
+   * appear for the questions that have it, with no further change here.
+   */
+  hasText: boolean;
 };
 
 export type BankPaperView = {
@@ -154,6 +169,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
         totalMarks: question.totalMarks,
         pageStart: question.pageStart,
         pageEnd: question.pageEnd,
+        hasText: question.bodyMd.trim().length > 0,
         strips: toStrips(question.strips),
         markScheme:
           question.markScheme && question.markScheme.status === 'published'
