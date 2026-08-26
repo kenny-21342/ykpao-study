@@ -138,6 +138,16 @@ export default function BankPractice() {
   const [session, setSession] = useState('');
   const [paperNumber, setPaperNumber] = useState('');
   const [page, setPage] = useState(1);
+  /**
+   * Whose subjects to browse.
+   *
+   * A student is enrolled in their own courses, so 'enrolled' is the useful
+   * default -- but it is also a hard filter, and without a way out of it the
+   * other 70 subjects in the bank are unreachable. Someone enrolled only in
+   * IGCSE courses would conclude the bank has no IB or A Level papers at all,
+   * when it holds tens of thousands.
+   */
+  const [scope, setScope] = useState<'enrolled' | 'all'>('enrolled');
 
   const [questions, setQuestions] = useState<Summary[]>([]);
   const [total, setTotal] = useState(0);
@@ -148,11 +158,11 @@ export default function BankPractice() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    fetch('/api/bank/questions?action=filters')
+    fetch(`/api/bank/questions?action=filters&scope=${scope}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setFilters({ ...EMPTY_FILTERS, ...data }))
       .catch(() => setFilters(EMPTY_FILTERS));
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     // `stale` guards against responses arriving out of order. Changing two
@@ -162,7 +172,7 @@ export default function BankPractice() {
     let stale = false;
     const controller = new AbortController();
 
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    const params = new URLSearchParams({ page: String(page), limit: '20', scope });
     if (subject) params.set('subject', subject);
     if (year) params.set('year', year);
     if (session) params.set('session', session);
@@ -193,7 +203,7 @@ export default function BankPractice() {
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber]);
+  }, [page, subject, year, session, paperNumber, scope]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -219,7 +229,12 @@ export default function BankPractice() {
 
   if (selected) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4 p-2 sm:p-4">
+      // The workspace that renders this is `flex-1 overflow-hidden`, so every
+      // view has to supply its own scroll container. Without h-full and
+      // overflow-y-auto the page is simply clipped at the fold and nothing
+      // below the first screenful can be reached.
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto max-w-4xl space-y-4 p-2 sm:p-4">
         <button
           type="button"
           onClick={() => setSelected(null)}
@@ -231,15 +246,43 @@ export default function BankPractice() {
           {selected.paper.subject} · {paperLabel(selected.paper)}
         </p>
         <BankQuestionCard question={selected} />
-        <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <AssistancePanel question={selected} />
+          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <AssistancePanel question={selected} />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-2 sm:p-4">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-5xl space-y-4 p-2 sm:p-4">
+      <div className="inline-flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+        {(['enrolled', 'all'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={scope === option}
+            onClick={() => {
+              // Changing scope changes which subjects exist, so a subject
+              // chosen under the old one may not be in the new list.
+              setScope(option);
+              setSubject('');
+              setPage(1);
+              setSelected(null);
+              setListLoading(true);
+            }}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+              scope === option
+                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
+                : 'text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            {option === 'enrolled' ? 'My courses' : 'All subjects'}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <select
           aria-label="Subject"
@@ -367,6 +410,7 @@ export default function BankPractice() {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }
