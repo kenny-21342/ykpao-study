@@ -122,3 +122,37 @@ def content_words(page, clip=None):
             continue
         if is_content_token(word):
             yield box, word
+
+
+def filter_erase_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
+    """Split erase boxes into those safe to paint and those that would destroy content.
+
+    A box is dropped whole rather than clipped around the word it hits. The
+    boxes that matter here come from two places: glyph-measured answer rules,
+    which stop at the first character that is not a dot and so never cover a
+    word, and whole text lines classified as furniture. Only the second kind
+    ever trips this, and for those dropping is the right answer -- the line was
+    misread as furniture, so none of it should have been painted.
+
+    Leaving an answer rule visible is a blemish. Painting out the constant a
+    question turns on makes it unanswerable while it still reads as complete.
+    """
+    import fitz
+
+    if not boxes:
+        return [], []
+
+    rects = [fitz.Rect(*box) for box in boxes]
+    words = list(content_words(page))
+
+    kept, dropped = [], []
+    for box, rect in zip(boxes, rects):
+        casualty = next(
+            (word for word_box, word in words if coverage(word_box, [rect]) >= threshold),
+            None,
+        )
+        if casualty is None:
+            kept.append(box)
+        else:
+            dropped.append((box, casualty))
+    return kept, dropped

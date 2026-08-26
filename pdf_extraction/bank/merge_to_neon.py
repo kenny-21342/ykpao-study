@@ -384,13 +384,17 @@ def main():
         ))
     written, failed = batch.finish()
 
-    with dst.cursor() as cur:
-        cur.execute('SELECT id, sha256 FROM bank_assets')
-        existing_assets = {r[1]: r[0] for r in cur.fetchall() if r[1]}
-    for row in rows:
-        new_id = existing_assets.get(row["sha256"])
-        if new_id:
-            asset_id_map[row["id"]] = new_id
+    # Only when something was actually inserted. The loop above already mapped
+    # every asset that was already there, so on a re-run this second pass over
+    # 400,328 rows recovers nothing and costs minutes of network round trip.
+    if written:
+        with dst.cursor() as cur:
+            cur.execute('SELECT id, sha256 FROM bank_assets')
+            existing_assets = {r[1]: r[0] for r in cur.fetchall() if r[1]}
+        for row in rows:
+            new_id = existing_assets.get(row["sha256"])
+            if new_id:
+                asset_id_map[row["id"]] = new_id
 
     print(f"  ✓ {len(rows)} assets ({len(asset_id_map)} mapped, "
           f"{skipped_assets} already existed, {failed} failed)")

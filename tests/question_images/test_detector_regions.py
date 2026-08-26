@@ -137,6 +137,41 @@ class DetectorAndRegionTests(unittest.TestCase):
             code = next(line for line in pages[0].lines if line.text.startswith("0625/"))
             self.assertEqual(code.furniture_reason, "paper_code")
 
+    def test_question_text_below_the_copyright_block_survives(self) -> None:
+        """The copyright cascade must not take the rest of the page with it.
+
+        Every line below the copyright block's top was classified as furniture
+        on position alone, so a question continuing past it -- or a copyright
+        line detected slightly too high -- lost its tail. That is how the bank
+        came to hold a question reading "the line y = ax +" with the constant
+        gone, while still reading as a complete sentence.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "copyright-cascade.pdf"
+            document = fitz.open()
+            page = document.new_page(width=595, height=842)
+            page.insert_text((50, 300), "1 State the first answer.", fontsize=11)
+            page.insert_text(
+                (50, 700),
+                "\u00a9 UCLES 2023 Permission to reproduce items where third-party owned",
+                fontsize=9,
+            )
+            # Prose sitting below the copyright block, which is where a
+            # continuing question stem lands on a crowded page.
+            page.insert_text(
+                (50, 760),
+                "(b) Explain why the resistance of the wire increases with length.",
+                fontsize=11,
+            )
+            document.save(path)
+            document.close()
+
+            pages = extract_document_evidence(path).pages
+            stem = next(line for line in pages[0].lines if "resistance" in line.text)
+            self.assertIsNone(stem.furniture_reason)
+            notice = next(line for line in pages[0].lines if "Permission" in line.text)
+            self.assertEqual(notice.furniture_reason, "copyright_furniture")
+
     def test_a_rule_never_eats_the_words_on_either_side_of_it(self) -> None:
         """Rule boxes come from glyph positions, not from font-metric guesses.
 

@@ -33,6 +33,7 @@ from typing import Any
 
 import fitz
 
+from . import erase_guard
 from .spans import DocumentSpans, PageRegion, RENDER_DPI, RootSpan
 
 # Padding around a span rectangle, in PDF points. Enough to catch a figure
@@ -302,9 +303,17 @@ def _render_strip(
     # Paint over dotted answer rules, barcodes, and page furniture so the model
     # never sees them. Redaction needs a writable page, so this is applied to a
     # scratch copy of the page rather than mutating the open document.
+    # Last check before pixels are destroyed. The producers of these boxes have
+    # no idea what text they sit on: a line misread as furniture contributes its
+    # whole bbox, and a vector rule detected inside a figure contributes its
+    # own. A question shipped reading "the line y = ax +" because of exactly
+    # that. Whatever the producer decides, a box that would cover a word never
+    # gets painted.
+    erase_bboxes, _dropped = erase_guard.filter_erase_boxes(page, region.erase_bboxes)
+
     scratch: fitz.Document | None = None
     render_page = page
-    if region.erase_bboxes:
+    if erase_bboxes:
         scratch = fitz.open()
         scratch.insert_pdf(page.parent, from_page=page.number, to_page=page.number)
         render_page = scratch[0]
@@ -314,7 +323,7 @@ def _render_strip(
         # painted without this conversion came out as a vertical stripe through
         # the answers. derotation_matrix is the identity on an unrotated page.
         derotate = render_page.derotation_matrix
-        for box in region.erase_bboxes:
+        for box in erase_bboxes:
             rect = fitz.Rect(*box) & page_rect
             if rect.is_empty or rect.width < 1 or rect.height < 1:
                 continue

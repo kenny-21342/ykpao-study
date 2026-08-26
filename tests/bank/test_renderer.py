@@ -72,8 +72,17 @@ class RotatedPageTests(unittest.TestCase):
             pdf_path = Path(directory) / "erase-rotated.pdf"
             document = fitz.open()
             page = document.new_page(width=595, height=842)
+            # A running header in the band, and the answers clear of it.
+            #
+            # This used to put the answer text itself under the band, because
+            # any text would do to make a visible change. It will not do any
+            # more: the renderer refuses to paint a box that would cover
+            # content, so a box over "answer text" is now dropped and nothing
+            # is painted. Unrotated x becomes display y, so x=60 lands inside
+            # the 0-100 band and x=160 lands outside it.
+            page.insert_text((60, 80), "\u00a9 UCLES 2023", fontsize=11)
             for offset in range(0, 700, 60):
-                page.insert_text((60, 80 + offset), "answer text on every line", fontsize=11)
+                page.insert_text((160, 80 + offset), "answer text on every line", fontsize=11)
             page.set_rotation(90)
             document.save(pdf_path)
             document.close()
@@ -94,9 +103,8 @@ class RotatedPageTests(unittest.TestCase):
                 return fitz.open(out.span_for(1).strips[0].absolute_path)[0].get_pixmap()
 
             plain = render(())
-            # A band across the top of the *rendered* page. It has to reach far
-            # enough down to touch the text, which lands at display y ~60
-            # because insert_text placed it at unrotated x = 60.
+            # A band across the top of the *rendered* page, covering the
+            # running header and nothing else.
             painted = render(((0.0, 0.0, width, 100.0),))
             self.assertEqual((plain.width, plain.height), (painted.width, painted.height))
 
@@ -369,3 +377,75 @@ class FigureInventoryTests(unittest.TestCase):
             [("fig1", 4, 1), ("fig2", 4, 2)],
         )
         self.assertIn("reading order down each page", payload["instructions"])
+
+class EraseGuardTests(unittest.TestCase):
+    """A box that would cover question text is never painted.
+
+    The bank shipped a question reading "the line y = ax +" because an erase
+    box covered its constant. The producers of these boxes cannot see the text
+    they sit on -- a line misread as furniture contributes its whole bbox --
+    so the renderer refuses them at the last moment before pixels are lost.
+    """
+
+    def _render(self, directory: Path, erase, name: str):
+        pdf_path = Path(directory) / f"{name}.pdf"
+        document = fitz.open()
+        page = document.new_page(width=595, height=842)
+        page.insert_text((60, 100), "Find a when y = ax + 9 holds", fontsize=11)
+        page.insert_text((60, 300), "\u00a9 UCLES 2023", fontsize=11)
+        document.save(pdf_path)
+        document.close()
+
+        spans = DocumentSpans(
+            source_path=str(pdf_path), source_sha256="x", doc_type="qp",
+            page_count=1, strategy="prose",
+            spans=(RootSpan(root_number=1, regions=(PageRegion(
+                page=1, bbox=(40.0, 60.0, 560.0, 340.0), erase_bboxes=erase,
+            ),)),),
+        )
+        out = render_strips_and_assets(spans, pdf_path, Path(directory) / name)
+        return fitz.open(out.span_for(1).strips[0].absolute_path)[0].get_pixmap()
+
+    def _box_over(self, directory: Path, word: str):
+        pdf_path = Path(directory) / "probe.pdf"
+        document = fitz.open()
+        page = document.new_page(width=595, height=842)
+        page.insert_text((60, 100), "Find a when y = ax + 9 holds", fontsize=11)
+        page.insert_text((60, 300), "\u00a9 UCLES 2023", fontsize=11)
+        document.save(pdf_path)
+        for x0, y0, x1, y1, found, *_ in document[0].get_text("words"):
+            if found == word:
+                document.close()
+                return (x0 - 0.5, y0 - 0.5, x1 + 0.5, y1 + 0.5)
+        document.close()
+        raise AssertionError(f"{word!r} is not on the page")
+
+    def _differs(self, plain, painted) -> bool:
+        return any(
+            plain.pixel(x, y) != painted.pixel(x, y)
+            for y in range(0, plain.height, 2)
+            for x in range(0, plain.width, 2)
+        )
+
+    def test_a_box_over_question_text_paints_nothing(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            plain = self._render(root, (), "plain")
+            painted = self._render(root, (self._box_over(root, "9"),), "over-content")
+            self.assertFalse(
+                self._differs(plain, painted),
+                "the constant in 'ax + 9' was painted out",
+            )
+
+    def test_a_box_over_furniture_is_still_painted(self) -> None:
+        # The guard must not simply refuse everything: erasing the copyright
+        # line is what erase boxes are for.
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            plain = self._render(root, (), "plain")
+            painted = self._render(root, (self._box_over(root, "UCLES"),), "over-furniture")
+            self.assertTrue(
+                self._differs(plain, painted),
+                "the copyright line should have been erased",
+            )
+

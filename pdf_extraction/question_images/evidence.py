@@ -362,9 +362,24 @@ def _furniture_reason(
     copyright_start: float | None,
 ) -> str | None:
     text = line.text.strip()
-    if copyright_start is not None and line.bbox[1] >= copyright_start:
+    # Everything below the copyright block is furniture -- unless it reads as
+    # question text. The bare positional form erased the tail of any question
+    # that continued past where the copyright block starts, and a copyright
+    # line detected even slightly too high took the rest of the page with it.
+    if (
+        copyright_start is not None
+        and line.bbox[1] >= copyright_start
+        and not _looks_like_prose(text)
+    ):
         return "copyright_furniture"
-    if _repeat_key(text) in repeated:
+    # Repeats are collected only from the top and bottom bands (see
+    # _mark_repeated_furniture), but this was matching them anywhere on the
+    # page. A stem that happened to repeat across papers -- "Answer all
+    # questions", a shared table caption -- was erased wherever it appeared,
+    # including mid-page where no header ever lives.
+    if _repeat_key(text) in repeated and (
+        line.bbox[1] < page.height * 0.11 or line.bbox[3] > page.height * 0.89
+    ):
         return "repeated_header_footer"
     if _CANDIDATE_FIELD.search(text):
         return "candidate_field"
@@ -396,8 +411,9 @@ def _furniture_reason(
 def _looks_like_prose(text: str) -> bool:
     """True when a line is question text, whatever band of the page it sits in.
 
-    Only the position-based rules below consult this. Copyright notices,
-    candidate fields, and repeated headers are identified by their content and
+    Consulted by the position-based rules, and by the copyright-block cascade
+    above them, which is otherwise purely positional. Candidate fields,
+    barcodes and repeated headers are identified by their content and
     stay furniture however long they run.
     """
     return len(text.split()) >= _PROSE_WORDS or bool(_SENTENCE_END.search(text))
