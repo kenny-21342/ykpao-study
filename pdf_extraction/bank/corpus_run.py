@@ -25,6 +25,13 @@ ASSETS = Path(__file__).resolve().parent / "assets"
 def collect() -> list[Path]:
     papers = sorted((ROOT / "my_raw_pdfs").rglob("*.pdf"))
     papers += sorted((ROOT / "IB PAST PAPERS - YEAR").rglob("*.pdf"))
+    skip = quarantined()
+    if skip:
+        repo = ROOT.parent
+        papers = [
+            path for path in papers
+            if str(path.relative_to(repo)) not in skip
+        ]
     return papers
 
 
@@ -51,6 +58,27 @@ def already_done() -> set[str]:
 
 
 LOCK = Path(__file__).resolve().parent / ".corpus_run.lock"
+QUARANTINE = Path(__file__).resolve().parent / "quarantine.txt"
+
+
+def quarantined() -> set[str]:
+    """Papers that hang the renderer and must not be attempted again.
+
+    One pathological file stops the whole corpus: every chunk starts at the
+    same paper, hangs, and is killed having done nothing. The hang is inside a
+    C-level PyMuPDF call, so a Python alarm cannot interrupt it — a 90 second
+    SIGALRM never fired — which rules out an in-process timeout.
+
+    Quarantining is therefore the only way past it. Each entry records the
+    path; the reason belongs in the commit that added it.
+    """
+    if not QUARANTINE.exists():
+        return set()
+    return {
+        line.strip()
+        for line in QUARANTINE.read_text().splitlines()
+        if line.strip() and not line.startswith("#")
+    }
 
 
 @contextmanager

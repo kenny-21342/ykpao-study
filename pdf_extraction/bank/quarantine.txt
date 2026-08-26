@@ -1,0 +1,14 @@
+# Papers the renderer cannot get through.
+#
+# One file here stops everything: every chunk starts at the first unprocessed
+# paper, hangs, and is killed having done nothing. The hang is inside a
+# C-level PyMuPDF call — a 90 second Python alarm never fired — so it cannot
+# be caught in process. Listing the path is the only way past it.
+#
+# Measured on the entry below: span detection finishes in 1.4s,
+# get_drawings in 0.04s, _find_figures in 0.17s. What is left is
+# _render_strip, whose redaction path copies the page into a scratch document
+# once per region; on a 10.5 MB file that is the remaining suspect. Not yet
+# proven, and worth fixing properly rather than growing this list.
+
+pdf_extraction/IB PAST PAPERS - YEAR/2024 Examination Session/May 2024 Examination Session/PDFs/Experimental sciences/Sports_exercise_and_health_science_paper_1__TZ1_HL.pdf
