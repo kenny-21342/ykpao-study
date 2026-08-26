@@ -543,48 +543,39 @@ def link_mark_schemes_to_questions(connection: sqlite3.Connection) -> int:
 
     A question paper and its mark scheme are separate documents and therefore
     separate bank_papers rows, so nothing during a single document's processing
-    can make the link — it needs both sides present. Until this ran,
-    bank_mark_schemes.question_id was NULL for every row ever written, which
-    meant the mark scheme could never be shown next to its question.
+    can make the link -- it needs both sides present.
 
-    Two papers are the same sitting when everything but doc_type matches.
+    This used to be one correlated UPDATE. bank_mark_schemes.question_id is
+    UNIQUE, and IB option papers collapse to a single identity because
+    parse_ib_path reads nothing after _paper_N: one Mathematics paper 3
+    identity is shared by the Calculus, Discrete, Sets and Statistics mark
+    schemes. The statement handed one question to several rows, hit the
+    constraint, and SQLite's ON CONFLICT ABORT rolled the WHOLE statement back
+    -- so not one row was linked, for the entire corpus, while the failure was
+    swallowed by a broad except in run_corpus.
+
+    It now links row by row, so a collision costs one row instead of all of
+    them, and only where the pairing is unambiguous in both directions.
+    Ambiguous groups are left for relink_mark_schemes, which reports them
+    rather than guessing.
+
     Returns the number of rows newly linked.
     """
-    cursor = connection.execute(
-        """
-        UPDATE bank_mark_schemes
-        SET question_id = (
-            SELECT q.id
-            FROM bank_questions q
-            JOIN bank_papers qp ON qp.id = q.paper_id
-            JOIN bank_papers mp ON mp.id = bank_mark_schemes.paper_id
-            WHERE qp.doc_type = 'qp'
-              AND qp.subject_id = mp.subject_id
-              AND qp.year = mp.year
-              AND qp.session = mp.session
-              AND qp.paper_number = mp.paper_number
-              AND qp.variant = mp.variant
-              AND IFNULL(qp.timezone, '') = IFNULL(mp.timezone, '')
-              AND q.root_number = bank_mark_schemes.root_number
-        )
-        WHERE question_id IS NULL
-          AND EXISTS (
-            SELECT 1
-            FROM bank_questions q
-            JOIN bank_papers qp ON qp.id = q.paper_id
-            JOIN bank_papers mp ON mp.id = bank_mark_schemes.paper_id
-            WHERE qp.doc_type = 'qp'
-              AND qp.subject_id = mp.subject_id
-              AND qp.year = mp.year
-              AND qp.session = mp.session
-              AND qp.paper_number = mp.paper_number
-              AND qp.variant = mp.variant
-              AND IFNULL(qp.timezone, '') = IFNULL(mp.timezone, '')
-              AND q.root_number = bank_mark_schemes.root_number
-          )
-        """
-    )
-    return cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
+    from .relink_mark_schemes import plan_links
+
+    links, _ambiguous = plan_links(connection)
+    linked = 0
+    for question_id, mark_scheme_id in links:
+        try:
+            connection.execute(
+                "UPDATE bank_mark_schemes SET question_id = ? WHERE id = ?",
+                (question_id, mark_scheme_id),
+            )
+            linked += 1
+        except sqlite3.IntegrityError:
+            # One row's problem, not the batch's.
+            continue
+    return linked
 
 
 def clear_paper_flags(connection: sqlite3.Connection, paper_id: int) -> None:

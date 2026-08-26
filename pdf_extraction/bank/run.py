@@ -693,7 +693,10 @@ def run_corpus(
             if linked:
                 log(f"  linked {linked} mark schemes to their questions")
         except Exception as error:  # pragma: no cover - diagnostics only
-            log(f"  ! mark-scheme linking failed: {error}")
+            # Loud, with the traceback. This swallowed a UNIQUE violation that
+            # left every mark scheme in the corpus unlinked, and the one-line
+            # message it printed was indistinguishable from a warning.
+            log(f"  ! mark-scheme linking FAILED: {error}\n{traceback.format_exc()}")
         connection.commit()
         connection.close()
 

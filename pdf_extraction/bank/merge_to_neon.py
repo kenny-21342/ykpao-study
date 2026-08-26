@@ -73,6 +73,16 @@ def main():
     parser.add_argument("--source", default="pdf_extraction/bank/extract.db", help="Source SQLite file")
     parser.add_argument("--dry-run", action="store_true", help="Show counts without writing")
     parser.add_argument(
+        "--refresh-strips",
+        action="store_true",
+        help=(
+            "replace the strips of every question being merged, instead of "
+            "keeping whatever is already there. Needed after a re-render: "
+            "assets are content-addressed, so corrected crops are new rows and "
+            "the plain insert would silently keep the old ones."
+        ),
+    )
+    parser.add_argument(
         "--include-flagged",
         action="store_true",
         help=(
@@ -736,6 +746,29 @@ def main():
         rows = src.execute(
             f"SELECT {source_column}, asset_id, ordering, page FROM {table}"
         ).fetchall()
+
+        # Re-rendered crops are new objects: assets are content-addressed, so a
+        # corrected strip has a different sha256 and a different id. The insert
+        # below is ON CONFLICT DO NOTHING against a primary key of
+        # (owner, ordering), so without clearing first the OLD strip wins and
+        # the re-render reaches the store but never the browser. Clearing only
+        # the owners actually being written keeps this safe to run at any time.
+        if args.refresh_strips:
+            owners = sorted({
+                owner for owner in (id_map.get(row[source_column]) for row in rows)
+                if owner
+            })
+            cleared = 0
+            for start in range(0, len(owners), 1000):
+                chunk = owners[start:start + 1000]
+                with dst.cursor() as cur:
+                    cur.execute(
+                        f'DELETE FROM {table} WHERE "{owner_column}" = ANY(%s)', (chunk,)
+                    )
+                    cleared += cur.rowcount
+                dst.commit()
+            print(f"  cleared {cleared:,} existing strips for {len(owners):,} owners")
+
         batch = BatchInserter(
             f"""
             INSERT INTO {table} ("{owner_column}", "assetId", ordering, page)
