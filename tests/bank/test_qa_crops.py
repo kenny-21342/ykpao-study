@@ -15,6 +15,7 @@ import fitz
 
 from pdf_extraction.bank.qa import (
     ISSUE_CROP_EMPTY,
+    ISSUE_CROP_ERASED_TEXT,
     ISSUE_CROP_FURNITURE,
     ISSUE_CROP_MISSING_NUMBER,
     ISSUE_CROP_NO_MARKS,
@@ -64,6 +65,87 @@ def _mark_scheme_page(path: Path) -> None:
     document.save(path)
     document.close()
 
+
+def _erasable_page(path: Path, sentence: str) -> None:
+    """A question whose stem is one line, plus the usual page furniture."""
+    document = fitz.open()
+    page = document.new_page(width=595, height=842)
+    page.insert_text((50, 80), sentence, fontsize=11)
+    page.insert_text((500, 140), "[4]", fontsize=11)
+    page.insert_text((50, 800), "\u00a9 UCLES 2023", fontsize=9)
+    document.save(path)
+    document.close()
+
+
+def _word_box(path: Path, wanted: str) -> tuple[float, float, float, float]:
+    """The bbox of a word on page 1, padded the way an erase box would be.
+
+    Computed from the real glyph geometry rather than hardcoded, so the test
+    does not depend on the font metrics of whatever build of MuPDF is present.
+    """
+    with fitz.open(path) as document:
+        for x0, y0, x1, y1, word, *_ in document[0].get_text("words"):
+            if word == wanted:
+                return (x0 - 0.5, y0 - 0.5, x1 + 0.5, y1 + 0.5)
+    raise AssertionError(f"{wanted!r} is not on the page")
+
+
+class ErasedTextTests(unittest.TestCase):
+    """An erase box may remove answer rules and furniture. Never content.
+
+    The bank shipped with a question reading "the line y = ax +" whose constant
+    had been painted out by an answer-rule box; the mark scheme showed it should
+    be "ax + 9". crop_erased_text did not flag it, because a lost "9" is
+    excluded three times over: _CROP_INTENDED_ERASE ends in a catch-all matching
+    any one- or two-character token, it separately whitelists \\d{1,3}, and the
+    casualty filter then strips non-letters and requires three characters.
+    """
+
+    SENTENCE = "1 Find the values of a for which the line y = ax + 9 intersects"
+
+    def _run(self, path: Path, erase: tuple[float, float, float, float]):
+        span = RootSpan(root_number=1, regions=(
+            PageRegion(page=1, bbox=(40.0, 60.0, 560.0, 160.0), erase_bboxes=(erase,)),
+        ))
+        rendered = FakeRendered(1, (FakeStrip(1, (40.0, 60.0, 560.0, 160.0)),))
+        return {flag.issue_type for flag in run_crop_checks(path, span, rendered, "qp", 1)}
+
+    def test_a_single_erased_digit_is_flagged(self) -> None:
+        # The exact defect found in production.
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "9")))
+
+    def test_a_single_erased_short_word_is_flagged(self) -> None:
+        # "of" is two characters, so the catch-all swallowed it as well.
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "of")))
+
+    def test_erasing_the_mark_allocation_is_flagged(self) -> None:
+        # "[4]" is what tells a student the question's weight.
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "[4]")))
+
+    def test_erasing_the_copyright_line_is_not_flagged(self) -> None:
+        # The guard against over-correcting: this is what erase boxes are for.
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertNotIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "UCLES")))
+
+    def test_a_box_that_touches_nothing_is_not_flagged(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertNotIn(
+                ISSUE_CROP_ERASED_TEXT,
+                self._run(path, (300.0, 300.0, 360.0, 320.0)),
+            )
 
 class CropCheckTests(unittest.TestCase):
     def test_a_clean_question_crop_raises_nothing(self) -> None:

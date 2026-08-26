@@ -461,7 +461,14 @@ def upsert_mark_scheme(
         connection.execute(
             """
             UPDATE bank_mark_schemes SET
-                question_id = ?, answer_md = ?, marking_points = ?, total_marks = ?,
+                -- COALESCE, not assignment: every caller passes question_id=None,
+                -- because the link is made later by link_mark_schemes_to_questions
+                -- once both the question paper and its mark scheme exist. A plain
+                -- assignment meant any re-render or transcription pass over a mark
+                -- scheme silently unlinked it again, so repairing the links and
+                -- then re-rendering would have quietly undone the repair.
+                question_id = COALESCE(?, question_id),
+                answer_md = ?, marking_points = ?, total_marks = ?,
                 answer_letter = ?, confidence = ?, status = ?, run_id = ?,
                 model = ?, prompt_version = ?
             WHERE id = ?

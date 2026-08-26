@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import json
 import re
+
+from . import erase_guard
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -169,21 +171,10 @@ _CROP_FURNITURE = re.compile(
     r"\u00a9\s*UCLES|Page \d+ of \d+|\[\s*Turn over|PUBLISHED|"
     r"Cambridge (?:IGCSE|Assessment)|\d{4}/\d\d/[A-Z]/[A-Z]/\d\d"
 )
-# A word made only of answer-rule characters, which an erase box is meant to
-# remove. Anything else it removes is content.
-_CROP_RULE_ONLY = re.compile(r"^[.\u2026_\-\s]*$")
-_CROP_INTENDED_ERASE = re.compile(
-    r"^(?:\d{1,3}|\u00a9|UCLES|\d{4}|\[?Turn|over\]?|\[|\]"
-    r"|\d{4}/\d\d/[A-Z]/[A-Z]/\d\d"
-    r"|DO|NOT|WRITE|IN|THIS|MARGIN|MARG"
-    r"|Permission|to|reproduce|items|where|third-party|owned"
-    r"|material|is|protected|by|copyright|included|Every|reasonable|effort"
-    r"|Cambridge|International|Assessment|Education|www\.[\w.]+"
-    r"|.{1,2})$"
-)
-_CROP_BARCODE = re.compile(r"^[^\x00-\x7F]{6,}$")
-# Below this many erased content words the loss is a stray label, not a stem.
-_CROP_ERASED_WORD_LIMIT = 3
+# One is enough. Losing a single token can make a question unanswerable —
+# the constant in "y = ax + 9" — while leaving it looking complete, which
+# is worse than losing a whole sentence a reader would notice was missing.
+_CROP_ERASED_WORD_LIMIT = 1
 # How far inside the grid's right edge a crop may stop before the Marks column
 # is at risk. The column itself is roughly 40pt wide.
 _MARKS_COLUMN_SLACK = 12.0
@@ -284,10 +275,11 @@ def run_crop_checks(
     # scheme's erase boxes come from _ms_furniture, which by construction only
     # covers the bands above and below the grid, so every word they remove is
     # furniture and checking them would flag the running header every time.
-    lost = (
-        [word for word in erased if len(re.sub(r"[^A-Za-z]", "", word)) >= 3]
-        if doc_type != "ms" else []
-    )
+    # Every casualty counts. The old filter kept only words with three or more
+    # ASCII letters, so an erased numeral, unit, symbol or short word scored
+    # nothing at all — a question could lose the constant that makes it
+    # answerable and still read as clean.
+    lost = list(erased) if doc_type != "ms" else []
     if len(lost) >= _CROP_ERASED_WORD_LIMIT:
         flags.append(ReviewFlag(
             question_id=question_id, paper_id=paper_id,
@@ -408,12 +400,13 @@ def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
             overlap = box & erase
             if not overlap.is_empty and area:
                 covered = max(covered, overlap.get_area() / area)
-        if covered >= 0.30:
-            token = re.sub(r"[.\u2026_]{2,}\s*$", "", word) or word
-            if not _CROP_RULE_ONLY.match(word) \
-                    and not _CROP_INTENDED_ERASE.match(token) \
-                    and not _CROP_BARCODE.match(token):
-                casualties.append(token)
+        if covered >= erase_guard.COVERAGE_THRESHOLD:
+            # One definition of "content", shared with the render-time guard —
+            # see erase_guard. The local regexes it replaces whitelisted every
+            # one- and two-character token, which is why a lost "9" was never
+            # reported.
+            if erase_guard.is_content_token(word):
+                casualties.append(erase_guard.normalise_token(word))
             continue
         position = tuple(int(value) for value in order[:3]) if len(order) >= 3 \
             else (0, 0, 0)

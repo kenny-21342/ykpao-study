@@ -505,9 +505,14 @@ def main():
         "mark scheme", len(rows),
     )
     wanted_ms = []
+    # Counted, not silently dropped. A mark scheme with no question cannot be
+    # merged -- the Postgres column is NOT NULL -- and the old summary printed
+    # len(rows), so 21,667 rows vanished behind a line that read as a success.
+    skipped_unlinked = 0
     for row in rows:
         new_question_id = question_id_map.get(row["question_id"])
         if not new_question_id:
+            skipped_unlinked += 1
             continue
         new_paper_id = paper_id_map.get(row["paper_id"])
         if not new_paper_id:
@@ -535,8 +540,9 @@ def main():
         new_id = existing_ms.get(ms_key)
         if new_id:
             ms_id_map[old_id] = new_id
-    print(f"  ✓ {len(rows)} mark schemes ({len(ms_id_map)} mapped, "
-          f"{skipped_ms} already existed, {failed_ms} failed)")
+    print(f"  ✓ {len(ms_id_map)} of {len(rows)} mark schemes mapped "
+          f"({skipped_ms} already existed, {skipped_unlinked} have no question, "
+          f"{failed_ms} failed)")
 
     # ---- Merge topics ----
     print("Merging bank_topics...")
