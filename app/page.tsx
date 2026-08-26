@@ -9,6 +9,7 @@ import ThemeToggle from './components/ThemeToggle';
 import FloatingAIAssistant from './components/FloatingAIAssistant';
 import OnboardingWizard from './components/OnboardingWizard';
 import QuestionsDatabase from './components/QuestionsDatabase';
+import BankPractice from './components/BankPractice';
 import MockExams from './components/MockExams';
 import { FEATURE_READINESS, isFeaturePreview, isFeatureVisible } from '@/lib/feature-readiness';
 import DiscussionBoard from './components/DiscussionBoard';
@@ -1165,13 +1166,27 @@ export default function SmartEduPlatform() {
           />
         )}
 
-        {/* VIEW 2: Practice */}
+        {/* VIEW 2: Practice
+          *
+          * Browsing goes to the crop-first bank: 67,873 published questions
+          * shown as the page they were printed on, against 5,133 transcribed
+          * ones. A crop is also the faithful artefact — a transcription drops
+          * the diagrams, tables and notation a past paper is largely made of.
+          *
+          * A deep link still opens the old browser, because the id in it
+          * belongs to the text bank and means nothing to the crop bank. The
+          * two are the same corpus but not the same rows, so a link cannot be
+          * translated by pointing it at a different table. */}
         {activeTab === 'practice' && (
-          <QuestionsDatabase
-            initialQuestionId={pendingQuestionId}
-            initialMode={practiceStartMode}
-            onQuestionOpened={() => setPendingQuestionId(null)}
-          />
+          pendingQuestionId ? (
+            <QuestionsDatabase
+              initialQuestionId={pendingQuestionId}
+              initialMode={practiceStartMode}
+              onQuestionOpened={() => setPendingQuestionId(null)}
+            />
+          ) : (
+            <BankPractice />
+          )
         )}
 
         {/* VIEW 3: Materials */}

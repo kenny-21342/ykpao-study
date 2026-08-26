@@ -610,6 +610,12 @@ test('lib/auth.ts is the only place that reads the session directly', async () =
     'app/uploads/[...path]/route.ts',
     'app/extracted_images/[...path]/route.ts',
     'app/step-images/[...path]/route.ts',
+    // Same trade-off, and the strongest case for it: a crop-first question is
+    // served as a stack of strips, so one question page fetches up to seven
+    // images and a whole paper several hundred. It was left off this list when
+    // the route was written, which is why the check flagged it rather than
+    // anything about it having changed.
+    'app/bank_assets/[...path]/route.ts',
   ]);
 
   const offenders: string[] = [];

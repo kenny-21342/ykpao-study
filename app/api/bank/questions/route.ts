@@ -1,0 +1,90 @@
+/**
+ * Browsing the crop-first question bank.
+ *
+ * A sibling of /api/questions rather than a replacement for it. The two banks
+ * derive from the same corpus but answer different jobs: the text bank feeds
+ * everything that reasons over a question — AI grading, hints, `searchVector`
+ * — and cannot be served by images, while this one is what a student actually
+ * reads, because a crop of the original paper is faithful in a way a
+ * transcription is not.
+ *
+ * The action names match /api/questions ('filters', 'questions', 'question')
+ * so the Practice browser can source from either without changing shape.
+ */
+import { NextRequest, NextResponse } from 'next/server';
+import { getSessionUser } from '@/lib/auth';
+import { resolveCourseScope } from '@/lib/course-scope';
+import { LearnerContextError } from '@/lib/learner-context';
+import { parsePositiveInt } from '@/lib/query-params';
+import { reportError } from '@/lib/error-reporting';
+import {
+  getBankQuestion,
+  listBankFilters,
+  listBankQuestions,
+} from '@/lib/bank-questions';
+
+export const dynamic = 'force-dynamic';
+
+/** null means "every subject"; a list means "only these". */
+function scopedSubjectCodes(scope: { effectiveScope: string; subjectCodes: string[] }) {
+  return scope.effectiveScope === 'enrolled' ? scope.subjectCodes : null;
+}
+
+function intParam(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const user = await getSessionUser();
+    const courseScope = await resolveCourseScope({
+      userId: user?.id,
+      scope: searchParams.get('scope'),
+      courseId: searchParams.get('courseId'),
+    });
+    const subjectCodes = scopedSubjectCodes(courseScope);
+
+    if (action === 'filters') {
+      return NextResponse.json({
+        ...(await listBankFilters(subjectCodes)),
+        scope: courseScope,
+      });
+    }
+
+    if (action === 'question') {
+      const questionId = intParam(searchParams.get('id'));
+      if (!questionId) {
+        return NextResponse.json({ error: 'Question ID required' }, { status: 400 });
+      }
+
+      const question = await getBankQuestion(questionId);
+      if (!question) {
+        return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+      return NextResponse.json({ question });
+    }
+
+    // Default: a page of questions.
+    const result = await listBankQuestions({
+      subjectCodes,
+      subjectId: intParam(searchParams.get('subject')),
+      year: intParam(searchParams.get('year')),
+      session: searchParams.get('session') || null,
+      paperNumber: intParam(searchParams.get('paper')),
+      page: parsePositiveInt(searchParams.get('page'), 1),
+      limit: parsePositiveInt(searchParams.get('limit'), 20, 100),
+    });
+
+    return NextResponse.json({ ...result, scope: courseScope });
+  } catch (error) {
+    if (error instanceof LearnerContextError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    reportError(error, { routePath: '/api/bank/questions', routeType: 'route', method: 'GET' });
+    return NextResponse.json({ error: 'Failed to load the question bank' }, { status: 500 });
+  }
+}

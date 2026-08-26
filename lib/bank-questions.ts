@@ -209,3 +209,242 @@ export async function listBankPapers(limit = 100) {
     subject: { ...paper.subject, name: displaySubject(paper.subject) },
   }));
 }
+
+// ---------- Browsing the bank ----------
+
+export type BankFilters = {
+  subjects: Array<{ id: number; code: string; name: string }>;
+  years: number[];
+  sessions: string[];
+  paperNumbers: number[];
+};
+
+export type BankQuestionSummary = {
+  id: number;
+  rootNumber: number;
+  totalMarks: number | null;
+  hasText: boolean;
+  hasMarkScheme: boolean;
+  /** First strip only: enough for a list row, without loading the whole crop. */
+  thumbnail: BankStrip | null;
+  paper: {
+    id: number;
+    subject: string;
+    subjectCode: string;
+    year: number;
+    session: string;
+    paperNumber: number;
+    variant: number;
+  };
+};
+
+/**
+ * Only question papers, only published questions.
+ *
+ * Mark scheme and insert documents are separate `BankPaper` rows of their own,
+ * and a student browsing questions should never be offered one directly.
+ */
+function publishedQuestionPaperWhere(subjectCodes: string[] | null) {
+  return {
+    docType: 'qp',
+    questions: { some: { status: 'published' } },
+    ...(subjectCodes ? { subject: { code: { in: toBankSubjectCodes(subjectCodes) } } } : {}),
+  };
+}
+
+/**
+ * Translate course-catalog subject codes into the codes the bank stores.
+ *
+ * The two disagree for IB. The catalog namespaces its codes -- `ib-biology`,
+ * `ib-physics` -- while the extraction pipeline derives the bank's from the
+ * directory name and stores the bare slug, `biology`. CAIE agrees on both
+ * sides because a syllabus number is a syllabus number.
+ *
+ * Matching the catalog's codes directly therefore returned nothing at all for
+ * an enrolled IB student: their scope filtered to `ib-*`, and no such code
+ * exists in bank_subjects. Both forms are accepted, so neither side has to be
+ * rewritten and a corpus rebuild cannot quietly undo it.
+ */
+function toBankSubjectCodes(catalogCodes: string[]): string[] {
+  const codes = new Set<string>();
+  for (const code of catalogCodes) {
+    codes.add(code);
+    if (code.startsWith('ib-')) codes.add(code.slice(3));
+  }
+  return [...codes];
+}
+
+/** The filter options that actually have published questions behind them. */
+export async function listBankFilters(subjectCodes: string[] | null): Promise<BankFilters> {
+  const where = publishedQuestionPaperWhere(subjectCodes);
+
+  const [subjects, years, sessions, paperNumbers] = await Promise.all([
+    prisma.bankSubject.findMany({
+      where: { papers: { some: where } },
+      orderBy: [{ name: 'asc' }, { level: 'asc' }],
+      select: { id: true, code: true, name: true, level: true, board: true },
+    }),
+    prisma.bankPaper.findMany({
+      where, distinct: ['year'], orderBy: { year: 'desc' }, select: { year: true },
+    }),
+    prisma.bankPaper.findMany({
+      where, distinct: ['session'], orderBy: { session: 'asc' }, select: { session: true },
+    }),
+    prisma.bankPaper.findMany({
+      where, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
+      select: { paperNumber: true },
+    }),
+  ]);
+
+  return {
+    // The stored name is "CAIE 0625" for CAIE papers; resolve it the same way
+    // the paper view does, so the two lists agree.
+    subjects: subjects.map((subject) => ({
+      id: subject.id,
+      code: subject.code,
+      name: displaySubject(subject),
+    })),
+    years: years.map((row) => row.year),
+    sessions: sessions.map((row) => row.session),
+    paperNumbers: paperNumbers.map((row) => row.paperNumber),
+  };
+}
+
+/**
+ * A page of questions across papers, for the Practice browser.
+ *
+ * Loads one strip per question rather than the whole crop: a 20-row page of
+ * seven-strip questions would otherwise pull 140 images the list never shows.
+ */
+export async function listBankQuestions(options: {
+  subjectCodes: string[] | null;
+  subjectId?: number | null;
+  year?: number | null;
+  session?: string | null;
+  paperNumber?: number | null;
+  page?: number;
+  limit?: number;
+}): Promise<{ questions: BankQuestionSummary[]; total: number; page: number; limit: number }> {
+  const page = Math.max(1, options.page ?? 1);
+  const limit = Math.min(100, Math.max(1, options.limit ?? 20));
+
+  const where = {
+    status: 'published',
+    paper: {
+      ...publishedQuestionPaperWhere(options.subjectCodes),
+      ...(options.subjectId ? { subjectId: options.subjectId } : {}),
+      ...(options.year ? { year: options.year } : {}),
+      ...(options.session ? { session: options.session } : {}),
+      ...(options.paperNumber ? { paperNumber: options.paperNumber } : {}),
+    },
+  };
+
+  const [total, rows] = await Promise.all([
+    prisma.bankQuestion.count({ where }),
+    prisma.bankQuestion.findMany({
+      where,
+      orderBy: [{ paperId: 'asc' }, { rootNumber: 'asc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        rootNumber: true,
+        totalMarks: true,
+        bodyMd: true,
+        markScheme: { select: { id: true, status: true } },
+        strips: {
+          orderBy: { ordering: 'asc' },
+          take: 1,
+          select: { page: true, asset: { select: { sha256: true, width: true, height: true } } },
+        },
+        paper: {
+          select: {
+            id: true, year: true, session: true, paperNumber: true, variant: true,
+            subject: { select: { name: true, code: true, level: true, board: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    total,
+    page,
+    limit,
+    questions: rows.map((row) => ({
+      id: row.id,
+      rootNumber: row.rootNumber,
+      totalMarks: row.totalMarks,
+      hasText: row.bodyMd.trim().length > 0,
+      hasMarkScheme: row.markScheme?.status === 'published',
+      thumbnail: toStrips(row.strips)[0] ?? null,
+      paper: {
+        id: row.paper.id,
+        subject: displaySubject(row.paper.subject),
+        subjectCode: row.paper.subject.code,
+        year: row.paper.year,
+        session: row.paper.session,
+        paperNumber: row.paper.paperNumber,
+        variant: row.paper.variant,
+      },
+    })),
+  };
+}
+
+/** One question with its whole crop, and its mark scheme if there is one. */
+export async function getBankQuestion(
+  questionId: number
+): Promise<(BankQuestionView & { paper: BankQuestionSummary['paper'] }) | null> {
+  const question = await prisma.bankQuestion.findFirst({
+    where: { id: questionId, status: 'published' },
+    include: {
+      strips: {
+        orderBy: { ordering: 'asc' },
+        include: { asset: { select: { sha256: true, width: true, height: true } } },
+      },
+      markScheme: {
+        include: {
+          strips: {
+            orderBy: { ordering: 'asc' },
+            include: { asset: { select: { sha256: true, width: true, height: true } } },
+          },
+        },
+      },
+      paper: {
+        select: {
+          id: true, year: true, session: true, paperNumber: true, variant: true,
+          subject: { select: { name: true, code: true, level: true, board: true } },
+        },
+      },
+    },
+  });
+
+  if (!question) return null;
+
+  return {
+    id: question.id,
+    rootNumber: question.rootNumber,
+    totalMarks: question.totalMarks,
+    pageStart: question.pageStart,
+    pageEnd: question.pageEnd,
+    hasText: question.bodyMd.trim().length > 0,
+    strips: toStrips(question.strips),
+    markScheme:
+      question.markScheme && question.markScheme.status === 'published'
+        ? {
+            id: question.markScheme.id,
+            strips: toStrips(question.markScheme.strips),
+            answerLetter: question.markScheme.answerLetter,
+          }
+        : null,
+    paper: {
+      id: question.paper.id,
+      subject: displaySubject(question.paper.subject),
+      subjectCode: question.paper.subject.code,
+      year: question.paper.year,
+      session: question.paper.session,
+      paperNumber: question.paper.paperNumber,
+      variant: question.paper.variant,
+    },
+  };
+}
