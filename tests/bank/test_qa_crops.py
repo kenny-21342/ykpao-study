@@ -14,6 +14,7 @@ import unittest
 import fitz
 
 from pdf_extraction.bank.qa import (
+    _crop_words,
     ISSUE_CROP_EMPTY,
     ISSUE_CROP_ERASED_TEXT,
     ISSUE_CROP_FURNITURE,
@@ -110,26 +111,54 @@ class ErasedTextTests(unittest.TestCase):
         rendered = FakeRendered(1, (FakeStrip(1, (40.0, 60.0, 560.0, 160.0)),))
         return {flag.issue_type for flag in run_crop_checks(path, span, rendered, "qp", 1)}
 
-    def test_a_single_erased_digit_is_flagged(self) -> None:
-        # The exact defect found in production.
+    def _casualties(self, path: Path, erase) -> list[str]:
+        """What the detector counts as lost, given boxes that WERE painted.
+
+        Called directly rather than through run_crop_checks, which now filters
+        boxes through the render-time guard first. Both layers matter and they
+        are tested apart: this one asks whether a loss would be noticed, and
+        the tests below ask whether it can happen at all.
+        """
+        with fitz.open(path) as document:
+            _kept, casualties = _crop_words(
+                document[0], (40.0, 60.0, 560.0, 160.0), (erase,))
+        return casualties
+
+    def test_a_lost_digit_is_counted(self) -> None:
+        # The exact defect found in production: "y = ax + 9" lost its 9. The
+        # old detector excluded it three times over.
         with TemporaryDirectory() as directory:
             path = Path(directory) / "qp.pdf"
             _erasable_page(path, self.SENTENCE)
-            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "9")))
+            self.assertIn("9", self._casualties(path, _word_box(path, "9")))
 
-    def test_a_single_erased_short_word_is_flagged(self) -> None:
+    def test_a_lost_short_word_is_counted(self) -> None:
         # "of" is two characters, so the catch-all swallowed it as well.
         with TemporaryDirectory() as directory:
             path = Path(directory) / "qp.pdf"
             _erasable_page(path, self.SENTENCE)
-            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "of")))
+            self.assertIn("of", self._casualties(path, _word_box(path, "of")))
 
-    def test_erasing_the_mark_allocation_is_flagged(self) -> None:
+    def test_a_lost_mark_allocation_is_counted(self) -> None:
         # "[4]" is what tells a student the question's weight.
         with TemporaryDirectory() as directory:
             path = Path(directory) / "qp.pdf"
             _erasable_page(path, self.SENTENCE)
-            self.assertIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "[4]")))
+            self.assertIn("[4]", self._casualties(path, _word_box(path, "[4]")))
+
+    def test_a_box_the_guard_refuses_raises_no_flag(self) -> None:
+        """The check and the guard must agree.
+
+        A box that would cover the constant is never painted, so reporting it
+        as damage describes an image that does not exist. Checking the raw
+        boxes instead held back 1,089 of one subject's 1,570 questions whose
+        crops were in fact correct.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _erasable_page(path, self.SENTENCE)
+            self.assertNotIn(
+                ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "9")))
 
     def test_erasing_the_copyright_line_is_not_flagged(self) -> None:
         # The guard against over-correcting: this is what erase boxes are for.

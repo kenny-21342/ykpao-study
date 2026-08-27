@@ -229,8 +229,18 @@ def run_crop_checks(
             if not 1 <= strip.page <= document.page_count:
                 continue
             page = document[strip.page - 1]
-            kept, casualties = _crop_words(
-                page, strip.bbox, erase_by_page.get(strip.page, ()))
+            # Judge what the renderer will actually paint, not what the
+            # producer proposed. The renderer refuses any box that would cover
+            # content, so checking the raw boxes reports damage that never
+            # reaches the image -- it held back 1,089 of one subject's 1,570
+            # questions whose crops were correct.
+            #
+            # This makes the check the exact inverse of the guard: it can only
+            # fire on a box the guard let through, which is the one case worth
+            # knowing about.
+            painted, _refused = erase_guard.filter_erase_boxes(
+                page, erase_by_page.get(strip.page, ()))
+            kept, casualties = _crop_words(page, strip.bbox, painted)
             visible.append(kept)
             erased.extend(casualties)
 

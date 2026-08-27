@@ -146,6 +146,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DB)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--subject",
+        default=None,
+        help=(
+            "only papers of this syllabus code or IB slug. Statuses are "
+            "re-decided against the CURRENT erase boxes, so a subject that has "
+            "not been re-rendered yet would be judged on boxes its stored "
+            "crops were not made with."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -157,10 +167,15 @@ def main() -> int:
         connection.execute("PRAGMA busy_timeout = 30000")
     else:
         connection = store.connect(args.db)
+    where = "doc_type != 'ms'"
+    params: tuple = ()
+    if args.subject:
+        where += (" AND subject_id IN (SELECT id FROM bank_subjects WHERE code = ?)")
+        params = (args.subject,)
     papers = connection.execute(
-        "SELECT id, source_path, doc_type FROM bank_papers "
-        "WHERE doc_type != 'ms' ORDER BY id"
-        + (f" LIMIT {args.limit}" if args.limit else "")
+        f"SELECT id, source_path, doc_type FROM bank_papers WHERE {where} ORDER BY id"
+        + (f" LIMIT {args.limit}" if args.limit else ""),
+        params,
     ).fetchall()
 
     print(f"{len(papers)} papers" + (" (dry run)" if args.dry_run else ""), flush=True)
