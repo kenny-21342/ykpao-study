@@ -35,19 +35,51 @@ DB = Path(__file__).resolve().parent / "extract.db"
 ASSETS = Path(__file__).resolve().parent / "assets"
 
 
+_SEPARATORS = re.compile(r"[-_\s]+")
+
+
+def _slug(text: str) -> str:
+    """Normalise a subject name so hyphens, underscores and spaces agree."""
+    return _SEPARATORS.sub("-", text.strip().lower()).strip("-")
+
+
 def matches_subject(path: Path, subject: str) -> bool:
     """Whether a PDF belongs to the named syllabus code or IB subject.
 
     CAIE papers live under my_raw_pdfs/<level>/<name>-<code>/ and name their
-    code in the filename too (0625_s23_qp_41.pdf); IB papers sit under a
-    subject directory whose name is the slug. Matching on either the directory
-    or the filename covers both without a second source of truth.
+    code in the filename too (0625_s23_qp_41.pdf). IB papers are filed by
+    subject *group* -- "Individuals and societies" -- and name the subject in
+    the filename instead (Business_management_paper_1_HL.pdf), so the filename
+    is the only place the subject appears.
+
+    Separators have to be normalised on both sides. The subject slugs use
+    hyphens and the IB filenames use underscores, so matching them literally
+    silently returned nothing for every multi-word subject while single-word
+    ones worked -- the failure looks like a missing subject, not a bug.
+
+    Where a filename carries a paper marker the subject is everything before
+    it, and the match must be exact: `mathematics` is a different subject from
+    `mathematics-analysis-and-approaches`, and a prefix test quietly swallows
+    the second into the first. CAIE filenames have no such marker, so they
+    keep the prefix test.
     """
-    wanted = subject.lower()
-    if any(wanted == part.lower() or part.lower().endswith(f"-{wanted}")
-           for part in path.parts):
-        return True
-    return bool(re.match(rf"{re.escape(wanted)}[_/]", path.name.lower()))
+    wanted = _slug(subject)
+    name = _slug(path.stem)
+
+    # An IB filename names its own subject, so it decides on its own. Asking
+    # the directory first gets this wrong: the group directory is
+    # "Group 5 - Mathematics", which ends with "-mathematics", so the subject
+    # `mathematics` claimed analysis-and-approaches,
+    # applications-and-interpretation, mathematical-studies and
+    # further-mathematics as well -- 602 papers where 176 belong.
+    if "-paper-" in name:
+        return name.split("-paper-", 1)[0] == wanted
+
+    for part in path.parts:
+        slug = _slug(part)
+        if slug == wanted or slug.endswith(f"-{wanted}"):
+            return True
+    return name.startswith(f"{wanted}-")
 
 
 def collect(subject: str | None = None) -> list[Path]:
