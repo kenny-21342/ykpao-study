@@ -153,6 +153,12 @@ def main() -> int:
                         help="stop after this many documents")
     parser.add_argument("--force", action="store_true",
                         help="re-render papers that were already cropped")
+    parser.add_argument("--use-model", action="store_true",
+                        help="transcribe the crops. THIS SPENDS MONEY.")
+    parser.add_argument("--max-spend", type=float, default=100.0,
+                        help="stop once a run has cost this much (default 100)")
+    parser.add_argument("--concurrency", type=int, default=None,
+                        help="parallel model calls (default 4; 6 queues, 8 wedges)")
     args = parser.parse_args()
 
     papers = collect(args.subject)
@@ -163,7 +169,11 @@ def main() -> int:
             print("nothing matched — check the code or slug", flush=True)
             return 1
 
-    done = set() if args.force else already_done()
+    # The resume filter asks whether a paper has ever been cropped. For a
+    # transcription run that is the wrong question -- every paper has been --
+    # and using it would skip the entire corpus. The ledger does the resuming
+    # instead, per question, so re-running stages 1 and 2 is free and correct.
+    done = set() if (args.force or args.use_model) else already_done()
     if done:
         # Stored paths are relative to the repository root.
         repo = ROOT.parent
@@ -187,13 +197,18 @@ def main() -> int:
         print(f"[{time.time() - started:8.0f}s] {message}", flush=True)
 
     with single_writer():
+        if args.use_model:
+            print(f"MODEL RUN: up to ${args.max_spend:.2f}. "
+                  f"Ctrl-C is safe — the ledger resumes per question.", flush=True)
         stats = run_corpus(
             papers,
             db_path=DB,
             asset_root=ASSETS,
-            use_model=False,
+            use_model=args.use_model,
+            max_spend_usd=args.max_spend if args.use_model else None,
             progress_every=25,
             log=log,
+            **({"concurrency": args.concurrency} if args.concurrency else {}),
         )
 
     print(

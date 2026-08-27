@@ -137,6 +137,11 @@ class WorkItem:
     rendered_span: RenderedSpan
     asset_ids: dict[str, int]
     work_key: str
+    # What stage 1 found wrong with the IMAGE. Carried through because the
+    # model cannot see it: a cut-off question number or an erased stem is
+    # invisible to a transcription, so a pass that decided status from its own
+    # flags alone published exactly the questions the crop QA held back.
+    crop_flags: list = field(default_factory=list)
 
 
 @dataclass
@@ -263,13 +268,16 @@ def prepare_document(
         connection.commit()
         return []
 
-    # Phase B creates the rows, so the crop flags cannot be attached to a
-    # question yet; they are recorded against the paper.
-    paper_flags = [flag for flags in crop_flags.values() for flag in flags]
-    if paper_flags:
-        store.record_flags(
-            connection, question_id=None, paper_id=paper_id, flags=paper_flags)
-        stats.flags += len(paper_flags)
+    # A mark scheme has no question row to hang a flag from, so its crop flags
+    # are recorded against the paper. A question's travel with it into phase B
+    # and are attached to the row there, which also keeps them out of the
+    # paper-level set that clear_paper_flags rebuilds on every run.
+    if doc_type == "ms":
+        paper_flags = [flag for flags in crop_flags.values() for flag in flags]
+        if paper_flags:
+            store.record_flags(
+                connection, question_id=None, paper_id=paper_id, flags=paper_flags)
+            stats.flags += len(paper_flags)
     connection.commit()
 
     rendered = render.rendered_spans
@@ -293,6 +301,7 @@ def prepare_document(
             rendered_span=rendered_span,
             asset_ids=asset_ids,
             work_key=work_key,
+            crop_flags=list(crop_flags.get(rendered_span.root_number, [])),
         ))
     return items
 
@@ -393,7 +402,11 @@ def _persist(
         None,
         figure_inventory=item.rendered_span.figures if item.doc_type != "ms" else None,
     )
-    status = "needs_review" if flags else "published"
+    # Both halves, through the same severity rule stage 1 uses. A question is
+    # published only when neither the image nor the text gives a reason to
+    # hold it, and transcribing a bad crop pays to record the damage rather
+    # than repairing it.
+    status = _crop_status(list(item.crop_flags) + flags, transcription.confidence)
 
     if item.doc_type == "ms":
         store.upsert_mark_scheme(
@@ -427,7 +440,8 @@ def _persist(
             status=status,
         )
         store.record_flags(
-            connection, question_id=question_id, paper_id=item.paper_id, flags=flags
+            connection, question_id=question_id, paper_id=item.paper_id,
+            flags=list(item.crop_flags) + flags,
         )
         stats.questions += 1
 
@@ -590,6 +604,7 @@ def run_corpus(
     asset_root: Path | str,
     run_id: str | None = None,
     use_model: bool = False,
+    max_spend_usd: float | None = None,
     do_tagging: bool = True,
     subject_topics: list[str] | None = None,
     subject_context: str | None = None,
@@ -658,29 +673,67 @@ def run_corpus(
         # --- Phase B: billed stages in parallel, writes on this thread -----
         log(f"transcribing {len(pending)} items with {concurrency} workers")
         done = 0
+        queue = iter(pending)
+        stopped_on_budget = False
+
+        def submit_next(pool, futures) -> bool:
+            """Start one more item, unless the budget says stop.
+
+            Work is submitted a few at a time rather than all at once. Every
+            item is billed, so a cap can only mean anything if the decision to
+            spend more is taken after the last result came back -- submitting
+            all 7,600 upfront makes the cap a suggestion. It also keeps phase B
+            from holding a RenderedSpan for every item in the subject before
+            the first call fires.
+
+            The cap is therefore a ceiling on what is *started*, not a
+            guarantee: up to `concurrency * 2` items are already in flight when
+            it trips, so the final total can exceed it by that many items.
+            Sized against the cap it is a rounding error, and stopping mid
+            call would waste the tokens already spent on it.
+            """
+            nonlocal stopped_on_budget
+            if max_spend_usd is not None and stats.cost_usd >= max_spend_usd:
+                stopped_on_budget = True
+                return False
+            item = next(queue, None)
+            if item is None:
+                return False
+            futures[pool.submit(
+                _execute, item,
+                do_tagging=do_tagging,
+                subject_topics=subject_topics,
+                subject_context=subject_context,
+                vision_settings=vision_conf,
+                text_settings=text_conf,
+            )] = item
+            return True
+
         with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
-            futures = {
-                pool.submit(
-                    _execute, item,
-                    do_tagging=do_tagging,
-                    subject_topics=subject_topics,
-                    subject_context=subject_context,
-                    vision_settings=vision_conf,
-                    text_settings=text_conf,
-                ): item
-                for item in pending
-            }
-            for future in as_completed(futures):
-                try:
-                    result = future.result()
-                except Exception as error:  # noqa: BLE001 - defensive; _execute catches its own
-                    item = futures[future]
-                    result = WorkResult(item=item, error=str(error)[:400])
-                _persist(
-                    result, connection, stats, ledger,
-                    run_id=run_id, model_name=model_name,
-                )
-                done += 1
+            futures: dict = {}
+            for _ in range(max(1, concurrency) * 2):
+                if not submit_next(pool, futures):
+                    break
+
+            while futures:
+                for future in as_completed(list(futures)):
+                    item = futures.pop(future)
+                    try:
+                        result = future.result()
+                    except Exception as error:  # noqa: BLE001 - defensive
+                        result = WorkResult(item=item, error=str(error)[:400])
+                    _persist(
+                        result, connection, stats, ledger,
+                        run_id=run_id, model_name=model_name,
+                    )
+                    done += 1
+                    submit_next(pool, futures)
+                    break
+
+            if stopped_on_budget:
+                log(f"  stopped: spend cap ${max_spend_usd:.2f} reached "
+                    f"at ${stats.cost_usd:.2f} after {done} items. "
+                    f"The ledger has recorded them, so a re-run resumes here.")
                 if done % progress_every == 0 or done == len(pending):
                     rate = done / max(1e-6, time.time() - started) * 3600
                     log(f"  {done}/{len(pending)} items  "
