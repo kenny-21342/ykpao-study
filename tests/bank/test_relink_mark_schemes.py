@@ -19,7 +19,7 @@ import sqlite3
 import unittest
 
 from pdf_extraction.bank import store
-from pdf_extraction.bank.relink_mark_schemes import plan_links
+from pdf_extraction.bank.relink_mark_schemes import option_tokens, plan_links
 from pdf_extraction.bank.store import PaperIdentity
 
 
@@ -70,20 +70,30 @@ class RelinkTests(unittest.TestCase):
         self.assertEqual(links, [(question_id, ms_id)])
         self.assertEqual(ambiguous, [])
 
-    def test_option_papers_sharing_an_identity_are_refused(self) -> None:
-        # The real IB case. Four option papers, one identity: any link here
-        # would be a coin toss recorded as fact.
-        for option in ("Calculus", "Discrete", "Sets", "Statistics"):
-            paper = self._paper("qp", f"/papers/Mathematics_paper_3_{option}__HL.pdf")
-            self._question(paper, 1)
-        mark_paper = self._paper("ms", "/papers/Mathematics_paper_3_Calculus__HL_ms.pdf")
-        self._mark_scheme(mark_paper, 1)
+    def test_several_mark_schemes_competing_for_one_question_are_refused(self) -> None:
+        """The reverse collision, which no filename can settle.
+
+        One question paper, several mark schemes claiming it. question_id is
+        UNIQUE so at most one can win, and nothing in the names says which
+        should -- so none does. This is the direction the option tiebreak
+        deliberately does not touch.
+        """
+        question_paper = self._paper("qp", "/papers/Mathematics_paper_3_Calculus__HL.pdf")
+        self._question(question_paper, 1)
+        for suffix in ("_markscheme", "_markscheme_Spa"):
+            mark_paper = self._paper(
+                "ms", f"/papers/Mathematics_paper_3_Calculus__HL{suffix}.pdf")
+            self._mark_scheme(mark_paper, 1)
 
         links, ambiguous = plan_links(self.connection)
 
+        # Each mark scheme is reported, so the pair yields two entries.
         self.assertEqual(links, [])
-        self.assertEqual(len(ambiguous), 1)
-        self.assertEqual(ambiguous[0]["reason"], "one mark scheme, several questions")
+        self.assertTrue(ambiguous)
+        self.assertTrue(all(
+            entry["reason"] == "several mark schemes, one question"
+            for entry in ambiguous
+        ))
 
     def test_a_question_already_claimed_is_not_offered_again(self) -> None:
         # question_id is UNIQUE; offering a claimed question is what produced
@@ -112,3 +122,126 @@ class RelinkTests(unittest.TestCase):
 
         self.assertEqual(links, [])
         self.assertEqual(ambiguous, [])
+
+
+class OptionTiebreakTests(unittest.TestCase):
+    """Which option a paper is, read from its filename.
+
+    IB option papers share one identity, so pairing them needs the only thing
+    that distinguishes them: the option named in the filename. It is not
+    written identically on both sides -- one paper says "the_Middle_East" where
+    its mark scheme says "the_ME" -- so the match is by overlap with a margin,
+    not by equality.
+    """
+
+    def test_the_option_is_read_from_after_the_paper_number(self) -> None:
+        self.assertEqual(
+            option_tokens("/x/Mathematics_paper_3_Calculus__HL_markscheme.pdf"),
+            frozenset({"calculus"}),
+        )
+
+    def test_level_and_document_suffixes_are_not_part_of_the_option(self) -> None:
+        # Otherwise every HL paper looks like every other HL paper.
+        plain = option_tokens("/x/Mathematics_paper_3_Calculus__HL.pdf")
+        scheme = option_tokens("/x/Mathematics_paper_3_Calculus__HL_markscheme.pdf")
+        translated = option_tokens("/x/Mathematics_paper_3_Calculus__HL_markscheme_Spa.pdf")
+        self.assertEqual(plain, scheme)
+        self.assertEqual(plain, translated)
+
+    def test_a_paper_with_no_option_names_none(self) -> None:
+        self.assertEqual(option_tokens("/x/0625_s23_qp_41.pdf"), frozenset())
+
+    def test_the_clearer_option_wins_a_shared_identity(self) -> None:
+        """Four option papers, one identity, one mark scheme.
+
+        Without this the whole group is refused and every IB option paper keeps
+        no mark scheme at all. With it, the one naming the same option is
+        taken and the rest are left alone.
+        """
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        connection.executescript(store.SCHEMA_PATH.read_text(encoding="utf-8"))
+        subject_id = store.upsert_subject(
+            connection, board="IB", code="mathematics", name="Mathematics", level="HL"
+        )
+
+        def paper(doc_type: str, option: str, suffix: str = "") -> int:
+            return store.upsert_paper(
+                connection,
+                subject_id=subject_id,
+                identity=PaperIdentity(
+                    code="mathematics", board="IB", year=2016, session="May",
+                    paper_number=3, variant=0, doc_type=doc_type, level="HL",
+                ),
+                source_path=f"/papers/Mathematics_paper_3_{option}__HL{suffix}.pdf",
+                source_sha256=f"{doc_type}{option}".ljust(64, "x")[:64],
+                page_count=1, span_strategy="prose", used_ocr=False,
+            )
+
+        wanted = None
+        for option in ("Calculus", "Discrete_mathematics",
+                       "Sets_relations_and_groups", "Statistics_and_probability"):
+            question_paper = paper("qp", option)
+            question_id = int(connection.execute(
+                "INSERT INTO bank_questions (paper_id, root_number, body_md, status) "
+                "VALUES (?, 1, '', 'published')", (question_paper,),
+            ).lastrowid)
+            if option == "Discrete_mathematics":
+                wanted = question_id
+
+        mark_paper = paper("ms", "Discrete_mathematics", "_markscheme")
+        ms_id = int(connection.execute(
+            "INSERT INTO bank_mark_schemes (paper_id, root_number, answer_md, status) "
+            "VALUES (?, 1, '', 'published')", (mark_paper,),
+        ).lastrowid)
+
+        links, ambiguous = plan_links(connection)
+        connection.close()
+
+        self.assertEqual(links, [(wanted, ms_id)])
+        self.assertEqual(ambiguous, [])
+
+    def test_options_that_are_all_equally_unlike_are_still_refused(self) -> None:
+        """No clear winner means no guess.
+
+        The margin is what keeps this honest: a mark scheme naming no option,
+        or naming one no question paper shares, must not be attached to
+        whichever row happens to come first.
+        """
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        connection.executescript(store.SCHEMA_PATH.read_text(encoding="utf-8"))
+        subject_id = store.upsert_subject(
+            connection, board="IB", code="history", name="History", level="HL"
+        )
+
+        def paper(doc_type: str, tail: str) -> int:
+            return store.upsert_paper(
+                connection,
+                subject_id=subject_id,
+                identity=PaperIdentity(
+                    code="history", board="IB", year=2016, session="May",
+                    paper_number=1, variant=0, doc_type=doc_type, level="HL",
+                ),
+                source_path=f"/papers/History_paper_1_{tail}.pdf",
+                source_sha256=f"{doc_type}{tail}".ljust(64, "x")[:64],
+                page_count=1, span_strategy="prose", used_ocr=False,
+            )
+
+        for option in ("Communism_in_crisis__HL", "Peacemaking__HL"):
+            question_paper = paper("qp", option)
+            connection.execute(
+                "INSERT INTO bank_questions (paper_id, root_number, body_md, status) "
+                "VALUES (?, 1, '', 'published')", (question_paper,),
+            )
+        mark_paper = paper("ms", "Rights_and_protest__HL_markscheme")
+        connection.execute(
+            "INSERT INTO bank_mark_schemes (paper_id, root_number, answer_md, status) "
+            "VALUES (?, 1, '', 'published')", (mark_paper,),
+        )
+
+        links, ambiguous = plan_links(connection)
+        connection.close()
+
+        self.assertEqual(links, [])
+        self.assertEqual(len(ambiguous), 1)

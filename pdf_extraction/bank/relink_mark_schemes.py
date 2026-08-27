@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import time
 from collections import Counter, defaultdict
@@ -67,6 +68,62 @@ CANDIDATES = """
 CLAIMED = "SELECT question_id FROM bank_mark_schemes WHERE question_id IS NOT NULL"
 
 
+# Everything after "_paper_<N>" in an IB filename is the option: the route,
+# topic or language that distinguishes papers sharing one identity.
+_OPTION = re.compile(r"_paper_\d+_(.*)$", re.IGNORECASE)
+
+# Suffixes that describe the document rather than the option.
+_NOT_OPTION = re.compile(
+    r"(markscheme|marking_?scheme|_ms|TZ\d|HLSL|HL|SL|Spa|Fre|Ger|paper\d*)",
+    re.IGNORECASE,
+)
+
+# How far ahead the best candidate must be before it is trusted. The option
+# token is not written identically on both sides -- one paper says
+# "the_Middle_East" where its mark scheme says "the_ME" -- so an exact match
+# would refuse pairs a human would make instantly. A margin means a clear
+# winner is taken and a close call is still left alone.
+_TIEBREAK_MARGIN = 0.25
+
+
+def option_tokens(source_path: str) -> frozenset[str]:
+    """The words identifying which option a paper is, as a set."""
+    stem = Path(source_path).stem
+    match = _OPTION.search(stem)
+    if not match:
+        return frozenset()
+    words = _NOT_OPTION.sub(" ", match.group(1)).replace("_", " ")
+    return frozenset(
+        word.lower() for word in re.split(r"[^\w-]+", words)
+        if len(word) > 2
+    )
+
+
+def _similarity(first: frozenset[str], second: frozenset[str]) -> float:
+    """Jaccard overlap; 0 when either side names no option."""
+    if not first or not second:
+        return 0.0
+    return len(first & second) / len(first | second)
+
+
+def resolve_by_option(rows) -> int | None:
+    """The question whose paper names the same option, when one clearly does.
+
+    Returns None if nothing stands out, which leaves the group for a human.
+    """
+    scores: dict[int, float] = {}
+    for row in rows:
+        score = _similarity(option_tokens(row["ms_path"]), option_tokens(row["qp_path"]))
+        scores[row["q_id"]] = max(scores.get(row["q_id"], 0.0), score)
+    if not scores:
+        return None
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    best_id, best = ranked[0]
+    runner_up = ranked[1][1] if len(ranked) > 1 else 0.0
+    if best > 0 and best - runner_up >= _TIEBREAK_MARGIN:
+        return best_id
+    return None
+
 def plan_links(connection: sqlite3.Connection):
     """Decide which mark schemes can be linked without guessing.
 
@@ -88,6 +145,14 @@ def plan_links(connection: sqlite3.Connection):
     for ms_id, rows in by_ms.items():
         questions = {row["q_id"] for row in rows}
         if len(questions) != 1:
+            # Several question papers share this identity -- the IB option
+            # case. If one of them names the same option as the mark scheme,
+            # and clearly more so than the rest, take it.
+            chosen = resolve_by_option(rows)
+            if chosen is not None and chosen not in claimed:
+                links.append((chosen, ms_id))
+                claimed.add(chosen)
+                continue
             ambiguous.append({
                 "reason": "one mark scheme, several questions",
                 "ms_id": ms_id,
