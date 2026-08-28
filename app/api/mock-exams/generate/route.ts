@@ -5,7 +5,7 @@ import { requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createPredictedPaper } from '@/lib/predicted-paper';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
-import { MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
+import { MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 import { selectBankQuestions, totalMarksOf } from '@/lib/mock-exam-selection';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 
@@ -123,20 +123,25 @@ export async function POST(req: Request) {
     // poll, and no way for a slow completion to strand a paper in `failed`.
     const bankSubjectCodes = toBankSubjectCodes([resolvedSubjectCode]);
 
-    // `questionCount` comes straight from the request body. Clamp it to what a
-    // submission can actually grade inside one function invocation -- an exam
-    // larger than MAX_EXAM_ITEMS would generate fine and then be impossible to
-    // submit, which is a much worse failure than a smaller paper.
+    // Let the mark target decide how many questions a paper holds, and cap the
+    // count only where a cap is actually needed.
+    //
+    // This used to guess `totalMarks / 6`, which assumes a six-mark structured
+    // question. Most of this bank is one-mark multiple choice, so a 50-mark
+    // request became eight items -- and eight marks. The mark target is the
+    // thing the student asked for; the item count is downstream of it.
     const requestedCount =
       typeof questionCount === 'number' && Number.isFinite(questionCount)
         ? Math.round(questionCount)
-        : Math.max(4, Math.min(20, Math.round(totalMarks / 6)));
-    const targetCount = Math.max(1, Math.min(MAX_EXAM_ITEMS, requestedCount));
+        : MAX_KEYED_EXAM_ITEMS;
+    const targetCount = Math.max(1, Math.min(MAX_KEYED_EXAM_ITEMS, requestedCount));
 
     const selected = await selectBankQuestions({
       subjectCodes: bankSubjectCodes,
       targetMarks: totalMarks,
       maxItems: targetCount,
+      // Only questions needing a model constrain the invocation.
+      maxUnkeyedItems: MAX_EXAM_ITEMS,
     });
 
     if (selected.length === 0) {

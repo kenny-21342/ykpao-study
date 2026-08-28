@@ -53,8 +53,11 @@ test('submission imports the same shared constant', async () => {
     src,
     /import\s*\{[^}]*\bMAX_EXAM_ITEMS\b[^}]*\}\s*from\s*['"]@\/lib\/mock-exam-limits['"]/,
   );
-  // The grading ceiling must be the constant, never a literal.
-  assert.match(src, /take:\s*MAX_EXAM_ITEMS/);
+  // The list ceiling must be one of the shared constants, never a literal. It
+  // is the larger of the two: a keyed item costs a row update rather than an
+  // LLM completion, and it is `MAX_EXAM_ITEMS` -- still imported above, and
+  // still what bounds the unkeyed share at generation -- that bounds spend.
+  assert.match(src, /take:\s*MAX_(KEYED_)?EXAM_ITEMS/);
   assert.doesNotMatch(
     src,
     /take:\s*\d+/,
@@ -65,10 +68,14 @@ test('submission imports the same shared constant', async () => {
 test('every generation path clamps the requested question count', async () => {
   for (const file of GENERATORS) {
     const src = await source(file);
+    // Either ceiling satisfies this: what matters is that the count is clamped
+    // to a shared constant rather than left to the request body. The bank
+    // generator clamps to MAX_KEYED_EXAM_ITEMS and passes MAX_EXAM_ITEMS down
+    // as the separate cap on questions that need a model.
     assert.match(
       src,
-      /Math\.min\(\s*\n?\s*MAX_EXAM_ITEMS|Math\.min\(MAX_EXAM_ITEMS/,
-      `${file} must clamp the requested question count to MAX_EXAM_ITEMS`,
+      /Math\.min\(\s*\n?\s*MAX_(KEYED_)?EXAM_ITEMS|Math\.min\(MAX_(KEYED_)?EXAM_ITEMS/,
+      `${file} must clamp the requested question count to a shared ceiling`,
     );
   }
 });

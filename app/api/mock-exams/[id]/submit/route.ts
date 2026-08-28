@@ -7,7 +7,7 @@ import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
 import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
-import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
+import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
 import { gradeAgainstKey } from '@/lib/bank-grading';
@@ -173,12 +173,14 @@ export async function POST(
       where: { mockExamId: exam.id },
       include: EXAM_ITEM_INCLUDE,
       orderBy: { order: 'asc' },
-      // Hard ceiling on work per request. Grading runs one LLM completion per
-      // item (plus an OCR call for any attached photo), so without a cap a
-      // single submit is unbounded spend. Generation clamps to the same
+      // Hard ceiling on work per request. Generation clamps to the same
       // constant, so in practice this never truncates a real exam — it is the
       // backstop for rows created before the clamp existed, or by hand.
-      take: MAX_EXAM_ITEMS,
+      //
+      // The larger of the two caps, because a keyed item costs a row update
+      // rather than an LLM completion; `MAX_EXAM_ITEMS` still bounds what
+      // generation lets through unkeyed, which is what bounds the spend.
+      take: MAX_KEYED_EXAM_ITEMS,
     });
 
     // Pre-resolve every item into one shape, and find the legacy mark schemes.

@@ -11,6 +11,11 @@ export type SelectedQuestion = {
   marks: number;
   paperId: number;
   year: number;
+  /**
+   * Whether the mark scheme carries an answer key. Keyed questions cost nothing
+   * to grade, so they are capped separately -- see `maxUnkeyedItems`.
+   */
+  keyed: boolean;
 };
 
 /**
@@ -28,10 +33,17 @@ export function packToTarget(
   candidates: SelectedQuestion[],
   targetMarks: number,
   maxItems: number,
+  /**
+   * How many chosen questions may lack an answer key. Each of those costs one
+   * LLM completion at submission, which is the only thing bounding paper size;
+   * keyed questions are free to mark and bound only by `maxItems`.
+   */
+  maxUnkeyedItems: number = maxItems,
 ): SelectedQuestion[] {
   const chosen: SelectedQuestion[] = [];
   const usedPapers = new Set<number>();
   let marks = 0;
+  let unkeyed = 0;
 
   // Two passes over the same shuffled list: the first takes at most one
   // question per paper, the second fills any remaining room from whatever is
@@ -44,10 +56,14 @@ export function packToTarget(
       if (pass === 0 && usedPapers.has(candidate.paperId)) continue;
       // Skip anything that would overshoot; a later, smaller candidate may fit.
       if (marks + candidate.marks > targetMarks) continue;
+      // A paper may still take keyed questions after its grading budget is
+      // spent, so this skips rather than breaks.
+      if (!candidate.keyed && unkeyed >= maxUnkeyedItems) continue;
 
       chosen.push(candidate);
       usedPapers.add(candidate.paperId);
       marks += candidate.marks;
+      if (!candidate.keyed) unkeyed += 1;
     }
   }
 

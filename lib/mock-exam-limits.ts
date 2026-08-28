@@ -24,6 +24,23 @@
 export const MAX_EXAM_ITEMS = 12;
 
 /**
+ * How large a paper may be when its questions carry answer keys.
+ *
+ * `MAX_EXAM_ITEMS` is derived entirely from grading cost, and a keyed question
+ * has none: marking it is a character comparison in the request, not an LLM
+ * completion. Applying the model-shaped cap to keyed items produced a visible
+ * absurdity -- a 50-mark Biology paper came back as eight one-mark
+ * multiple-choice questions, because the item cap bound long before the mark
+ * target did.
+ *
+ * So the caps are separate. At most `MAX_EXAM_ITEMS` items in a paper may lack
+ * a key; the paper as a whole may reach this. Sixty one-mark questions is a
+ * real CAIE multiple-choice paper, and grading them costs nothing but sixty
+ * row updates.
+ */
+export const MAX_KEYED_EXAM_ITEMS = 60;
+
+/**
  * Concurrent grading calls per submission.
  *
  * Grading was originally strictly sequential to stay clear of DeepSeek's rate

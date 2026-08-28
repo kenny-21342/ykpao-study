@@ -11,12 +11,23 @@ import { packToTarget, totalMarksOf, type SelectedQuestion } from '../lib/mock-e
  * looks like an exam or like forty questions off one 2019 paper.
  */
 
-const q = (id: number, marks: number, paperId = id, year = 2020): SelectedQuestion => ({
+const q = (
+  id: number,
+  marks: number,
+  paperId = id,
+  year = 2020,
+  keyed = true,
+): SelectedQuestion => ({
   id,
   marks,
   paperId,
   year,
+  keyed,
 });
+
+/** A question with no answer key, so one that costs a model call to mark. */
+const unkeyed = (id: number, marks: number, paperId = id, year = 2020): SelectedQuestion =>
+  q(id, marks, paperId, year, false);
 
 test('packs up to the target without overshooting it', () => {
   const picked = packToTarget([q(1, 6), q(2, 8), q(3, 10), q(4, 4)], 20, 12);
@@ -65,4 +76,28 @@ test('questions come back in reading order, not draw order', () => {
     picked.map((p) => p.year),
     [2018, 2020, 2022],
   );
+});
+
+test('the unkeyed cap bounds grading cost without shrinking the paper', () => {
+  // Twelve is the model-shaped ceiling; keyed questions cost nothing to mark,
+  // so they must keep filling the paper after it is reached. The defect this
+  // guards against is the reverse: a 50-mark request coming back as eight
+  // one-mark questions because the item cap bound before the mark target did.
+  const candidates = [
+    ...Array.from({ length: 30 }, (_, i) => unkeyed(i + 1, 1)),
+    ...Array.from({ length: 60 }, (_, i) => q(i + 101, 1)),
+  ];
+  const picked = packToTarget(candidates, 50, 60, 12);
+
+  assert.equal(totalMarksOf(picked), 50, 'the mark target must still be met');
+  assert.ok(
+    picked.filter((p) => !p.keyed).length <= 12,
+    'no more than twelve questions may need a model',
+  );
+});
+
+test('a paper of only unkeyed questions still respects the model ceiling', () => {
+  const candidates = Array.from({ length: 40 }, (_, i) => unkeyed(i + 1, 1));
+  const picked = packToTarget(candidates, 50, 60, 12);
+  assert.equal(picked.length, 12);
 });

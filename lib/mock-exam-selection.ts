@@ -32,9 +32,10 @@ export type { SelectedQuestion } from '@/lib/mock-exam-packing';
  * Packing needs slack: drawing exactly the number of questions a paper holds
  * would let one 12-mark question overshoot a 20-mark target with nothing
  * smaller left to try. Ten times the ceiling is enough for the greedy pass
- * below to find a close fit, and is still one indexed query.
+ * below to find a close fit, and is still one indexed query. Sized against the
+ * largest paper the caps allow (60 one-mark questions), not the smallest.
  */
-const CANDIDATE_POOL = 200;
+const CANDIDATE_POOL = 500;
 
 /**
  * Draw a paper's worth of questions for a subject.
@@ -49,14 +50,17 @@ export async function selectBankQuestions(options: {
   subjectCodes: string[];
   targetMarks: number;
   maxItems: number;
+  /** How many chosen questions may lack an answer key. Defaults to `maxItems`. */
+  maxUnkeyedItems?: number;
 }): Promise<SelectedQuestion[]> {
-  const { subjectCodes, targetMarks, maxItems } = options;
+  const { subjectCodes, targetMarks, maxItems, maxUnkeyedItems } = options;
   if (subjectCodes.length === 0 || maxItems <= 0) return [];
 
   const candidates = await prisma.$queryRaw<
-    Array<{ id: number; marks: number; paperId: number; year: number }>
+    Array<{ id: number; marks: number; paperId: number; year: number; keyed: boolean }>
   >(Prisma.sql`
-    SELECT q.id, m."totalMarks" AS marks, p.id AS "paperId", p.year
+    SELECT q.id, m."totalMarks" AS marks, p.id AS "paperId", p.year,
+           (m."answerLetter" IS NOT NULL) AS keyed
     FROM bank_questions q
     JOIN bank_papers p ON p.id = q."paperId"
     JOIN bank_subjects s ON s.id = p."subjectId"
@@ -71,7 +75,7 @@ export async function selectBankQuestions(options: {
     LIMIT ${CANDIDATE_POOL}
   `);
 
-  return packToTarget(candidates, targetMarks, maxItems);
+  return packToTarget(candidates, targetMarks, maxItems, maxUnkeyedItems ?? maxItems);
 }
 
 
