@@ -48,15 +48,33 @@ async function pickDailyQuestion(dateKey: string): Promise<DailyQuestion | null>
   // Ordered by id so the list is stable between days; the seed does the
   // rotating. Restricted to questions with a published mark scheme, because a
   // challenge nobody can be shown the answer to is the defect this replaces.
-  const candidates = await prisma.bankQuestion.findMany({
+  const publishedWithMarkScheme = {
+    status: 'published',
+    paper: { docType: 'qp' },
+    markScheme: { status: 'published' },
+  } as const;
+
+  // Keyed questions first. A challenge that can be marked by comparing a letter
+  // tells the student they were right *and* what the answer was, in the
+  // request; without a key the best the day can do is hand back the mark scheme
+  // and ask them to mark themselves, which is a weaker thing to open the app
+  // to. The fallback exists so an empty keyed pool degrades to that rather than
+  // to no challenge at all.
+  let candidates = await prisma.bankQuestion.findMany({
     where: {
-      status: 'published',
-      paper: { docType: 'qp' },
-      markScheme: { status: 'published' },
+      ...publishedWithMarkScheme,
+      markScheme: { ...publishedWithMarkScheme.markScheme, answerLetter: { not: null } },
     },
     select: { id: true },
     orderBy: { id: 'asc' },
   });
+  if (candidates.length === 0) {
+    candidates = await prisma.bankQuestion.findMany({
+      where: publishedWithMarkScheme,
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+  }
   if (candidates.length === 0) return null;
 
   let seed = 0;

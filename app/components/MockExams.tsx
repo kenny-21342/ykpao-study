@@ -257,8 +257,8 @@ export default function MockExams() {
               Mock Exams
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Generate AI-tailored exam papers from the question bank, sit them under timed
-              conditions, and get instant AI-graded feedback.
+              Build a paper from the question bank, sit it under timed conditions, and
+              get multiple-choice answers marked the moment you submit.
             </p>
           </div>
           <button
@@ -559,7 +559,10 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/questions?action=filters');
+        // Only the subjects generation can actually serve — see
+        // app/api/mock-exams/subjects/route.ts. The old source listed every
+        // subject with a paper, which is how 0606 got offered and then refused.
+        const res = await fetch('/api/mock-exams/subjects');
         if (!res.ok) throw new Error('Failed to load subjects');
         const data = await res.json();
         if (cancelled) return;
@@ -626,7 +629,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {mode === 'predicted'
                 ? 'The AI will forecast a realistic paper from the question bank and historical structure.'
-                : 'The AI will pick questions from the question bank to match your settings.'}
+                : 'Questions are drawn from the bank to match your mark total. No wait — the paper is ready as soon as you press the button.'}
             </p>
           </div>
         </div>
@@ -691,17 +694,28 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
               </Field>
 
               <Field label="Subject" required>
-                <select
-                  value={subjectCode}
-                  onChange={(e) => setSubjectCode(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                >
-                  {subjects.map((s) => (
-                    <option key={s.code} value={s.code}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
+                {subjects.length === 0 ? (
+                  // Rather than an empty dropdown above a dead button. This is
+                  // reachable: a student may be enrolled only in subjects whose
+                  // mark schemes have not been linked yet.
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    None of your subjects have marked questions in the bank yet, so a
+                    paper cannot be assembled. Browse the question bank in Practice
+                    in the meantime.
+                  </p>
+                ) : (
+                  <select
+                    value={subjectCode}
+                    onChange={(e) => setSubjectCode(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  >
+                    {subjects.map((s) => (
+                      <option key={s.code} value={s.code}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </Field>
 
               {/* Difficulty is set on 50 of 85,611 bank questions, and no bank

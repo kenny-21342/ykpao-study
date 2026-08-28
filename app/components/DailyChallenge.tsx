@@ -176,7 +176,7 @@ export default function DailyChallenge() {
             {data.question.part ? `${data.question.part}` : ''} · {data.question.paper.year}
           </span>
           <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
-            {data.question.marks} marks
+            {data.question.marks} {data.question.marks === 1 ? 'mark' : 'marks'}
           </span>
         </div>
         <div className="mt-2 text-sm text-gray-800 dark:text-gray-200">

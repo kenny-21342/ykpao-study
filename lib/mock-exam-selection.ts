@@ -74,3 +74,35 @@ export async function selectBankQuestions(options: {
   return packToTarget(candidates, targetMarks, maxItems);
 }
 
+
+/**
+ * The subjects generation can actually serve.
+ *
+ * The form used to fill its dropdown from `/api/questions?action=filters`,
+ * which lists legacy `subjects` having any *paper* -- and papers exist for all
+ * eight enrolled subjects while questions do not. So the picker offered
+ * Additional Mathematics, the student picked it, and generation failed. The
+ * predicate below is deliberately the same one `selectBankQuestions` draws
+ * against, so a subject can never be offered that the draw would then come up
+ * empty on.
+ */
+export async function listServableSubjects(
+  subjectCodes: string[] | null,
+): Promise<Array<{ id: number; code: string; name: string }>> {
+  if (subjectCodes && subjectCodes.length === 0) return [];
+
+  return prisma.$queryRaw<Array<{ id: number; code: string; name: string }>>(Prisma.sql`
+    SELECT DISTINCT s.id, s.code, s.name
+    FROM bank_questions q
+    JOIN bank_papers p ON p.id = q."paperId"
+    JOIN bank_subjects s ON s.id = p."subjectId"
+    JOIN bank_mark_schemes m ON m."questionId" = q.id
+    WHERE q.status = 'published'
+      AND m.status = 'published'
+      AND m."totalMarks" IS NOT NULL
+      AND m."totalMarks" > 0
+      AND p."docType" = 'qp'
+      ${subjectCodes ? Prisma.sql`AND s.code IN (${Prisma.join(subjectCodes)})` : Prisma.empty}
+    ORDER BY s.name ASC
+  `);
+}
