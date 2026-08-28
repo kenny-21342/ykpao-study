@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { bankAssetKey } from '@/lib/storage/keys';
 import { PLACEHOLDER_ANSWER, plainText, scheduleReview } from '@/lib/learning';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 
 export const dynamic = 'force-dynamic';
+
+/** Stored strip rows as servable URLs; malformed digests are dropped. */
+function toReviewStrips(
+  rows: Array<{ page: number; asset: { sha256: string; width: number | null; height: number | null } }>,
+) {
+  return rows.flatMap((row) => {
+    const key = bankAssetKey(row.asset.sha256);
+    if (!key) return [];
+    return [{ url: `/${key}`, width: row.asset.width, height: row.asset.height, page: row.page }];
+  });
+}
 
 const CreateReview = z.object({
   questionId: z.number().int().positive().optional(),
@@ -56,12 +68,38 @@ export async function GET(req: NextRequest) {
           paper: { select: { year: true, session: true, paperNumber: true, variant: true, subject: true } },
         },
       },
+      // A crop-first question is an image, and so is its mark scheme in 47,844
+      // cases. The card stores the id; the strips are resolved here so the
+      // client can render a back that has no text on it.
+      bankQuestion: {
+        select: {
+          rootNumber: true,
+          strips: { include: { asset: true }, orderBy: { ordering: 'asc' } },
+          markScheme: {
+            select: {
+              status: true,
+              strips: { include: { asset: true }, orderBy: { ordering: 'asc' } },
+            },
+          },
+          paper: { select: { year: true, session: true, paperNumber: true, variant: true } },
+        },
+      },
     },
     orderBy: [{ nextReviewAt: 'asc' }, { createdAt: 'desc' }],
     take: 100,
   });
 
-  return NextResponse.json({ reviews, scope: courseScope });
+  return NextResponse.json({
+    reviews: reviews.map(({ bankQuestion, ...review }) => ({
+      ...review,
+      promptStrips: bankQuestion ? toReviewStrips(bankQuestion.strips) : [],
+      answerStrips:
+        bankQuestion?.markScheme?.status === 'published'
+          ? toReviewStrips(bankQuestion.markScheme.strips)
+          : [],
+    })),
+    scope: courseScope,
+  });
 }
 
 export async function POST(req: Request) {

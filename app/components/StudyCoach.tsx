@@ -1,5 +1,12 @@
 'use client';
 
+/*
+ * next/image is deliberately not used for the crops below: they are
+ * session-gated strips from /bank_assets/**, which the optimiser would fetch
+ * server-side without the viewer's cookie and get a 401 for.
+ */
+/* eslint-disable @next/next/no-img-element */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
@@ -44,11 +51,18 @@ type StudyTask = {
   status: string;
 };
 
+type ReviewStrip = { url: string; width: number | null; height: number | null };
+
 type ReviewItem = {
   id: string;
   questionId: number | null;
+  bankQuestionId: number | null;
   prompt: string;
   answer: string;
+  /** Non-empty when the question is a crop rather than transcribed text. */
+  promptStrips?: ReviewStrip[];
+  /** Non-empty when the mark scheme is an image with no prose behind it. */
+  answerStrips?: ReviewStrip[];
   subject: string;
   topic: string;
   status: string;
@@ -476,13 +490,42 @@ function MistakesView({ mistakes, busy, onOpenQuestion, onAddReview }: { mistake
   return <main className="max-w-5xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-gray-900 dark:text-white">Mistake notebook</h3><p className="text-xs text-gray-500 mt-1">Your latest unsuccessful attempt for each question</p></div>{mistakes.length === 0 ? <EmptyState icon={CheckCircle2} title="No recorded mistakes" body="Incorrect practice and mock-exam answers will appear here automatically." /> : <div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{mistakes.map((mistake) => <article key={mistake.attemptId} className="py-4 px-2"><div className="flex items-start gap-3"><button onClick={() => onOpenQuestion(mistake.questionId)} className="w-10 h-10 grid place-items-center rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 flex-none"><AlertCircle className="w-5 h-5" /></button><button onClick={() => setExpanded(expanded === mistake.attemptId ? null : mistake.attemptId)} className="min-w-0 flex-1 text-left"><div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{mistake.code}</h4><span className="text-xs text-gray-500">{mistake.score ?? 0}/{mistake.maxScore ?? '-'}</span></div><p className="text-xs text-gray-500 mt-1">{mistake.subject} · {mistake.topic} · {new Date(mistake.attemptedAt).toLocaleDateString()}</p><p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mt-2">{mistake.question}</p></button><button onClick={() => mistake.reviewId ? undefined : onAddReview(mistake)} disabled={!!mistake.reviewId || busy === `mistake-${mistake.questionId}`} className="h-9 px-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-semibold disabled:opacity-60">{busy === `mistake-${mistake.questionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mistake.reviewId ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Plus className="w-3.5 h-3.5" />}{mistake.reviewId ? 'In review' : 'Add review'}</button></div>{expanded === mistake.attemptId && <div className="ml-13 mt-4 grid md:grid-cols-2 gap-4"><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Your answer</p><p className="text-sm text-gray-700 dark:text-gray-300">{mistake.answer || 'No answer submitted.'}</p>{mistake.weaknesses.length > 0 && <ul className="mt-3 space-y-1">{mistake.weaknesses.map((weakness) => <li key={weakness} className="text-xs text-red-700 dark:text-red-300">· {weakness}</li>)}</ul>}</div><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Feedback</p>{mistake.explanation ? <FormattedMessage content={mistake.explanation} /> : <p className="text-sm text-gray-500">Open the question to review the mark scheme.</p>}</div></div>}</article>)}</div>}</main>;
 }
 
+/**
+ * One face of a review card, whether it is text or a crop.
+ *
+ * Strips win when present: a crop-first question has no transcript, and 47,844
+ * linked mark schemes are images with no `answerMd` at all. Rendering only
+ * `answer` left those cards blank, which is the same failure as the placeholder
+ * they replaced.
+ */
+function ReviewFace({ content, strips, alt }: { content: string; strips?: ReviewStrip[]; alt: string }) {
+  if (strips && strips.length > 0) {
+    return (
+      <div className="overflow-x-auto">
+        {strips.map((strip, index) => (
+          <img
+            key={`${strip.url}-${index}`}
+            src={strip.url}
+            alt={index === 0 ? alt : ''}
+            width={strip.width ?? undefined}
+            height={strip.height ?? undefined}
+            className="block max-w-full"
+          />
+        ))}
+      </div>
+    );
+  }
+  if (!content) return null;
+  return <FormattedMessage content={content} />;
+}
+
 function ReviewView({ reviews, busy, onRate, onOpenQuestion }: { reviews: ReviewItem[]; busy: string | null; onRate: (id: string, rating: 'again' | 'hard' | 'good' | 'easy') => void; onOpenQuestion: (id: number) => void }) {
   const due = reviews.filter((review) => review.status === 'active' && new Date(review.nextReviewAt) <= new Date());
   const [index, setIndex] = useState(0); const [revealed, setRevealed] = useState(false);
   const safeIndex = due.length > 0 ? index % due.length : 0;
   const item = due[safeIndex];
   const rate = async (rating: 'again' | 'hard' | 'good' | 'easy') => { if (!item) return; onRate(item.id, rating); setIndex(0); setRevealed(false); };
-  return <main className="max-w-4xl mx-auto p-4 md:p-6"><div className="flex items-center justify-between mb-5"><div><h3 className="font-bold text-gray-900 dark:text-white">Spaced review</h3><p className="text-xs text-gray-500 mt-1">{due.length} due now · {reviews.filter((review) => review.status === 'active').length} active</p></div>{item?.questionId && <button onClick={() => onOpenQuestion(item.questionId!)} className="text-sm font-semibold text-green-700 dark:text-green-400">Open original</button>}</div>{!item ? <EmptyState icon={Brain} title="Reviews complete" body="Your next items will appear here when their interval is due." /> : <div className="min-h-[420px] border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 flex flex-col"><div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500"><span>{item.subject} · {item.topic}</span><span>{safeIndex + 1} / {due.length}</span></div><div className="flex-1 p-6 md:p-10"><p className="text-xs font-bold text-gray-500 uppercase mb-4">Recall the answer</p><div className="text-base text-gray-900 dark:text-white"><FormattedMessage content={item.prompt} /></div>{revealed && <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800"><p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase mb-4">Answer</p><FormattedMessage content={item.answer} /></div>}</div><div className="p-4 border-t border-gray-200 dark:border-gray-800">{!revealed ? <button onClick={() => setRevealed(true)} className="w-full h-11 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold">Reveal answer</button> : <div className="grid grid-cols-4 gap-2">{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} disabled={busy === item.id} onClick={() => void rate(rating)} className={`h-11 rounded-lg text-sm font-semibold capitalize border ${rating === 'again' ? 'border-red-300 text-red-700' : rating === 'hard' ? 'border-amber-300 text-amber-700' : rating === 'good' ? 'border-green-300 text-green-700' : 'border-blue-300 text-blue-700'} disabled:opacity-50`}>{rating}</button>)}</div>}</div></div>}</main>;
+  return <main className="max-w-4xl mx-auto p-4 md:p-6"><div className="flex items-center justify-between mb-5"><div><h3 className="font-bold text-gray-900 dark:text-white">Spaced review</h3><p className="text-xs text-gray-500 mt-1">{due.length} due now · {reviews.filter((review) => review.status === 'active').length} active</p></div>{item?.questionId && <button onClick={() => onOpenQuestion(item.questionId!)} className="text-sm font-semibold text-green-700 dark:text-green-400">Open original</button>}</div>{!item ? <EmptyState icon={Brain} title="Reviews complete" body="Your next items will appear here when their interval is due." /> : <div className="min-h-[420px] border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 flex flex-col"><div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500"><span>{item.subject} · {item.topic}</span><span>{safeIndex + 1} / {due.length}</span></div><div className="flex-1 p-6 md:p-10"><p className="text-xs font-bold text-gray-500 uppercase mb-4">Recall the answer</p><div className="text-base text-gray-900 dark:text-white"><ReviewFace content={item.prompt} strips={item.promptStrips} alt="Question from the original paper" /></div>{revealed && <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800"><p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase mb-4">Answer</p><ReviewFace content={item.answer} strips={item.answerStrips} alt="Mark scheme from the original paper" /></div>}</div><div className="p-4 border-t border-gray-200 dark:border-gray-800">{!revealed ? <button onClick={() => setRevealed(true)} className="w-full h-11 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold">Reveal answer</button> : <div className="grid grid-cols-4 gap-2">{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} disabled={busy === item.id} onClick={() => void rate(rating)} className={`h-11 rounded-lg text-sm font-semibold capitalize border ${rating === 'again' ? 'border-red-300 text-red-700' : rating === 'hard' ? 'border-amber-300 text-amber-700' : rating === 'good' ? 'border-green-300 text-green-700' : 'border-blue-300 text-blue-700'} disabled:opacity-50`}>{rating}</button>)}</div>}</div></div>}</main>;
 }
 
 function MasteryView({ topics, subjects, selectedSubject, setSelectedSubject, onOpenQuestion, queue }: { topics: MasteryTopic[]; subjects: string[]; selectedSubject: string; setSelectedSubject: (subject: string) => void; onOpenQuestion: (id: number) => void; queue: QueueItem[] }) {

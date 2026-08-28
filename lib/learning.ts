@@ -121,4 +121,55 @@ export async function upsertMistakeReview(input: {
     },
   });
 }
+
+/**
+ * The same, for a question from the crop-first bank.
+ *
+ * A separate function rather than a branch, because the two differ in what
+ * counts as an answer. A legacy card needs text: there is nothing else to put
+ * on the back. A bank card can be answered by an image -- 47,844 linked mark
+ * schemes are strips with no `answerMd` at all -- so `hasMarkSchemeStrips` is
+ * as good as prose here, and the card stores the question id for the API to
+ * resolve those strips against.
+ *
+ * Returns null and writes nothing when there is neither, for the same reason as
+ * above: a card with nothing on the back cannot be reviewed.
+ */
+export async function upsertBankMistakeReview(input: {
+  userId: string;
+  bankQuestionId: number;
+  prompt: string;
+  answer?: string | null;
+  answerLetter?: string | null;
+  hasMarkSchemeStrips?: boolean;
+  subject: string;
+  topic: string;
+}) {
+  // An answer key is a complete answer to a multiple-choice question, so it
+  // beats the mark scheme prose rather than falling back to it.
+  const text = input.answerLetter
+    ? `Answer: ${input.answerLetter}`
+    : plainText(input.answer || '', 5000);
+
+  if (!text && !input.hasMarkSchemeStrips) return null;
+
+  const fields = {
+    prompt: plainText(input.prompt, 5000),
+    // Empty when the mark scheme is image-only; the client renders the strips
+    // the API resolves from `bankQuestionId`.
+    answer: text,
+    subject: input.subject,
+    topic: input.topic || 'General',
+    status: 'active',
+    nextReviewAt: new Date(),
+  };
+
+  return prisma.reviewItem.upsert({
+    where: {
+      userId_bankQuestionId: { userId: input.userId, bankQuestionId: input.bankQuestionId },
+    },
+    create: { userId: input.userId, bankQuestionId: input.bankQuestionId, ...fields },
+    update: fields,
+  });
+}
 import { prisma } from '@/lib/prisma';

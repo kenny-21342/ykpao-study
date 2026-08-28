@@ -6,7 +6,7 @@ import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting } from '@/lib/vision';
 import type { GradeResult } from '@/types/ai';
-import { upsertMistakeReview } from '@/lib/learning';
+import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
@@ -272,11 +272,28 @@ export async function POST(
       });
     };
 
-    /** Raise a review card, where the corpus supports one. */
+    /** Raise a review card in whichever corpus the item belongs to. */
     const recordMistake = async (
       entry: (typeof itemsWithMs)[number],
       modelAnswer: string | null | undefined,
     ) => {
+      if (entry.item.bankQuestionId && entry.normalized) {
+        await upsertBankMistakeReview({
+          userId: user.id,
+          bankQuestionId: entry.item.bankQuestionId,
+          // A crop-only question has no text, so the card's prompt falls back
+          // to naming it; the strips are rendered from the id either way.
+          prompt:
+            entry.normalized.content.trim() ||
+            `Question ${entry.normalized.number} — see the original paper`,
+          answer: modelAnswer || entry.normalized.markschemeContent,
+          answerLetter: entry.normalized.answerLetter,
+          hasMarkSchemeStrips: entry.normalized.markschemeStrips.length > 0,
+          subject: exam.subjectCode ?? 'General',
+          topic: 'General',
+        });
+        return;
+      }
       if (!entry.item.question) return;
       await upsertMistakeReview({
         userId: user.id,

@@ -541,10 +541,22 @@ model AIActionProposal {
 
 // A mistake or manually-created card in the spaced-repetition queue. Review
 // scheduling uses a compact SM-2-style interval/ease calculation.
+// A spaced-repetition card raised from a question got wrong.
+//
+// `questionId` and `bankQuestionId` are the same two-corpus pair carried by
+// MockExamItem and DailyChallengeAttempt, and for the same reason: a foreign
+// key can only point at one question table. A card raised by hand has neither,
+// which is why there is no CHECK requiring exactly one here -- `prompt` and
+// `answer` stand on their own.
+//
+// The bank reference matters for more than provenance. A crop-first question's
+// mark scheme is often an image with no text at all (47,844 of them), so the
+// card carries the id and the API resolves the strips to render on the back.
 model ReviewItem {
   id             String    @id @default(cuid())
   userId         String
   questionId     Int?
+  bankQuestionId Int?
   prompt         String
   answer         String
   subject        String
@@ -559,10 +571,16 @@ model ReviewItem {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question     PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  bankQuestion BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: SetNull)
 
   @@unique([userId, questionId])
+  // One card per user per bank question, so a repeated mistake refreshes the
+  // card rather than stacking duplicates -- the same guarantee the legacy pair
+  // gives. Postgres treats NULLs as distinct, so hand-made cards (both ids
+  // null) are unaffected by either constraint.
+  @@unique([userId, bankQuestionId])
   @@index([userId, status, nextReviewAt])
   @@map("review_items")
 }
@@ -1353,6 +1371,7 @@ model BankQuestion {
   attempts               BankQuestionAttempt[]
   mockExamItems          MockExamItem[]
   dailyChallengeAttempts DailyChallengeAttempt[]
+  reviewItems            ReviewItem[]
 
   @@unique([paperId, rootNumber])
   @@index([paperId])

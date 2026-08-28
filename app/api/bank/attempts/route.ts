@@ -18,6 +18,8 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { gradeAgainstKey } from '@/lib/bank-grading';
+import { upsertBankMistakeReview } from '@/lib/learning';
+import { subjectNameForCode } from '@/lib/course-catalog';
 import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
@@ -93,14 +95,26 @@ export async function POST(req: Request) {
     where: { id: body.questionId, status: 'published' },
     select: {
       id: true,
-      markScheme: { select: { status: true, answerLetter: true } },
+      rootNumber: true,
+      bodyMd: true,
+      paper: { select: { subject: { select: { code: true, name: true } } } },
+      markScheme: {
+        select: {
+          status: true,
+          answerLetter: true,
+          answerMd: true,
+          _count: { select: { strips: true } },
+        },
+      },
     },
   });
   if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
-  // An unpublished mark scheme is not an answer key we should mark against.
-  const answerLetter =
-    question.markScheme?.status === 'published' ? question.markScheme.answerLetter : null;
+  // An unpublished mark scheme is not an answer key we should mark against,
+  // nor one to put on the back of a review card.
+  const publishedMarkScheme =
+    question.markScheme?.status === 'published' ? question.markScheme : null;
+  const answerLetter = publishedMarkScheme?.answerLetter ?? null;
 
   const keyGrade = gradeAgainstKey(body.answer, answerLetter);
 
@@ -132,6 +146,25 @@ export async function POST(req: Request) {
       },
       select: { id: true, isCorrect: true, score: true, gradedBy: true, createdAt: true },
     });
+
+    // A wrong answer is what spaced review exists for. Raising the card here
+    // rather than only on mock-exam submission matters because Practice is
+    // where most attempts happen; `upsertBankMistakeReview` declines to create
+    // one when there would be nothing on the back of it.
+    if (marked?.isCorrect === false) {
+      await upsertBankMistakeReview({
+        userId: user.id,
+        bankQuestionId: question.id,
+        prompt:
+          question.bodyMd.trim() ||
+          `Question ${question.rootNumber} — see the original paper`,
+        answer: publishedMarkScheme?.answerMd,
+        answerLetter,
+        hasMarkSchemeStrips: (publishedMarkScheme?._count.strips ?? 0) > 0,
+        subject: subjectNameForCode(question.paper.subject.code) ?? question.paper.subject.name,
+        topic: 'General',
+      });
+    }
 
     return NextResponse.json({
       attempt,
