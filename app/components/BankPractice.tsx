@@ -83,10 +83,15 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   const [error, setError] = useState<string | null>(null);
 
   if (!question.hasText) {
+    // A keyed question *is* marked automatically -- against the stored answer
+    // letter, which needs no transcript. Saying otherwise under a question that
+    // just came back "Correct." reads as the app not knowing what it did.
+    const keyed = Boolean(question.markScheme?.answerLetter);
     return (
       <p className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-        Hints and automatic marking aren&apos;t available for this question yet.
-        You can still answer it and check your work against the mark scheme.
+        {keyed
+          ? 'Hints aren\u2019t available for this question yet. Your answer is still marked against the answer key.'
+          : 'Hints and automatic marking aren\u2019t available for this question yet. You can still answer it and check your work against the mark scheme.'}
       </p>
     );
   }

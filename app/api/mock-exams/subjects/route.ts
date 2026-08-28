@@ -17,6 +17,7 @@ import { getSessionUser } from '@/lib/auth';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
+import { subjectNameForCode } from '@/lib/course-catalog';
 import { listServableSubjects } from '@/lib/mock-exam-selection';
 import { reportError } from '@/lib/error-reporting';
 
@@ -40,10 +41,13 @@ export async function GET() {
           .map((catalogCode) => {
             const bankCodes = toBankSubjectCodes([catalogCode]);
             const match = servable.find((s) => bankCodes.includes(s.code));
-            return match ? { id: match.id, code: catalogCode, name: match.name } : null;
+            if (!match) return null;
+            // bank_subjects.name is derived from the filename, so it reads
+            // "CAIE 0610". The catalog knows it as Biology.
+            return { id: match.id, code: catalogCode, name: subjectNameForCode(catalogCode) ?? match.name };
           })
           .filter((s): s is { id: number; code: string; name: string } => s !== null)
-      : servable;
+      : servable.map((s) => ({ ...s, name: subjectNameForCode(s.code) ?? s.name }));
 
     return NextResponse.json({ subjects });
   } catch (error) {
