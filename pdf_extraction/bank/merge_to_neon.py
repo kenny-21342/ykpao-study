@@ -390,10 +390,18 @@ def main():
     asset_id_map: dict[int, int] = {}
     skipped_assets = 0
 
-    # Pre-load existing assets by sha256
-    with dst.cursor() as cur:
+    # Pre-load existing assets by sha256, streaming rather than buffering.
+    # A plain fetchall() pulls the whole table across in one read; at 460,220
+    # rows that is what timed the socket out mid-merge. A named cursor is
+    # server-side, so psycopg2 fetches itersize rows at a time and the
+    # connection never goes quiet for long.
+    existing_assets = {}
+    with dst.cursor(name="bank_assets_scan") as cur:
+        cur.itersize = 20000
         cur.execute('SELECT id, sha256 FROM bank_assets')
-        existing_assets = {row[1]: row[0] for row in cur.fetchall() if row[1]}
+        for asset_id, sha in cur:
+            if sha:
+                existing_assets[sha] = asset_id
     print(f"  (found {len(existing_assets)} assets already in Postgres)")
 
     # RETURNING id is what forced one round trip per row: it ties each new id
@@ -412,11 +420,13 @@ def main():
         """,
         "asset", len(rows),
     )
+    inserted_shas: list[str] = []
     for row in rows:
         if row["sha256"] in existing_assets:
             asset_id_map[row["id"]] = existing_assets[row["sha256"]]
             skipped_assets += 1
             continue
+        inserted_shas.append(row["sha256"])
         batch.add((
             row["sha256"], row["kind"], row["relative_path"], row["width"],
             row["height"], row["byte_size"], row["source_page"],
@@ -425,14 +435,31 @@ def main():
     written, failed = batch.finish()
 
     # Only when something was actually inserted. The loop above already mapped
-    # every asset that was already there, so on a re-run this second pass over
-    # 400,328 rows recovers nothing and costs minutes of network round trip.
+    # every asset that was already there, so on a re-run this second pass
+    # recovers nothing and costs minutes of network round trip.
+    #
+    # Ask only for the rows just written, in chunks. Selecting the whole table
+    # and fetchall()-ing it killed the merge after a re-render: 460,220 rows
+    # in one read, and the socket timed out mid-fetch ("SSL SYSCALL error:
+    # Operation timed out") with every asset already safely inserted. The
+    # keepalives on the connection do not help -- the connection is not idle,
+    # the single read is simply too big.
     if written:
-        with dst.cursor() as cur:
-            cur.execute('SELECT id, sha256 FROM bank_assets')
-            existing_assets = {r[1]: r[0] for r in cur.fetchall() if r[1]}
+        ensure_connection()
+        recovered: dict[str, int] = {}
+        chunk_size = 5000
+        for start in range(0, len(inserted_shas), chunk_size):
+            chunk = inserted_shas[start:start + chunk_size]
+            ensure_connection()
+            with dst.cursor() as cur:
+                cur.execute(
+                    'SELECT id, sha256 FROM bank_assets WHERE sha256 = ANY(%s)',
+                    (chunk,))
+                for asset_id, sha in cur.fetchall():
+                    if sha:
+                        recovered[sha] = asset_id
         for row in rows:
-            new_id = existing_assets.get(row["sha256"])
+            new_id = recovered.get(row["sha256"])
             if new_id:
                 asset_id_map[row["id"]] = new_id
 
