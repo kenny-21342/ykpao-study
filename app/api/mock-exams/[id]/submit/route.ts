@@ -9,6 +9,8 @@ import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 import { reportError } from '@/lib/error-reporting';
+import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
+import { gradeAgainstKey } from '@/lib/bank-grading';
 
 export const dynamic = 'force-dynamic';
 
@@ -169,11 +171,7 @@ export async function POST(
     // Fetch full item data + markscheme for grading
     const items = await prisma.mockExamItem.findMany({
       where: { mockExamId: exam.id },
-      include: {
-        question: {
-          include: { paper: { include: { subject: true } } },
-        },
-      },
+      include: EXAM_ITEM_INCLUDE,
       orderBy: { order: 'asc' },
       // Hard ceiling on work per request. Grading runs one LLM completion per
       // item (plus an OCR call for any attached photo), so without a cap a
@@ -183,12 +181,17 @@ export async function POST(
       take: MAX_EXAM_ITEMS,
     });
 
-    // Also pre-fetch markschemes for each item
+    // Pre-resolve every item into one shape, and find the legacy mark schemes.
+    //
+    // A legacy item's mark scheme lives in a separate `ms` document and has to
+    // be matched on the paper's coordinates; a bank item's is a direct relation
+    // that came back with the item. Only the former needs a query, so only the
+    // former gets one.
     const itemsWithMs = await Promise.all(
       items.map(async (item) => {
         let ms: string | null = null;
         let markschemeId: number | null = null;
-        if (item.question.paper.docType === 'qp') {
+        if (item.question && item.question.paper.docType === 'qp') {
           const found = await prisma.pastPaperQuestion.findFirst({
             where: {
               paper: {
@@ -208,9 +211,83 @@ export async function POST(
           ms = found?.content ?? null;
           markschemeId = found?.id ?? null;
         }
-        return { item, markscheme: ms, markschemeId };
+        const normalized = normalizeExamItem(item, ms);
+        return { item, normalized, markscheme: normalized?.markschemeContent ?? ms, markschemeId };
       })
     );
+
+    /**
+     * Record one graded answer in whichever attempt table the item belongs to.
+     *
+     * There are two because a foreign key can only point at one question table.
+     * A bank item also has no `ReviewItem` path yet -- that table is likewise
+     * keyed to the legacy corpus -- so a bank mistake is recorded as an attempt
+     * and does not yet raise a review card.
+     */
+    const recordAttempt = async (
+      entry: (typeof itemsWithMs)[number],
+      data: {
+        answer: string;
+        score: number | null;
+        isCorrect: boolean | null;
+        maxScore: number | null;
+        strengths?: string[];
+        weaknesses?: string[];
+        explanation?: string | null;
+        modelAnswer?: string | null;
+        gradingStatus: string;
+        answerImageUrl?: string | null;
+      },
+    ) => {
+      if (entry.item.bankQuestionId) {
+        await prisma.bankQuestionAttempt.create({
+          data: {
+            userId: user.id,
+            questionId: entry.item.bankQuestionId,
+            answer: data.answer,
+            isCorrect: data.isCorrect,
+            score: data.score,
+            gradedBy: entry.normalized?.answerLetter ? 'key' : 'ai',
+          },
+        });
+        return;
+      }
+      if (!entry.item.question) return;
+      await prisma.pastPaperAttempt.create({
+        data: {
+          userId: user.id,
+          questionId: entry.item.question.id,
+          answer: data.answer,
+          score: data.score ?? 0,
+          maxScore: data.maxScore,
+          isCorrect: data.isCorrect ?? false,
+          strengths: data.strengths ?? [],
+          weaknesses: data.weaknesses ?? [],
+          explanation: data.explanation ?? null,
+          modelAnswer: data.modelAnswer ?? null,
+          gradingStatus: data.gradingStatus,
+          gradingSourceId: entry.markschemeId,
+          answerImageUrl: data.answerImageUrl ?? null,
+        },
+      });
+    };
+
+    /** Raise a review card, where the corpus supports one. */
+    const recordMistake = async (
+      entry: (typeof itemsWithMs)[number],
+      modelAnswer: string | null | undefined,
+    ) => {
+      if (!entry.item.question) return;
+      await upsertMistakeReview({
+        userId: user.id,
+        questionId: entry.item.question.id,
+        prompt: entry.item.question.content,
+        answer: modelAnswer,
+        fallbackAnswer: entry.markscheme,
+        subject: entry.item.question.paper.subject.name,
+        topic: entry.item.question.topic,
+      });
+    };
 
     // Grading is the expensive part: one LLM call per item, plus an OCR call
     // for any photographed working. It used to run strictly sequentially to
@@ -223,7 +300,10 @@ export async function POST(
     const scores = await mapWithConcurrency(
       itemsWithMs,
       GRADING_CONCURRENCY,
-      async ({ item, markscheme, markschemeId }) => {
+      async (entry) => {
+        const { item, normalized, markscheme, markschemeId } = entry;
+        // Unreachable while the CHECK constraint holds; skip rather than throw.
+        if (!normalized) return 0;
         const rawAnswer = (answers[item.id] ?? '').trim();
         const imageUrl = typeof images[item.id] === 'string' ? images[item.id] : null;
 
@@ -246,41 +326,97 @@ export async function POST(
         }
 
         if (!answer) {
-          await prisma.$transaction([
-            prisma.mockExamItem.update({
-              where: { id: item.id },
-              data: { answer: '', score: 0, isCorrect: false, attemptedAt: new Date(), gradingStatus: markscheme ? 'official' : 'provisional', gradingSourceId: markschemeId },
-            }),
-            prisma.pastPaperAttempt.create({
-              data: {
-                userId: user.id,
-                questionId: item.question.id,
-                answer: '',
-                score: 0,
-                maxScore: item.question.marks || null,
-                isCorrect: false,
-                strengths: [],
-                weaknesses: ['Question not attempted under exam conditions'],
-                explanation: 'Return to this question and complete it without time pressure before reviewing the mark scheme.',
-                modelAnswer: markscheme,
-                gradingStatus: markscheme ? 'official' : 'provisional',
-                gradingSourceId: markschemeId,
-              },
-            }),
-          ]);
-          await upsertMistakeReview({
-            userId: user.id,
-            questionId: item.question.id,
-            prompt: item.question.content,
-            fallbackAnswer: markscheme,
-            subject: item.question.paper.subject.name,
-            topic: item.question.topic,
+          await prisma.mockExamItem.update({
+            where: { id: item.id },
+            data: { answer: '', score: 0, isCorrect: false, attemptedAt: new Date(), gradingStatus: markscheme ? 'official' : 'provisional', gradingSourceId: markschemeId },
+          });
+          await recordAttempt(entry, {
+            answer: '',
+            score: 0,
+            isCorrect: false,
+            maxScore: normalized.marks || null,
+            weaknesses: ['Question not attempted under exam conditions'],
+            explanation: 'Return to this question and complete it without time pressure before reviewing the mark scheme.',
+            modelAnswer: markscheme,
+            gradingStatus: markscheme ? 'official' : 'provisional',
+          });
+          await recordMistake(entry, null);
+          return 0;
+        }
+
+        const max = normalized.marks || 1;
+
+        // A multiple-choice question with a stored key needs no model: compare
+        // the letter and be done. This is most of the science papers in the
+        // bank, and it is the difference between a paper that grades instantly
+        // and one that spends a minute of provider time to reach the same
+        // answer -- or times out before it gets there.
+        const keyGrade = gradeAgainstKey(answer, normalized.answerLetter);
+        if (keyGrade) {
+          const score = keyGrade.isCorrect ? max : 0;
+          await prisma.mockExamItem.update({
+            where: { id: item.id },
+            data: {
+              answer,
+              score,
+              isCorrect: keyGrade.isCorrect,
+              explanation: keyGrade.isCorrect
+                ? null
+                : `The correct answer is ${keyGrade.correctLetter}.`,
+              modelAnswer: keyGrade.correctLetter,
+              strengths: [],
+              weaknesses: [],
+              gradingStatus: 'official',
+              gradingSourceId: markschemeId,
+              answerImageUrl,
+              attemptedAt: new Date(),
+            },
+          });
+          await recordAttempt(entry, {
+            answer,
+            score,
+            isCorrect: keyGrade.isCorrect,
+            maxScore: max,
+            modelAnswer: keyGrade.correctLetter,
+            gradingStatus: 'official',
+            answerImageUrl,
+          });
+          if (!keyGrade.isCorrect) await recordMistake(entry, keyGrade.correctLetter);
+          return score;
+        }
+
+        // Nothing left to mark against: a crop-only question has no transcript
+        // for the grader to read, and inventing one from the image is a
+        // different (and paid) job. Save the work and let the student mark it.
+        if (!normalized.content.trim()) {
+          await prisma.mockExamItem.update({
+            where: { id: item.id },
+            data: {
+              answer,
+              score: null,
+              isCorrect: null,
+              explanation:
+                'This question has not been transcribed yet, so it could not be marked automatically. Compare your answer against the mark scheme.',
+              modelAnswer: markscheme,
+              gradingStatus: 'ungraded',
+              gradingSourceId: markschemeId,
+              answerImageUrl,
+              attemptedAt: new Date(),
+            },
+          });
+          await recordAttempt(entry, {
+            answer,
+            score: null,
+            isCorrect: null,
+            maxScore: max,
+            modelAnswer: markscheme,
+            gradingStatus: 'ungraded',
+            answerImageUrl,
           });
           return 0;
         }
 
-        const questionContent = item.question.content;
-        const max = item.question.marks || 1;
+        const questionContent = normalized.content;
 
         try {
           const grade = await chatJSON<GradeResult>(
@@ -334,36 +470,22 @@ export async function POST(
                 attemptedAt: new Date(),
               },
             }),
-            prisma.pastPaperAttempt.create({
-              data: {
-                userId: user.id,
-                questionId: item.question.id,
-                answer,
-                score,
-                maxScore: max,
-                isCorrect,
-                strengths: grade.strengths ?? [],
-                weaknesses: grade.weaknesses ?? [],
-                explanation: grade.explanation ?? null,
-                modelAnswer: grade.modelAnswer ?? null,
-                gradingStatus: markscheme ? 'official' : 'provisional',
-                gradingSourceId: markschemeId,
-                answerImageUrl,
-              },
-            }),
           ]);
 
-          if (!isCorrect) {
-            await upsertMistakeReview({
-              userId: user.id,
-              questionId: item.question.id,
-              prompt: item.question.content,
-              answer: grade.modelAnswer,
-              fallbackAnswer: markscheme,
-              subject: item.question.paper.subject.name,
-              topic: item.question.topic,
-            });
-          }
+          await recordAttempt(entry, {
+            answer,
+            score,
+            isCorrect,
+            maxScore: max,
+            strengths: grade.strengths ?? [],
+            weaknesses: grade.weaknesses ?? [],
+            explanation: grade.explanation ?? null,
+            modelAnswer: grade.modelAnswer ?? null,
+            gradingStatus: markscheme ? 'official' : 'provisional',
+            answerImageUrl,
+          });
+
+          if (!isCorrect) await recordMistake(entry, grade.modelAnswer);
 
           await recordUsage({
             userId: user.id,
@@ -418,7 +540,7 @@ export async function POST(
       include: {
         items: {
           orderBy: { order: 'asc' },
-          include: { question: { include: { paper: { include: { subject: true } } } } },
+          include: EXAM_ITEM_INCLUDE,
         },
       },
     });
@@ -430,23 +552,30 @@ export async function POST(
         totalMarks: updated.totalMarks,
         score: updated.score,
         submittedAt: updated.submittedAt,
-        items: updated.items.map((i) => ({
-          id: i.id,
-          sectionTitle: i.sectionTitle,
-          order: i.order,
-          number: i.question.number,
-          part: i.question.part,
-          subPart: i.question.subPart,
-          content: i.question.content,
-          marks: i.question.marks,
-          answer: i.answer,
-          score: i.score,
-          isCorrect: i.isCorrect,
-          explanation: i.explanation,
-          modelAnswer: i.modelAnswer,
-          strengths: i.strengths,
-          weaknesses: i.weaknesses,
-        })),
+        items: updated.items.flatMap((i) => {
+          const view = normalizeExamItem(i);
+          if (!view) return [];
+          return [{
+            id: i.id,
+            sectionTitle: i.sectionTitle,
+            order: i.order,
+            number: view.number,
+            part: view.part,
+            subPart: view.subPart,
+            content: view.content,
+            // A crop-first question is read from the image, not the text.
+            strips: view.strips,
+            markschemeStrips: view.markschemeStrips,
+            marks: view.marks,
+            answer: i.answer,
+            score: i.score,
+            isCorrect: i.isCorrect,
+            explanation: i.explanation,
+            modelAnswer: i.modelAnswer,
+            strengths: i.strengths,
+            weaknesses: i.weaknesses,
+          }];
+        }),
       },
       // Only ever set when the student attached photos and their credentials
       // name no vision model: the paper was graded, the pictures were not read.

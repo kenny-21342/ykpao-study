@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
+import { optionLettersFor } from '@/lib/bank-grading';
 
 /**
  * One past-paper question, shown as the crop it was cut from.
@@ -130,6 +131,137 @@ function ZoomOverlay({
   );
 }
 
+/**
+ * Where a student answers the question.
+ *
+ * Two shapes, decided by whether the mark scheme carries an answer key. A keyed
+ * question gets option buttons, because it *is* a multiple-choice question and
+ * a free-text box asking for one of four letters is a worse version of four
+ * buttons. Everything else gets a textarea and marks itself against the mark
+ * scheme, which is the only honest option while the question has no transcript
+ * for the model to mark against.
+ *
+ * Either way the mark scheme opens as soon as an answer is in. Withholding it
+ * after the attempt is what made the daily challenge useless -- a verdict with
+ * nothing to learn from is not feedback.
+ */
+function AnswerPanel({
+  question,
+  onAnswered,
+}: {
+  question: Question;
+  onAnswered: () => void;
+}) {
+  const answerLetter = question.markScheme?.answerLetter ?? null;
+  const [answer, setAnswer] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    isCorrect: boolean | null;
+    correctLetter: string | null;
+  } | null>(null);
+
+  const submit = async (value: string) => {
+    if (!value.trim() || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/bank/attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: question.id, answer: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Could not save your answer');
+      setResult({
+        isCorrect: data.attempt?.isCorrect ?? null,
+        correctLetter: data.correctLetter ?? null,
+      });
+      onAnswered();
+    } catch (submitError) {
+      setError((submitError as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (result) {
+    const { isCorrect, correctLetter } = result;
+    return (
+      <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        {isCorrect === true && (
+          <p className="text-sm font-medium text-green-700 dark:text-green-400">Correct.</p>
+        )}
+        {isCorrect === false && (
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">
+            Not quite.
+            {correctLetter && (
+              <>
+                {' '}
+                The answer is <span className="font-semibold">{correctLetter}</span>.
+              </>
+            )}
+          </p>
+        )}
+        {isCorrect === null && (
+          <p className="text-sm text-gray-700 dark:text-gray-200">
+            Answer saved. Check it against the mark scheme below.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setResult(null);
+            setAnswer('');
+          }}
+          className="mt-2 text-xs text-green-700 underline hover:no-underline dark:text-green-400"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+      {answerLetter ? (
+        <div className="flex flex-wrap gap-2">
+          {optionLettersFor(answerLetter).map((letter) => (
+            <button
+              key={letter}
+              type="button"
+              disabled={saving}
+              onClick={() => submit(letter)}
+              className="h-10 w-10 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+            >
+              {letter}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <textarea
+            value={answer}
+            onChange={(event) => setAnswer(event.target.value)}
+            rows={3}
+            placeholder="Write your working, then mark it against the mark scheme."
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          />
+          <button
+            type="button"
+            disabled={saving || !answer.trim()}
+            onClick={() => submit(answer)}
+            className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save answer'}
+          </button>
+        </div>
+      )}
+      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
+
 export default function BankQuestionCard({ question }: { question: Question }) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
@@ -170,6 +302,8 @@ export default function BankQuestionCard({ question }: { question: Question }) {
           onZoom={() => setZoomed('question')}
         />
       </div>
+
+      <AnswerPanel question={question} onAnswered={() => setShowAnswer(true)} />
 
       {question.markScheme &&
         (question.markScheme.strips.length > 0 || question.markScheme.answerLetter) && (

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
+import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +23,7 @@ export async function GET(
       include: {
         items: {
           orderBy: { order: 'asc' },
-          include: {
-            question: {
-              include: { paper: { include: { subject: true } } },
-            },
-          },
+          include: EXAM_ITEM_INCLUDE,
         },
       },
     });
@@ -35,12 +32,14 @@ export async function GET(
       return NextResponse.json({ error: 'Mock exam not found' }, { status: 404 });
     }
 
-    // For each item, fetch the matching markscheme
-    const itemsWithMarkschemes = await Promise.all(
+    // A legacy item's mark scheme has to be found by matching the whole paper's
+    // coordinates in the `ms` document; a bank item's is a direct relation, so
+    // it needs no lookup at all. `normalizeExamItem` hides that difference.
+    const normalizedItems = await Promise.all(
       exam.items.map(async (item) => {
-        let markscheme: { content: string } | null = null;
-        if (item.question.paper.docType === 'qp') {
-          markscheme = await prisma.pastPaperQuestion.findFirst({
+        let legacyMarkscheme: string | null = null;
+        if (item.question && item.question.paper.docType === 'qp') {
+          const found = await prisma.pastPaperQuestion.findFirst({
             where: {
               paper: {
                 subjectId: item.question.paper.subjectId,
@@ -56,8 +55,9 @@ export async function GET(
             },
             select: { content: true },
           });
+          legacyMarkscheme = found?.content ?? null;
         }
-        return { ...item, markschemeContent: markscheme?.content ?? null };
+        return { item, normalized: normalizeExamItem(item, legacyMarkscheme) };
       })
     );
 
@@ -81,27 +81,39 @@ export async function GET(
         startedAt: exam.startedAt,
         submittedAt: exam.submittedAt,
         createdAt: exam.createdAt,
-        items: itemsWithMarkschemes.map((i) => ({
-          id: i.id,
-          sectionTitle: i.sectionTitle,
-          order: i.order,
-          questionId: i.questionId,
-          number: i.question.number,
-          part: i.question.part,
-          subPart: i.question.subPart,
-          content: i.question.content,
-          latex: i.question.latex,
-          marks: i.question.marks,
-          markschemeContent: i.markschemeContent,
-          answer: i.answer,
-          score: i.score,
-          isCorrect: i.isCorrect,
-          explanation: i.explanation,
-          modelAnswer: i.modelAnswer,
-          strengths: i.strengths,
-          weaknesses: i.weaknesses,
-          attemptedAt: i.attemptedAt,
-        })),
+        // An item that resolved to neither corpus is dropped rather than
+        // rendered blank; the CHECK constraint should make that impossible.
+        items: normalizedItems.flatMap(({ item, normalized }) =>
+          normalized
+            ? [{
+                id: item.id,
+                sectionTitle: item.sectionTitle,
+                order: item.order,
+                questionId: item.questionId,
+                bankQuestionId: item.bankQuestionId,
+                number: normalized.number,
+                part: normalized.part,
+                subPart: normalized.subPart,
+                content: normalized.content,
+                latex: normalized.latex,
+                marks: normalized.marks,
+                // Empty for a legacy item, populated for a crop: the client
+                // renders whichever it gets.
+                strips: normalized.strips,
+                markschemeContent: normalized.markschemeContent,
+                markschemeStrips: normalized.markschemeStrips,
+                answerLetter: normalized.answerLetter,
+                answer: item.answer,
+                score: item.score,
+                isCorrect: item.isCorrect,
+                explanation: item.explanation,
+                modelAnswer: item.modelAnswer,
+                strengths: item.strengths,
+                weaknesses: item.weaknesses,
+                attemptedAt: item.attemptedAt,
+              }]
+            : []
+        ),
       },
     });
   } catch (error) {

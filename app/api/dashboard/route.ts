@@ -5,15 +5,23 @@ import { prisma } from '@/lib/prisma'
 import { resolveCourseScope } from '@/lib/course-scope'
 import { LearnerContextError } from '@/lib/learner-context'
 import { isFeaturePreview } from '@/lib/feature-readiness'
+import { PLACEHOLDER_ANSWER } from '@/lib/learning'
 
 /**
  * Aggregated dashboard stats for the signed-in user.
  *
- * Pulls from BOTH attempt tables:
- *  - PastPaperAttempt  (the real past-paper bank — what users actually answer)
- *  - QuestionAttempt   (the legacy custom Question table)
+ * Pulls from ALL THREE attempt tables:
+ *  - PastPaperAttempt      (the transcribed past-paper corpus)
+ *  - QuestionAttempt       (the legacy custom Question table)
+ *  - BankQuestionAttempt   (the crop-first bank, what Practice browses)
  *
- * Accuracy is computed from COUNTS, not by loading every row.
+ * There are three because a foreign key can only point at one question table.
+ * Missing the third is what kept these tiles at 0 while the bank was in use.
+ *
+ * Accuracy is computed from COUNTS, not by loading every row. Its denominator
+ * is graded attempts, not all attempts: a free-response answer with no key to
+ * mark it against was still answered, and counting it as wrong would punish a
+ * student for a gap in the corpus.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -41,6 +49,10 @@ export async function GET(req: NextRequest) {
       ppCorrect,
       qTotal,
       qCorrect,
+      bankTotal,
+      bankGraded,
+      bankCorrect,
+      recentBank,
       recentPP,
       studySessions,
       bookmarkCount,
@@ -50,6 +62,23 @@ export async function GET(req: NextRequest) {
       prisma.pastPaperAttempt.count({ where: { userId, gradingStatus: 'official', isCorrect: true, ...ppWhere } }),
       prisma.questionAttempt.count({ where: { userId, ...legacyWhere } }),
       prisma.questionAttempt.count({ where: { userId, isCorrect: true, ...legacyWhere } }),
+      // The crop-first bank is the corpus students actually browse, so its
+      // attempts have to count here or the tiles stay at zero however much the
+      // bank is used. Unmarked attempts (free response with no answer key) are
+      // answered but not graded, so they raise the count and stay out of the
+      // accuracy denominator -- hence `isCorrect: { not: null }` rather than a
+      // bare total.
+      prisma.bankQuestionAttempt.count({ where: { userId } }),
+      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: { not: null } } }),
+      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: true } }),
+      // Dates only, for the streak: practising in the bank has to count as a
+      // day studied like any other attempt does.
+      prisma.bankQuestionAttempt.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 60,
+        select: { createdAt: true },
+      }),
       prisma.pastPaperAttempt.findMany({
         where: { userId, gradingStatus: 'official', ...ppWhere },
         include: { question: { include: { paper: { include: { subject: true } } } } },
@@ -65,9 +94,9 @@ export async function GET(req: NextRequest) {
       prisma.note.count({ where: { userId, ...(courseScope.effectiveScope === 'enrolled' ? { OR: [{ courseId: { in: courseScope.courseIds } }, { courseId: null }] } : {}) } }),
     ])
 
-    const questionsAnswered = ppTotal + qTotal
-    const totalGraded = ppTotal + qTotal
-    const totalCorrect = ppCorrect + qCorrect
+    const questionsAnswered = ppTotal + qTotal + bankTotal
+    const totalGraded = ppTotal + qTotal + bankGraded
+    const totalCorrect = ppCorrect + qCorrect + bankCorrect
     const accuracy = totalGraded > 0 ? Math.round((totalCorrect / totalGraded) * 100) : 0
 
     // ----- Study streak (consecutive calendar days with activity) -----
@@ -78,6 +107,7 @@ export async function GET(req: NextRequest) {
       activityDays.add(k)
     }
     recentPP.forEach((a) => addDay(new Date(a.attemptedAt)))
+    recentBank.forEach((a) => addDay(new Date(a.createdAt)))
     studySessions.forEach((s) => addDay(new Date(s.startTime)))
 
     let studyStreak = 0
@@ -134,16 +164,25 @@ export async function GET(req: NextRequest) {
     const twoWeeksAgo = new Date(now)
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
 
-    const [thisWeek, lastWeek] = await Promise.all([
+    // Both corpora, or the "+x% this week" caption under a tile that now counts
+    // bank attempts would be computed from a different set of attempts than the
+    // number above it.
+    const [thisWeekPP, lastWeekPP, thisWeekBank, lastWeekBank] = await Promise.all([
       prisma.pastPaperAttempt.count({ where: { userId, gradingStatus: 'official', attemptedAt: { gte: weekAgo }, ...ppWhere } }),
       prisma.pastPaperAttempt.count({
         where: { userId, gradingStatus: 'official', attemptedAt: { gte: twoWeeksAgo, lt: weekAgo }, ...ppWhere },
       }),
+      prisma.bankQuestionAttempt.count({ where: { userId, createdAt: { gte: weekAgo } } }),
+      prisma.bankQuestionAttempt.count({
+        where: { userId, createdAt: { gte: twoWeeksAgo, lt: weekAgo } },
+      }),
     ])
+    const thisWeek = thisWeekPP + thisWeekBank
+    const lastWeek = lastWeekPP + lastWeekBank
     const weekDelta = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : thisWeek > 0 ? 100 : 0
 
     const [dueReviews, pendingOldTasks] = await Promise.all([
-      prisma.reviewItem.count({ where: { userId, status: 'active', nextReviewAt: { lte: now }, ...(courseScope.effectiveScope === 'enrolled' ? { subject: { in: courseScope.subjects } } : {}) } }),
+      prisma.reviewItem.count({ where: { userId, status: 'active', nextReviewAt: { lte: now }, answer: { not: PLACEHOLDER_ANSWER }, ...(courseScope.effectiveScope === 'enrolled' ? { subject: { in: courseScope.subjects } } : {}) } }),
       prisma.studyTask.count({ where: { userId, status: 'pending', dueAt: { lt: weekAgo }, ...(courseScope.effectiveScope === 'enrolled' ? { subject: { in: courseScope.subjects } } : {}) } }),
     ])
     let newIndexedMaterial = 0

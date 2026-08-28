@@ -205,6 +205,8 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
   const [view, setView] = useState<AssistantView>('chat');
   const [learnerCourses, setLearnerCourses] = useState<LearnerCourse[]>([]);
   const [activeCourseId, setActiveCourseId] = useState('');
+  /** The question a "which course?" clarification interrupted, if any. */
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [weakTopics, setWeakTopics] = useState<Array<{ courseId: string; topic: string }>>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -334,11 +336,23 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
         body: JSON.stringify({ conversationId, courseId: courseId || null }),
       });
     }
+    // Picking a course in answer to "which course should I use for this?" is
+    // the student answering the question they were asked. Resume their original
+    // turn rather than making them type it again.
+    if (pendingQuestion) {
+      const question = pendingQuestion;
+      setPendingQuestion(null);
+      void handleSend({ message: question, courseId });
+    }
   };
 
-  const handleSend = async () => {
-    const message = userInput.trim();
+  const handleSend = async (options?: { message?: string; courseId?: string }) => {
+    const message = (options?.message ?? userInput).trim();
     if (!message || isLoading) return;
+    // `setActiveCourseId` has not committed yet when a resumed turn calls
+    // through here, so the chosen course is passed explicitly rather than read
+    // back off state.
+    const courseId = options?.courseId ?? activeCourseId;
     const previous = chatHistory;
     const optimistic: Message = { id: nextLocalId('local'), role: 'user', text: message };
     setUserInput('');
@@ -351,7 +365,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          courseId: activeCourseId || undefined,
+          courseId: courseId || undefined,
           pageCourseId: screenCtx.context.data.courseId,
           pageSubjectCode: screenCtx.context.data.subjectCode,
           conversationId: conversationId || undefined,
@@ -365,6 +379,11 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
       if (!response.ok) throw new Error(data?.error || 'AI request failed');
       setConversationTitle(data.conversationTitle || conversationTitle);
       if (data.resolvedCourse?.id) setActiveCourseId(data.resolvedCourse.id);
+      // Hold the question the clarification interrupted, so choosing a course
+      // can answer it. Without this the tutor asked "which course?", accepted
+      // the answer, set the dropdown, and then sat there -- the student had to
+      // retype the question they had already asked.
+      setPendingQuestion(data.clarificationRequired ? message : null);
       setChatHistory([
         ...previous,
         { id: data.userMessageId, role: 'user', text: message },

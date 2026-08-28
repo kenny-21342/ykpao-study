@@ -3,8 +3,11 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON } from '@/lib/ai';
-import { requireTextAi } from '@/lib/ai-credentials';
+import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
+import { normalizeExamItem } from '@/lib/mock-exam-items';
+import { gradeAgainstKey, optionLettersFor } from '@/lib/bank-grading';
+import { bankSubjectName, type BankStrip } from '@/lib/bank-questions';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,34 +20,78 @@ export const maxDuration = 60;
 /**
  * Deterministic question-of-the-day picker.
  *
- * We pick a stable question id for each (dateKey) so every student sees the
- * *same* challenge on a given day — this is what makes it a shared community
- * talking point. The rotation uses a simple seeded hash over the candidate
- * pool of `marks > 0` questions.
+ * Every student sees the *same* challenge on a given day -- that is what makes
+ * it a shared talking point -- so the choice is a seeded hash of the date over
+ * a stable, ordered candidate list rather than a random draw.
  *
- * Returns the selected PastPaperQuestion, or null if the DB has no candidates.
+ * It reads the crop-first bank, and prefers questions whose mark scheme carries
+ * an answer key. Two reasons. The pool is 66,758 published questions instead of
+ * the few hundred the legacy table holds, so the challenge stops repeating. And
+ * a keyed question can be marked by comparing a letter, which is instant and
+ * free, where the old path spent about twenty seconds of provider time to
+ * return a verdict with no answer attached to it.
  */
-async function pickDailyQuestion(dateKey: string) {
-  const candidates = await prisma.pastPaperQuestion.findMany({
-    where: { docType: 'qp', marks: { gt: 0 } },
-    select: { id: true, topic: true, paper: { select: { subject: { select: { name: true } } } } },
-    take: 500,
+type DailyQuestion = {
+  id: number;
+  rootNumber: number;
+  marks: number;
+  subject: string;
+  year: number;
+  bodyMd: string;
+  strips: BankStrip[];
+  answerLetter: string | null;
+  markSchemeStrips: BankStrip[];
+  markSchemeMd: string | null;
+};
+
+async function pickDailyQuestion(dateKey: string): Promise<DailyQuestion | null> {
+  // Ordered by id so the list is stable between days; the seed does the
+  // rotating. Restricted to questions with a published mark scheme, because a
+  // challenge nobody can be shown the answer to is the defect this replaces.
+  const candidates = await prisma.bankQuestion.findMany({
+    where: {
+      status: 'published',
+      paper: { docType: 'qp' },
+      markScheme: { status: 'published' },
+    },
+    select: { id: true },
     orderBy: { id: 'asc' },
   });
   if (candidates.length === 0) return null;
 
-  // Simple deterministic seed from the date string.
   let seed = 0;
   for (let i = 0; i < dateKey.length; i++) seed = (seed * 31 + dateKey.charCodeAt(i)) >>> 0;
-  const idx = seed % candidates.length;
-  const picked = candidates[idx];
+  const picked = candidates[seed % candidates.length];
 
-  return prisma.pastPaperQuestion.findUnique({
+  const question = await prisma.bankQuestion.findUnique({
     where: { id: picked.id },
     include: {
-      paper: { select: { subject: { select: { name: true } }, year: true } },
+      paper: { include: { subject: true } },
+      strips: { include: { asset: true }, orderBy: { ordering: 'asc' } },
+      markScheme: {
+        include: { strips: { include: { asset: true }, orderBy: { ordering: 'asc' } } },
+      },
     },
   });
+  if (!question) return null;
+
+  const view = normalizeExamItem({ question: null, bankQuestion: question });
+  if (!view) return null;
+
+  return {
+    id: question.id,
+    rootNumber: question.rootNumber,
+    // A mark total is needed to score against; one mark is the honest floor for
+    // a multiple-choice question, which is most of what carries a key.
+    marks: view.marks || 1,
+    subject: bankSubjectName(question.paper.subject),
+    year: question.paper.year,
+    bodyMd: view.content,
+    strips: view.strips,
+    answerLetter: view.answerLetter,
+    markSchemeStrips: view.markschemeStrips,
+    markSchemeMd: view.markschemeContent,
+  };
 }
 
 function todayKey(): string {
@@ -87,15 +134,17 @@ export async function GET() {
     dateKey,
     question: {
       id: question.id,
-      number: question.number,
-      part: question.part,
-      content: question.content,
+      number: question.rootNumber,
+      part: null,
+      // Empty for a crop-only question; the client renders `strips` instead.
+      content: question.bodyMd,
+      strips: question.strips,
       marks: question.marks,
-      topic: question.topic,
-      paper: {
-        year: question.paper.year,
-        subject: question.paper.subject.name,
-      },
+      // Present only for multiple choice. The client uses it to draw option
+      // buttons rather than a free-text box asking for one of four letters.
+      options: question.answerLetter ? optionLettersFor(question.answerLetter) : null,
+      topic: null,
+      paper: { year: question.year, subject: question.subject },
     },
     attempt: attempt
       ? {
@@ -103,6 +152,15 @@ export async function GET() {
           score: attempt.score,
           isCorrect: attempt.isCorrect,
           attemptedAt: attempt.attemptedAt,
+          // The answer, once they have had their go.
+          //
+          // Withholding this was the whole defect: the challenge graded a
+          // submission, said "Done", and showed nothing to learn from. It is
+          // returned only alongside an existing attempt, so it cannot be read
+          // off the wire before answering.
+          correctAnswer: question.answerLetter,
+          markSchemeMd: question.markSchemeMd,
+          markSchemeStrips: question.markSchemeStrips,
         }
       : null,
     stats: {
@@ -127,21 +185,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Grading a daily challenge is an LLM call, but it is not what the endpoint
-  // is *for*: the attempt is recorded either way, once per day. So a student
-  // with no AI credentials still gets to submit — they simply get the
-  // ungraded path plus an explanation, rather than a 503 that would cost them
-  // their one attempt of the day.
+  // Grading is not what this endpoint is *for*: the attempt is recorded either
+  // way, once per day. So a student with no AI credentials still gets to
+  // submit -- they get the ungraded path plus an explanation, rather than a 503
+  // that would cost them their one attempt of the day.
+  //
+  // The allowance check moved into the branch that actually spends: most days
+  // the answer key settles the question, and refusing a free comparison
+  // because someone is over their model budget made no sense.
   const access = await requireTextAi(user.id);
-  if (access.ok) {
-    const allowance = await checkAiAllowance(user.id, { source: access.source });
-    if (!allowance.allowed) {
-      return NextResponse.json(
-        { error: allowance.message },
-        { status: 429 }
-      );
-    }
-  }
 
   let parsed;
   try {
@@ -171,14 +223,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No challenge available.' }, { status: 404 });
   }
 
-  // Grade with AI when available; otherwise mark as submitted without a score.
   let score: number | null = null;
   let isCorrect: boolean | null = null;
   let feedback = '';
+  let aiNotice: string | null = null;
 
-  let aiNotice: string | null = access.ok ? null : access.error;
+  // The answer key settles it without a model, which is the common case: most
+  // of what carries a key is multiple choice, and comparing a letter is both
+  // instant and free. Only a free-response question reaches the grader below.
+  const keyGrade = gradeAgainstKey(parsed.answer, question.answerLetter);
 
-  if (access.ok) {
+  if (keyGrade) {
+    isCorrect = keyGrade.isCorrect;
+    score = keyGrade.isCorrect ? question.marks : 0;
+    feedback = keyGrade.isCorrect
+      ? 'Correct.'
+      : `Not quite — the answer is ${keyGrade.correctLetter}.`;
+  } else if (!question.bodyMd.trim()) {
+    // A crop-only question has no text for a grader to read, and reading it
+    // off the image is a different and paid job. Record it and show the mark
+    // scheme rather than pretending to have marked it.
+    aiNotice =
+      'This question has not been transcribed yet, so it could not be marked automatically. Check your answer against the mark scheme.';
+  } else if (!access.ok) {
+    aiNotice = access.error;
+  } else {
+    const allowance = await checkAiAllowance(user.id, { source: access.source });
+    if (!allowance.allowed) {
+      return NextResponse.json({ error: allowance.message }, { status: 429 });
+    }
     try {
       const result = await chatJSON<{ score: number; feedback: string }>(
         [
@@ -191,18 +264,19 @@ export async function POST(req: NextRequest) {
           {
             role: 'user',
             content:
-              `Question (worth ${question.marks} marks):\n${question.content}\n\n` +
+              `Question (worth ${question.marks} marks):\n${question.bodyMd}\n\n` +
+              (question.markSchemeMd ? `Mark scheme:\n${question.markSchemeMd}\n\n` : '') +
               `Student answer:\n${parsed.answer}\n\nReturn JSON only.`,
           },
         ],
-        { credential: access.credential, temperature: 0.2, maxTokens: 600 }
+        { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 600 }
       );
       score = Math.max(0, Math.min(question.marks, Math.round(result.score)));
       isCorrect = score >= Math.ceil(question.marks * 0.5);
       feedback = result.feedback ?? '';
       await recordUsage({ userId: user.id, feature: 'daily-challenge', tokensOut: 400, model: access.credential.model });
     } catch (err) {
-      // AI grading failed — record the attempt ungraded so the user isn't blocked.
+      // Grading failed — record the attempt ungraded so the user isn't blocked.
       console.error('Daily challenge grading failed:', err);
       aiNotice = 'Your answer was recorded, but the AI marker could not be reached, so it is unscored.';
     }
@@ -211,7 +285,7 @@ export async function POST(req: NextRequest) {
   const attempt = await prisma.dailyChallengeAttempt.create({
     data: {
       userId: user.id,
-      questionId: question.id,
+      bankQuestionId: question.id,
       dateKey,
       answer: parsed.answer,
       score,
@@ -219,5 +293,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ok: true, attempt, feedback, marks: question.marks, aiNotice });
+  return NextResponse.json({
+    ok: true,
+    attempt,
+    feedback,
+    marks: question.marks,
+    aiNotice,
+    // Whatever happened above, the student now gets to see the answer.
+    correctAnswer: question.answerLetter,
+    markSchemeMd: question.markSchemeMd,
+    markSchemeStrips: question.markSchemeStrips,
+  });
 }

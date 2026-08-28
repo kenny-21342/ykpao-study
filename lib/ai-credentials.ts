@@ -191,6 +191,26 @@ export function sharedTextCredential(): TextCredential | null {
 }
 
 /**
+ * The same credential, pointed at a lower-latency model.
+ *
+ * Some calls have a student waiting on them -- the tutor, a hint, marking one
+ * free-response answer -- and some do not. Measured against the shared
+ * provider, a call's median is 7-27 seconds with a tail past 90, which a person
+ * watching a spinner cannot absorb: the tutor and mock generation both timed
+ * out in production at the 45s budget. Where a faster model is configured,
+ * interactive calls use it and batch work keeps the better one.
+ *
+ * Only the shared credential is switched. A student who supplied their own key
+ * chose their own model, and quietly substituting a different one would spend
+ * their money on something they did not ask for.
+ */
+export function forInteractive(credential: TextCredential): TextCredential {
+  const fast = process.env.AI_INTERACTIVE_MODEL;
+  if (!fast || credential.source !== 'shared') return credential;
+  return { ...credential, model: fast };
+}
+
+/**
  * Host every SiliconFlow request goes to; also what makes the alias below safe.
  */
 const SILICONFLOW_HOST = 'api.siliconflow.cn';

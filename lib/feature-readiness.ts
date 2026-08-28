@@ -33,14 +33,14 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
-      'Only a small share of the past-paper archive has been turned into individual questions so far, and some questions refer to diagrams that have not been extracted yet. What is here is usable, but it is not the finished bank — use Past Papers for complete papers in the meantime.',
+      'Most of the archive is here — around 67,000 questions across 41 subjects, each with the original crop and, for three quarters of them, its mark scheme. Two gaps remain: multiple-choice questions can be marked automatically but written answers are marked by you against the mark scheme, and a small number of questions are held back because their crop was cut wrongly.',
   },
   'mock-exams': {
     state: 'preview',
     badge: 'Preview',
     title: 'Mock exams are still in preview',
     body:
-      'Papers are assembled from the question bank, which is still incomplete, so generation can time out or produce a paper that is thinner than a real one. Treat anything generated here as practice material, not as a realistic sitting.',
+      'Papers are drawn at random from past questions that have a mark scheme, to hit the mark total you ask for. They are not modelled on the structure of a real paper, and they are not topic-matched yet, so treat one as practice material rather than a realistic sitting.',
   },
 };
 

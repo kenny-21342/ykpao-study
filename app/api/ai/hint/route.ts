@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
-import { requireTextAi } from '@/lib/ai-credentials';
+import { forInteractive, requireTextAi, type TextCredential } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { reportError } from '@/lib/error-reporting';
 
@@ -108,7 +108,7 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
     const hint = await chat([
       { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
       { role: 'user', content: prompt },
-    ], { credential: access.credential, temperature: 0.25, maxTokens: 600 });
+    ], { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600 });
     await recordUsage({ userId: user.id, feature: 'progressive-hint', tokensOut: Math.ceil(hint.length / 4), model: access.credential.model });
     return NextResponse.json({ hint, level: body.level, maxLevel: 3, grounded: Boolean(markscheme) });
   } catch (error) {
@@ -133,7 +133,10 @@ async function hintForBankQuestion(
   bankQuestionId: number,
   body: { level: number; studentAnswer?: string },
   userId: string,
-  access: { credential: { model: string } } & Record<string, unknown>,
+  // Typed as the real credential rather than `{ model: string }`: the loose
+  // shape forced an `as never` at the call below, which would have hidden a
+  // genuine mismatch just as effectively as it hid this one.
+  access: { credential: TextCredential } & Record<string, unknown>,
 ) {
   const question = await prisma.bankQuestion.findFirst({
     where: { id: bankQuestionId, status: 'published' },
@@ -178,7 +181,7 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
         { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
         { role: 'user', content: prompt },
       ],
-      { credential: access.credential as never, temperature: 0.25, maxTokens: 600 },
+      { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600 },
     );
     await recordUsage({
       userId,

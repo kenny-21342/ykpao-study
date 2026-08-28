@@ -34,6 +34,7 @@ model User {
   bookmarks               Bookmark[]
   pastPaperBookmarks      PastPaperBookmark[]
   bankQuestionBookmarks   BankQuestionBookmark[]
+  bankQuestionAttempts    BankQuestionAttempt[]
   studySessions           StudySession[]
   sharedNotes             SharedNote[]
   noteComments            NoteComment[]
@@ -639,10 +640,19 @@ model MockExam {
 }
 
 // Each question selected for a mock exam
+// One question on a generated paper.
+//
+// Exactly one of `questionId` and `bankQuestionId` is set. Two nullable columns
+// rather than one, because the two corpora are separate tables and a foreign
+// key can only point at one of them -- the same constraint that gives the bank
+// its own bookmark and attempt tables. Papers generated before the switch to
+// the crop-first bank still carry `questionId`, so both paths have to keep
+// resolving; nothing was backfilled or dropped.
 model MockExamItem {
   id              String    @id @default(cuid())
   mockExamId      String
-  questionId      Int
+  questionId      Int?
+  bankQuestionId  Int?
   sectionTitle    String
   order           Int       @default(0)
   // Per-item attempt state
@@ -658,8 +668,9 @@ model MockExamItem {
   answerImageUrl  String? // optional photo/screenshot of handwritten working
   attemptedAt     DateTime?
 
-  mockExam MockExam          @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
-  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  mockExam     MockExam           @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  question     PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  bankQuestion BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
 
   @@index([mockExamId])
   @@map("mock_exam_items")
@@ -1173,18 +1184,26 @@ model NoteCollaborator {
 
 // Records a user's attempt at the daily challenge question.
 // One row per user per day (enforced by unique [userId, dateKey]).
+// One student's go at the question of the day.
+//
+// Exactly one of `questionId` and `bankQuestionId` is set, for the same reason
+// MockExamItem carries two: the challenge now draws from the crop-first bank,
+// where the pool is 66,758 published questions rather than the few hundred the
+// legacy table holds, and a foreign key can only point at one of them.
 model DailyChallengeAttempt {
-  id          String   @id @default(cuid())
-  userId      String
-  questionId  Int
-  dateKey     String // YYYY-MM-DD — the challenge day
-  answer      String   @default("")
-  score       Float?
-  isCorrect   Boolean?
-  attemptedAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  questionId     Int?
+  bankQuestionId Int?
+  dateKey        String // YYYY-MM-DD — the challenge day
+  answer         String   @default("")
+  score          Float?
+  isCorrect      Boolean?
+  attemptedAt    DateTime @default(now())
 
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question PastPaperQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question     PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  bankQuestion BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dateKey])
   @@index([dateKey])
@@ -1322,15 +1341,18 @@ model BankQuestion {
   promptVersion       String?
   createdAt           DateTime @default(now())
 
-  paper       BankPaper              @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  screenshot  BankAsset?             @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
-  strips      BankQuestionStrip[]
-  assets      BankQuestionAsset[]
-  topics      BankQuestionTopic[]
-  tags        BankQuestionTag[]
-  reviewFlags BankReviewFlag[]
-  markScheme  BankMarkScheme?
-  bookmarks   BankQuestionBookmark[]
+  paper         BankPaper              @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  screenshot    BankAsset?             @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
+  strips        BankQuestionStrip[]
+  assets        BankQuestionAsset[]
+  topics        BankQuestionTopic[]
+  tags          BankQuestionTag[]
+  reviewFlags   BankReviewFlag[]
+  markScheme    BankMarkScheme?
+  bookmarks     BankQuestionBookmark[]
+  attempts               BankQuestionAttempt[]
+  mockExamItems          MockExamItem[]
+  dailyChallengeAttempts DailyChallengeAttempt[]
 
   @@unique([paperId, rootNumber])
   @@index([paperId])
@@ -1359,6 +1381,43 @@ model BankQuestionBookmark {
   @@unique([userId, questionId])
   @@index([userId])
   @@map("bank_question_bookmarks")
+}
+
+// An attempt at a crop-first bank question.
+//
+// A fourth attempt table, for the same reason there is a third bookmark table:
+// a foreign key can only point at one question table. `QuestionAttempt` targets
+// the legacy Question, `PastPaperAttempt` the transcribed PastPaperQuestion,
+// and this the BankQuestion a student actually browses. Until this existed the
+// bank had no attempt path at all, so "Questions Answered" on the dashboard
+// could not move off zero however much the bank was used.
+//
+// Unlike the bookmark table there is no unique constraint: re-attempting a
+// question is the point, and the history is what the accuracy tile reads.
+model BankQuestionAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId Int
+  answer     String
+  // Null when nothing could mark it -- a free-response question whose mark
+  // scheme has no answer key, left for the student to self-mark. Distinct from
+  // false, which means marked and wrong.
+  isCorrect  Boolean?
+  score      Float?
+  // key  -- compared against BankMarkScheme.answerLetter, no model involved
+  // self -- the student marked their own work against the mark scheme
+  // ai   -- graded by the model, for free-response questions with a transcript
+  gradedBy   String
+  timeSpent  Int?
+  createdAt  DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // The dashboard tiles read every attempt for one user, newest first.
+  @@index([userId, createdAt])
+  @@index([questionId])
+  @@map("bank_question_attempts")
 }
 
 model BankMarkScheme {

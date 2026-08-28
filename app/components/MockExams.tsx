@@ -12,7 +12,54 @@ import {
   Image as ImageIcon, Upload,
 } from 'lucide-react';
 
+/*
+ * next/image is deliberately not used for the crops below.
+ *
+ * They are session-gated strips served from /bank_assets/**, which the image
+ * optimiser would fetch server-side without the viewer's cookie and get a 401
+ * for. They are also already rendered at a fixed 200 DPI, so re-encoding buys
+ * nothing.
+ */
+/* eslint-disable @next/next/no-img-element */
+
 const FormattedMessage = dynamic(() => import('./FormattedMessage'), { ssr: false });
+
+/**
+ * A question or mark scheme, however it is stored.
+ *
+ * Papers built from the crop-first bank carry strip images and an empty
+ * `content`; papers from the older transcribed corpus carry text and no strips.
+ * Rendering `content` alone showed a blank card for every question on a
+ * bank-built paper, so the images come first and prose is the fallback.
+ */
+function ExamContent({
+  content,
+  strips,
+  alt,
+}: {
+  content: string | null;
+  strips?: Array<{ url: string; width: number | null; height: number | null }>;
+  alt: string;
+}) {
+  if (strips && strips.length > 0) {
+    return (
+      <div className="overflow-x-auto">
+        {strips.map((strip, index) => (
+          <img
+            key={`${strip.url}-${index}`}
+            src={strip.url}
+            alt={index === 0 ? alt : ''}
+            width={strip.width ?? undefined}
+            height={strip.height ?? undefined}
+            className="block max-w-full"
+          />
+        ))}
+      </div>
+    );
+  }
+  if (!content) return null;
+  return <FormattedMessage content={content} />;
+}
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
 // ----------------------------- Types -----------------------------
@@ -28,6 +75,8 @@ type ExamListItem = {
   difficulty: string;
   topics: string[];
   status: ExamStatus;
+  /** Set only when status is 'failed'; shown in place of a dead Start button. */
+  generationError?: string | null;
   score: number | null;
   questionCount: number;
   createdAt: string;
@@ -46,6 +95,11 @@ type ExamItem = {
   latex: string | null;
   marks: number;
   markschemeContent: string | null;
+  // A question drawn from the crop-first bank has no transcript: it *is* the
+  // image. Empty for the older transcribed corpus, which has text and no crop.
+  strips?: Array<{ url: string; width: number | null; height: number | null }>;
+  markschemeStrips?: Array<{ url: string; width: number | null; height: number | null }>;
+  answerLetter?: string | null;
   answer: string | null;
   score: number | null;
   isCorrect: boolean | null;
@@ -332,7 +386,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No mock exams yet</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
-        Create your first AI-generated mock exam. Pick a subject, difficulty, and topics —
+        Create your first mock exam. Pick a subject and a mark total —
         we&apos;ll assemble a paper from real past-paper questions.
       </p>
       <button
@@ -371,7 +425,7 @@ function ExamCard({
               {meta.label}
             </span>
           </div>
-          {exam.description && (
+          {exam.description && exam.status !== 'failed' && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
               {exam.description}
             </p>
@@ -436,7 +490,16 @@ function ExamCard({
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          {exam.status !== 'completed' ? (
+          {/* A paper that failed to generate has no questions on it, so Start
+              leads to an error page. Say what went wrong instead of offering a
+              button that cannot work. */}
+          {exam.status === 'failed' ? (
+            <span className="text-xs text-red-600 dark:text-red-400 max-w-xs text-right">
+              {exam.generationError ?? 'This paper could not be generated.'}
+            </span>
+          ) : exam.status === 'generating' ? (
+            <span className="text-xs text-gray-500 dark:text-gray-400">Still building…</span>
+          ) : exam.status !== 'completed' ? (
             <button
               onClick={onOpen}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow hover:shadow-md transition-all"
@@ -641,6 +704,13 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                 </select>
               </Field>
 
+              {/* Difficulty is set on 50 of 85,611 bank questions, and no bank
+                  topic has been tagged at all, so neither control can steer a
+                  paper assembled by query -- it would sit there looking like it
+                  worked. A predicted paper still passes both to a model that
+                  can act on them, so they stay for that mode only, and come
+                  back for mock exams when the tagging pass has run. */}
+              {mode === 'predicted' && (
               <Field label="Difficulty">
                 <div className="grid grid-cols-4 gap-2">
                   {DIFFICULTY_OPTIONS.map((d) => (
@@ -659,6 +729,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   ))}
                 </div>
               </Field>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field label={`Total marks: ${totalMarks}`}>
@@ -692,18 +763,20 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                 </Field>
               </div>
 
-              <Field label="Topics (comma-separated, optional)">
-                <input
-                  type="text"
-                  value={topicsRaw}
-                  onChange={(e) => setTopicsRaw(e.target.value)}
-                  placeholder="e.g. kinematics, forces, momentum"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Leave blank to let the AI sample across the whole subject.
-                </p>
-              </Field>
+              {mode === 'predicted' && (
+                <Field label="Topics (comma-separated, optional)">
+                  <input
+                    type="text"
+                    value={topicsRaw}
+                    onChange={(e) => setTopicsRaw(e.target.value)}
+                    placeholder="e.g. kinematics, forces, momentum"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Leave blank to let the AI sample across the whole subject.
+                  </p>
+                </Field>
+              )}
             </>
           )}
         </div>
@@ -1169,7 +1242,11 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             {/* Question content */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
               <div className="prose prose-sm max-w-none text-gray-900 dark:text-gray-100">
-                <FormattedMessage content={item.content} />
+                <ExamContent
+                  content={item.content}
+                  strips={item.strips}
+                  alt={`Question ${item.number}`}
+                />
               </div>
             </div>
 
@@ -1209,7 +1286,6 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               </div>
               {images[item.id] && (
                 <div className="mb-2 flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700" />
                   <span className="text-xs text-gray-500 flex-1">Photo attached — transcribe or submit as-is.</span>
                   <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
@@ -1458,7 +1534,11 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                         <div>
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Question</p>
                           <div className="text-sm text-gray-900 dark:text-gray-100">
-                            <FormattedMessage content={item.content} />
+                            <ExamContent
+                              content={item.content}
+                              strips={item.strips}
+                              alt={`Question ${item.number}`}
+                            />
                           </div>
                         </div>
 
@@ -1479,9 +1559,14 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                           </FeedbackBlock>
                         )}
 
-                        {item.markschemeContent && (
+                        {(item.markschemeContent ||
+                          (item.markschemeStrips?.length ?? 0) > 0) && (
                           <FeedbackBlock label="Original mark scheme" icon={<FileText className="w-4 h-4" />} tone="blue">
-                            <FormattedMessage content={item.markschemeContent} />
+                            <ExamContent
+                              content={item.markschemeContent}
+                              strips={item.markschemeStrips}
+                              alt={`Mark scheme for question ${item.number}`}
+                            />
                           </FeedbackBlock>
                         )}
 

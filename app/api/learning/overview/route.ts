@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { endOfDay, plainText, startOfDay } from '@/lib/learning';
+import { PLACEHOLDER_ANSWER, endOfDay, plainText, startOfDay } from '@/lib/learning';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 
@@ -75,7 +75,15 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.reviewItem.findMany({
-      where: { userId: user.id, ...(subjectFilter ? { subject: subjectFilter } : {}) },
+      where: {
+        userId: user.id,
+        ...(subjectFilter ? { subject: subjectFilter } : {}),
+      // Cards whose answer is the old placeholder string are unanswerable and
+      // must not be served. `scripts/repair-placeholder-reviews.ts` clears the
+      // rows; this keeps any that survive out of the queue, and costs nothing
+      // once they are gone.
+      answer: { not: PLACEHOLDER_ANSWER },
+      },
       orderBy: { nextReviewAt: 'asc' },
       take: 200,
     }),

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { plainText, scheduleReview } from '@/lib/learning';
+import { PLACEHOLDER_ANSWER, plainText, scheduleReview } from '@/lib/learning';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 
@@ -40,6 +40,11 @@ export async function GET(req: NextRequest) {
       userId: user.id,
       ...(mode !== 'all' ? { status: 'active' } : {}),
       ...(mode === 'due' ? { nextReviewAt: { lte: new Date() } } : {}),
+      // Cards whose answer is the old placeholder string are unanswerable and
+      // must not be served. `scripts/repair-placeholder-reviews.ts` clears the
+      // rows; this keeps any that survive out of the queue, and costs nothing
+      // once they are gone.
+      answer: { not: PLACEHOLDER_ANSWER },
       ...(courseScope.effectiveScope === 'enrolled' ? { subject: { in: courseScope.subjects } } : {}),
     },
     include: {

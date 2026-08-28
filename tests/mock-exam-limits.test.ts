@@ -62,23 +62,44 @@ test('submission imports the same shared constant', async () => {
   );
 });
 
-test('generation clamps the item list, not just the prompt', async () => {
+test('every generation path clamps the requested question count', async () => {
   for (const file of GENERATORS) {
     const src = await source(file);
-    // The model routinely returns more questions than the prompt asks for, so
-    // a clamp on `targetCount` alone is not enough — the flattening loop that
-    // builds the persisted items must break on the ceiling too.
-    assert.match(
-      src,
-      /flatItems\.length\s*>=\s*MAX_EXAM_ITEMS/,
-      `${file} must enforce MAX_EXAM_ITEMS while flattening the AI plan`,
-    );
     assert.match(
       src,
       /Math\.min\(\s*\n?\s*MAX_EXAM_ITEMS|Math\.min\(MAX_EXAM_ITEMS/,
       `${file} must clamp the requested question count to MAX_EXAM_ITEMS`,
     );
   }
+});
+
+test('a model-planned paper clamps while flattening the plan too', async () => {
+  // A model routinely returns more questions than the prompt asks for, so for
+  // the paths that still ask one, a clamp on `targetCount` alone is not enough
+  // — the flattening loop that builds the persisted items must break on the
+  // ceiling as well.
+  //
+  // The plain mock generator is no longer one of those paths: it selects with a
+  // query and passes the ceiling to `selectBankQuestions` as `maxItems`, which
+  // `tests/mock-exam-packing.test.ts` covers behaviourally. Predicted papers
+  // still call a model, so the source-level guard stays where it still bites.
+  const src = await source('lib/predicted-paper.ts');
+  assert.match(
+    src,
+    /flatItems\.length\s*>=\s*MAX_EXAM_ITEMS/,
+    'lib/predicted-paper.ts must enforce MAX_EXAM_ITEMS while flattening the AI plan',
+  );
+});
+
+test('the bank generator hands the ceiling to the selector', async () => {
+  // The invariant has not gone away, only moved: whatever the request asks for,
+  // the number of items persisted is bounded by MAX_EXAM_ITEMS.
+  const src = await source('app/api/mock-exams/generate/route.ts');
+  assert.match(
+    src,
+    /maxItems:\s*targetCount/,
+    'generate must pass the clamped count to selectBankQuestions as maxItems',
+  );
 });
 
 test('generation and submission declare the same function budget', async () => {

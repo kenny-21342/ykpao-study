@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
-import { requireTextAi } from '@/lib/ai-credentials';
+import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
 import { retrieveContext } from '@/lib/rag';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
@@ -44,6 +44,22 @@ export const dynamic = 'force-dynamic';
  * ceiling every other AI route declares.
  */
 export const maxDuration = 60;
+
+/**
+ * Wall-clock budget for the tutor's completion.
+ *
+ * The 45s default in lib/ai.ts assumed a lone request with time to spare. It
+ * did not survive the shared provider: measured medians run 7-27s with a tail
+ * past 90, and a tutor question timed out in production with
+ * "The AI service did not respond in time."
+ *
+ * The retrieval above is already done by this point, so the remaining
+ * invocation belongs to the completion; 50s leaves the platform's 60s ceiling
+ * room to serialise a reply rather than being killed mid-write. Paired with
+ * AI_INTERACTIVE_MODEL, which is the part that makes the call fast rather than
+ * merely more patient.
+ */
+const TUTOR_BUDGET_MS = 50_000;
 
 const Body = z.object({
   message: z.string().min(1).max(2000),
@@ -309,9 +325,10 @@ FORMATTING RULES:
   // ---- Step 4: Call the LLM ----
   try {
     const answer = await chat(messages, {
-      credential: access.credential,
+      credential: forInteractive(access.credential),
       temperature: 0.4,
       maxTokens: 2000,
+      budgetMs: TUTOR_BUDGET_MS,
     });
 
     await recordUsage({

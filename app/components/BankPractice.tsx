@@ -85,8 +85,8 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   if (!question.hasText) {
     return (
       <p className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-        Hints and AI marking need a transcript of this question, which it does
-        not have yet. The question and its mark scheme are complete.
+        Hints and automatic marking aren&apos;t available for this question yet.
+        You can still answer it and check your work against the mark scheme.
       </p>
     );
   }

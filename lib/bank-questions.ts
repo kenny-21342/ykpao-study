@@ -70,7 +70,7 @@ export type BankPaperView = {
  * 9702, History is IGCSE and IB — so without the level the list shows repeated
  * identical entries with no way to tell them apart.
  */
-function displaySubject(subject: {
+export function bankSubjectName(subject: {
   name: string;
   code: string;
   level: string | null;
@@ -156,7 +156,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
 
   return {
     id: paper.id,
-    subject: displaySubject(paper.subject),
+    subject: bankSubjectName(paper.subject),
     board: paper.board,
     year: paper.year,
     session: paper.session,
@@ -206,7 +206,7 @@ export async function listBankPapers(limit = 100) {
 
   return papers.map((paper) => ({
     ...paper,
-    subject: { ...paper.subject, name: displaySubject(paper.subject) },
+    subject: { ...paper.subject, name: bankSubjectName(paper.subject) },
   }));
 }
 
@@ -275,7 +275,7 @@ function publishedQuestionPaperWhere(subjectCodes: string[] | null) {
  * exists in bank_subjects. Both forms are accepted, so neither side has to be
  * rewritten and a corpus rebuild cannot quietly undo it.
  */
-function toBankSubjectCodes(catalogCodes: string[]): string[] {
+export function toBankSubjectCodes(catalogCodes: string[]): string[] {
   const codes = new Set<string>();
   for (const code of catalogCodes) {
     codes.add(code);
@@ -317,7 +317,7 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
     subjects: subjects.map((subject) => ({
       id: subject.id,
       code: subject.code,
-      name: displaySubject(subject),
+      name: bankSubjectName(subject),
     })),
     years: years.map((row) => row.year),
     sessions: sessions.map((row) => row.session),
@@ -403,7 +403,7 @@ export async function listBankQuestions(options: {
       thumbnail: toStrips(row.strips)[0] ?? null,
       paper: {
         id: row.paper.id,
-        subject: displaySubject(row.paper.subject),
+        subject: bankSubjectName(row.paper.subject),
         subjectCode: row.paper.subject.code,
         year: row.paper.year,
         session: row.paper.session,
@@ -462,7 +462,7 @@ export async function getBankQuestion(
         : null,
     paper: {
       id: question.paper.id,
-      subject: displaySubject(question.paper.subject),
+      subject: bankSubjectName(question.paper.subject),
       subjectCode: question.paper.subject.code,
       year: question.paper.year,
       session: question.paper.session,

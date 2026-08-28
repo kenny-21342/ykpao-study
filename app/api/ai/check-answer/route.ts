@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
-import { requireTextAi } from '@/lib/ai-credentials';
+import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import type { GradeResult } from '@/types/ai';
 
@@ -75,7 +75,7 @@ ${answer}`;
         { role: 'system', content: SYSTEM_PROMPTS.grader },
         { role: 'user', content: userContent },
       ],
-      { credential: access.credential, temperature: 0.2, maxTokens: 1500 }
+      { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 1500 }
     );
 
     const max = marks ?? result.maxScore ?? 1;

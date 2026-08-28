@@ -46,6 +46,9 @@ export async function GET(req: NextRequest) {
         difficulty: e.difficulty,
         topics: e.topics,
         status: e.status,
+        // The card shows this in place of a Start button on a failed paper;
+        // without it every failure read as the generic fallback message.
+        generationError: e.generationError,
         score: e.score,
         questionCount: e._count.items,
         createdAt: e.createdAt,
