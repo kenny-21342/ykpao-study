@@ -18,13 +18,15 @@ import base64
 import json
 import mimetypes
 import re
-import ssl
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+import requests
+from requests.adapters import HTTPAdapter
 
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_TIMEOUT_SECONDS = 300
@@ -143,7 +145,8 @@ def call_json(
                 output_tokens=int(usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0),
                 errors=tuple(diagnostics),
             )
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, ProviderError) as error:
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError,
+                requests.RequestException, ProviderError) as error:
             last_error = error
             diagnostic = {
                 "attempt": attempt,
@@ -164,59 +167,97 @@ def call_json(
     ) from last_error
 
 
+_SESSIONS = threading.local()
+
+
+def _session() -> requests.Session:
+    """A connection-pooling session, one per thread.
+
+    Every call used to go through urlopen, which opens a fresh socket each
+    time: a DNS lookup and a full TLS handshake per request. Across a subject
+    that is thousands of handshakes bought for nothing, and it is also what
+    made the pipeline fragile under load -- with an unrelated upload job
+    saturating the link, resolution started failing outright
+    ("nodename nor servname provided") and every attempt burned its 30s
+    timeout. A pooled connection is reused, so the handshake is paid once per
+    thread and the name is resolved once.
+
+    Sessions are thread-local because requests.Session is not documented as
+    thread-safe, and the transcription pool calls this from several workers at
+    once. The underlying urllib3 pool is per-session, so each worker keeps its
+    own warm connection.
+    """
+    session = getattr(_SESSIONS, "session", None)
+    if session is None:
+        session = requests.Session()
+        # Retries are handled by call_json, which also validates the body and
+        # knows about Retry-After. A second retry layer here would multiply
+        # the wait and hide the diagnostics.
+        adapter = HTTPAdapter(pool_connections=4, pool_maxsize=8, max_retries=0)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        _SESSIONS.session = session
+    return session
+
+
 def _post_json(
     endpoint: str,
     api_key: str,
     body: dict[str, Any],
     timeout_seconds: int,
 ) -> dict[str, Any]:
-    request = Request(
-        endpoint,
-        data=json.dumps(body, ensure_ascii=True, separators=(",", ":")).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "smart-edu-v4-bank/1.0",
-        },
-        method="POST",
-    )
+    payload = json.dumps(body, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "smart-edu-v4-bank/1.0",
+    }
     try:
-        with urlopen(request, timeout=timeout_seconds, context=_ssl_context()) as response:
-            raw = response.read()
-    except HTTPError as error:
-        detail = error.read(65536).decode("utf-8", errors="replace")
-        if error.code == 429:
+        response = _session().post(
+            endpoint, data=payload, headers=headers,
+            timeout=timeout_seconds, verify=_ca_bundle(),
+        )
+    except requests.RequestException as error:
+        # A pooled connection can be closed by the far end between calls; the
+        # caller retries, which re-opens it.
+        raise ProviderError(f"request failed: {error}") from error
+
+    if response.status_code >= 400:
+        detail = response.text[:65536]
+        if response.status_code == 429:
             raise RateLimited(
                 f"HTTP 429: {detail[:300]}",
-                _retry_after(error, default=RATE_LIMIT_BACKOFF_SECONDS),
+                _retry_after(response.headers, default=RATE_LIMIT_BACKOFF_SECONDS),
                 raw_response={"httpStatus": 429, "body": detail},
-            ) from error
+            )
         raise ProviderError(
-            f"HTTP {error.code}: {detail[:600]}",
-            raw_response={"httpStatus": error.code, "body": detail},
-        ) from error
+            f"HTTP {response.status_code}: {detail[:600]}",
+            raw_response={"httpStatus": response.status_code, "body": detail},
+        )
 
+    raw = response.content
     try:
-        payload = json.loads(raw)
+        payload_json = json.loads(raw)
     except json.JSONDecodeError as error:
         raise ProviderError(
             "provider response was not JSON",
             raw_response={"body": raw.decode("utf-8", errors="replace")[:2000]},
         ) from error
 
-    if not isinstance(payload, dict):
-        raise ProviderError("provider response was not a JSON object", raw_response=payload)
-    if payload.get("error"):
-        raise ProviderError(f"provider error: {payload['error']}", raw_response=payload)
-    return payload
+    if not isinstance(payload_json, dict):
+        raise ProviderError("provider response was not a JSON object",
+                            raw_response=payload_json)
+    if payload_json.get("error"):
+        raise ProviderError(f"provider error: {payload_json['error']}",
+                            raw_response=payload_json)
+    return payload_json
 
 
-def _retry_after(error: HTTPError, *, default: float) -> float:
+def _retry_after(headers: Any, *, default: float) -> float:
     """Seconds the server asked us to wait, or ``default`` if it did not say."""
-    raw = ""
     try:
-        raw = (error.headers.get("Retry-After") or "").strip()
+        raw = (headers.get("Retry-After") or "").strip()
     except Exception:
         raw = ""
     if raw:
@@ -228,12 +269,13 @@ def _retry_after(error: HTTPError, *, default: float) -> float:
     return default
 
 
-def _ssl_context() -> ssl.SSLContext:
+def _ca_bundle() -> Any:
+    """certifi's bundle when it is installed, otherwise the system default."""
     try:
         import certifi
     except ImportError:
-        return ssl.create_default_context()
-    return ssl.create_default_context(cafile=certifi.where())
+        return True
+    return certifi.where()
 
 
 def _parse_assistant_json(response: dict[str, Any]) -> dict[str, Any]:
