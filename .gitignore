@@ -128,3 +128,9 @@ __pycache__/
 # (uploaded by scripts/upload-bank-assets.ts) and are rebuilt by the extraction
 # pipeline, so they must never enter git history.
 /pdf_extraction/bank/assets/
+
+# Generated data migrations. Regenerate from pdf_extraction/bank/extract.db
+# rather than carrying three-quarters of a megabyte of VALUES in git; the
+# extractor that produces them is pdf_extraction/bank/marks.py.
+prisma/manual/*.sql
+!prisma/manual/*_verify_*.sql
