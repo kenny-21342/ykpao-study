@@ -45,6 +45,12 @@ const CANDIDATE_POOL = 500;
  * published questions with a published mark scheme carrying a mark total are
  * eligible: a question we cannot mark or weight has no place in something
  * presented as an exam.
+ *
+ * The total may come from either side. A multiple-choice key stamps 1 on the
+ * mark scheme; a structured question gets its total from the allocation printed
+ * on the question paper, which `pdf_extraction/bank/marks.py` reads into
+ * `bank_questions.totalMarks`. Requiring the mark-scheme column alone is what
+ * restricted every generated paper to multiple choice.
  */
 export async function selectBankQuestions(options: {
   subjectCodes: string[];
@@ -59,7 +65,9 @@ export async function selectBankQuestions(options: {
   const candidates = await prisma.$queryRaw<
     Array<{ id: number; marks: number; paperId: number; year: number; keyed: boolean }>
   >(Prisma.sql`
-    SELECT q.id, m."totalMarks" AS marks, p.id AS "paperId", p.year,
+    SELECT q.id,
+           COALESCE(m."totalMarks", q."totalMarks") AS marks,
+           p.id AS "paperId", p.year,
            (m."answerLetter" IS NOT NULL) AS keyed
     FROM bank_questions q
     JOIN bank_papers p ON p.id = q."paperId"
@@ -67,8 +75,7 @@ export async function selectBankQuestions(options: {
     JOIN bank_mark_schemes m ON m."questionId" = q.id
     WHERE q.status = 'published'
       AND m.status = 'published'
-      AND m."totalMarks" IS NOT NULL
-      AND m."totalMarks" > 0
+      AND COALESCE(m."totalMarks", q."totalMarks") > 0
       AND p."docType" = 'qp'
       AND s.code IN (${Prisma.join(subjectCodes)})
     ORDER BY random()
@@ -103,8 +110,7 @@ export async function listServableSubjects(
     JOIN bank_mark_schemes m ON m."questionId" = q.id
     WHERE q.status = 'published'
       AND m.status = 'published'
-      AND m."totalMarks" IS NOT NULL
-      AND m."totalMarks" > 0
+      AND COALESCE(m."totalMarks", q."totalMarks") > 0
       AND p."docType" = 'qp'
       ${subjectCodes ? Prisma.sql`AND s.code IN (${Prisma.join(subjectCodes)})` : Prisma.empty}
     ORDER BY s.name ASC
