@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function PapersPage() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-full">
       <div className="mx-auto max-w-6xl">
         <PaperBrowser />
       </div>

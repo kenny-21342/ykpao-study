@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './components/ThemeToggle';
+import AppSidebar, { SidebarScrim, useSidebarChrome } from './components/AppSidebar';
 import FloatingAIAssistant from './components/FloatingAIAssistant';
 import OnboardingWizard from './components/OnboardingWizard';
 import QuestionsDatabase from './components/QuestionsDatabase';
 import BankPractice from './components/BankPractice';
 import MockExams from './components/MockExams';
-import { FEATURE_READINESS, isFeaturePreview, isFeatureVisible } from '@/lib/feature-readiness';
+import { isFeaturePreview } from '@/lib/feature-readiness';
 import DiscussionBoard from './components/DiscussionBoard';
 import NotificationBell from './components/NotificationBell';
 import StudyCoach from './components/StudyCoach';
@@ -20,14 +21,7 @@ import DailyChallenge from './components/DailyChallenge';
 import TrendingNotes from './components/TrendingNotes';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import { ScreenContextProvider, useScreenContext } from './components/ScreenContext';
-import {
-  BookOpen, Database, Sparkles, TrendingUp,
-  Clock, Award, Target, Star, User, Settings,
-  LogOut, Home, FileText, Zap,
-  BookMarked, GraduationCap, BarChart3, Calendar, LogIn,
-  PanelLeftClose, PanelLeft, ClipboardList, Library, MessagesSquare,
-  ShieldCheck, Brain, ArrowRight, Layers3, Menu, X,
-} from 'lucide-react';
+import { BookOpen, Database, Sparkles, TrendingUp, Clock, Award, Target, Star, FileText, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
 
 type StudyCoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'mastery' | 'search';
 type PracticeMode = 'browse' | 'practice';
@@ -168,14 +162,23 @@ export default function SmartEduPlatform() {
   const [pendingQuestionId, setPendingQuestionId] = useState<number | null>(null);
   const [studyStartView, setStudyStartView] = useState<StudyCoachView>('today');
   const [practiceStartMode, setPracticeStartMode] = useState<PracticeMode>('browse');
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [learningOverview, setLearningOverview] = useState<LearningOverview | null>(null);
 
   // Below `lg` the sidebar is an off-canvas drawer rather than a column, so it
   // needs its own open/closed state independent of the desktop collapse.
   // Declared before `openRoute`, which closes the drawer on navigation.
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  //
+  // Shared with /papers through `useSidebarChrome`, so a student who collapses
+  // the sidebar here still finds it collapsed after opening Past Papers.
+  const {
+    collapsed: sidebarCollapsed,
+    collapsedPreference: isMainSidebarCollapsed,
+    toggleCollapsed,
+    mobileOpen: isMobileNavOpen,
+    openMobile,
+    closeMobile,
+  } = useSidebarChrome();
 
   const openRoute = useCallback((route: RoutedTab) => {
     if (route.tab === 'study') {
@@ -190,8 +193,8 @@ export default function SmartEduPlatform() {
     setActiveTab(route.tab);
     // Navigating from the drawer should dismiss it, or the destination stays
     // hidden behind the overlay on a phone.
-    setIsMobileNavOpen(false);
-  }, []);
+    closeMobile();
+  }, [closeMobile]);
 
   // While the question bank is a preview, the dashboard stops *recommending*
   // it: every "here is something to go and do" control points at Past Papers,
@@ -201,12 +204,12 @@ export default function SmartEduPlatform() {
   const router = useRouter();
   const openPracticeOrPapers = useCallback(() => {
     if (bankIsPreview) {
-      setIsMobileNavOpen(false);
+      closeMobile();
       router.push('/papers');
       return;
     }
     openRoute({ tab: 'practice', practiceMode: 'browse' });
-  }, [bankIsPreview, router, openRoute]);
+  }, [bankIsPreview, router, openRoute, closeMobile]);
   // Memoised because it is a dependency of the dashboard-focus memo below; a
   // fresh object each render would recompute that on every keystroke.
   const practiceShortcut = useMemo(
@@ -220,11 +223,11 @@ export default function SmartEduPlatform() {
   useEffect(() => {
     if (!isMobileNavOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsMobileNavOpen(false);
+      if (event.key === 'Escape') closeMobile();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isMobileNavOpen]);
+  }, [isMobileNavOpen, closeMobile]);
 
   useEffect(() => {
     const openAIAssistant = () => setIsAIAssistantOpen(true);
@@ -265,11 +268,6 @@ export default function SmartEduPlatform() {
    * look broken. Anything that says "you are signed out" has to wait for this.
    */
   const isSessionLoading = status === 'loading';
-  const userInitials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-    : user?.email?.[0]?.toUpperCase() ?? 'YS';
-
-  const [isMainSidebarCollapsed, setIsMainSidebarCollapsed] = useState(false);
   // User-customizable background image (fetched from /api/account via session).
   const [bgImage, setBgImage] = useState<string | null>(null);
 
@@ -619,15 +617,6 @@ export default function SmartEduPlatform() {
   // Collapsing is a desktop-only affordance. While the mobile drawer is open
   // it is always shown expanded, so the labels don't stay `sr-only` inside a
   // full-width drawer just because the user collapsed it on a larger screen.
-  const sidebarCollapsed = isMainSidebarCollapsed && !isMobileNavOpen;
-  const sidebarNavItemClass = (active: boolean) => (
-    `w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-      active
-        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-indigo-500/30'
-        : 'text-gray-700 hover:bg-gray-100'
-    }`
-  );
-  const sidebarNavLabelClass = sidebarCollapsed ? 'sr-only' : '';
 
   return (
     <ScreenContextProvider>
@@ -652,243 +641,15 @@ export default function SmartEduPlatform() {
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
       )}
 
-      {/* Scrim behind the mobile drawer. Desktop never renders it. */}
-      {isMobileNavOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
-          onClick={() => setIsMobileNavOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      <SidebarScrim open={isMobileNavOpen} onClose={() => closeMobile()} />
 
-      {/* Left Sidebar Navigation — translucent glass.
-          Below `lg` this is a fixed off-canvas drawer: as a static 256px
-          column it left roughly 119px of usable width on a 375px phone.
-          From `lg` up it returns to being an in-flow column that the
-          collapse button narrows to 80px. */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/30 dark:border-white/10 shadow-xl transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
-          isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
-      >
-
-        {/* Dismiss control for the mobile drawer; the desktop column has no
-            overlay to escape from, so it is hidden from `lg` up. */}
-        <button
-          onClick={() => setIsMobileNavOpen(false)}
-          className="absolute right-3 top-3 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
-          aria-label="Close navigation"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        {/* Logo */}
-        <div className={`${sidebarCollapsed ? 'p-4' : 'p-6'} border-b border-white/30 dark:border-white/10`}>
-          {/* A button, not a clickable div: as a div it was invisible to
-              keyboard and screen-reader users even though it is the app's
-              "home" control. */}
-          <button
-            type="button"
-            onClick={() => openRoute({ tab: 'dashboard' })}
-            aria-label="YKPao Study — go to dashboard"
-            className={`flex w-full items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
-          >
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20 group-hover:shadow-green-500/40 transition-all duration-300 group-hover:scale-105">
-              <GraduationCap className="w-6 h-6 text-white" />
-            </div>
-            <span className={`${sidebarCollapsed ? 'sr-only' : 'text-xl'} font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent`}>YKPao Study</span>
-          </button>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className={`${sidebarCollapsed ? 'px-2' : 'px-4'} flex-1 space-y-2 overflow-y-auto py-6`}>
-          <button
-            onClick={() => openRoute({ tab: 'dashboard' })}
-            title="Dashboard"
-            className={sidebarNavItemClass(activeTab === 'dashboard')}
-          >
-            <Home className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Dashboard</span>
-          </button>
-
-          <button
-            onClick={() => openRoute({ tab: 'study', studyView: 'today' })}
-            title="Study"
-            className={sidebarNavItemClass(activeTab === 'study')}
-          >
-            <Brain className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Study</span>
-          </button>
-
-          {isFeatureVisible('question-bank') && (
-            <button
-              onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
-              title="Practice"
-              className={sidebarNavItemClass(activeTab === 'practice')}
-            >
-              <Database className="w-5 h-5" />
-              <span className={sidebarNavLabelClass}>Practice</span>
-              <NavBadge feature="question-bank" collapsed={sidebarCollapsed} />
-            </button>
-          )}
-
-          {/* Past papers is its own route rather than a tab, because the PDF
-              viewer at /papers/[id] navigates away from the shell anyway. */}
-          <Link
-            href="/papers"
-            title="Past Papers"
-            className={sidebarNavItemClass(false)}
-            onClick={() => setIsMobileNavOpen(false)}
-          >
-            <Library className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Past Papers</span>
-          </Link>
-
-          <button
-            onClick={() => openRoute({ tab: 'materials' })}
-            title="Materials"
-            className={sidebarNavItemClass(activeTab === 'materials')}
-          >
-            <Layers3 className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Materials</span>
-          </button>
-
-          {isFeatureVisible('mock-exams') && (
-            <button
-              onClick={() => openRoute({ tab: 'mock-exams' })}
-              title="Mock Exams"
-              className={sidebarNavItemClass(activeTab === 'mock-exams')}
-            >
-              <ClipboardList className="w-5 h-5" />
-              <span className={sidebarNavLabelClass}>Mock Exams</span>
-              <NavBadge feature="mock-exams" collapsed={sidebarCollapsed} />
-            </button>
-          )}
-
-          <button
-            onClick={() => openRoute({ tab: 'discussions' })}
-            title="Discussion Board"
-            className={sidebarNavItemClass(activeTab === 'discussions')}
-          >
-            <MessagesSquare className="w-5 h-5" />
-            <span className={sidebarNavLabelClass}>Discussion Board</span>
-          </button>
-        </nav>
-
-        {/* User Account Section */}
-        <div className={`${sidebarCollapsed ? 'px-2 py-4' : 'p-4'} border-t border-white/30 dark:border-white/10`}>
-          {isSessionLoading ? (
-            // A placeholder, not the signed-out buttons: offering "Sign In" to
-            // someone who is already signed in is the whole bug.
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3 px-3'} py-3`}>
-              <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
-              {!sidebarCollapsed && (
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                  <div className="h-2.5 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                </div>
-              )}
-            </div>
-          ) : isAuthenticated ? (
-            <div className="relative">
-              <button
-                onClick={() => setIsAccountOpen(!isAccountOpen)}
-                title={user?.name ?? 'Account'}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-xl hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
-                  {user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} alt={user.name ?? 'User'} className="w-full h-full object-cover" />
-                  ) : (
-                    userInitials
-                  )}
-                </div>
-                {!sidebarCollapsed && (
-                  <>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student'}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                    </div>
-                    <Settings className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                  </>
-                )}
-              </button>
-
-              {isAccountOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsAccountOpen(false)} />
-                  <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-2xl shadow-2xl py-2 z-50 ${sidebarCollapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student Account'}</p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
-                    </div>
-                    <div className="py-1">
-                      <a
-                        href="/account"
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <User className="w-4 h-4" />
-                        <span>Account Settings</span>
-                      </a>
-                      <a
-                        href="/usage"
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        <span>Usage & API Credits</span>
-                      </a>
-                      {user?.isAdmin && (
-                        <a
-                          href="/admin"
-                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>Admin Console</span>
-                        </a>
-                      )}
-                    </div>
-                    <div className="border-t border-gray-100 mt-1 pt-1">
-                      <button
-                        onClick={async () => {
-                          await signOut({
-                            redirect: false,
-                            callbackUrl: `${window.location.origin}/`,
-                          });
-                          window.location.assign('/');
-                        }}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Log out</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Link
-                href="/auth/login"
-                title="Sign In"
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-200`}
-              >
-                <LogIn className="w-4 h-4" />
-                <span className={sidebarCollapsed ? 'sr-only' : ''}>Sign In</span>
-              </Link>
-              <Link
-                href="/auth/signup"
-                title="Create Account"
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200`}
-              >
-                <User className="w-4 h-4" />
-                <span className={sidebarCollapsed ? 'sr-only' : ''}>Create Account</span>
-              </Link>
-            </div>
-          )}
-        </div>
-      </aside>
+      <AppSidebar
+        active={activeTab}
+        collapsed={sidebarCollapsed}
+        mobileOpen={isMobileNavOpen}
+        onCloseMobile={() => closeMobile()}
+        onNavigate={(tab) => openRoute({ tab })}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -898,7 +659,7 @@ export default function SmartEduPlatform() {
           <div className="flex items-center space-x-4">
             {/* Mobile: open the navigation drawer. */}
             <button
-              onClick={() => setIsMobileNavOpen(true)}
+              onClick={() => openMobile()}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:hidden"
               aria-label="Open navigation"
               aria-expanded={isMobileNavOpen}
@@ -908,7 +669,7 @@ export default function SmartEduPlatform() {
 
             {/* Desktop: collapse the sidebar to icons. */}
             <button
-              onClick={() => setIsMainSidebarCollapsed(!isMainSidebarCollapsed)}
+              onClick={toggleCollapsed}
               className="hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:block"
               aria-label={isMainSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               title={isMainSidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
@@ -1234,16 +995,6 @@ export default function SmartEduPlatform() {
 // The "Preview" chip on a sidebar entry whose feature is not finished. Hidden
 // when the sidebar is collapsed, where there is no room for it and the title
 // attribute is the only affordance anyway.
-function NavBadge({ feature, collapsed }: { feature: keyof typeof FEATURE_READINESS; collapsed: boolean }) {
-  const readiness = FEATURE_READINESS[feature];
-  if (readiness.state !== 'preview' || collapsed) return null;
-  return (
-    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
-      {readiness.badge}
-    </span>
-  );
-}
-
 // Tiny invisible component that syncs the active tab into ScreenContext.
 // Must live inside <ScreenContextProvider> to use the hook.
 function TabContextSync({ activeTab }: { activeTab: MainTab }) {
