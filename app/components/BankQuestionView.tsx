@@ -340,6 +340,27 @@ export default function BankQuestionCard({ question }: { question: Question }) {
           )}
         </div>
       )}
+
+      {/*
+        A quarter of the published bank -- 16,749 of 66,756 questions -- has no
+        mark scheme behind it, because the paper's scheme has not been matched
+        and published yet. Saying nothing leaves a student who has just worked
+        through the question hunting for a reveal control that was never
+        rendered. The list badges which questions have one; this is the same
+        fact stated where they actually need it.
+      */}
+      {!(
+        question.markScheme &&
+        (question.markScheme.strips.length > 0 || question.markScheme.answerLetter)
+      ) && (
+        <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No mark scheme for this question yet. The question paper is complete
+            &mdash; it is the matching scheme that is still being processed.
+          </p>
+        </div>
+      )}
+
       {zoomed && (
         <ZoomOverlay
           strips={zoomed === 'question' ? question.strips : question.markScheme!.strips}
