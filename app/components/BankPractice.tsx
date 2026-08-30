@@ -17,7 +17,8 @@
  * `AssistancePanel`.
  */
 import { useEffect, useState } from 'react';
-import { Loader2, Search, Star } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
 
@@ -138,6 +139,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
 }
 
 export default function BankPractice() {
+  const { status: sessionStatus } = useSession();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [subject, setSubject] = useState('');
   const [year, setYear] = useState('');
@@ -184,6 +186,11 @@ export default function BankPractice() {
   }, [scope]);
 
   useEffect(() => {
+    // The bank needs a session, so there is nothing to ask for until we have
+    // one. Fetching while `loading` would also fire a 401 on first paint for
+    // every signed-in student, before the session resolves.
+    if (sessionStatus !== 'authenticated') return;
+
     // `stale` guards against responses arriving out of order. Changing two
     // filters quickly starts two requests, and the first one can answer last;
     // without this the older result overwrites the newer and the list stops
@@ -224,7 +231,7 @@ export default function BankPractice() {
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked]);
+  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked, sessionStatus]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -282,6 +289,32 @@ export default function BankPractice() {
   };
 
   const lastPage = Math.max(1, Math.ceil(total / 20));
+
+  // Browsing the bank needs an account. Saying so beats the alternative, which
+  // is the list error surfacing a bare "Sign in to browse the question bank."
+  // where a student expected questions, with nothing to click.
+  if (sessionStatus === 'unauthenticated') {
+    return (
+      <div className="h-full grid place-items-center p-6">
+        <div className="max-w-md text-center">
+          <GraduationCap className="w-10 h-10 mx-auto text-green-600 mb-4" aria-hidden="true" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Sign in to practise
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            The question bank is scoped to the subjects you study, and your attempts
+            and bookmarks are saved to your account.
+          </p>
+          <a
+            href="/auth/login"
+            className="inline-flex mt-5 px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700"
+          >
+            Sign in
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (selected) {
     return (

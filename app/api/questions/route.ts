@@ -13,6 +13,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const user = await getSessionUser();
+
+    // Requires a session for the same reason /api/bank/questions does: the
+    // session was read only to scope results, so an anonymous caller fell
+    // outside `enrolled` scope and received every subject. `action=filters`
+    // alone returned 45KB of the full catalogue to anyone who asked.
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Sign in to browse questions.' },
+        { status: 401 },
+      );
+    }
     const courseScope = await resolveCourseScope({
       userId: user?.id,
       scope: searchParams.get('scope'),

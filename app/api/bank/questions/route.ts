@@ -41,6 +41,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const user = await getSessionUser();
+
+    // A session is required, not merely consulted.
+    //
+    // The session used to be read only to *scope* the results, never to gate
+    // them -- so an anonymous request fell outside `enrolled` scope, which
+    // means "every subject", and could page through all 65,776 published
+    // questions without an account. Being signed out granted broader access
+    // than being signed in, which is the wrong way round for a school
+    // platform heading into a closed beta.
+    //
+    // The crops themselves were never exposed (/bank_assets/* has always
+    // answered 401), so this closes an enumerable catalogue rather than a
+    // content leak. Found by the pre-launch sweep on 30 Aug 2026.
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Sign in to browse the question bank.' },
+        { status: 401 },
+      );
+    }
+
     const courseScope = await resolveCourseScope({
       userId: user?.id,
       scope: searchParams.get('scope'),
