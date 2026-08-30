@@ -35,6 +35,24 @@ export type SignedUrlOptions = {
   /** When set, asks the store to return this as `Content-Disposition`. */
   contentDisposition?: string;
   contentType?: string;
+  /**
+   * When set, asks the store to return this as `Cache-Control` on the object.
+   * Without it the bucket's own header wins, and R2 defaults to `no-cache`.
+   */
+  cacheControl?: string;
+  /**
+   * Round the signing timestamp down to a multiple of this many seconds.
+   *
+   * A signed URL is normally unique per call, because the signature covers the
+   * current time to the second. That makes it uncacheable: every render mints a
+   * new URL, so the browser has never seen it before and fetches the bytes
+   * again. Quantising the timestamp makes the URL identical for every caller
+   * inside the window, which is what lets `cacheControl` do anything at all.
+   *
+   * Only safe for immutable keys. `expiresInSeconds` must exceed the window,
+   * or a URL minted at the end of one expires almost immediately.
+   */
+  stableWindowSeconds?: number;
 };
 
 export interface ObjectStore {

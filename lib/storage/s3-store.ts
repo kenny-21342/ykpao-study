@@ -432,6 +432,18 @@ export class S3ObjectStore implements ObjectStore {
     if (options.contentType) {
       extraQuery['response-content-type'] = options.contentType;
     }
+    if (options.cacheControl) {
+      extraQuery['response-cache-control'] = options.cacheControl;
+    }
+
+    // Quantise the signing time so repeated calls for the same key inside a
+    // window produce byte-identical URLs, which is the only way a browser can
+    // reuse what it already downloaded. See SignedUrlOptions.
+    const window = options.stableWindowSeconds;
+    const now =
+      window && window > 0
+        ? new Date(Math.floor(Date.now() / (window * 1000)) * window * 1000)
+        : undefined;
 
     return presignUrl({
       method: 'GET',
@@ -439,6 +451,7 @@ export class S3ObjectStore implements ObjectStore {
       expiresInSeconds: options.expiresInSeconds ?? this.config.signedUrlTtlSeconds,
       credentials: this.credentials,
       extraQuery,
+      now,
     });
   }
 }
