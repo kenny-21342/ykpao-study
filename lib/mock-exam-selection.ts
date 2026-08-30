@@ -58,8 +58,18 @@ export async function selectBankQuestions(options: {
   maxItems: number;
   /** How many chosen questions may lack an answer key. Defaults to `maxItems`. */
   maxUnkeyedItems?: number;
+  /**
+   * Restrict the draw to one paper number.
+   *
+   * A mock exam does not care -- it wants a spread of the subject. A predicted
+   * paper does: it is shaped after the observed structure of, say, Paper 2, and
+   * drawing Paper 1 multiple choice into it would contradict the blueprint it
+   * just described. Left undefined the draw is unrestricted, which is what
+   * every existing caller wants.
+   */
+  paperNumber?: number | null;
 }): Promise<SelectedQuestion[]> {
-  const { subjectCodes, targetMarks, maxItems, maxUnkeyedItems } = options;
+  const { subjectCodes, targetMarks, maxItems, maxUnkeyedItems, paperNumber } = options;
   if (subjectCodes.length === 0 || maxItems <= 0) return [];
 
   const candidates = await prisma.$queryRaw<
@@ -78,6 +88,7 @@ export async function selectBankQuestions(options: {
       AND COALESCE(m."totalMarks", q."totalMarks") > 0
       AND p."docType" = 'qp'
       AND s.code IN (${Prisma.join(subjectCodes)})
+      ${typeof paperNumber === 'number' ? Prisma.sql`AND p."paperNumber" = ${paperNumber}` : Prisma.empty}
     ORDER BY random()
     LIMIT ${CANDIDATE_POOL}
   `);

@@ -19,6 +19,7 @@ import { LearnerContextError } from '@/lib/learner-context';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { listServableSubjects } from '@/lib/mock-exam-selection';
+import { predictionPathsFor } from '@/lib/predicted-paper';
 import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,13 @@ export async function GET() {
     // mapped back to the code the form has to submit.
     const servable = await listServableSubjects(enrolled ? toBankSubjectCodes(enrolled) : null);
 
+    // A predicted paper is model-curated only where the legacy corpus has the
+    // question text to curate. Everywhere else it is assembled from the bank,
+    // and the form must not offer Topics or Difficulty for it.
+    const paths = await predictionPathsFor(
+      enrolled ?? servable.map((subject) => subject.code),
+    );
+
     const subjects = enrolled
       ? enrolled
           .map((catalogCode) => {
@@ -44,10 +52,22 @@ export async function GET() {
             if (!match) return null;
             // bank_subjects.name is derived from the filename, so it reads
             // "CAIE 0610". The catalog knows it as Biology.
-            return { id: match.id, code: catalogCode, name: subjectNameForCode(catalogCode) ?? match.name };
+            return {
+              id: match.id,
+              code: catalogCode,
+              name: subjectNameForCode(catalogCode) ?? match.name,
+              curatedPrediction: paths.get(catalogCode) === 'curated',
+            };
           })
-          .filter((s): s is { id: number; code: string; name: string } => s !== null)
-      : servable.map((s) => ({ ...s, name: subjectNameForCode(s.code) ?? s.name }));
+          .filter(
+            (s): s is { id: number; code: string; name: string; curatedPrediction: boolean } =>
+              s !== null,
+          )
+      : servable.map((s) => ({
+          ...s,
+          name: subjectNameForCode(s.code) ?? s.name,
+          curatedPrediction: paths.get(s.code) === 'curated',
+        }));
 
     return NextResponse.json({ subjects });
   } catch (error) {

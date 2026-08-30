@@ -129,7 +129,17 @@ type ExamDetail = {
   items: ExamItem[];
 };
 
-type Subject = { id: number; code: string; name: string };
+type Subject = {
+  id: number;
+  code: string;
+  name: string;
+  /**
+   * Whether a predicted paper for this subject is curated by a model reading
+   * question text, or assembled from the crop-first bank. Topics and
+   * Difficulty only reach the first kind.
+   */
+  curatedPrediction?: boolean;
+};
 
 type View =
   | { name: 'list' }
@@ -582,6 +592,13 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
 
   const canGenerate = !!subjectCode && !generating;
 
+  // Controls that only the model-curated path can act on. For a bank-backed
+  // subject the paper is drawn by query over image crops, with no topic table
+  // and no difficulty tagging, so these would be inert.
+  const curatedPrediction =
+    subjects.find((s) => s.code === subjectCode)?.curatedPrediction ?? false;
+  const showPredictionSteering = mode === 'predicted' && curatedPrediction;
+
   const handleGenerate = async () => {
     if (!subjectCode) return;
     setGenerating(true);
@@ -628,8 +645,10 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generate a Mock Exam</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {mode === 'predicted'
-                ? 'The AI will forecast a realistic paper from the question bank and historical structure.'
-                : 'Questions are drawn from the bank to match your mark total. No wait — the paper is ready as soon as you press the button.'}
+                ? curatedPrediction
+                  ? 'A paper shaped after the structure of your subject\u2019s real past papers, with the questions chosen for you.'
+                  : 'A paper shaped after the structure of your subject\u2019s real past papers \u2014 same mark total, same length, same spread of question sizes.'
+                : 'Questions are drawn from the bank to match your mark total. No wait \u2014 the paper is ready as soon as you press the button.'}
             </p>
           </div>
         </div>
@@ -718,13 +737,13 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                 )}
               </Field>
 
-              {/* Difficulty is set on 50 of 85,611 bank questions, and no bank
+              {/* No published bank question carries a difficulty and no bank
                   topic has been tagged at all, so neither control can steer a
                   paper assembled by query -- it would sit there looking like it
-                  worked. A predicted paper still passes both to a model that
-                  can act on them, so they stay for that mode only, and come
-                  back for mock exams when the tagging pass has run. */}
-              {mode === 'predicted' && (
+                  worked. Only a model-curated prediction, which reads the
+                  legacy corpus's question text, can act on them. Both come back
+                  for everything once the tagging pass has run. */}
+              {showPredictionSteering && (
               <Field label="Difficulty">
                 <div className="grid grid-cols-4 gap-2">
                   {DIFFICULTY_OPTIONS.map((d) => (
@@ -777,7 +796,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                 </Field>
               </div>
 
-              {mode === 'predicted' && (
+              {showPredictionSteering && (
                 <Field label="Topics (comma-separated, optional)">
                   <input
                     type="text"
@@ -787,7 +806,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Leave blank to let the AI sample across the whole subject.
+                    Leave blank to sample across the whole subject.
                   </p>
                 </Field>
               )}
@@ -827,10 +846,9 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
             <span>
-              {mode === 'predicted'
-                ? 'The AI is forecasting the paper structure, selecting questions, and assembling mark-scheme guidance.'
-                : 'The AI is selecting questions, mapping markschemes, and assembling your paper.'}
-              This usually takes 10–30 seconds.
+              {mode === 'predicted' && curatedPrediction
+                ? 'Reading your subject\u2019s past papers, choosing questions, and writing the marking guidance. This usually takes 10\u201330 seconds.'
+                : 'Measuring your subject\u2019s past papers and drawing questions to match.'}
             </span>
           </div>
         )}
