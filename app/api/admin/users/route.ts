@@ -71,7 +71,10 @@ export async function GET(req: NextRequest) {
 const updateSchema = z.object({
   role: z.enum(['student', 'teacher', 'admin']).optional(),
   banned: z.boolean().optional(),
-  bannedReason: z.string().max(500).optional(),
+  // Explicit null clears the column — the UI sends bannedReason: null when it
+  // unbans. A plain z.string() rejected that, so the ban itself could never
+  // be revoked and every unban attempt surfaced as "Invalid request".
+  bannedReason: z.string().max(500).nullable().optional(),
 });
 
 /**
