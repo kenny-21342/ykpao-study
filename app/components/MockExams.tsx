@@ -905,6 +905,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const startedRef = useRef(false);
@@ -1371,15 +1372,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 </button>
               ) : (
                 <button
-                  onClick={() => {
-                    // The old text stated facts but never asked anything, so
-                    // OK/Cancel were ambiguous at the single highest-stakes
-                    // moment in the app. End on the actual question.
-                    const parts = [`You've answered ${answeredCount} of ${totalItems} questions.`];
-                    if (flaggedCount > 0) parts.push(`${flaggedCount} still flagged for review.`);
-                    parts.push('\nSubmit for grading now? You cannot change your answers afterwards.');
-                    if (confirm(parts.join(' '))) handleSubmit();
-                  }}
+                  onClick={() => setConfirmSubmit(true)}
                   disabled={submitting}
                   className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
                 >
@@ -1388,6 +1381,39 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 </button>
               )}
             </div>
+
+            {confirmSubmit && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
+                <div className="mx-4 w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-2xl">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Submit Exam?</h3>
+                  <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <p>You&apos;ve answered {answeredCount} of {totalItems} questions.</p>
+                    {flaggedCount > 0 && (
+                      <p className="text-amber-600 dark:text-amber-400 font-medium">
+                        {flaggedCount} question{flaggedCount === 1 ? ' is' : 's are'} still flagged for review.
+                      </p>
+                    )}
+                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                      Submit for grading now? You cannot change your answers afterwards.
+                    </p>
+                  </div>
+                  <div className="mt-6 flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setConfirmSubmit(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors"
+                    >
+                      Go back
+                    </button>
+                    <button
+                      onClick={() => { setConfirmSubmit(false); handleSubmit(); }}
+                      className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Submit for grading
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {submitError && <ErrorBanner message={submitError} />}
 
