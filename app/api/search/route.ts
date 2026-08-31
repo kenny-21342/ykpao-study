@@ -6,7 +6,7 @@ import { plainText } from '@/lib/learning';
 import type { Prisma } from '@prisma/client';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
-
+import { toBankSubjectCodes } from '@/lib/bank-questions';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -58,41 +58,65 @@ export async function GET(req: NextRequest) {
   }
   const words = query.split(/\s+/).filter((word) => word.length > 1).slice(0, 6);
   const terms = words.length > 0 ? words : [query];
-  const questionFilters: Prisma.PastPaperQuestionWhereInput[] = terms.flatMap((term) => [
-    { content: { contains: term, mode: 'insensitive' as const } },
-    { topic: { contains: term, mode: 'insensitive' as const } },
-  ]);
 
-  // Question text does not contain identifiers such as "0610" or
-  // "0610-S25-P2v1-Q4", so include paper and subject metadata explicitly.
-  questionFilters.push(
-    { paper: { filename: { contains: query, mode: 'insensitive' } } },
-    { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
-    { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
-  );
+  // --- Bank questions (the crop-first corpus students actually browse) ---
+  // bodyMd is empty for most questions (crop-only run), so match on metadata
+  // and on bodyMd so results appear for free as transcription lands.
+  const bankSubjectScope = courseScope.effectiveScope === 'enrolled'
+    ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
+    : {};
 
   const syllabusCode = query.match(/(?:^|\D)(\d{4})(?:\D|$)/)?.[1];
   const questionNumber = query.match(/(?:^|\W)q(?:uestion)?\s*(\d+)/i)?.[1];
 
+  const bankQuestionOr: Prisma.BankQuestionWhereInput[] = [
+    ...terms.flatMap((term) => [
+      { bodyMd: { contains: term, mode: 'insensitive' as const } },
+    ]),
+    // Paper and subject metadata — what actually has text today.
+    { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
+    { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
+  ];
   if (syllabusCode || questionNumber) {
-    questionFilters.push({
+    bankQuestionOr.push({
       AND: [
         ...(syllabusCode ? [{ paper: { subject: { code: syllabusCode } } }] : []),
-        ...(questionNumber ? [{ number: Number(questionNumber) }] : []),
+        ...(questionNumber ? [{ rootNumber: Number(questionNumber) }] : []),
       ],
     });
   }
 
+  // Mark scheme text (answerMd) — 26,531 mark schemes carry real text.
+  const bankMsOr: Prisma.BankMarkSchemeWhereInput[] = [
+    ...terms.flatMap((term) => [
+      { answerMd: { contains: term, mode: 'insensitive' as const } },
+    ]),
+    { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
+    { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
+  ];
+
+  const bankMsSubjectScope = courseScope.effectiveScope === 'enrolled'
+    ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
+    : {};
+
   const [questions, markschemes, notes, pages, documents, resources] = await Promise.all([
-    prisma.pastPaperQuestion.findMany({
-      where: { docType: 'qp', OR: questionFilters, ...(courseScope.effectiveScope === 'enrolled' ? { paper: { subject: { code: { in: courseScope.subjectCodes } } } } : {}) },
+    prisma.bankQuestion.findMany({
+      where: {
+        status: 'published',
+        OR: bankQuestionOr,
+        ...bankSubjectScope,
+      },
       include: { paper: { include: { subject: true } } },
       take: 8,
       orderBy: { id: 'desc' },
     }),
-    prisma.pastPaperQuestion.findMany({
-      where: { docType: 'ms', OR: questionFilters, ...(courseScope.effectiveScope === 'enrolled' ? { paper: { subject: { code: { in: courseScope.subjectCodes } } } } : {}) },
-      include: { paper: { include: { subject: true } } },
+    prisma.bankMarkScheme.findMany({
+      where: {
+        status: 'published',
+        OR: bankMsOr,
+        ...bankMsSubjectScope,
+      },
+      include: { paper: { include: { subject: true } }, question: { select: { rootNumber: true } } },
       take: 5,
       orderBy: { id: 'desc' },
     }),
@@ -157,20 +181,20 @@ export async function GET(req: NextRequest) {
     ...questions.map((question) => ({
       id: `question-${question.id}`,
       type: 'question' as const,
-      title: `${question.paper.subject.code} Q${question.number}${question.part}${question.subPart} - ${question.topic}`,
-      snippet: plainText(question.content, 240),
+      title: `${question.paper.subject.code} ${question.paper.year} ${question.paper.session.toUpperCase()} P${question.paper.paperNumber} Q${question.rootNumber}`,
+      snippet: question.bodyMd ? plainText(question.bodyMd, 240) : `${question.paper.subject.name} — Paper ${question.paper.paperNumber}, Question ${question.rootNumber}`,
       url: `/?tab=practice&qid=${question.id}`,
       subject: question.paper.subject.name,
-      topic: question.topic,
+      topic: null,
     })),
     ...markschemes.map((scheme) => ({
       id: `markscheme-${scheme.id}`,
       type: 'markscheme' as const,
-      title: `${scheme.paper.subject.code} mark scheme Q${scheme.number}${scheme.part}${scheme.subPart}`,
-      snippet: plainText(scheme.content, 240),
-      url: `/?tab=practice&qid=${scheme.id}`,
+      title: `${scheme.paper.subject.code} ${scheme.paper.year} ${scheme.paper.session.toUpperCase()} P${scheme.paper.paperNumber} Q${scheme.question.rootNumber} mark scheme`,
+      snippet: scheme.answerMd ? plainText(scheme.answerMd, 240) : `Mark scheme for Q${scheme.question.rootNumber}`,
+      url: `/?tab=practice&qid=${scheme.questionId}`,
       subject: scheme.paper.subject.name,
-      topic: scheme.topic,
+      topic: null,
     })),
     ...notes.map((note) => ({
       id: `note-${note.id}`,
