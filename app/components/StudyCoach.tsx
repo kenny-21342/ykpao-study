@@ -509,7 +509,10 @@ function ReviewFace({ content, strips, alt }: { content: string; strips?: Review
             alt={index === 0 ? alt : ''}
             width={strip.width ?? undefined}
             height={strip.height ?? undefined}
-            className="block max-w-full"
+            // The crops are scanned paper. Many are transparent PNGs with
+            // black ink, which is invisible on the dark theme, so the white
+            // ground travels with the image rather than the container.
+            className="block max-w-full bg-white"
           />
         ))}
       </div>

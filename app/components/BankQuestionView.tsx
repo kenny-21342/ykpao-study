@@ -56,7 +56,9 @@ function StripStack({
             height={strip.height ?? undefined}
             loading="lazy"
             decoding="async"
-            className="block h-auto"
+            // As in the other strip renderers: a transparent crop must not
+            // vanish into the dark theme, so the ground is on the image.
+            className="block h-auto bg-white"
             style={{
               // Percentage of the widest strip, so a half-width part stays
               // half-width instead of being blown up to match.
