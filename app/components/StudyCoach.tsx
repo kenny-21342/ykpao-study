@@ -519,7 +519,39 @@ function ReviewFace({ content, strips, alt }: { content: string; strips?: Review
     );
   }
   if (!content) return null;
-  return <FormattedMessage content={content} />;
+  return <FormattedMessage content={splitMcqOptionRun(content)} />;
+}
+
+// MCQ options arrive as a single run — "A metallic character B number of
+// electron shells C…" — because the corpus stores them as flat text. Split
+// before each letter of an increasing A→F run so they render as a readable
+// list. The run has to be consecutive (A, then B, …) with actual option text
+// between the letters, and at least three long — prose that merely contains
+// capital letters ("Vitamin A B C deficiency") must not be mangled.
+function splitMcqOptionRun(content: string): string {
+  const letters = [...content.matchAll(/(?:^|(?<=\s))([A-F])(?=\s)/g)];
+  let best: number[] = [];
+  let run: number[] = [];
+  for (const match of letters) {
+    const letter = match[1];
+    const index = match.index ?? 0;
+    const expected = String.fromCharCode(65 + run.length);
+    const hasOptionText =
+      run.length === 0 || content.slice(run[run.length - 1] + 1, index).trim().length > 0;
+    if (letter === expected && hasOptionText) {
+      run.push(index);
+    } else {
+      if (run.length > best.length) best = run;
+      run = letter === 'A' ? [index] : [];
+    }
+  }
+  if (run.length > best.length) best = run;
+  if (best.length < 3) return content;
+  let out = content;
+  for (let i = best.length - 1; i >= 0; i--) {
+    if (best[i] > 0) out = `${out.slice(0, best[i])}\n${out.slice(best[i])}`;
+  }
+  return out;
 }
 
 function ReviewView({ reviews, busy, onRate, onOpenQuestion }: { reviews: ReviewItem[]; busy: string | null; onRate: (id: string, rating: 'again' | 'hard' | 'good' | 'easy') => void; onOpenQuestion: (id: number) => void }) {
