@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { indexSchoolResource, refreshRagIndex } from '@/lib/rag-index';
+import { deleteSchoolResource } from '@/lib/school-resources';
 import { reportError } from '@/lib/error-reporting';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +48,8 @@ export async function GET(
 }
 
 // DELETE /api/school-resources/[id] — only the uploader can delete.
+// The row, the stored file, and the RAG entry all go, via the same helper the
+// admin paths use — this route used to skip the storage cleanup.
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -67,8 +69,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    await prisma.schoolResource.delete({ where: { id } });
-    await refreshRagIndex(`resource:${id}`, () => indexSchoolResource(id));
+    await deleteSchoolResource(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete school resource:', error);

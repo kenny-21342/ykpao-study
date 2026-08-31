@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parsePositiveInt } from '@/lib/query-params';
+import { deleteSchoolResource } from '@/lib/school-resources';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,14 @@ export async function DELETE(req: NextRequest) {
   if (type === 'threads') await prisma.discussionThread.delete({ where: { id } });
   else if (type === 'posts') await prisma.discussionPost.delete({ where: { id } });
   else if (type === 'shared-notes') await prisma.sharedNote.delete({ where: { id } });
-  else if (type === 'resources') await prisma.schoolResource.delete({ where: { id } });
+  else if (type === 'resources') {
+    // Via the shared helper: the row deletion alone used to leave the stored
+    // file on the bill and the resource's text alive in the RAG index.
+    const result = await deleteSchoolResource(id);
+    if (result.status === 'not-found') {
+      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+    }
+  }
   else return NextResponse.json({ error: 'Unknown content type' }, { status: 400 });
 
   return NextResponse.json({ success: true });
