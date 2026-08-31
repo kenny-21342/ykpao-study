@@ -10,6 +10,12 @@ import {
   Folder, FolderOpen, Home,
 } from 'lucide-react';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import {
+  ALLOWED_RESOURCE_EXTS as ALLOWED_EXTS,
+  RESOURCE_UPLOAD_MAX_BYTES,
+  FOLDER_UPLOAD_PREFIX,
+  isHiddenUploadSegment as isHiddenSegment,
+} from '@/lib/upload-constants';
 
 const FormattedMessage = dynamic(() => import('./FormattedMessage'), { ssr: false });
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
@@ -774,7 +780,6 @@ type ResourcePageResponse = {
 };
 
 type ResourceViewMode = 'list' | 'browser';
-const FOLDER_UPLOAD_PREFIX = 'From folder upload: ';
 const BROWSER_RESOURCE_LIMIT = 1000;
 
 type ResourceBrowserNode = {
@@ -1534,16 +1539,6 @@ type FolderFileItem = {
   error?: string;
 };
 
-// Extensions allowed for school resources — kept in sync with /api/upload.
-const ALLOWED_EXTS = new Set([
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md',
-  '.jpg', '.jpeg', '.png', '.webp', '.gif',
-]);
-
-function isHiddenSegment(seg: string): boolean {
-  return seg.startsWith('.') || seg === '__MACOSX';
-}
-
 function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; onUploaded: () => void }) {
   // 'single' = one file (legacy flow), 'folder' = pick a whole directory.
   const [mode, setMode] = useState<'single' | 'folder'>('single');
@@ -1574,7 +1569,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 25 * 1024 * 1024) {
+    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
       setError('File too large (max 25 MB).');
       return;
     }
@@ -1641,7 +1636,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
       const segments = rel.split('/');
       if (segments.some(isHiddenSegment)) { skipped++; continue; }
       if (!ALLOWED_EXTS.has(ext)) { skipped++; continue; }
-      if (f.size > 25 * 1024 * 1024) { tooBig++; continue; }
+      if (f.size > RESOURCE_UPLOAD_MAX_BYTES) { tooBig++; continue; }
       accepted.push({ file: f, relativePath: rel, status: 'pending' });
     }
     if (accepted.length === 0) {
@@ -2157,7 +2152,7 @@ function PublishNoteDialog({ onClose, onPublished }: { onClose: () => void; onPu
     try {
       const uploaded: Attachment[] = [];
       for (const file of files) {
-        if (file.size > 25 * 1024 * 1024) {
+        if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
           throw new Error(`${file.name} is too large (max 25 MB).`);
         }
         const fd = new FormData();
