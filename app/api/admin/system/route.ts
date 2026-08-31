@@ -92,9 +92,15 @@ export async function GET(req: NextRequest) {
     return { email: row?.email ?? 'unknown', name: row?.name, cost: u._sum.cost ?? 0, requests: u._count._all };
   });
 
-  // Storage estimate from school-resource file sizes.
-  const [resourceBytes] = await Promise.all([
+  // Storage estimate from school-resource file sizes, plus the handful of
+  // files actually worth looking at when the total looks wrong.
+  const [resourceBytes, largestFiles] = await Promise.all([
     prisma.schoolResource.aggregate({ _sum: { fileSize: true } }),
+    prisma.schoolResource.findMany({
+      orderBy: { fileSize: 'desc' },
+      take: 10,
+      select: { title: true, fileName: true, fileSize: true },
+    }),
   ]);
   const totalStorageBytes = (resourceBytes._sum.fileSize ?? 0);
 
@@ -117,6 +123,7 @@ export async function GET(req: NextRequest) {
     storage: {
       totalBytes: totalStorageBytes,
       totalMB: Math.round((totalStorageBytes / (1024 * 1024)) * 100) / 100,
+      largestFiles,
     },
     tables: tableCounts,
     errors: {

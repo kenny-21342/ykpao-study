@@ -15,7 +15,15 @@ type SystemData = {
     cost7d: number;
     topUsers: { email: string; name: string | null; cost: number; requests: number }[];
   };
-  storage: { totalBytes: number; totalMB: number; largestFiles: { title: string; fileName: string; fileSize: number; user: { email: string } }[] };
+  // largestFiles is optional on purpose: this type is an unchecked cast over
+  // the network, so anything declared required here is a promise the server is
+  // not held to. It was declared required and never sent, which crashed the
+  // whole console on a `.length` read.
+  storage: {
+    totalBytes: number;
+    totalMB: number;
+    largestFiles?: { title: string; fileName: string; fileSize: number }[];
+  };
   tables: { name: string; count: number }[];
 };
 
@@ -110,10 +118,10 @@ export default function SystemMonitor() {
       </Card>
 
       {/* Largest files */}
-      {data.storage.largestFiles.length > 0 && (
+      {(data.storage.largestFiles?.length ?? 0) > 0 && (
         <Card title="Largest Files" icon={HardDrive}>
           <div className="space-y-2">
-            {data.storage.largestFiles.map((f, i) => (
+            {data.storage.largestFiles!.map((f, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="truncate">{f.title || f.fileName}</span>
                 <span className="text-gray-500 ml-2 flex-shrink-0">{(f.fileSize / 1024 / 1024).toFixed(1)} MB</span>
