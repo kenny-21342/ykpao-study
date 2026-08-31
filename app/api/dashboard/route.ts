@@ -77,7 +77,19 @@ export async function GET(req: NextRequest) {
         where: { userId },
         orderBy: { createdAt: 'desc' },
         take: 60,
-        select: { createdAt: true },
+        select: {
+          createdAt: true,
+          isCorrect: true,
+          question: {
+            select: {
+              paper: {
+                select: {
+                  subject: { select: { name: true, code: true, level: true, board: true } },
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.pastPaperAttempt.findMany({
         where: { userId, gradingStatus: 'official', ...ppWhere },
@@ -145,6 +157,14 @@ export async function GET(req: NextRequest) {
       entry.count += 1
       if (a.isCorrect) entry.correct += 1
       entry.lastAt = Math.max(entry.lastAt, new Date(a.attemptedAt).getTime())
+      bySubject.set(subj, entry)
+    }
+    for (const a of recentBank) {
+      const subj = a.question?.paper?.subject?.name ?? 'General'
+      const entry = bySubject.get(subj) ?? { count: 0, correct: 0, lastAt: 0 }
+      entry.count += 1
+      if (a.isCorrect) entry.correct += 1
+      entry.lastAt = Math.max(entry.lastAt, new Date(a.createdAt).getTime())
       bySubject.set(subj, entry)
     }
     const recentActivity = Array.from(bySubject.entries())
