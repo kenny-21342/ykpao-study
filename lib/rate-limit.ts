@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { estimateCostUsd } from './ai-pricing.ts';
 
 /**
  * Durable fixed-window rate limiter, backed by Postgres.
@@ -282,6 +283,13 @@ export async function checkAiAllowance(
 
 /**
  * Record an AI usage event for the Usage & API Credits dashboard.
+ *
+ * When `cost` is not supplied it is estimated from the token counts and the
+ * per-model price table (lib/ai-pricing.ts); with no counts either, cost
+ * stays at zero. Failure recording uses a `<feature>:error` feature label so
+ * the by-feature breakdowns in both the admin console and the user usage page
+ * show attempts that never produced an answer instead of hiding them.
+ *
  * Never throws — usage logging is best-effort.
  */
 export async function recordUsage(opts: {
@@ -299,7 +307,7 @@ export async function recordUsage(opts: {
         feature: opts.feature,
         tokensIn: opts.tokensIn ?? 0,
         tokensOut: opts.tokensOut ?? 0,
-        cost: opts.cost ?? 0,
+        cost: opts.cost ?? estimateCostUsd(opts.model, opts.tokensIn ?? 0, opts.tokensOut ?? 0),
         model: opts.model ?? 'deepseek-chat',
       },
     });

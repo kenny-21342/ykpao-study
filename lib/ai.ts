@@ -56,6 +56,13 @@ export type ChatOptions = {
   maxAttempts?: number;
   /** Caller cancellation (e.g. the client disconnected). */
   signal?: AbortSignal;
+  /**
+   * Called once with the provider's own token counts when a request succeeds
+   * and the provider reported usage. Callers that log usage prefer this over
+   * estimating from text length; when the endpoint omits `usage` (some proxies
+   * do) it is simply never called and the caller keeps its estimate.
+   */
+  onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void;
 };
 
 /** Transient upstream conditions worth one more attempt. */
@@ -154,7 +161,15 @@ export async function chat(
       } else {
         const data = (await res.json()) as DeepSeekResponse;
         const content = data.choices?.[0]?.message?.content;
-        if (content) return content;
+        if (content) {
+          if (data.usage && options.onUsage) {
+            options.onUsage({
+              promptTokens: data.usage.prompt_tokens ?? 0,
+              completionTokens: data.usage.completion_tokens ?? 0,
+            });
+          }
+          return content;
+        }
         lastError = new DeepSeekError('The AI provider returned an empty response', 502);
       }
     } catch (err) {
