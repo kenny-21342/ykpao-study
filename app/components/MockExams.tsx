@@ -908,6 +908,11 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const startedRef = useRef(false);
+  // Wall-clock instant the paper is due, derived from the server's `startedAt`.
+  // The countdown reads this rather than decrementing a counter: a background
+  // tab has its timers throttled and a stalled renderer stops them outright,
+  // both of which silently hand the candidate extra time.
+  const deadlineRef = useRef<number | null>(null);
   const submittedRef = useRef(false);
   // Keep a ref to the latest answers so the auto-save interval + beforeunload
   // handlers can read current state without re-subscribing on every keystroke.
@@ -950,7 +955,13 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
           return;
         }
 
-        setSecondsLeft(detail.durationMinutes * 60);
+        // Resume against when the exam actually started, not when this tab
+        // loaded it. Seeding the full duration on every load meant a reload
+        // returned the whole paper's time, so the limit was unenforceable.
+        const startedAt = detail.startedAt ? Date.parse(detail.startedAt) : NaN;
+        const startedMs = Number.isFinite(startedAt) ? startedAt : Date.now();
+        deadlineRef.current = startedMs + detail.durationMinutes * 60_000;
+        setSecondsLeft(Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000)));
         // Pre-fill any existing answers
         const existing: Record<string, string> = {};
         for (const item of detail.items) {
@@ -989,7 +1000,11 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
       handleSubmit();
       return;
     }
-    const t = setTimeout(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000);
+    const t = setTimeout(() => {
+      const deadline = deadlineRef.current;
+      if (deadline === null) return;
+      setSecondsLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    }, 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft, submitting]);
