@@ -296,6 +296,7 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       // Grading failed — record the attempt ungraded so the user isn't blocked.
       console.error('Daily challenge grading failed:', err);
+      await recordUsage({ userId: user.id, feature: 'daily-challenge:error', model: access.credential.model });
       aiNotice = 'Your answer was recorded, but the AI marker could not be reached, so it is unscored.';
     }
   }

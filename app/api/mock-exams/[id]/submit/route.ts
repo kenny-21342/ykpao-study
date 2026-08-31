@@ -518,6 +518,11 @@ export async function POST(
           // One item failing to grade must not fail the whole submission — the
           // student's other answers are already persisted.
           console.error(`Failed to grade item ${item.id}:`, err);
+          await recordUsage({
+            userId: user.id,
+            feature: 'mock-exam-grade:error',
+            model: access.credential.model,
+          });
           // ...but the answer itself must still survive. This used to return
           // without writing anything, so a transient upstream failure threw
           // away work the student had already typed, and the item came back

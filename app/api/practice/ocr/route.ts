@@ -30,11 +30,17 @@ export const maxDuration = 60;
  * Callers should fall back to text-only input when this returns a non-2xx.
  */
 export async function POST(req: NextRequest) {
+  // Hoisted so the catch below can attribute a failed attempt even when the
+  // throw happened after the caller was authenticated and the credential
+  // resolved — those two facts are all a usage row needs.
+  let attemptUserId: string | null = null;
+  let attemptModel: string | undefined;
   try {
     const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    attemptUserId = user.id;
 
     // Vision is the one capability a bring-your-own-key user can be missing
     // while everything else works, so the denial carries its own reason code
@@ -46,6 +52,7 @@ export async function POST(req: NextRequest) {
         { status: access.status }
       );
     }
+    attemptModel = access.credential.model;
 
     const allowance = await checkAiAllowance(user.id, { source: access.source });
     if (!allowance.allowed) {
@@ -95,6 +102,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text, questionContext, backend: access.credential.model });
   } catch (error) {
     console.error('OCR transcription error:', error);
+    if (attemptUserId) {
+      await recordUsage({
+        userId: attemptUserId,
+        feature: 'ocr-transcribe:error',
+        model: attemptModel,
+      });
+    }
     await reportError(error, { routePath: '/api/practice/ocr', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'OCR transcription failed' },

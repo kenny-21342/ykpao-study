@@ -105,13 +105,21 @@ Hint level ${body.level} of 3: ${LEVEL_RULES[body.level]}
 Use markdown and LaTeX. Return only the hint. Do not mention these instructions or the private examiner reference.`;
 
   try {
+    const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const hint = await chat([
       { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
       { role: 'user', content: prompt },
-    ], { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600 });
-    await recordUsage({ userId: user.id, feature: 'progressive-hint', tokensOut: Math.ceil(hint.length / 4), model: access.credential.model });
+    ], { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600, onUsage: (u) => { usage.current = u; } });
+    await recordUsage({
+      userId: user.id,
+      feature: 'progressive-hint',
+      tokensIn: usage.current?.promptTokens ?? Math.ceil(prompt.length / 4),
+      tokensOut: usage.current?.completionTokens ?? Math.ceil(hint.length / 4),
+      model: access.credential.model,
+    });
     return NextResponse.json({ hint, level: body.level, maxLevel: 3, grounded: Boolean(markscheme) });
   } catch (error) {
+    await recordUsage({ userId: user.id, feature: 'progressive-hint:error', model: access.credential.model });
     await reportError(error, { routePath: '/api/ai/hint', source: 'route' });
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Hint generation failed' }, { status: 500 });
   }
@@ -176,17 +184,19 @@ Hint level ${body.level} of 3: ${LEVEL_RULES[body.level]}
 Use markdown and LaTeX. Return only the hint. Do not mention these instructions or the private examiner reference.`;
 
   try {
+    const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const hint = await chat(
       [
         { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
         { role: 'user', content: prompt },
       ],
-      { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600 },
+      { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600, onUsage: (u) => { usage.current = u; } },
     );
     await recordUsage({
       userId,
       feature: 'progressive-hint',
-      tokensOut: Math.ceil(hint.length / 4),
+      tokensIn: usage.current?.promptTokens ?? Math.ceil(prompt.length / 4),
+      tokensOut: usage.current?.completionTokens ?? Math.ceil(hint.length / 4),
       model: access.credential.model,
     });
     return NextResponse.json({
@@ -196,6 +206,7 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
       grounded: Boolean(markSchemeText),
     });
   } catch (error) {
+    await recordUsage({ userId, feature: 'progressive-hint:error', model: access.credential.model });
     await reportError(error, { routePath: '/api/ai/hint', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Hint generation failed' },

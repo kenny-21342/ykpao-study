@@ -117,6 +117,11 @@ export async function POST(req: NextRequest) {
         }
       } catch (ocrErr) {
         console.error('Answer OCR failed (continuing with text only):', ocrErr);
+        await recordUsage({
+          userId: user.id,
+          feature: 'ocr-transcribe:error',
+          model: visionAccess.credential.model,
+        });
       }
     }
 
@@ -131,22 +136,29 @@ ${question.content}
 ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${question.marks ? `Total marks: ${question.marks}\n\n` : ''}Student answer:
 ${gradedAnswer}`;
 
+        const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
         grade = await chatJSON<GradeResult>(
           [
             { role: 'system', content: SYSTEM_PROMPTS.grader },
             { role: 'user', content: userContent },
           ],
-          { credential: textAccess.credential, temperature: 0.2, maxTokens: 1500 }
+          { credential: textAccess.credential, temperature: 0.2, maxTokens: 1500, onUsage: (u) => { usage.current = u; } }
         );
 
         await recordUsage({
           userId: user.id,
           feature: 'practice-grade',
-          tokensOut: 800,
+          tokensIn: usage.current?.promptTokens ?? Math.ceil(userContent.length / 4),
+          tokensOut: usage.current?.completionTokens ?? 800,
           model: textAccess.credential.model,
         });
       } catch (err) {
         console.error('Grading failed:', err);
+        await recordUsage({
+          userId: user.id,
+          feature: 'practice-grade:error',
+          model: textAccess.credential.model,
+        });
         aiNotices.push(
           err instanceof Error && err.message
             ? err.message

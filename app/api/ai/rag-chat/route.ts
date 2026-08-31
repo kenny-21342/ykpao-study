@@ -324,17 +324,22 @@ FORMATTING RULES:
 
   // ---- Step 4: Call the LLM ----
   try {
+    // The provider's own token counts when it reports them; the char/4
+    // estimates below are only the fallback for endpoints that omit usage.
+    const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const answer = await chat(messages, {
       credential: forInteractive(access.credential),
       temperature: 0.4,
       maxTokens: 2000,
       budgetMs: TUTOR_BUDGET_MS,
+      onUsage: (u) => { usage.current = u; },
     });
 
     await recordUsage({
       userId: user.id,
       feature: 'rag-chat',
-      tokensOut: Math.ceil(answer.length / 4),
+      tokensIn: usage.current?.promptTokens ?? Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 4),
+      tokensOut: usage.current?.completionTokens ?? Math.ceil(answer.length / 4),
       model: access.credential.model,
     });
 
@@ -415,6 +420,11 @@ FORMATTING RULES:
     });
   } catch (err) {
     console.error('RAG chat failed:', err);
+    // The attempt is a usage event even when it produced nothing — recording
+    // it under the :error label is what makes the admin's error counts mean
+    // something. The catch also covers the persistence after the model call,
+    // so a small number of :error rows are succeeded-then-failed-to-save.
+    await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: access.credential.model });
     await reportError(err, { routePath: '/api/ai/rag-chat', source: 'route' });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'AI request failed', conversationId: conversation.id },

@@ -70,12 +70,13 @@ ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${marks ? `Total marks: ${m
 ${answer}`;
 
   try {
+    const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const result = await chatJSON<GradeResult>(
       [
         { role: 'system', content: SYSTEM_PROMPTS.grader },
         { role: 'user', content: userContent },
       ],
-      { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 1500 }
+      { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 1500, onUsage: (u) => { usage.current = u; } }
     );
 
     const max = marks ?? result.maxScore ?? 1;
@@ -84,7 +85,8 @@ ${answer}`;
     await recordUsage({
       userId: user.id,
       feature: 'practice-grade',
-      tokensOut: 800, // rough estimate
+      tokensIn: usage.current?.promptTokens ?? Math.ceil(userContent.length / 4),
+      tokensOut: usage.current?.completionTokens ?? 800, // rough estimate
       model: access.credential.model,
     });
 
@@ -101,6 +103,7 @@ ${answer}`;
     });
   } catch (error) {
     console.error('Error grading answer:', error);
+    await recordUsage({ userId: user.id, feature: 'practice-grade:error', model: access.credential.model });
     const status = (error as { status?: number })?.status ?? 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to grade answer' },
