@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -381,42 +381,52 @@ export default function SmartEduPlatform() {
 
   const visibleBgImage = isAuthenticated ? bgImage : null;
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
+  // Read URL parameters synchronously on mount rather than inside a deferred
+  // timer. The old `setTimeout(…, 0)` ran after the first paint, so a sidebar
+  // click that landed before the timer fired was immediately overwritten —
+  // making the first click after page load appear to be swallowed.
+  //
+  // useLayoutEffect, not useEffect: it still runs after hydration (so there is
+  // no server/client mismatch) but flushes in the same task as the commit,
+  // before the browser can deliver any click, keeping that window at zero.
+  //
+  // The setState-in-effect rule is suppressed on purpose: this is a one-time
+  // hydration initialization from an external system (the URL), and it cannot
+  // move into a state initializer without breaking server-rendered markup.
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(window.location.search);
 
-      // app/admin/layout.tsx redirects here with
-      // ?admin=forbidden when a non-admin reaches an admin route. Nothing used
-      // to read it, so those users were silently bounced to the dashboard with
-      // no idea why the link they clicked did nothing.
-      if (params.get('admin') === 'forbidden') {
-        toast.error('You need administrator access to open that page.');
-        const cleaned = new URLSearchParams(window.location.search);
-        cleaned.delete('admin');
-        const query = cleaned.toString();
-        window.history.replaceState(
-          null,
-          '',
-          `${window.location.pathname}${query ? `?${query}` : ''}`,
-        );
-      }
+    // app/admin/layout.tsx redirects here with
+    // ?admin=forbidden when a non-admin reaches an admin route. Nothing used
+    // to read it, so those users were silently bounced to the dashboard with
+    // no idea why the link they clicked did nothing.
+    if (params.get('admin') === 'forbidden') {
+      toast.error('You need administrator access to open that page.');
+      const cleaned = new URLSearchParams(window.location.search);
+      cleaned.delete('admin');
+      const query = cleaned.toString();
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${query ? `?${query}` : ''}`,
+      );
+    }
 
-      const route = resolveRoute(params.get('tab'));
-      const requestedView = params.get('view') as StudyCoachView | null;
-      const questionId = Number(params.get('qid'));
-      if (route) {
-        const validStudyViews = new Set<StudyCoachView>(['today', 'plan', 'mistakes', 'review', 'mastery', 'search']);
-        openRoute({
-          ...route,
-          studyView: requestedView && validStudyViews.has(requestedView) ? requestedView : route.studyView,
-          questionId: Number.isInteger(questionId) && questionId > 0 ? questionId : route.questionId,
-          practiceMode: params.get('mode') === 'practice' ? 'practice' : route.practiceMode,
-        });
-      } else if (Number.isInteger(questionId) && questionId > 0) {
-        openRoute({ tab: 'practice', questionId, practiceMode: 'practice' });
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
+    const route = resolveRoute(params.get('tab'));
+    const requestedView = params.get('view') as StudyCoachView | null;
+    const questionId = Number(params.get('qid'));
+    if (route) {
+      const validStudyViews = new Set<StudyCoachView>(['today', 'plan', 'mistakes', 'review', 'mastery', 'search']);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration init, see block comment above
+      openRoute({
+        ...route,
+        studyView: requestedView && validStudyViews.has(requestedView) ? requestedView : route.studyView,
+        questionId: Number.isInteger(questionId) && questionId > 0 ? questionId : route.questionId,
+        practiceMode: params.get('mode') === 'practice' ? 'practice' : route.practiceMode,
+      });
+    } else if (Number.isInteger(questionId) && questionId > 0) {
+      openRoute({ tab: 'practice', questionId, practiceMode: 'practice' });
+    }
   }, [openRoute]);
 
   useEffect(() => {
