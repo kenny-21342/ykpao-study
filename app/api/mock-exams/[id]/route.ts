@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
+import { optionLettersFor } from '@/lib/bank-grading';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,9 +101,23 @@ export async function GET(
                 // Empty for a legacy item, populated for a crop: the client
                 // renders whichever it gets.
                 strips: normalized.strips,
-                markschemeContent: normalized.markschemeContent,
-                markschemeStrips: normalized.markschemeStrips,
-                answerLetter: normalized.answerLetter,
+                // The mark scheme is the worked answer to the question the
+                // student is currently sitting. The results view is the only
+                // thing that renders it, so it has no business being in the
+                // payload before the paper is handed in.
+                markschemeContent: exam.submittedAt ? normalized.markschemeContent : null,
+                markschemeStrips: exam.submittedAt ? normalized.markschemeStrips : [],
+                // The options the question offers, but not which one is right.
+                // This route used to send `answerLetter` on every item whatever
+                // the exam's status, so a student sitting a paper could read the
+                // correct letter for every multiple-choice question straight out
+                // of the network tab. The client only ever needed the option
+                // count to draw the buttons, which is what this is.
+                options: normalized.answerLetter
+                  ? optionLettersFor(normalized.answerLetter)
+                  : null,
+                // The key itself is held back until the paper is handed in.
+                answerLetter: exam.submittedAt ? normalized.answerLetter : null,
                 answer: item.answer,
                 score: item.score,
                 isCorrect: item.isCorrect,
