@@ -151,6 +151,17 @@ class WorkItem:
     # invisible to a transcription, so a pass that decided status from its own
     # flags alone published exactly the questions the crop QA held back.
     crop_flags: list = field(default_factory=list)
+    # Stage 4's own ledger key, and whether stage 3 still has to run.
+    #
+    # The two stages shared one key, so a transcribed question was skipped
+    # whole: tagging could never be added afterwards without bumping the
+    # transcription prompt version and paying for the vision call again. That
+    # made "skip tagging for now" a one-way door across 66,758 questions.
+    # Keyed apart, a tagging pass can run later over what is already
+    # transcribed, and `body_md` comes from the store instead of the model.
+    tag_key: str | None = None
+    needs_transcribe: bool = True
+    cached_body: str | None = None
 
 
 @dataclass
@@ -178,6 +189,8 @@ def prepare_document(
     ledger: RunLedger | None,
     use_model: bool,
     model_name: str,
+    text_model_name: str = "none",
+    do_tagging: bool = False,
     max_questions: int | None = None,
     log: Callable[[str], None] = print,
 ) -> list[WorkItem]:
@@ -295,13 +308,40 @@ def prepare_document(
 
     items: list[WorkItem] = []
     for rendered_span in rendered:
+        root = rendered_span.root_number
         work_key = create_ledger_key(
-            spans.source_sha256, rendered_span.root_number,
+            spans.source_sha256, root,
             model_name, TRANSCRIBE_PROMPT_VERSION, "transcribe",
         )
-        if ledger is not None and ledger.is_completed(work_key):
+        # Only question papers are tagged; a mark scheme has no topics.
+        tag_key = create_ledger_key(
+            spans.source_sha256, root,
+            text_model_name, TAG_PROMPT_VERSION, "tag",
+        ) if (do_tagging and doc_type == "qp") else None
+
+        transcribed = ledger is not None and ledger.is_completed(work_key)
+        tagged = tag_key is None or (ledger is not None and ledger.is_completed(tag_key))
+        if transcribed and tagged:
             stats.skipped_cached += 1
             continue
+
+        cached_body = None
+        if transcribed:
+            # Tagging alone. The text the tagger needs is already stored, so
+            # the vision call is not repeated.
+            row = connection.execute(
+                "SELECT body_md FROM bank_questions "
+                "WHERE paper_id = ? AND root_number = ?",
+                (paper_id, int(root)),
+            ).fetchone()
+            cached_body = (row["body_md"] if row is not None else None) or None
+            if not cached_body:
+                # Transcribed with no text to show for it -- a crop-only row.
+                # Nothing to tag, and re-transcribing is a decision for a run
+                # that was asked to.
+                stats.skipped_cached += 1
+                continue
+
         items.append(WorkItem(
             pdf_name=pdf_path.name,
             paper_id=paper_id,
@@ -310,7 +350,10 @@ def prepare_document(
             rendered_span=rendered_span,
             asset_ids=asset_ids,
             work_key=work_key,
-            crop_flags=list(crop_flags.get(rendered_span.root_number, [])),
+            crop_flags=list(crop_flags.get(root, [])),
+            tag_key=tag_key,
+            needs_transcribe=not transcribed,
+            cached_body=cached_body,
         ))
     return items
 
@@ -329,24 +372,30 @@ def _execute(
     Touches no database and shares no mutable state, so it is safe to run many
     of these at once.
     """
-    try:
-        transcription, call = transcribe_question(
-            item.rendered_span, item.doc_type, settings=vision_settings
+    if item.needs_transcribe:
+        try:
+            transcription, call = transcribe_question(
+                item.rendered_span, item.doc_type, settings=vision_settings
+            )
+        except Exception as error:  # noqa: BLE001 - one bad question must not stop the run
+            return WorkResult(item=item, error=str(error)[:400], stage="transcribe")
+
+        result = WorkResult(
+            item=item,
+            transcription=transcription,
+            vision_in=call.input_tokens,
+            vision_out=call.output_tokens,
         )
-    except Exception as error:  # noqa: BLE001 - one bad question must not stop the run
-        return WorkResult(item=item, error=str(error)[:400], stage="transcribe")
+        body = transcription.body_md
+    else:
+        # Already transcribed on an earlier run; this pass owes only stage 4.
+        result = WorkResult(item=item)
+        body = item.cached_body or ""
 
-    result = WorkResult(
-        item=item,
-        transcription=transcription,
-        vision_in=call.input_tokens,
-        vision_out=call.output_tokens,
-    )
-
-    if do_tagging and item.doc_type == "qp":
+    if do_tagging and item.doc_type == "qp" and body.strip():
         try:
             tagging, tag_call = tag_and_rate(
-                transcription.body_md, subject_topics, subject_context,
+                body, subject_topics, subject_context,
                 settings=text_settings,
             )
             result.tagging = tagging
@@ -372,6 +421,31 @@ def _persist(
 ) -> None:
     """Write one worker result. Main thread only."""
     item = result.item
+
+    if not item.needs_transcribe:
+        # A tagging-only pass over a question transcribed on an earlier run.
+        # Nothing here may touch the transcription: it was not re-read, and
+        # rewriting `status` from this pass's flags would republish or hold
+        # back a row on evidence it does not have.
+        stats.text_input_tokens += result.text_in
+        stats.text_output_tokens += result.text_out
+        if result.tagging is not None:
+            store.update_question_tagging(
+                connection,
+                paper_id=item.paper_id,
+                root_number=item.rendered_span.root_number,
+                tagging=result.tagging,
+            )
+        _record_tagging(result, ledger)
+        if result.error:
+            stats.errors.append({
+                "file": item.pdf_name,
+                "root": item.rendered_span.root_number,
+                "stage": result.stage,
+                "error": result.error,
+            })
+        connection.commit()
+        return
 
     if result.transcription is None:
         stats.errors.append({
@@ -463,7 +537,31 @@ def _persist(
             item.work_key, "transcribe", item.source_sha256,
             item.rendered_span.root_number, result.vision_in, result.vision_out,
         )
+    _record_tagging(result, ledger)
     connection.commit()
+
+
+def _record_tagging(result: WorkResult, ledger: RunLedger | None) -> None:
+    """Ledger stage 4 in its own right, so it can be resumed on its own.
+
+    A tagging failure is recorded as a failure and nothing else: the
+    transcription beside it is good and keeps its own entry, so a later run
+    retries only the tagging.
+    """
+    item = result.item
+    if ledger is None or item.tag_key is None:
+        return
+    root = item.rendered_span.root_number
+    if result.tagging is not None:
+        ledger.record_success(
+            item.tag_key, "tag", item.source_sha256,
+            root, result.text_in, result.text_out,
+        )
+    elif result.stage == "tag":
+        ledger.record_failure(
+            item.tag_key, "tag", item.source_sha256,
+            root, result.error or "unknown",
+        )
 
 
 @dataclass(frozen=True)
@@ -667,6 +765,8 @@ def run_corpus(
                     pdf_path, connection, stats,
                     asset_root=asset_root, run_id=run_id, ledger=ledger,
                     use_model=use_model, model_name=model_name,
+                    text_model_name=(text_conf or {}).get("model", "none"),
+                    do_tagging=do_tagging,
                     max_questions=max_questions_per_doc, log=log,
                 ))
                 stats.documents += 1

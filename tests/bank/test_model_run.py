@@ -317,3 +317,101 @@ class ModelRunTests(unittest.TestCase):
         self._run(use_model=True)
 
         self.assertEqual(self.provider.calls, expected)
+
+
+class TaggingResumesOnItsOwnTests(unittest.TestCase):
+    """Stage 4 must be runnable after stage 3, without paying for stage 3 again.
+
+    The two stages shared one ledger key, so a transcribed question was skipped
+    whole. Tagging could then only be added by bumping the transcription prompt
+    version and re-running the vision call -- the expensive two thirds of the
+    corpus, to attach a topic. With topics configured for one subject out of
+    83, "transcribe now, tag later" is the only sensible order, and it was a
+    one-way door.
+    """
+
+    def setUp(self) -> None:
+        self._directory = TemporaryDirectory()
+        self.root = Path(self._directory.name)
+        self.db = self.root / "bank.db"
+        self.pdf = self.root / "0610_s23_qp_41.pdf"
+        _question_paper(self.pdf)
+        self.provider = _Provider()
+
+    def tearDown(self) -> None:
+        self._directory.cleanup()
+
+    def _run(self, *, do_tagging: bool):
+        with mock.patch.object(run_module, "load_vision", _settings, create=True), \
+             mock.patch("pdf_extraction.bank.env.vision_settings", _settings), \
+             mock.patch("pdf_extraction.bank.env.text_settings", _settings), \
+             mock.patch("pdf_extraction.bank.transcribe.call_json", self.provider), \
+             mock.patch("pdf_extraction.bank.tag.call_json", self.provider):
+            return run_corpus(
+                [self.pdf],
+                db_path=self.db,
+                asset_root=self.root / "assets",
+                use_model=True,
+                do_tagging=do_tagging,
+                subject_topics=["Photosynthesis"] if do_tagging else None,
+                subject_context="CAIE 0610" if do_tagging else None,
+                concurrency=2,
+                log=lambda message: None,
+            )
+
+    def _stages(self) -> dict[str, int]:
+        connection = sqlite3.connect(self.db)
+        try:
+            return {
+                stage: count for stage, count in connection.execute(
+                    "SELECT stage, count(*) FROM bank_run_ledger "
+                    "WHERE status = 'ok' GROUP BY stage")
+            }
+        finally:
+            connection.close()
+
+    def test_a_tagging_pass_after_a_transcription_pass_buys_no_vision(self) -> None:
+        first = self._run(do_tagging=False)
+        self.assertGreater(first.vision_input_tokens, 0)
+        self.assertEqual(first.text_input_tokens, 0)
+        self.assertEqual(self._stages().get("tag", 0), 0)
+
+        second = self._run(do_tagging=True)
+        # The whole point: stage 3 is not repeated.
+        self.assertEqual(second.vision_input_tokens, 0)
+        self.assertEqual(second.vision_output_tokens, 0)
+        self.assertGreater(second.text_input_tokens, 0)
+        self.assertEqual(self._stages().get("tag", 0), first.questions)
+
+    def test_the_tagging_pass_does_not_disturb_the_transcription(self) -> None:
+        self._run(do_tagging=False)
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        before = {row["root_number"]: (row["body_md"], row["status"], row["model"])
+                  for row in connection.execute(
+                      "SELECT root_number, body_md, status, model FROM bank_questions")}
+        connection.close()
+
+        self._run(do_tagging=True)
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            "SELECT root_number, body_md, status, model, difficulty FROM bank_questions"
+        ).fetchall()
+        connection.close()
+
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertEqual(
+                (row["body_md"], row["status"], row["model"]),
+                before[row["root_number"]],
+                f"tagging rewrote the transcription of question {row['root_number']}")
+            self.assertIsNotNone(row["difficulty"])
+
+    def test_a_third_run_asks_the_provider_nothing(self) -> None:
+        self._run(do_tagging=False)
+        self._run(do_tagging=True)
+        calls = self.provider.calls
+        third = self._run(do_tagging=True)
+        self.assertEqual(self.provider.calls, calls)
+        self.assertEqual(third.cost_usd, 0.0)

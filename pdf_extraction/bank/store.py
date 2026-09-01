@@ -402,6 +402,49 @@ def _link_strips(
         )
 
 
+def update_question_tagging(
+    connection: sqlite3.Connection,
+    *,
+    paper_id: int,
+    root_number: int,
+    tagging,
+) -> int | None:
+    """Apply stage 4's result to a question that is already transcribed.
+
+    Stage 3 and stage 4 used to share one ledger entry, so a question that had
+    been transcribed was skipped whole and could never be tagged afterwards
+    without paying for the vision call again -- roughly two thirds of the cost
+    of the corpus, to add a topic. They are ledgered apart now, which needs a
+    way to write the tagging half on its own.
+
+    Deliberately touches nothing else: not `body_md`, not `status`, not the
+    run/model/prompt columns. Those describe the transcription, and this pass
+    did not produce it.
+    """
+    row = connection.execute(
+        "SELECT id FROM bank_questions WHERE paper_id = ? AND root_number = ?",
+        (paper_id, int(root_number)),
+    ).fetchone()
+    if row is None:
+        return None
+    question_id = int(row["id"])
+
+    difficulty = getattr(tagging, "difficulty", None)
+    connection.execute(
+        "UPDATE bank_questions SET difficulty = ?, difficulty_source = ?, "
+        "difficulty_rationale = ? WHERE id = ?",
+        (
+            difficulty,
+            "llm" if difficulty is not None else None,
+            getattr(tagging, "difficulty_rationale", None),
+            question_id,
+        ),
+    )
+    _link_tags(connection, question_id, tagging)
+    _link_topics(connection, paper_id, question_id, tagging)
+    return question_id
+
+
 def _link_topics(
     connection: sqlite3.Connection, paper_id: int, question_id: int, tagging
 ) -> None:
