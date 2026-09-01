@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import NoticeDialog from './NoticeDialog';
 import PreviewNotice from './PreviewNotice';
 import toast from 'react-hot-toast';
+import { normalizeOptionLetter } from '@/lib/bank-grading';
 import {
   ClipboardList, Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
   CheckCircle2, XCircle, Sparkles, FileText, ChevronRight, Loader2, AlertCircle,
@@ -102,6 +103,13 @@ type ExamItem = {
   // image. Empty for the older transcribed corpus, which has text and no crop.
   strips?: Array<{ url: string; width: number | null; height: number | null }>;
   markschemeStrips?: Array<{ url: string; width: number | null; height: number | null }>;
+  /**
+   * The letters this question offers, or null when it is free response.
+   * The server sends the option list rather than the key, so the exam can
+   * draw the buttons without handing the student the answer.
+   */
+  options?: string[] | null;
+  /** Null until the paper is submitted. */
   answerLetter?: string | null;
   answer: string | null;
   score: number | null;
@@ -1302,57 +1310,102 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             </div>
 
             {/* Answer area */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {/*
+              * A question with an answer key gets its options as buttons, the
+              * same as practice and the daily challenge. It used to get the
+              * rich-text editor like everything else, so picking B stored
+              * "<p>B</p>" and the marker -- which reads a leading option
+              * letter -- saw "<" and marked a right answer wrong. The grader
+              * now flattens markup, but asking for a letter in a WYSIWYG box
+              * invites the same class of answer ("B is correct", "the second
+              * one") and there is nothing to write out for four fixed options.
+              */}
+            {item.options?.length ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Your answer
                 </label>
-                <div className="flex items-center gap-2">
-                  {images[item.id] && (
-                    <button
-                      onClick={() => transcribeAnswer(item.id)}
-                      disabled={ocrLoading === item.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
-                    >
-                      {ocrLoading === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
-                      {ocrLoading === item.id ? 'Transcribing…' : 'Transcribe'}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.onchange = (e) => {
-                        const f = (e.target as HTMLInputElement).files?.[0];
-                        if (f) void handleImageUpload(item.id, f);
-                      };
-                      input.click();
-                    }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" /> Upload photo
-                  </button>
+                <div className="flex flex-wrap gap-2">
+                  {item.options.map((letter) => {
+                    // Read through the same parser the marker uses, so an
+                    // answer saved before this existed still shows as picked.
+                    const selected = normalizeOptionLetter(answers[item.id] ?? '') === letter;
+                    return (
+                      <button
+                        key={letter}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setAnswers((a) => ({ ...a, [item.id]: letter }))}
+                        className={`h-12 w-12 rounded-xl border text-base font-semibold transition-all ${
+                          selected
+                            ? 'border-green-500 bg-green-500 text-white shadow'
+                            : 'border-gray-300 text-gray-700 hover:border-green-500 hover:bg-green-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30'
+                        }`}
+                      >
+                        {letter}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  {answers[item.id]?.trim() ? 'Answer saved' : 'Not yet answered'} • You can change your answer until you submit.
+                  {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
+                  {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
+                </p>
               </div>
-              {images[item.id] && (
-                <div className="mb-2 flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                  <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700" />
-                  <span className="text-xs text-gray-500 flex-1">Photo attached — transcribe or submit as-is.</span>
-                  <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Your answer
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {images[item.id] && (
+                      <button
+                        onClick={() => transcribeAnswer(item.id)}
+                        disabled={ocrLoading === item.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
+                      >
+                        {ocrLoading === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
+                        {ocrLoading === item.id ? 'Transcribing…' : 'Transcribe'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => {
+                          const f = (e.target as HTMLInputElement).files?.[0];
+                          if (f) void handleImageUpload(item.id, f);
+                        };
+                        input.click();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> Upload photo
+                    </button>
+                  </div>
                 </div>
-              )}
-              <RichTextEditor
-                content={answers[item.id] ?? ''}
-                onChange={(html) => setAnswers((a) => ({ ...a, [item.id]: html }))}
-                placeholder="Explain your method, final answer, and any LaTeX working."
-              />
-              <p className="text-xs text-gray-400 mt-1.5">
-                {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit.
-                {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
-                {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
-              </p>
-            </div>
+                {images[item.id] && (
+                  <div className="mb-2 flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700" />
+                    <span className="text-xs text-gray-500 flex-1">Photo attached — transcribe or submit as-is.</span>
+                    <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
+                  </div>
+                )}
+                <RichTextEditor
+                  content={answers[item.id] ?? ''}
+                  onChange={(html) => setAnswers((a) => ({ ...a, [item.id]: html }))}
+                  placeholder="Explain your method, final answer, and any LaTeX working."
+                />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit.
+                  {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
+                  {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
+                </p>
+              </div>
+            )}
 
             {/* Nav buttons */}
             <div className="flex items-center justify-between pt-2">
