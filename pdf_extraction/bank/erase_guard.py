@@ -25,7 +25,7 @@ COVERAGE_THRESHOLD = 0.30
 
 # A word made only of answer-rule characters. Removing these is the whole point
 # of an erase box.
-_RULE_ONLY = re.compile(r"^[.…_\-\s]+$")
+_RULE_ONLY = re.compile(r"^[.…_\-\u2013\u2014\s]+$")
 
 # Barcodes, in the three shapes they extract as: a run of non-ASCII bytes, the
 # candidate-number digits themselves, and the asterisks that delimit them.
@@ -144,14 +144,113 @@ _CONTENT_SHARE = 0.5
 # "is this box erasing a notice or a question?", the check asks "did we lose
 # something a student needed?". Treating "is" or "the" as furniture in the
 # second would start hiding real losses, which is the bug this all began with.
+#
+# Transcribed from the block CAIE prints at the end of every question paper,
+# all three paragraphs of it. A partial list is worse than none: the words it
+# missed -- "candidates", "acknowledgements", "reproduced", "online",
+# "Booklet" -- were enough to keep the flag firing on every paper, which is
+# the flood this list exists to stop.
 _NOTICE_WORDS = frozenset(
     """
     to is by the of and has been where items material sought cleared possible
     made publisher trace holders any at in on for with that this it its as an
     avoid issue disclosure answer-related information candidate live
     examinations copyright part cambridge local school tests exams series
+    permission reproduce reproduced third-party owned protected included
+    every reasonable effort will be pleased make amends earliest opportunity
+    unwittingly requiring clearance but if have candidates all
+    acknowledgement acknowledgements are online booklet produced each
+    freely available download after examination group brand name university
+    syndicate department itself blank page international assessment education
+    baccalaureate organization organisation source adapted used ucles
+    january february march april may june july august september october
+    november december
     """.split()
 )
+
+
+# CAIE sets its notices with typographic hyphens, so "answer\u2011related" and
+# "third\u2011party" arrive as different strings from the ASCII spellings in the
+# list above -- 68 flags fired on that difference alone. Folded here rather
+# than duplicating every hyphenated entry.
+_HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-",
+                          "\u2013": "-", "\u2014": "-", "\u2212": "-"})
+
+
+def is_notice_word(word: str) -> bool:
+    """Whether this word is vocabulary from a printed notice rather than a question.
+
+    Used only to judge a whole box, never a word on its own -- see the note on
+    `_NOTICE_WORDS`.
+
+    Brackets are stripped as well as sentence punctuation: the notice signs
+    itself "(UCLES)", which `_FURNITURE` does not match because it is anchored
+    on the bare word, and that one token accounted for 2,061 flags.
+    """
+    return word.lower().translate(_HYPHENS).strip('.,()[]:;\'"') in _NOTICE_WORDS
+
+
+def _covered_words(every_word, rect, threshold):
+    """The words a single box covers, and which of those are real content.
+
+    "Real content" here is the guard's question -- is this box erasing a
+    printed notice or a question? -- so the notice vocabulary is excluded.
+    `is_content_token` alone answers the *check's* question and stays stricter.
+    """
+    covered = [
+        word for word_box, word in every_word
+        if coverage(word_box, [rect]) >= threshold
+    ]
+    content = [
+        word for word in covered
+        if is_content_token(word) and not is_notice_word(word)
+    ]
+    return covered, content
+
+
+def _page_words(page):
+    import fitz
+
+    matrix = page.rotation_matrix
+    return [
+        (fitz.Rect(wx0, wy0, wx1, wy1) * matrix, word)
+        for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words")
+    ]
+
+
+def notice_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
+    """Which of `boxes` are painted *because* they cover a printed notice.
+
+    `filter_erase_boxes` keeps a box whose words are mostly the Cambridge
+    copyright notice -- that is precisely why the notice does not survive into
+    a crop. The QA check must not then turn round and report those same words
+    as destroyed question text.
+
+    Without this the check fired `crop_erased_text` at high severity on the
+    end-of-paper copyright block of every question paper in the corpus: the
+    block's second paragraph ("To avoid the issue of disclosure of
+    answer-related information to candidates...") is ordinary English that
+    `is_content_token` rightly refuses to call furniture. Real damage would
+    then be one flag among fourteen thousand -- the exact flood this module
+    was written to prevent.
+
+    The answer is not to widen `is_content_token`: treating "the" or "is" as
+    furniture would start hiding genuine losses. The judgement belongs to the
+    box, not the word, which is the judgement the guard already makes.
+    """
+    import fitz
+
+    every_word = _page_words(page)
+    notices = []
+    for box in boxes:
+        rect = fitz.Rect(*box)
+        covered, content = _covered_words(every_word, rect, threshold)
+        # The same condition under which filter_erase_boxes kept it, restricted
+        # to boxes that actually cover words: one covering only answer rules
+        # destroys nothing either way and needs no exemption.
+        if covered and len(content) / len(covered) <= _CONTENT_SHARE:
+            notices.append(rect)
+    return notices
 
 
 def filter_erase_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
@@ -172,23 +271,12 @@ def filter_erase_boxes(page, boxes, *, threshold: float = COVERAGE_THRESHOLD):
     if not boxes:
         return [], []
 
-    matrix = page.rotation_matrix
-    every_word = [
-        (fitz.Rect(wx0, wy0, wx1, wy1) * matrix, word)
-        for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words")
-    ]
+    every_word = _page_words(page)
 
     kept, dropped = [], []
     for box in boxes:
         rect = fitz.Rect(*box)
-        covered = [
-            word for word_box, word in every_word
-            if coverage(word_box, [rect]) >= threshold
-        ]
-        content = [
-            word for word in covered
-            if is_content_token(word) and word.lower().strip('.,()') not in _NOTICE_WORDS
-        ]
+        covered, content = _covered_words(every_word, rect, threshold)
         if covered and len(content) / len(covered) > _CONTENT_SHARE:
             dropped.append((box, content[0]))
         else:

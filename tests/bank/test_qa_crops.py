@@ -78,6 +78,34 @@ def _erasable_page(path: Path, sentence: str) -> None:
     document.close()
 
 
+def _notice_page(path: Path, extra: str = "") -> None:
+    """The end of a real question paper: last line, then the copyright block.
+
+    The wording is CAIE's own. Its second paragraph is ordinary English, which
+    is why `is_content_token` cannot tell it from question text on its own.
+    """
+    document = fitz.open()
+    page = document.new_page(width=595, height=842)
+    page.insert_text((50, 80), "12 State one advantage of the method.", fontsize=11)
+    page.insert_text((500, 100), "[4]", fontsize=11)
+    lines = [
+        "Permission to reproduce items where third-party owned material protected by",
+        "copyright is included has been sought and cleared where possible.",
+        "To avoid the issue of disclosure of answer-related information to candidates,",
+        "all copyright acknowledgements are reproduced online in the Cambridge",
+        f"International Examinations Copyright Acknowledgements Booklet. {extra}",
+    ]
+    for index, line in enumerate(lines):
+        page.insert_text((50, 700 + index * 14), line, fontsize=8)
+    document.save(path)
+    document.close()
+
+
+def _notice_band(path: Path) -> tuple[float, float, float, float]:
+    """A band over the whole copyright block, as the renderer paints it."""
+    return (40.0, 690.0, 560.0, 780.0)
+
+
 def _word_box(path: Path, wanted: str) -> tuple[float, float, float, float]:
     """The bbox of a word on page 1, padded the way an erase box would be.
 
@@ -166,6 +194,42 @@ class ErasedTextTests(unittest.TestCase):
             path = Path(directory) / "qp.pdf"
             _erasable_page(path, self.SENTENCE)
             self.assertNotIn(ISSUE_CROP_ERASED_TEXT, self._run(path, _word_box(path, "UCLES")))
+
+    def test_the_end_of_paper_copyright_block_is_not_damage(self) -> None:
+        """The flood this check must not produce.
+
+        Every CAIE question paper ends with the same copyright block, and the
+        renderer paints over it on purpose. Reporting those words as destroyed
+        question text fired `crop_erased_text` at HIGH severity on the last
+        question of every paper in the corpus -- 14,193 flags that describe
+        nothing wrong, burying the real losses this check exists to find.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _notice_page(path)
+            span = RootSpan(root_number=12, regions=(
+                PageRegion(page=1, bbox=(40.0, 60.0, 560.0, 800.0),
+                           erase_bboxes=(_notice_band(path),)),
+            ))
+            rendered = FakeRendered(12, (FakeStrip(1, (40.0, 60.0, 560.0, 800.0)),))
+            issues = {f.issue_type for f in run_crop_checks(path, span, rendered, "qp", 1)}
+            self.assertNotIn(ISSUE_CROP_ERASED_TEXT, issues)
+
+    def test_a_constant_inside_the_notice_band_is_still_damage(self) -> None:
+        """The exemption is per word, not per box.
+
+        A band that mostly covers boilerplate is still painted, so anything
+        real caught underneath it is genuinely gone. "1.8" is not notice
+        vocabulary, so it must survive the exemption and be reported.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            _notice_page(path, extra="1.8")
+            with fitz.open(path) as document:
+                _kept, casualties = _crop_words(
+                    document[0], (40.0, 60.0, 560.0, 800.0),
+                    (_notice_band(path),), (_notice_band(path),))
+            self.assertIn("1.8", casualties)
 
     def test_a_box_that_touches_nothing_is_not_flagged(self) -> None:
         with TemporaryDirectory() as directory:

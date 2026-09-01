@@ -240,7 +240,12 @@ def run_crop_checks(
             # knowing about.
             painted, _refused = erase_guard.filter_erase_boxes(
                 page, erase_by_page.get(strip.page, ()))
-            kept, casualties = _crop_words(page, strip.bbox, painted)
+            # A box the guard painted *because* it covers a printed notice is
+            # not damage: reporting it made the copyright block at the end of
+            # every question paper a high-severity flag, which would bury the
+            # real losses this check exists to surface.
+            notices = erase_guard.notice_boxes(page, painted)
+            kept, casualties = _crop_words(page, strip.bbox, painted, notices)
             visible.append(kept)
             erased.extend(casualties)
 
@@ -380,7 +385,7 @@ def _check_marks_column(
     return []
 
 
-def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
+def _crop_words(page, clip, erase_bboxes, notice_bboxes=()) -> tuple[str, list[str]]:
     """Text a reader would see in one strip, and the words the erase removed.
 
     Word boxes come back in the unrotated page space while the strip is clipped
@@ -392,6 +397,7 @@ def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
     matrix = page.rotation_matrix
     rect = fitz.Rect(*clip)
     erased = [fitz.Rect(*box) for box in erase_bboxes]
+    notices = [fitz.Rect(*box) for box in notice_bboxes]
 
     # Ordered by the PDF's own block/line/word structure rather than by
     # coordinate. Sorting by (y, x) interleaves the columns of a two-column
@@ -415,7 +421,20 @@ def _crop_words(page, clip, erase_bboxes) -> tuple[str, list[str]]:
             # see erase_guard. The local regexes it replaces whitelisted every
             # one- and two-character token, which is why a lost "9" was never
             # reported.
-            if erase_guard.is_content_token(word):
+            #
+            # A word the guard painted over as part of a printed notice is
+            # exempt, and only that word: a real constant sitting inside an
+            # otherwise-boilerplate band is still a casualty, because it is
+            # covered by the notice box but is not notice vocabulary.
+            in_notice = any(
+                not (box & notice).is_empty
+                and area
+                and (box & notice).get_area() / area >= erase_guard.COVERAGE_THRESHOLD
+                for notice in notices
+            )
+            if erase_guard.is_content_token(word) and not (
+                in_notice and erase_guard.is_notice_word(word)
+            ):
                 casualties.append(erase_guard.normalise_token(word))
             continue
         position = tuple(int(value) for value in order[:3]) if len(order) >= 3 \
