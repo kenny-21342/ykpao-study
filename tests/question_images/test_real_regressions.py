@@ -105,6 +105,33 @@ class RealSourceRegressionTests(unittest.TestCase):
         region = by_root[9][0]
         self.assertLess(region.bbox[1], 128.0)
 
+    def test_a_section_heading_does_not_carry_over_to_a_later_page(self) -> None:
+        """The heading is remembered across pages; its y-coordinate is not.
+
+        On 0455_s17_qp_23 every root from page 3 onward carried a heading bbox
+        at y=344.5 belonging to page 3. Question 6, on page 4, extended its
+        crop up to that coordinate and so began 90 points inside question 5.
+        """
+        path = ROOT / "pdf_extraction/my_raw_pdfs/igcse/economics-0455/0455_s17_qp_23.pdf"
+        if not path.is_file():
+            self.skipTest("Local CAIE corpus is unavailable")
+        evidence = extract_document_evidence(path)
+        detection = detect_roots(evidence)
+
+        carried = [
+            root for root in detection.roots
+            if root.candidate.section_heading_bbox
+            and root.candidate.section_heading_page != root.candidate.page
+        ]
+        self.assertTrue(carried, "expected this paper to carry a heading across pages")
+
+        by_root = {entry.root.number: entry.regions
+                   for entry in build_source_regions(evidence, detection)}
+        fifth = [r for r in by_root[5] if r.page == 4][0]
+        sixth = [r for r in by_root[6] if r.page == 4][0]
+        # Padding may overlap by a few points; a whole question may not.
+        self.assertGreater(sixth.bbox[1], fifth.bbox[1] + 100)
+
     def test_multiple_choice_distractor_numbers_do_not_enter_the_root_sequence(self) -> None:
         path = ROOT / "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_s15_qp_12.pdf"
         if not path.is_file():

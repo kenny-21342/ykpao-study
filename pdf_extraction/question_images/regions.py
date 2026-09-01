@@ -100,6 +100,9 @@ def _regions_for_root(
             heading = root.candidate.section_heading_bbox
             if (
                 heading
+                # On this page, not carried over from an earlier one: the
+                # coordinate is meaningless against a different page.
+                and root.candidate.section_heading_page == page_number
                 and heading[1] < lower
                 and heading[1] >= lower - page.height * 0.35
                 # A heading belongs to the FIRST question under it, not to

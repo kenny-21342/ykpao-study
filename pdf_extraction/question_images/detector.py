@@ -38,6 +38,13 @@ class RootCandidate:
     section_index: int
     section_heading_id: str | None = None
     section_heading_bbox: tuple[float, float, float, float] | None = None
+    # The page that bbox is on. `section_heading` is carried across pages by
+    # the scan loop, so without this its y-coordinate was read against whatever
+    # page a later root happened to sit on -- on 0455_s17_qp_23 every root from
+    # page 3 onward carried a heading at y=344.5 from page 3, and question 6
+    # extended its crop up to that coordinate on page 4, starting 90pt inside
+    # question 5.
+    section_heading_page: int | None = None
     source: str = "native"
 
     @property
@@ -91,6 +98,7 @@ def _root_candidates(evidence: DocumentEvidence) -> list[RootCandidate]:
     section_index = 0
     section_name = "default"
     section_heading: TextLine | None = None
+    section_heading_page: int | None = None
     sizes = [
         line.size
         for page in evidence.pages
@@ -117,6 +125,7 @@ def _root_candidates(evidence: DocumentEvidence) -> list[RootCandidate]:
                     section_index += 1
                     section_name = label
                     section_heading = line
+                    section_heading_page = page.number
                 continue
             match = _ROOT.match(line.text)
             if not match or line.furniture_reason is not None:
@@ -140,6 +149,7 @@ def _root_candidates(evidence: DocumentEvidence) -> list[RootCandidate]:
                 section_index=section_index,
                 section_heading_id=section_heading.id if section_heading else None,
                 section_heading_bbox=section_heading.bbox if section_heading else None,
+                section_heading_page=section_heading_page,
                 source=line.source,
             ))
     return _typography_filter(candidates)
