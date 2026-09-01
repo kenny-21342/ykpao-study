@@ -98,6 +98,61 @@ def collect(subject: str | None = None) -> list[Path]:
     return papers
 
 
+def transcribed() -> set[str]:
+    """Source paths whose every billable item is already transcribed.
+
+    A model run cannot use `already_done`, which asks whether a paper has been
+    *cropped* -- every paper has, so it would skip the corpus. The ledger does
+    the resuming instead, but only for the model calls: phase A still
+    re-segments and re-renders every paper it is given before phase B makes its
+    first call. For the whole corpus that is about nine hours of work, and a
+    hundred and forty thousand rendered spans held in memory, before a single
+    question is transcribed.
+
+    `--chunk` exists for exactly that, and did not work here: with the resume
+    filter switched off, every chunk took the same first N papers and the run
+    could never reach paper N+1. So a long transcription run had to be one
+    process or nothing.
+
+    A paper is finished when the ledger holds a successful transcription for
+    each of its roots. A multiple-choice mark scheme has none to hold -- stage 1
+    recovers the whole answer key for free -- so it counts as finished on its
+    own terms.
+    """
+    if not DB.exists():
+        return set()
+    connection = sqlite3.connect(DB)
+    try:
+        rows = connection.execute(
+            """
+            SELECT p.source_path,
+                   (SELECT COUNT(*) FROM bank_questions q WHERE q.paper_id = p.id)
+                 + (SELECT COUNT(*) FROM bank_mark_schemes m
+                      WHERE m.paper_id = p.id
+                        AND COALESCE(m.answer_letter, '') = '')       AS needed,
+                   (SELECT COUNT(*) FROM bank_mark_schemes m WHERE m.paper_id = p.id)
+                                                                       AS schemes,
+                   (SELECT COUNT(*) FROM bank_run_ledger l
+                      WHERE l.source_sha256 = p.source_sha256
+                        AND l.stage = 'transcribe'
+                        AND l.status = 'ok')                           AS done
+            FROM bank_papers p
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return set()
+    finally:
+        connection.close()
+
+    finished = set()
+    for source_path, needed, schemes, done in rows:
+        if needed == 0 and schemes > 0:
+            finished.add(source_path)        # an answer key: nothing to bill
+        elif needed > 0 and done >= needed:
+            finished.add(source_path)
+    return finished
+
+
 def already_done() -> set[str]:
     """Source paths already cropped, so a restart does not redo them.
 
@@ -242,7 +297,12 @@ def main() -> int:
     # transcription run that is the wrong question -- every paper has been --
     # and using it would skip the entire corpus. The ledger does the resuming
     # instead, per question, so re-running stages 1 and 2 is free and correct.
-    done = set() if (args.force or args.use_model) else already_done()
+    if args.force:
+        done = set()
+    elif args.use_model:
+        done = transcribed()
+    else:
+        done = already_done()
     if done:
         # Stored paths are relative to the repository root.
         repo = ROOT.parent
@@ -250,7 +310,8 @@ def main() -> int:
             path for path in papers
             if str(path.relative_to(repo)) not in done and str(path) not in done
         ]
-        print(f"resuming: {total - len(papers)} of {total} already cropped",
+        verb = "transcribed" if args.use_model else "cropped"
+        print(f"resuming: {total - len(papers)} of {total} already {verb}",
               flush=True)
 
     # Applied *after* the resume filter, so repeated bounded runs walk the
