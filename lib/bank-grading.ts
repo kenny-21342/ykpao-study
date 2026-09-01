@@ -35,7 +35,12 @@ export type KeyGrade = {
  * required rather than a prefix match on anything.
  */
 export function normalizeOptionLetter(raw: string): string | null {
-  const trimmed = raw.trim();
+  // The mock-exam answer box is a rich-text editor, so a picked option arrives
+  // as "<p>B</p>" rather than "B". Reading a leading option letter off that
+  // finds "<" and gives up, which marked every multiple-choice answer in a
+  // submitted mock exam wrong however right it was. Practice and the daily
+  // challenge send a bare letter and are unaffected by the flattening.
+  const trimmed = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   if (!trimmed) return null;
 
   // A leading option letter, optionally bracketed, optionally followed by a

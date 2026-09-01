@@ -76,3 +76,40 @@ test('options default to four and widen only if the key demands it', () => {
   assert.deepEqual(optionLettersFor(null), ['A', 'B', 'C', 'D']);
   assert.deepEqual(optionLettersFor('E'), ['A', 'B', 'C', 'D', 'E']);
 });
+
+/**
+ * The mock-exam answer box is a rich-text editor, so a picked option reaches
+ * grading as markup rather than a bare letter. Every multiple-choice answer in
+ * a submitted mock exam was marked wrong because normalizeOptionLetter reads a
+ * leading option letter and found "<". normalizeOptionLetter flattens markup
+ * before reading the letter; these assert the shapes that editor actually produces.
+ */
+test('an option letter is recognised once the editor markup is flattened', () => {
+  for (const [html, expected] of [
+    ['<p>B</p>', 'B'],
+    ['<p>b</p>', 'B'],
+    ['<p>C.</p>', 'C'],
+    ['<p><strong>D</strong></p>', 'D'],
+    ['<p>A and 4</p>', 'A'],
+  ] as const) {
+    assert.equal(normalizeOptionLetter(html), expected, `failed on ${html}`);
+  }
+});
+
+test('markup alone is still not an option letter', () => {
+  assert.equal(normalizeOptionLetter('<p></p>'), null);
+  assert.equal(normalizeOptionLetter('<p>Because the valves are shut</p>'), null);
+});
+
+test('a flattened wrong letter is graded wrong, not unmarkable', () => {
+  const grade = gradeAgainstKey('<p>A</p>', 'C');
+  assert.equal(grade?.isCorrect, false);
+  assert.equal(grade?.score, 0);
+  assert.equal(grade?.correctLetter, 'C');
+});
+
+test('a flattened right letter scores the mark', () => {
+  const grade = gradeAgainstKey('<p>B</p>', 'B');
+  assert.equal(grade?.isCorrect, true);
+  assert.equal(grade?.score, 1);
+});
