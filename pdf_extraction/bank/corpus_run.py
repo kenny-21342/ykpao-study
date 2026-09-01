@@ -29,6 +29,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .run import run_corpus
+from .topics import configured_subjects, topics_for
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = Path(__file__).resolve().parent / "extract.db"
@@ -191,7 +192,43 @@ def main() -> int:
                         help="stop once a run has cost this much (default 100)")
     parser.add_argument("--concurrency", type=int, default=None,
                         help="parallel model calls (default 4; 6 queues, 8 wedges)")
+    parser.add_argument("--no-tagging", action="store_true",
+                        help="transcribe only; skip the topic/difficulty pass")
+    parser.add_argument("--allow-untagged-topics", action="store_true",
+                        help="tag even though no syllabus topics are configured "
+                             "for this subject (topics will come back empty)")
     args = parser.parse_args()
+
+    # Stage 4 discards every topic outside the supplied syllabus list, so with
+    # no list it is billed for each question and writes none. That silently
+    # cost the whole corpus a tagging pass and left bank_question_topics empty.
+    # Refuse it rather than repeat it.
+    subject_topics: list[str] | None = None
+    subject_context: str | None = None
+    do_tagging = not args.no_tagging
+    if args.use_model and do_tagging:
+        found = topics_for(args.subject)
+        if found:
+            subject_topics, subject_context = found
+            print(f"topics: {len(subject_topics)} syllabus topics for {args.subject}",
+                  flush=True)
+        elif args.allow_untagged_topics:
+            print("topics: none configured — tagging will return tags, skills and "
+                  "difficulty, but NO topics", flush=True)
+        else:
+            configured = ", ".join(configured_subjects()) or "none"
+            print(
+                f"no syllabus topics configured for "
+                f"{args.subject or '(whole corpus)'}.\n"
+                f"  The tagging pass would be billed for every question and write "
+                f"zero topics.\n"
+                f"  Add the subject to pdf_extraction/bank/syllabus_topics.json "
+                f"(configured: {configured}),\n"
+                f"  or pass --no-tagging to skip it, or --allow-untagged-topics "
+                f"to run it anyway.",
+                flush=True,
+            )
+            return 1
 
     papers = collect(args.subject)
     total = len(papers)
@@ -238,6 +275,9 @@ def main() -> int:
             asset_root=ASSETS,
             use_model=args.use_model,
             max_spend_usd=args.max_spend if args.use_model else None,
+            do_tagging=do_tagging,
+            subject_topics=subject_topics,
+            subject_context=subject_context,
             progress_every=25,
             log=log,
             **({"concurrency": args.concurrency} if args.concurrency else {}),

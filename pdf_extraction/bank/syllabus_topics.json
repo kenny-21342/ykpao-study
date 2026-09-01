@@ -1,0 +1,39 @@
+{
+  "9709": {
+    "context": "CAIE A-Level Mathematics 9709",
+    "topics": [
+      "Quadratics",
+      "Functions",
+      "Coordinate geometry",
+      "Circular measure",
+      "Trigonometry",
+      "Series",
+      "Differentiation",
+      "Integration",
+      "Algebra",
+      "Logarithmic and exponential functions",
+      "Trigonometry (advanced)",
+      "Differentiation (advanced)",
+      "Integration (advanced)",
+      "Numerical solution of equations",
+      "Vectors",
+      "Differential equations",
+      "Complex numbers",
+      "Forces and equilibrium",
+      "Kinematics of motion in a straight line",
+      "Momentum",
+      "Newton's laws of motion",
+      "Energy, work and power",
+      "Representation of data",
+      "Permutations and combinations",
+      "Probability",
+      "Discrete random variables",
+      "The normal distribution",
+      "The Poisson distribution",
+      "Linear combinations of random variables",
+      "Continuous random variables",
+      "Sampling and estimation",
+      "Hypothesis tests"
+    ]
+  }
+}

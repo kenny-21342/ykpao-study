@@ -637,6 +637,11 @@ def run_corpus(
             except ValueError as error:
                 log(f"text:   disabled ({error})")
                 do_tagging = False
+        if do_tagging and not subject_topics:
+            # Every topic outside the supplied list is discarded, so with no
+            # list the pass is billed per question and writes none. Callers
+            # that mean this should say so; callers that do not, should see it.
+            log("text:   WARNING no syllabus topics supplied — topics will be empty")
         log(f"workers: {concurrency}")
 
     connection = store.connect(db_path)
