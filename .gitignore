@@ -128,6 +128,10 @@ __pycache__/
 # (uploaded by scripts/upload-bank-assets.ts) and are rebuilt by the extraction
 # pipeline, so they must never enter git history.
 /pdf_extraction/bank/assets/
+# Held by a running corpus_run so a second chunk cannot start; carries
+# the holder's pid and is removed on exit. A stale one is recognised by
+# its dead pid, so it is never a problem, but it is not repository state.
+/pdf_extraction/bank/.corpus_run.lock
 
 # Generated data migrations. Regenerate from pdf_extraction/bank/extract.db
 # rather than carrying three-quarters of a megabyte of VALUES in git; the
