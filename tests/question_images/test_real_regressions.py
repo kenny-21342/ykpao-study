@@ -46,6 +46,65 @@ class RealSourceRegressionTests(unittest.TestCase):
         self.assertEqual([root.number for root in result.roots], [1, 2, 3, 4])
         self.assertGreater(sum(visual.essential for page in evidence.pages for visual in page.visuals), 10)
 
+
+    HISTORY = "pdf_extraction/my_raw_pdfs/igcse/history-0470/0470_s16_qp_12.pdf"
+
+    def _history_regions(self):
+        path = ROOT / self.HISTORY
+        if not path.is_file():
+            self.skipTest("Local CAIE corpus is unavailable")
+        evidence = extract_document_evidence(path)
+        return build_source_regions(evidence, detect_roots(evidence))
+
+    def test_a_section_heading_belongs_only_to_the_first_question_under_it(self) -> None:
+        """Every question under a heading used to start its crop at that heading.
+
+        On this paper questions 2, 6, 7, 9, 10, 12, 14, 16, 18, 20 and 22 each
+        began at "SECTION A: CORE CONTENT" and so rendered the whole of the
+        question before them -- eleven of twenty-two showing someone else's
+        text. Only a cap of 35% of page height stopped the rest, which is why
+        questions further down a page happened to come out right.
+        """
+        by_root = {entry.root.number: entry.regions for entry in self._history_regions()}
+        first, second = by_root[1][0], by_root[2][0]
+        self.assertEqual(first.page, second.page)
+        # Question 2 starts where question 1 ends, not at the top of the page.
+        self.assertGreaterEqual(second.bbox[1], first.bbox[3])
+
+    def test_no_two_questions_share_a_region_of_the_page(self) -> None:
+        spans = []
+        for entry in self._history_regions():
+            for region in entry.regions:
+                spans.append((region.page, region.bbox[1], region.bbox[3], entry.root.number))
+        spans.sort()
+        for (page, top, bottom, root), (next_page, next_top, _, next_root) in zip(spans, spans[1:]):
+            if page != next_page:
+                continue
+            self.assertLessEqual(
+                bottom, next_top,
+                f"question {root} overlaps question {next_root} on page {page}")
+
+    def test_a_section_rubric_stays_out_of_the_question_above_it(self) -> None:
+        """"Answer any one question from this Section." is bold but not capitals.
+
+        The capitalisation test caught the heading and let the rubric through,
+        so question 8 gained a region on page 4 containing nothing but question
+        9's instruction, and question 9's own crop was split in two around it.
+        """
+        by_root = {entry.root.number: entry.regions for entry in self._history_regions()}
+        self.assertEqual([region.page for region in by_root[8]], [3])
+        self.assertEqual(len(by_root[9]), 1)
+
+    def test_a_question_keeps_the_heading_that_names_its_topic(self) -> None:
+        """The crop must still reach up to "DEPTH STUDY A: THE FIRST WORLD WAR".
+
+        Without it the question reads "Military tactics were important on the
+        Western Front" with nothing saying which depth study it belongs to.
+        """
+        by_root = {entry.root.number: entry.regions for entry in self._history_regions()}
+        region = by_root[9][0]
+        self.assertLess(region.bbox[1], 128.0)
+
     def test_multiple_choice_distractor_numbers_do_not_enter_the_root_sequence(self) -> None:
         path = ROOT / "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_s15_qp_12.pdf"
         if not path.is_file():

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .detector import DetectionResult, DetectedRoot
 from .evidence import DocumentEvidence, PageEvidence, TextLine, VisualEvidence
 from .models import SourceRegion
 
+
+# "Answer any one question from this Section.", "Answer two questions." --
+# the rubric a paper prints under a section heading, which belongs to the
+# questions below it rather than the one above.
+_RUBRIC_LINE = re.compile(r"^(?:answer|attempt)\b[^.]{0,80}?\bquestions?\b", re.I)
 
 SOURCE_PADDING_POINTS = 12.0
 CLUSTER_GAP_POINTS = 48.0
@@ -31,11 +37,13 @@ def build_source_regions(
     roots = list(detection.roots)
     for index, root in enumerate(roots):
         next_root = roots[index + 1] if index + 1 < len(roots) else None
+        previous_root = roots[index - 1] if index else None
         regions, visual_count, mark_count, removed_count = _regions_for_root(
             evidence,
             root,
             next_root,
             dpi,
+            previous_root=previous_root,
         )
         diagnostics: list[dict[str, object]] = []
         if not regions:
@@ -51,11 +59,30 @@ def build_source_regions(
     return tuple(result)
 
 
+def _heading_taken(
+    previous_root: DetectedRoot | None,
+    page_number: int,
+    heading: tuple[float, float, float, float],
+) -> bool:
+    """Whether the question before this one already sits under `heading`.
+
+    If it does, that question owns the heading and this one must start at its
+    own number.
+    """
+    if previous_root is None:
+        return False
+    if previous_root.candidate.page != page_number:
+        return False
+    return previous_root.candidate.bbox[1] >= heading[1]
+
+
 def _regions_for_root(
     evidence: DocumentEvidence,
     root: DetectedRoot,
     next_root: DetectedRoot | None,
     dpi: int,
+    *,
+    previous_root: DetectedRoot | None = None,
 ) -> tuple[list[SourceRegion], int, int, int]:
     first_page = root.candidate.page
     last_page = next_root.candidate.page if next_root else len(evidence.pages)
@@ -70,12 +97,22 @@ def _regions_for_root(
         upper = page.height
         if page_number == first_page:
             lower = root.candidate.bbox[1]
+            heading = root.candidate.section_heading_bbox
             if (
-                root.candidate.section_heading_bbox
-                and root.candidate.section_heading_bbox[1] < lower
-                and root.candidate.section_heading_bbox[1] >= lower - page.height * 0.35
+                heading
+                and heading[1] < lower
+                and heading[1] >= lower - page.height * 0.35
+                # A heading belongs to the FIRST question under it, not to
+                # every question under it. Without this test, questions 2, 6,
+                # 7, 9, 10, 12 ... of a History paper each began their crop at
+                # "SECTION A: CORE CONTENT" and so contained the whole of the
+                # question before them: 0470_s16_qp_12 rendered eleven of its
+                # twenty-two questions showing someone else's text. The 35%
+                # cap was all that stopped the rest, which is why questions
+                # further down the page happened to come out right.
+                and not _heading_taken(previous_root, page_number, heading)
             ):
-                lower = root.candidate.section_heading_bbox[1]
+                lower = heading[1]
         if next_root and page_number == next_root.candidate.page:
             upper = next_root.candidate.bbox[1]
         if upper <= lower:
@@ -86,9 +123,16 @@ def _regions_for_root(
         # joined the cluster of whichever root came *before* it — so every
         # History question ended with the next Depth Study's title. The root
         # that owns a heading picks it up through section_heading_bbox above.
+        # Measured from the root's own number, not from `lower`: `lower` has
+        # already been pulled up to this root's section heading, so measuring
+        # from it treated that heading as introducing the NEXT root and cut it
+        # out of the crop that had just claimed it -- question 9 kept "SECTION
+        # B: DEPTH STUDIES" but lost "DEPTH STUDY A: THE FIRST WORLD WAR",
+        # which is the line that says what the question is about.
+        heading_floor = root.candidate.bbox[1] if page_number == first_page else lower
         lines = [
             line for line in lines
-            if not (next_root is not None and _introduces_next(line, lower))
+            if not (next_root is not None and _introduces_next(line, heading_floor))
         ]
         visuals = [visual for visual in page.visuals if _inside(visual.bbox, lower, upper)]
         essential_lines = [line for line in lines if line.essential]
@@ -136,6 +180,14 @@ def _introduces_next(line: TextLine, lower: float) -> bool:
     text = line.text.strip()
     if not text or text[0].isdigit():
         return False
+    # The instruction printed under the heading -- "Answer any one question
+    # from this Section." -- is bold but sentence case, so the capitalisation
+    # test below let it through and it stayed in the *previous* question's
+    # crop. On 0470_s16_qp_12 that gave question 8 a trailing region on page 4
+    # containing nothing but question 9's rubric, and split question 9's own
+    # crop in two.
+    if _RUBRIC_LINE.match(text):
+        return True
     letters = [character for character in text if character.isalpha()]
     if len(letters) < 6:
         return False
