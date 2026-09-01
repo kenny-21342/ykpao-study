@@ -386,7 +386,10 @@ def _execute(
             vision_in=call.input_tokens,
             vision_out=call.output_tokens,
         )
-        body = transcription.body_md
+        # A mark scheme transcribes to `answer_md` and is never tagged, so it
+        # has no body to read: reaching for one threw on every mark scheme in
+        # the run and recorded 23 of them as transcription failures.
+        body = transcription.body_md if item.doc_type == "qp" else ""
     else:
         # Already transcribed on an earlier run; this pass owes only stage 4.
         result = WorkResult(item=item)

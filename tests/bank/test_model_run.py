@@ -90,8 +90,21 @@ class _Provider:
 
     def __call__(self, *args, **kwargs) -> CallResult:
         self.calls += 1
+        # A mark scheme answers in a different shape, and its validator
+        # rejects a question-shaped reply. Which one is wanted is readable
+        # from the system prompt the caller sent.
+        prompt = str(kwargs.get("system_prompt", "") or (args[3] if len(args) > 3 else ""))
+        mark_scheme = "mark scheme" in prompt.lower()
         return CallResult(
             content={
+                "root_number": "1",
+                "answer_md": "chlorophyll",
+                "marking_points": [],
+                "total_marks": 2,
+                "answer_letter": None,
+                "confidence": 0.9,
+                "notes": "",
+            } if mark_scheme else {
                 "root_number": "1",
                 "body_md": "State the name of the process.",
                 "parts": [],
@@ -415,3 +428,37 @@ class TaggingResumesOnItsOwnTests(unittest.TestCase):
         third = self._run(do_tagging=True)
         self.assertEqual(self.provider.calls, calls)
         self.assertEqual(third.cost_usd, 0.0)
+
+    def test_a_mark_scheme_transcribes_when_tagging_is_on(self) -> None:
+        """A mark scheme has answer_md, not body_md, and is never tagged.
+
+        Reading a body off one threw before it could be written, and the run
+        recorded every mark scheme in the corpus as a transcription failure.
+        """
+        mark_scheme = self.root / "0610_s23_ms_41.pdf"
+        _question_paper(mark_scheme)
+        with mock.patch.object(run_module, "load_vision", _settings, create=True), \
+             mock.patch("pdf_extraction.bank.env.vision_settings", _settings), \
+             mock.patch("pdf_extraction.bank.env.text_settings", _settings), \
+             mock.patch("pdf_extraction.bank.transcribe.call_json", self.provider), \
+             mock.patch("pdf_extraction.bank.tag.call_json", self.provider):
+            stats = run_corpus(
+                [mark_scheme],
+                db_path=self.db,
+                asset_root=self.root / "assets",
+                use_model=True,
+                do_tagging=True,
+                subject_topics=["Photosynthesis"],
+                concurrency=2,
+                log=lambda message: None,
+            )
+        self.assertEqual(stats.errors, [])
+        self.assertGreater(stats.mark_schemes, 0)
+        connection = sqlite3.connect(self.db)
+        try:
+            failed = connection.execute(
+                "SELECT count(*) FROM bank_run_ledger WHERE status = 'failed'"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(failed, 0)
