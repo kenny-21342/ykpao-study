@@ -110,10 +110,6 @@ export async function replaceSchoolResourceFile(
   });
   if (!existing) return { status: 'not-found' };
 
-  // Only after the new file is accepted do we discard the old object — a
-  // failed replacement must never leave the resource with neither file.
-  await purgeUploadObject(existing.fileUrl, '/lib/school-resources/replace');
-
   const resource = await prisma.schoolResource.update({
     where: { id },
     data: {
@@ -124,6 +120,14 @@ export async function replaceSchoolResourceFile(
     },
     include: { uploader: { select: { id: true, name: true, image: true } } },
   });
+
+  // Only after the row points at the new file do we discard the old object — a
+  // failed replacement must never leave the resource with neither file. Purging
+  // first meant an update that threw (a DB blip, or a row deleted in another
+  // tab) left the row pointing at a key that no longer exists, and every
+  // student opening that resource got a 404 with no way back to the file.
+  await purgeUploadObject(existing.fileUrl, '/lib/school-resources/replace');
+
   await reindex(id);
   return { status: 'replaced', resource };
 }
