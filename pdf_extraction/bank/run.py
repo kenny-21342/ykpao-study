@@ -58,10 +58,19 @@ VISION_OUTPUT_PER_MTOK = 1.13
 TEXT_INPUT_PER_MTOK = 0.27
 TEXT_OUTPUT_PER_MTOK = 1.10
 
-# Measured against SiliconFlow: 3 parallel calls all return in ~4s, while at 6
-# one request is held for ~47s and at 8 the run wedges outright. Stay under the
-# point where the provider starts queueing.
-DEFAULT_CONCURRENCY = 4
+# Re-measured against SiliconFlow on 2026-09-01, on 9709 question papers with
+# the same model and prompt version:
+#
+#     concurrency  4   328 items/hour
+#     concurrency 10   692 items/hour
+#     concurrency 24   418 items/hour   (no failures; the provider throttles)
+#
+# The earlier note here -- "at 6 one request is held for ~47s and at 8 the run
+# wedges outright" -- no longer holds, and at 4 the corpus is a 35-day run
+# rather than an 8-day one. Past ten the provider gives the throughput back, so
+# this is a peak and not a floor: re-measure before raising it, because the
+# whole corpus is a week either way and a wedged run costs more than it saves.
+DEFAULT_CONCURRENCY = 10
 
 
 @dataclass

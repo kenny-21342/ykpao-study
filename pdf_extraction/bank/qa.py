@@ -186,6 +186,21 @@ _MARKS_COLUMN_SLACK = 12.0
 _CROP_NUMBER_BAND = 0.25
 _CROP_NUMBER_BAND_FLOOR = 36.0
 
+# The rubric a paper prints above the first question of a section: "Section B",
+# "Answer one question.", "Depth study 2", "EITHER". It legitimately sits above
+# the question number and pushes it out of the band, so the first question of
+# every section was reported as a crop that does not begin at its number --
+# 4,060 flags, 3,075 of them the only thing holding their question back from
+# publication. The crop is correct; the heading is part of it on purpose.
+_RUBRIC_WORDS = frozenset(
+    """
+    section sections part parts answer answers question questions
+    one two three four all any both either or and from in this these
+    the a an of on for each following below above depth study studies
+    topic topics option options paper booklet insert candidates
+    """.split()
+)
+
 
 def run_crop_checks(
     pdf_path,
@@ -331,15 +346,60 @@ def _number_visible_at_top(pdf_path, rendered_span, root: int) -> bool:
         band = clip.y0 + max(clip.height * _CROP_NUMBER_BAND,
                              _CROP_NUMBER_BAND_FLOOR)
         wanted = str(root)
-        for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words"):
+        words = [
+            (fitz.Rect(wx0, wy0, wx1, wy1) * matrix, word)
+            for wx0, wy0, wx1, wy1, word, *_ in page.get_text("words")
+        ]
+        numbers = []
+        for box, word in words:
             if word.strip(".)") != wanted:
                 continue
-            box = fitz.Rect(wx0, wy0, wx1, wy1) * matrix
             if (box & clip).is_empty:
                 continue
             if box.y0 <= band:
                 return True
+            numbers.append(box)
+
+        # Below the band, but perhaps only because a section rubric is printed
+        # above it. Judge what actually stands between the top of the crop and
+        # the number: if it is all rubric, the number still opens the question.
+        for number in sorted(numbers, key=lambda box: box.y0):
+            above = [
+                word for box, word in words
+                if not (box & clip).is_empty and box.y1 <= number.y0
+            ]
+            if above and all(_is_rubric_word(word) for word in above):
+                return True
     return False
+
+
+def _is_rubric_word(word: str) -> bool:
+    """Whether a word belongs to a section heading rather than the question.
+
+    Three signals, because a heading is not one shape. CAIE sets the heading
+    itself in capitals -- "SECTION A: CORE CONTENT", "DEPTH STUDY B: GERMANY,
+    1918-45" -- which no vocabulary list could ever cover, since most of it is
+    proper nouns and dates. The instruction under it is ordinary sentence case
+    but fixed wording ("Answer any two questions from this Section."), which a
+    list does cover. Numbers and single characters belong to either.
+    """
+    token = word.strip(".,:;()[]\u2013\u2014")
+    if not token:
+        return True
+    if len(token) == 1:
+        return True
+    # Anything carrying a digit: a section number, a date, or the year range a
+    # depth study is named for ("1918-45", "c.1930-c.1990"). Above the question
+    # number these are heading, never question content -- the question has not
+    # started yet.
+    if any(char.isdigit() for char in token):
+        return True
+    # No lowercase: set in capitals, so a heading rather than a sentence. No
+    # word list could cover these -- most of a depth-study title is proper
+    # nouns.
+    if not any(char.islower() for char in token):
+        return True
+    return token.lower() in _RUBRIC_WORDS
 
 
 def _check_marks_column(
