@@ -378,7 +378,13 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      // Cancel and the X are already disabled while an upload runs; the
+      // backdrop was not, so a stray click unmounted the dialog mid-folder,
+      // throwing away every file's progress while the requests kept going.
+      onClick={folderBusy ? undefined : onClose}
+    >
       <div
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
