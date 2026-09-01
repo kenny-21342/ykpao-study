@@ -198,6 +198,8 @@ _RUBRIC_WORDS = frozenset(
     one two three four all any both either or and from in this these
     the a an of on for each following below above depth study studies
     topic topics option options paper booklet insert candidates
+    are based refer refers relating printed opposite overleaf extract extracts
+    spend minutes marks total begin start
     """.split()
 )
 
@@ -352,7 +354,12 @@ def _number_visible_at_top(pdf_path, rendered_span, root: int) -> bool:
         ]
         numbers = []
         for box, word in words:
-            if word.strip(".)") != wanted:
+            # `.strip()` first, for the Unicode spaces: 0606 sets its question
+            # numbers as "1\u2002" -- an EN SPACE that PyMuPDF does not treat as
+            # a word separator -- so the token never equalled "1" and every
+            # question on every Additional Mathematics paper was reported as a
+            # crop that does not begin at its number.
+            if word.strip().strip(".)") != wanted:
                 continue
             if (box & clip).is_empty:
                 continue
