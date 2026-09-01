@@ -71,27 +71,38 @@ export async function PATCH(
     if (description !== undefined) data.description = description.trim();
     if (subject !== undefined) data.subject = subject?.trim() || null;
     if (category !== undefined) data.category = category?.trim() || null;
-    if (fileName !== undefined) data.fileName = fileName;
+    // A swap already set fileName from the uploaded file. The edit dialog
+    // prefills this field with the *previous* file's name and always sends it,
+    // so honouring it here relabelled the new file with the old one's name —
+    // students downloaded one document under another's title.
+    if (fileName !== undefined && !replacementFile) data.fileName = fileName;
 
     const hasMetadata = Object.keys(data).length > 0;
     if (!replacementFile && !hasMetadata) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
-    const updated = await prisma.schoolResource.update({
-      where: { id },
-      data,
-      include: { uploader: { select: { id: true, name: true, image: true } } },
-    });
-
-    // Title, description and fileName are exactly what the RAG index stores.
+    // Skip the write when only a file was swapped: `data` is empty there, and
+    // returning the pre-metadata row meant a request that both swapped the file
+    // and edited the title answered with the old title.
     if (hasMetadata) {
+      resource = await prisma.schoolResource.update({
+        where: { id },
+        data,
+        include: { uploader: { select: { id: true, name: true, image: true } } },
+      });
+      // Title, description and fileName are exactly what the RAG index stores.
       await refreshRagIndex(`resource:${id}`, () => indexSchoolResource(id));
     }
 
-    return NextResponse.json({ resource: resource ?? updated });
+    return NextResponse.json({ resource });
   } catch (error) {
     // A missing id reaching prisma.update surfaces as P2025; report and 404.
+    // This said so already but answered 500, so editing a resource another tab
+    // had deleted looked like a server fault rather than a stale page.
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+    }
     console.error('[admin/resources] update failed:', error);
     await reportError(error, { routePath: '/api/admin/resources/[id]', source: 'route' });
     return NextResponse.json({ error: 'Failed to update resource' }, { status: 500 });
