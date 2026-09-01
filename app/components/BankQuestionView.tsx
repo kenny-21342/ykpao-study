@@ -58,7 +58,7 @@ function StripStack({
             decoding="async"
             // As in the other strip renderers: a transparent crop must not
             // vanish into the dark theme, so the ground is on the image.
-            className="block h-auto bg-white"
+            className="block h-auto paper-ground"
             style={{
               // Percentage of the widest strip, so a half-width part stays
               // half-width instead of being blown up to match.
@@ -117,7 +117,7 @@ function ZoomOverlay({
       >
         <X className="h-5 w-5" aria-hidden="true" />
       </button>
-      <div className="w-max bg-white">
+      <div className="w-max paper-ground">
         {strips.map((strip, index) => (
           <img
             key={`${strip.url}-${index}`}

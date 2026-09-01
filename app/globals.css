@@ -122,3 +122,20 @@ body {
   background: #111827;
   color: #f3f4f6;
 }
+
+/*
+ * Scanned paper keeps a white ground in both themes.
+ *
+ * The question and mark-scheme crops are transparent PNGs with black ink, so
+ * without an opaque light ground they are invisible on the dark theme — the
+ * card shows an empty box where the question should be.
+ *
+ * This deliberately is NOT `bg-white`: the legacy shim in
+ * app/styles/darkmode.css repaints every `.bg-white` to gray-800 with
+ * `!important`, which silently defeated an earlier fix here. The crops are
+ * photographs of paper rather than a UI surface, so they want a ground that
+ * does not follow the theme at all.
+ */
+.paper-ground {
+  background-color: #fff;
+}

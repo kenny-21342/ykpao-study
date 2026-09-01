@@ -54,7 +54,7 @@ function ExamContent({
             // The crops are scanned paper. Many are transparent PNGs with
             // black ink, which is invisible on the dark theme, so the white
             // ground travels with the image rather than the container.
-            className="block max-w-full bg-white"
+            className="block max-w-full paper-ground"
           />
         ))}
       </div>
