@@ -16,7 +16,7 @@
  * image. The one piece of real logic is the transcription gate: see
  * `AssistancePanel`.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
@@ -138,7 +138,21 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   );
 }
 
-export default function BankPractice() {
+export default function BankPractice({
+  initialQuestionId = null,
+  onQuestionOpened,
+}: {
+  /**
+   * Open straight onto this bank question, for a deep link from search.
+   *
+   * Search results used to carry `qid`, which routes to the legacy text-bank
+   * browser -- a different table with an independent id space, so a result
+   * opened an unrelated question or none at all. The bank needs its own entry
+   * point rather than borrowing that one.
+   */
+  initialQuestionId?: number | null;
+  onQuestionOpened?: () => void;
+} = {}) {
   const { status: sessionStatus } = useSession();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [subject, setSubject] = useState('');
@@ -287,6 +301,18 @@ export default function BankPractice() {
       setDetailLoading(false);
     }
   };
+
+  // Consume a deep link once the session exists: the detail fetch is
+  // session-gated, so firing it before that 401s on first paint.
+  const deepLinkRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+    if (!initialQuestionId || deepLinkRef.current === initialQuestionId) return;
+    deepLinkRef.current = initialQuestionId;
+    void openQuestion(initialQuestionId);
+    onQuestionOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- openQuestion is recreated each render
+  }, [initialQuestionId, sessionStatus]);
 
   const lastPage = Math.max(1, Math.ceil(total / 20));
 

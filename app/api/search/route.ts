@@ -66,7 +66,15 @@ export async function GET(req: NextRequest) {
     ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
     : {};
 
-  const syllabusCode = query.match(/(?:^|\D)(\d{4})(?:\D|$)/)?.[1];
+  // A syllabus code and an exam year are both four digits, so split them by
+  // range rather than by position: "0610 2022" carries one of each, and
+  // treating the first match as the code left the year matching nothing at
+  // all. An ignored year is worse than no year filter -- the results order by
+  // id, so asking for 2022 silently answered with the newest papers instead.
+  const fourDigit = query.match(/\d{4}/g) ?? [];
+  const isExamYear = (value: string) => Number(value) >= 1990 && Number(value) <= 2099;
+  const year = fourDigit.find(isExamYear);
+  const syllabusCode = fourDigit.find((value) => !isExamYear(value));
   const questionNumber = query.match(/(?:^|\W)q(?:uestion)?\s*(\d+)/i)?.[1];
 
   const bankQuestionOr: Prisma.BankQuestionWhereInput[] = [
@@ -104,7 +112,12 @@ export async function GET(req: NextRequest) {
       where: {
         status: 'published',
         OR: bankQuestionOr,
-        ...bankSubjectScope,
+        // AND rather than a spread: the scope and the year both constrain
+        // `paper`, and two `paper` keys in one object would silently drop one.
+        AND: [
+          ...(Object.keys(bankSubjectScope).length > 0 ? [bankSubjectScope] : []),
+          ...(year ? [{ paper: { year: Number(year) } }] : []),
+        ],
       },
       include: { paper: { include: { subject: true } } },
       take: 8,
@@ -114,7 +127,10 @@ export async function GET(req: NextRequest) {
       where: {
         status: 'published',
         OR: bankMsOr,
-        ...bankMsSubjectScope,
+        AND: [
+          ...(Object.keys(bankMsSubjectScope).length > 0 ? [bankMsSubjectScope] : []),
+          ...(year ? [{ paper: { year: Number(year) } }] : []),
+        ],
       },
       include: { paper: { include: { subject: true } }, question: { select: { rootNumber: true } } },
       take: 5,
@@ -181,18 +197,18 @@ export async function GET(req: NextRequest) {
     ...questions.map((question) => ({
       id: `question-${question.id}`,
       type: 'question' as const,
-      title: `${question.paper.subject.code} ${question.paper.year} ${question.paper.session.toUpperCase()} P${question.paper.paperNumber} Q${question.rootNumber}`,
+      title: `${question.paper.subject.code} ${question.paper.year} ${question.paper.session.toUpperCase()} P${question.paper.paperNumber}${question.paper.variant ? `v${question.paper.variant}` : ''} Q${question.rootNumber}`,
       snippet: question.bodyMd ? plainText(question.bodyMd, 240) : `${question.paper.subject.name} — Paper ${question.paper.paperNumber}, Question ${question.rootNumber}`,
-      url: `/?tab=practice&qid=${question.id}`,
+      url: `/?tab=practice&bqid=${question.id}`,
       subject: question.paper.subject.name,
       topic: null,
     })),
     ...markschemes.map((scheme) => ({
       id: `markscheme-${scheme.id}`,
       type: 'markscheme' as const,
-      title: `${scheme.paper.subject.code} ${scheme.paper.year} ${scheme.paper.session.toUpperCase()} P${scheme.paper.paperNumber} Q${scheme.question.rootNumber} mark scheme`,
+      title: `${scheme.paper.subject.code} ${scheme.paper.year} ${scheme.paper.session.toUpperCase()} P${scheme.paper.paperNumber}${scheme.paper.variant ? `v${scheme.paper.variant}` : ''} Q${scheme.question.rootNumber} mark scheme`,
       snippet: scheme.answerMd ? plainText(scheme.answerMd, 240) : `Mark scheme for Q${scheme.question.rootNumber}`,
-      url: `/?tab=practice&qid=${scheme.questionId}`,
+      url: `/?tab=practice&bqid=${scheme.questionId}`,
       subject: scheme.paper.subject.name,
       topic: null,
     })),

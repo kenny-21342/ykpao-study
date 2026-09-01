@@ -160,6 +160,9 @@ export default function SmartEduPlatform() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<MainTab>('dashboard');
   const [pendingQuestionId, setPendingQuestionId] = useState<number | null>(null);
+  // Separate from `pendingQuestionId`: that one is a legacy text-bank id and
+  // routes to QuestionsDatabase. Bank ids are a different sequence entirely.
+  const [pendingBankQuestionId, setPendingBankQuestionId] = useState<number | null>(null);
   const [studyStartView, setStudyStartView] = useState<StudyCoachView>('today');
   const [practiceStartMode, setPracticeStartMode] = useState<PracticeMode>('browse');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
@@ -415,9 +418,13 @@ export default function SmartEduPlatform() {
     const route = resolveRoute(params.get('tab'));
     const requestedView = params.get('view') as StudyCoachView | null;
     const questionId = Number(params.get('qid'));
+    const bankQuestionId = Number(params.get('bqid'));
+    if (Number.isInteger(bankQuestionId) && bankQuestionId > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration init, see block comment above
+      setPendingBankQuestionId(bankQuestionId);
+    }
     if (route) {
       const validStudyViews = new Set<StudyCoachView>(['today', 'plan', 'mistakes', 'review', 'mastery', 'search']);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration init, see block comment above
       openRoute({
         ...route,
         studyView: requestedView && validStudyViews.has(requestedView) ? requestedView : route.studyView,
@@ -956,7 +963,10 @@ export default function SmartEduPlatform() {
               onQuestionOpened={() => setPendingQuestionId(null)}
             />
           ) : (
-            <BankPractice />
+            <BankPractice
+              initialQuestionId={pendingBankQuestionId}
+              onQuestionOpened={() => setPendingBankQuestionId(null)}
+            />
           )
         )}
 
