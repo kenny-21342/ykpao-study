@@ -346,6 +346,7 @@ def upsert_question(
     )
     if tagging is not None:
         _link_tags(connection, question_id, tagging)
+        _link_topics(connection, paper_id, question_id, tagging)
     return question_id
 
 
@@ -398,6 +399,54 @@ def _link_strips(
             VALUES (?, ?, ?, ?)
             """,
             (owner_id, asset_id, ordering, strip.page),
+        )
+
+
+def _link_topics(
+    connection: sqlite3.Connection, paper_id: int, question_id: int, tagging
+) -> None:
+    """Attach the syllabus topics stage 4 chose for this question.
+
+    This was never written. `bank_topics` and `bank_question_topics` exist in
+    the schema, `merge_to_neon` copies them, and the app filters on them -- but
+    nothing in the pipeline ever inserted a row, so both tables stayed empty
+    across all 85,611 questions and the mock-exam Topics filter is hidden for
+    want of data. Tags were linked next door in `_link_tags`, which is why a
+    tagging run looked like it was working.
+
+    Topics are scoped to the subject, not the paper: the same "Vectors" is one
+    topic across every 9709 paper, which is what makes filtering by it useful.
+    """
+    subject = connection.execute(
+        "SELECT subject_id FROM bank_papers WHERE id = ?", (paper_id,)
+    ).fetchone()
+    if subject is None:
+        return
+    subject_id = int(subject["subject_id"])
+
+    connection.execute(
+        "DELETE FROM bank_question_topics WHERE question_id = ?", (question_id,)
+    )
+    for name in getattr(tagging, "topics", []) or []:
+        name = str(name).strip()
+        if not name:
+            continue
+        row = connection.execute(
+            "SELECT id FROM bank_topics WHERE subject_id = ? AND name = ?",
+            (subject_id, name),
+        ).fetchone()
+        if row:
+            topic_id = int(row["id"])
+        else:
+            cursor = connection.execute(
+                "INSERT INTO bank_topics (subject_id, code, name) VALUES (?, ?, ?)",
+                (subject_id, None, name),
+            )
+            topic_id = int(cursor.lastrowid)
+        connection.execute(
+            "INSERT OR REPLACE INTO bank_question_topics "
+            "(question_id, topic_id, confidence) VALUES (?, ?, ?)",
+            (question_id, topic_id, getattr(tagging, "confidence", 0.0)),
         )
 
 
