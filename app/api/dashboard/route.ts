@@ -6,6 +6,7 @@ import { resolveCourseScope } from '@/lib/course-scope'
 import { LearnerContextError } from '@/lib/learner-context'
 import { isFeaturePreview } from '@/lib/feature-readiness'
 import { PLACEHOLDER_ANSWER } from '@/lib/learning'
+import { toBankSubjectCodes } from '@/lib/bank-questions'
 
 /**
  * Aggregated dashboard stats for the signed-in user.
@@ -43,6 +44,12 @@ export async function GET(req: NextRequest) {
     const legacyWhere = courseScope.effectiveScope === 'enrolled'
       ? { question: { courseId: { in: courseScope.courseIds } } }
       : {}
+    // The bank keeps its own subject codes, so an enrolled-scope student was
+    // being scoped on past papers but not on bank attempts — their tiles and
+    // Recent Activity counted subjects they are not enrolled in.
+    const bankWhere = courseScope.effectiveScope === 'enrolled'
+      ? { question: { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } } }
+      : {}
 
     const [
       ppTotal,
@@ -68,13 +75,13 @@ export async function GET(req: NextRequest) {
       // answered but not graded, so they raise the count and stay out of the
       // accuracy denominator -- hence `isCorrect: { not: null }` rather than a
       // bare total.
-      prisma.bankQuestionAttempt.count({ where: { userId } }),
-      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: { not: null } } }),
-      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: true } }),
+      prisma.bankQuestionAttempt.count({ where: { userId, ...bankWhere } }),
+      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: { not: null }, ...bankWhere } }),
+      prisma.bankQuestionAttempt.count({ where: { userId, isCorrect: true, ...bankWhere } }),
       // Dates only, for the streak: practising in the bank has to count as a
       // day studied like any other attempt does.
       prisma.bankQuestionAttempt.findMany({
-        where: { userId },
+        where: { userId, ...bankWhere },
         orderBy: { createdAt: 'desc' },
         take: 60,
         select: {
@@ -150,28 +157,32 @@ export async function GET(req: NextRequest) {
 
     // ----- Recent activity aggregated by subject -----
     // Group the latest attempts by subject, count questions, avg accuracy.
-    const bySubject = new Map<string, { count: number; correct: number; lastAt: number }>()
-    for (const a of recentPP) {
-      const subj = a.question?.paper?.subject?.name ?? 'General'
-      const entry = bySubject.get(subj) ?? { count: 0, correct: 0, lastAt: 0 }
+    // `graded` is a separate denominator from `count` for the same reason the
+    // headline accuracy uses `isCorrect: { not: null }`: a free-response answer
+    // with no key is answered but not marked. Counting it as wrong showed a
+    // student who had just saved one written answer "1 question · 0% accuracy".
+    const bySubject = new Map<string, { count: number; graded: number; correct: number; lastAt: number }>()
+    const tally = (subj: string, isCorrect: boolean | null, at: Date) => {
+      const entry = bySubject.get(subj) ?? { count: 0, graded: 0, correct: 0, lastAt: 0 }
       entry.count += 1
-      if (a.isCorrect) entry.correct += 1
-      entry.lastAt = Math.max(entry.lastAt, new Date(a.attemptedAt).getTime())
+      if (isCorrect !== null) {
+        entry.graded += 1
+        if (isCorrect) entry.correct += 1
+      }
+      entry.lastAt = Math.max(entry.lastAt, at.getTime())
       bySubject.set(subj, entry)
     }
+    for (const a of recentPP) {
+      tally(a.question?.paper?.subject?.name ?? 'General', a.isCorrect, new Date(a.attemptedAt))
+    }
     for (const a of recentBank) {
-      const subj = a.question?.paper?.subject?.name ?? 'General'
-      const entry = bySubject.get(subj) ?? { count: 0, correct: 0, lastAt: 0 }
-      entry.count += 1
-      if (a.isCorrect) entry.correct += 1
-      entry.lastAt = Math.max(entry.lastAt, new Date(a.createdAt).getTime())
-      bySubject.set(subj, entry)
+      tally(a.question?.paper?.subject?.name ?? 'General', a.isCorrect, new Date(a.createdAt))
     }
     const recentActivity = Array.from(bySubject.entries())
       .map(([subject, e]) => ({
         subject,
         questions: e.count,
-        accuracy: e.count > 0 ? Math.round((e.correct / e.count) * 100) : 0,
+        accuracy: e.graded > 0 ? Math.round((e.correct / e.graded) * 100) : null,
         time: new Date(e.lastAt).toISOString(),
       }))
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())

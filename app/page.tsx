@@ -58,7 +58,8 @@ type PlatformStats = {
 type ActivityItem = {
   subject: string;
   questions: number;
-  accuracy: number;
+  /** null when nothing in the group is marked — written answers with no key. */
+  accuracy: number | null;
   time: string;
   timeLabel: string;
 };
@@ -888,7 +889,7 @@ export default function SmartEduPlatform() {
                             </div>
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{a.subject}</p>
-                              <p className="truncate text-sm text-gray-600 dark:text-gray-400">{a.questions} question{a.questions === 1 ? '' : 's'} · {a.accuracy}% accuracy</p>
+                              <p className="truncate text-sm text-gray-600 dark:text-gray-400">{a.questions} question{a.questions === 1 ? '' : 's'}{a.accuracy === null ? ' · not marked yet' : ` · ${a.accuracy}% accuracy`}</p>
                             </div>
                           </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400">{a.timeLabel}</span>
