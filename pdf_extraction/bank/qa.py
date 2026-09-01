@@ -183,6 +183,10 @@ _MARKS_COLUMN_SLACK = 12.0
 # short crop a quarter of the height is less than one line of text, so there
 # is a floor of roughly two lines. A History essay question missed by 1.1 pt
 # without it.
+# A strip is padded a little above its content, and a line's recorded top sits
+# a fraction above its glyphs. Neither is a crop that missed the number.
+_NUMBER_ANCHOR_TOLERANCE = 2.0
+
 _CROP_NUMBER_BAND = 0.25
 _CROP_NUMBER_BAND_FLOOR = 36.0
 
@@ -268,8 +272,15 @@ def run_crop_checks(
 
     body = "\n".join(visible)
 
-    if doc_type != "ms" and not _number_visible_at_top(
-            pdf_path, rendered_span, root):
+    # The span knows where the number is; ask the crop whether it reached it.
+    # Only where it does not -- a mark scheme, or a span built before this was
+    # recorded -- does the check fall back to reading what stands above the
+    # number and judging whether it is a heading.
+    if span.number_anchor is not None:
+        number_found = _crop_reaches_number(rendered_span, span.number_anchor)
+    else:
+        number_found = _number_visible_at_top(pdf_path, rendered_span, root)
+    if doc_type != "ms" and not number_found:
         flags.append(ReviewFlag(
             question_id=question_id, paper_id=paper_id,
             issue_type=ISSUE_CROP_MISSING_NUMBER, severity=SEVERITY_MEDIUM,
@@ -321,6 +332,27 @@ def run_crop_checks(
         ))
 
     return flags
+
+
+def _crop_reaches_number(rendered_span, anchor: tuple[int, float]) -> bool:
+    """Does the rendered crop actually contain the question's own number?
+
+    The direct form of the question, available once the span carries where the
+    detector found the number. A crop legitimately begins above its number --
+    the section heading belongs to it -- so what matters is not that the number
+    is near the top, but that the crop reaches back to it at all. A crop that
+    begins *below* its number has opened part-way through the question, which
+    is the defect worth reporting: 0455_s17_qp_23 question 6 rendered starting
+    at "(a) Define 'Central Bank'" with no stem above it.
+    """
+    page, y = anchor
+    for strip in rendered_span.strips:
+        if strip.page != page:
+            continue
+        top, bottom = strip.bbox[1], strip.bbox[3]
+        if top <= y + _NUMBER_ANCHOR_TOLERANCE and bottom >= y:
+            return True
+    return False
 
 
 def _number_visible_at_top(pdf_path, rendered_span, root: int) -> bool:

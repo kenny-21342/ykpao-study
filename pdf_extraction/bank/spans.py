@@ -94,6 +94,21 @@ class RootSpan:
     visual_count: int = 0
     confidence: float = 1.0
     diagnostics: tuple[dict[str, Any], ...] = ()
+    # Where the question's own number was detected, as (page, y).
+    #
+    # A crop does not always begin at its number: a paper prints "SECTION A:
+    # CORE CONTENT / Answer any two questions from this Section." above the
+    # first question of a section, and that heading is deliberately part of the
+    # crop. So "does this crop begin at its number?" cannot be answered from
+    # the crop's own top edge, and the QA check was left guessing from the
+    # vocabulary of whatever stood above the number -- which works for a fixed
+    # rubric and cannot work for "based on the extract from Oppenheimer, by Tom
+    # Morton-Smith".
+    #
+    # The detector knew the answer all along. Carried here, the check becomes
+    # the question actually worth asking: does the crop reach the number, or
+    # does it start below it and so open part-way through the question?
+    number_anchor: tuple[int, float] | None = None
 
     @property
     def page_start(self) -> int:
@@ -117,6 +132,10 @@ class RootSpan:
             "visual_count": self.visual_count,
             "confidence": round(self.confidence, 3),
             "diagnostics": list(self.diagnostics),
+            "number_anchor": (
+                [self.number_anchor[0], round(self.number_anchor[1], 3)]
+                if self.number_anchor else None
+            ),
         }
 
 
@@ -270,6 +289,10 @@ def _detect_prose_spans(
             visual_count=entry.essential_visuals,
             confidence=_confidence_from_score(entry.root.candidate.score),
             diagnostics=tuple(entry.root.diagnostics) + tuple(entry.diagnostics),
+            number_anchor=(
+                entry.root.candidate.page,
+                entry.root.candidate.bbox[1],
+            ),
         ))
 
     return DocumentSpans(

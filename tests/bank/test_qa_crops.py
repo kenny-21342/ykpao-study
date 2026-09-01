@@ -359,3 +359,75 @@ class PaperWideMarksTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NumberAnchorTests(unittest.TestCase):
+    """The crop is judged against where the detector found the number.
+
+    Before the span carried that, the check asked whether the number sat in the
+    top quarter of the crop, and a section heading above it pushed it out --
+    so the first question of every section was reported as a crop that does not
+    begin at its number. 4,060 flags, 3,075 of them the only thing keeping
+    their question out of the published set. Reading the vocabulary above the
+    number covered a fixed rubric and could never cover "based on the extract
+    from Oppenheimer, by Tom Morton-Smith".
+    """
+
+    def _page(self, path: Path) -> None:
+        document = fitz.open()
+        page = document.new_page(width=595, height=842)
+        page.insert_text((50, 70), "SECTION B: DEPTH STUDIES", fontsize=11)
+        page.insert_text((50, 92), "Answer any one question from this Section.", fontsize=10)
+        page.insert_text((50, 130), "DEPTH STUDY A: THE FIRST WORLD WAR, 1914-18", fontsize=11)
+        page.insert_text((50, 170), "9 Military tactics mattered on the Western Front.", fontsize=11)
+        page.insert_text((500, 200), "[4]", fontsize=11)
+        document.save(path)
+        document.close()
+
+    def _issues(self, path: Path, crop, anchor):
+        span = RootSpan(
+            root_number=9,
+            regions=(PageRegion(page=1, bbox=crop),),
+            number_anchor=anchor,
+        )
+        rendered = FakeRendered(9, (FakeStrip(1, crop),))
+        return {flag.issue_type for flag in run_crop_checks(path, span, rendered, "qp", 1)}
+
+    def test_a_heading_above_the_number_is_not_a_defect(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            self._page(path)
+            issues = self._issues(path, (40.0, 55.0, 560.0, 220.0), (1, 160.0))
+            self.assertNotIn(ISSUE_CROP_MISSING_NUMBER, issues)
+
+    def test_a_crop_that_opens_below_its_number_is_reported(self) -> None:
+        """The defect the check exists for: the stem is missing.
+
+        0455_s17_qp_23 question 6 rendered starting at "(a) Define 'Central
+        Bank'" with nothing above it saying what the question was.
+        """
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            self._page(path)
+            issues = self._issues(path, (40.0, 185.0, 560.0, 260.0), (1, 160.0))
+            self.assertIn(ISSUE_CROP_MISSING_NUMBER, issues)
+
+    def test_a_crop_on_the_wrong_page_does_not_count_as_reaching_it(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            self._page(path)
+            issues = self._issues(path, (40.0, 55.0, 560.0, 220.0), (2, 160.0))
+            self.assertIn(ISSUE_CROP_MISSING_NUMBER, issues)
+
+    def test_without_an_anchor_the_older_reading_still_applies(self) -> None:
+        """Mark schemes and spans built before this carry no anchor."""
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "qp.pdf"
+            self._page(path)
+            span = RootSpan(
+                root_number=9,
+                regions=(PageRegion(page=1, bbox=(40.0, 55.0, 560.0, 220.0)),),
+            )
+            rendered = FakeRendered(9, (FakeStrip(1, (40.0, 55.0, 560.0, 220.0)),))
+            issues = {f.issue_type for f in run_crop_checks(path, span, rendered, "qp", 1)}
+            self.assertNotIn(ISSUE_CROP_MISSING_NUMBER, issues)
