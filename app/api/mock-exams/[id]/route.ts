@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
 import { optionLettersFor } from '@/lib/bank-grading';
+import { gradeForExam } from '@/lib/grade-boundaries';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,9 +63,37 @@ export async function GET(
       })
     );
 
+    // A grade only means anything once the paper is submitted, and only when
+    // real thresholds -- or an honestly-labelled estimate -- back it.
+    const grade = exam.submittedAt
+      ? await gradeForExam(async ({ board, subjectCodes }) => {
+          try {
+            return await prisma.gradeBoundary.findMany({
+              where: { board, subjectCode: { in: subjectCodes } },
+              select: {
+                grade: true, minMark: true, totalMarks: true,
+                source: true, year: true, session: true, paperNumber: true,
+              },
+              orderBy: { year: 'desc' },
+              take: 200,
+            });
+          } catch {
+            // The table is created by a hand-applied migration, so it can be
+            // absent while this code is live. An estimate is better than a
+            // result screen that fails to load.
+            return [];
+          }
+        }, {
+          subjectCode: exam.subjectCode,
+          marks: exam.score,
+          totalMarks: exam.totalMarks,
+        })
+      : null;
+
     return NextResponse.json({
       exam: {
         id: exam.id,
+        grade,
         title: exam.title,
         description: exam.description,
         subjectCode: exam.subjectCode,

@@ -1654,6 +1654,32 @@ model BankRunLedger {
 /// One row per limiter key (e.g. "signup:1.2.3.4", "token-account:a@b.c",
 /// a bare user id for the AI limiters). Rows are disposable — expired ones are
 /// cleaned up opportunistically and can be truncated at any time.
+/// Grade thresholds, so a raw mark can become the grade a student is asked about.
+///
+/// `source` is load-bearing: CAIE publishes thresholds per session
+/// (`published`), the IB does not and schools receive their own (`school`), and
+/// anything else is an `estimate` the UI has to label as one.
+model GradeBoundary {
+  id          Int      @id @default(autoincrement())
+  board       String // CAIE | IB
+  subjectCode String
+  level       String? // igcse | a-level | HL | SL
+  year        Int?
+  session     String?
+  /// Null when the row is a subject-wide fallback rather than one paper.
+  paperNumber Int?
+  grade       String // A* | A | ... | E, or 7 | 6 | ... | 1
+  minMark     Int
+  totalMarks  Int
+  source      String   @default("estimate") // published | school | estimate
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([board, subjectCode, level, year, session, paperNumber, grade], name: "grade_boundaries_identity_key")
+  @@index([board, subjectCode, year])
+  @@map("grade_boundaries")
+}
+
 model RateLimit {
   key     String   @id
   count   Int      @default(0)

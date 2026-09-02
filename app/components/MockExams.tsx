@@ -134,6 +134,17 @@ type ExamDetail = {
   /** Set only when status is 'failed'. */
   generationError?: string | null;
   score: number | null;
+  /**
+   * Resolved on the server against real grade thresholds where any are on
+   * file. Null until the paper is submitted. `source` says how much to trust
+   * it -- an estimate must never be presented as an official grade.
+   */
+  grade: {
+    grade: string;
+    source: 'published' | 'school' | 'estimate';
+    scale: 'caie' | 'ib';
+    isFallback: boolean;
+  } | null;
   startedAt: string | null;
   submittedAt: string | null;
   createdAt: string;
@@ -1541,7 +1552,21 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
     : 0;
   const attempted = exam.items.filter((i) => i.attemptedAt);
   const correctCount = exam.items.filter((i) => i.isCorrect).length;
-  const grade = scorePct >= 70 ? 'A' : scorePct >= 60 ? 'B' : scorePct >= 50 ? 'C' : scorePct >= 40 ? 'D' : 'E';
+  // The grade comes from the server, which reads real thresholds for the
+  // subject. This used to be a fixed percentage ladder applied to every board:
+  // it ignored the published thresholds, which move each session and mostly sit
+  // well below 70%, and it handed IB students a letter for a qualification
+  // graded 1-7.
+  const grade = exam.grade?.grade ?? '--';
+  const gradeNote = !exam.grade
+    ? null
+    : exam.grade.source === 'published'
+      ? 'Official grade thresholds'
+      : exam.grade.source === 'school'
+        ? 'School grade boundaries'
+        : exam.grade.isFallback
+          ? 'Estimated — no grade boundaries on file'
+          : 'Estimated grade boundaries';
   const gradeColor =
     scorePct >= 70 ? 'text-green-600' : scorePct >= 50 ? 'text-amber-600' : 'text-red-600';
 
@@ -1583,7 +1608,12 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <div className="text-5xl font-bold">{grade}</div>
-                <div className="text-xs text-green-100 mt-1 uppercase tracking-wide">Grade</div>
+                <div className="text-xs text-green-100 mt-1 uppercase tracking-wide">
+                  {exam.grade?.scale === 'ib' ? 'IB Grade' : 'Grade'}
+                </div>
+                {gradeNote && (
+                  <div className="text-[10px] text-green-100/80 mt-1 max-w-[9rem] leading-tight">{gradeNote}</div>
+                )}
               </div>
               <div className="text-center">
                 <div className="text-5xl font-bold">{scorePct}%</div>
