@@ -86,7 +86,14 @@ type MasteryTopic = {
 
 type Mistake = {
   attemptId: string;
-  questionId: number;
+  /**
+   * Which corpus the question lives in. The legacy text bank and the
+   * crop-first bank are separate tables with separate id sequences, so an id
+   * alone cannot say where to open it.
+   */
+  corpus: 'legacy' | 'bank';
+  questionId: number | null;
+  bankQuestionId: number | null;
   question: string;
   subject: string;
   subjectCode: string;
@@ -164,10 +171,18 @@ const EMPTY_AVAILABILITY = { 0: 45, 1: 45, 2: 45, 3: 45, 4: 45, 5: 60, 6: 60 };
 
 export default function StudyCoach({
   onOpenQuestion,
+  onOpenBankQuestion,
   onOpenMockExams,
   initialView = 'today',
 }: {
+  /** Opens a question in the legacy text bank, by `past_paper_questions.id`. */
   onOpenQuestion: (questionId: number) => void;
+  /**
+   * Opens a question in the crop-first bank, by `bank_questions.id`. Separate
+   * from `onOpenQuestion` because the two corpora are separate tables: passing
+   * one id to the other browser lands on an unrelated question, or on nothing.
+   */
+  onOpenBankQuestion: (bankQuestionId: number) => void;
   onOpenMockExams: () => void;
   initialView?: CoachView;
 }) {
@@ -274,7 +289,7 @@ export default function StudyCoach({
   };
 
   const addMistakeToReview = async (mistake: Mistake) => {
-    setBusy(`mistake-${mistake.questionId}`);
+    setBusy(`mistake-${mistake.attemptId}`);
     try {
       const res = await fetch('/api/learning/reviews', {
         method: 'POST',
@@ -376,7 +391,7 @@ export default function StudyCoach({
           <PlanView tasks={tasks} busy={busy} taskFormOpen={taskFormOpen} setTaskFormOpen={setTaskFormOpen} onGenerate={generatePlan} onUpdate={updateTask} onDelete={deleteTask} onCreated={load} onOpenQuestion={onOpenQuestion} onOpenMockExams={onOpenMockExams} />
         )}
         {view === 'mistakes' && overview && (
-          <MistakesView mistakes={overview.mistakes} busy={busy} onOpenQuestion={onOpenQuestion} onAddReview={addMistakeToReview} />
+          <MistakesView mistakes={overview.mistakes} busy={busy} onOpenQuestion={onOpenQuestion} onOpenBankQuestion={onOpenBankQuestion} onAddReview={addMistakeToReview} />
         )}
         {view === 'review' && (
           <ReviewView reviews={reviews} busy={busy} onRate={rateReview} onOpenQuestion={onOpenQuestion} />
@@ -485,9 +500,16 @@ function TaskForm({ onCreated }: { onCreated: () => Promise<void> }) {
   return <form onSubmit={submit} className="grid md:grid-cols-6 gap-3 p-4 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900"><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Review Paper 2 mechanics" className="md:col-span-2 input-field" /><input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="e.g. Physics" className="input-field" /><input required value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. Momentum" className="input-field" /><select value={form.taskType} onChange={(e) => setForm({ ...form, taskType: e.target.value })} className="input-field"><option value="practice">Practice</option><option value="review">Review</option><option value="notes">Notes</option><option value="mock-exam">Mock exam</option></select><input type="number" min="5" max="240" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: Number(e.target.value) })} className="input-field" aria-label="Duration in minutes" /><input required type="datetime-local" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} className="md:col-span-2 input-field" /><div className="md:col-span-4 flex items-center justify-end gap-3">{error && <span className="text-xs text-red-600 mr-auto">{error}</span>}<button disabled={saving} className="h-9 px-4 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold disabled:opacity-50">{saving ? 'Saving...' : 'Create task'}</button></div></form>;
 }
 
-function MistakesView({ mistakes, busy, onOpenQuestion, onAddReview }: { mistakes: Mistake[]; busy: string | null; onOpenQuestion: (id: number) => void; onAddReview: (mistake: Mistake) => void }) {
+function MistakesView({ mistakes, busy, onOpenQuestion, onOpenBankQuestion, onAddReview }: { mistakes: Mistake[]; busy: string | null; onOpenQuestion: (id: number) => void; onOpenBankQuestion: (id: number) => void; onAddReview: (mistake: Mistake) => void }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  return <main className="max-w-5xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-gray-900 dark:text-white">Mistake notebook</h3><p className="text-xs text-gray-500 mt-1">Your latest unsuccessful attempt for each question</p></div>{mistakes.length === 0 ? <EmptyState icon={CheckCircle2} title="No recorded mistakes" body="Incorrect practice and mock-exam answers will appear here automatically." /> : <div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{mistakes.map((mistake) => <article key={mistake.attemptId} className="py-4 px-2"><div className="flex items-start gap-3"><button onClick={() => onOpenQuestion(mistake.questionId)} className="w-10 h-10 grid place-items-center rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 flex-none"><AlertCircle className="w-5 h-5" /></button><button onClick={() => setExpanded(expanded === mistake.attemptId ? null : mistake.attemptId)} className="min-w-0 flex-1 text-left"><div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{mistake.code}</h4><span className="text-xs text-gray-500">{mistake.score ?? 0}/{mistake.maxScore ?? '-'}</span></div><p className="text-xs text-gray-500 mt-1">{mistake.subject} · {mistake.topic} · {new Date(mistake.attemptedAt).toLocaleDateString()}</p><p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mt-2">{mistake.question}</p></button><button onClick={() => mistake.reviewId ? undefined : onAddReview(mistake)} disabled={!!mistake.reviewId || busy === `mistake-${mistake.questionId}`} className="h-9 px-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-semibold disabled:opacity-60">{busy === `mistake-${mistake.questionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mistake.reviewId ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Plus className="w-3.5 h-3.5" />}{mistake.reviewId ? 'In review' : 'Add review'}</button></div>{expanded === mistake.attemptId && <div className="ml-13 mt-4 grid md:grid-cols-2 gap-4"><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Your answer</p><p className="text-sm text-gray-700 dark:text-gray-300">{mistake.answer || 'No answer submitted.'}</p>{mistake.weaknesses.length > 0 && <ul className="mt-3 space-y-1">{mistake.weaknesses.map((weakness) => <li key={weakness} className="text-xs text-red-700 dark:text-red-300">· {weakness}</li>)}</ul>}</div><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Feedback</p>{mistake.explanation ? <FormattedMessage content={mistake.explanation} /> : <p className="text-sm text-gray-500">Open the question to review the mark scheme.</p>}</div></div>}</article>)}</div>}</main>;
+  const openMistake = (mistake: Mistake) => {
+    if (mistake.corpus === 'bank') {
+      if (mistake.bankQuestionId) onOpenBankQuestion(mistake.bankQuestionId);
+    } else if (mistake.questionId) {
+      onOpenQuestion(mistake.questionId);
+    }
+  };
+  return <main className="max-w-5xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-gray-900 dark:text-white">Mistake notebook</h3><p className="text-xs text-gray-500 mt-1">Your latest unsuccessful attempt for each question</p></div>{mistakes.length === 0 ? <EmptyState icon={CheckCircle2} title="No recorded mistakes" body="Incorrect practice and mock-exam answers will appear here automatically." /> : <div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{mistakes.map((mistake) => <article key={mistake.attemptId} className="py-4 px-2"><div className="flex items-start gap-3"><button onClick={() => openMistake(mistake)} className="w-10 h-10 grid place-items-center rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 flex-none"><AlertCircle className="w-5 h-5" /></button><button onClick={() => setExpanded(expanded === mistake.attemptId ? null : mistake.attemptId)} className="min-w-0 flex-1 text-left"><div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{mistake.code}</h4><span className="text-xs text-gray-500">{mistake.score ?? 0}/{mistake.maxScore ?? '-'}</span></div><p className="text-xs text-gray-500 mt-1">{mistake.subject} · {mistake.topic} · {new Date(mistake.attemptedAt).toLocaleDateString()}</p><p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mt-2">{mistake.question}</p></button><button onClick={() => mistake.reviewId ? undefined : onAddReview(mistake)} disabled={!!mistake.reviewId || busy === `mistake-${mistake.attemptId}` || (mistake.corpus === 'bank' && !mistake.reviewId)} title={mistake.corpus === 'bank' && !mistake.reviewId ? 'This question has no mark scheme to put on the back of a card' : undefined} className="h-9 px-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-semibold disabled:opacity-60">{busy === `mistake-${mistake.attemptId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mistake.reviewId ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Plus className="w-3.5 h-3.5" />}{mistake.reviewId ? 'In review' : 'Add review'}</button></div>{expanded === mistake.attemptId && <div className="ml-13 mt-4 grid md:grid-cols-2 gap-4"><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Your answer</p><p className="text-sm text-gray-700 dark:text-gray-300">{mistake.answer || 'No answer submitted.'}</p>{mistake.weaknesses.length > 0 && <ul className="mt-3 space-y-1">{mistake.weaknesses.map((weakness) => <li key={weakness} className="text-xs text-red-700 dark:text-red-300">· {weakness}</li>)}</ul>}</div><div><p className="text-xs font-bold text-gray-500 uppercase mb-2">Feedback</p>{mistake.explanation ? <FormattedMessage content={mistake.explanation} /> : <p className="text-sm text-gray-500">Open the question to review the mark scheme.</p>}</div></div>}</article>)}</div>}</main>;
 }
 
 /**

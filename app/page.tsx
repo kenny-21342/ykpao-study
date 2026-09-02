@@ -31,7 +31,11 @@ type RoutedTab = {
   tab: MainTab;
   studyView?: StudyCoachView;
   practiceMode?: PracticeMode;
+  /** An id in the legacy text bank; opens QuestionsDatabase. */
   questionId?: number | null;
+  /** An id in the crop-first bank; opens BankPractice. Never interchangeable
+   * with `questionId` -- the two are separate tables. */
+  bankQuestionId?: number | null;
 };
 
 type DashboardStats = {
@@ -191,6 +195,10 @@ export default function SmartEduPlatform() {
     } else if (route.tab === 'practice') {
       setPracticeStartMode(route.practiceMode ?? (route.questionId ? 'practice' : 'browse'));
       setPendingQuestionId(route.questionId ?? null);
+      // Only one of the two can be pending: the practice tab renders
+      // QuestionsDatabase when a legacy id is set and BankPractice otherwise,
+      // so leaving a stale legacy id here would swallow the bank route.
+      if (route.bankQuestionId) setPendingBankQuestionId(route.bankQuestionId);
     } else {
       setPendingQuestionId(null);
     }
@@ -940,6 +948,9 @@ export default function SmartEduPlatform() {
             initialView={studyStartView}
             onOpenQuestion={(questionId) => {
               openRoute({ tab: 'practice', questionId, practiceMode: 'practice' });
+            }}
+            onOpenBankQuestion={(bankQuestionId) => {
+              openRoute({ tab: 'practice', bankQuestionId, practiceMode: 'practice' });
             }}
             onOpenMockExams={() => openRoute({ tab: 'mock-exams' })}
           />

@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { PLACEHOLDER_ANSWER, endOfDay, plainText, startOfDay } from '@/lib/learning';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
+import { analyticsSubjectName, bankTopicName } from '@/lib/bank-analytics';
+import { toBankSubjectCodes } from '@/lib/bank-questions';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
   const codeFilter = courseScope.effectiveScope === 'enrolled' ? { in: courseScope.subjectCodes } : undefined;
 
   const now = new Date();
-  const [profile, tasks, attempts, reviews, latestExam, catalog] = await Promise.all([
+  const [profile, tasks, attempts, bankMistakeAttempts, reviews, latestExam, catalog] = await Promise.all([
     prisma.learningProfile.findUnique({ where: { userId: user.id } }),
     prisma.studyTask.findMany({
       where: { userId: user.id, dueAt: { lte: endOfDay(now) }, status: 'pending', ...(subjectFilter ? { subject: subjectFilter } : {}) },
@@ -74,6 +76,44 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
+    // Mistakes made in the crop-first bank. Without this the notebook shows
+    // only legacy-corpus attempts, which is not where students practise.
+    prisma.bankQuestionAttempt.findMany({
+      where: {
+        userId: user.id,
+        isCorrect: false,
+        ...(codeFilter
+          ? { question: { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } } }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        answer: true,
+        score: true,
+        createdAt: true,
+        question: {
+          select: {
+            id: true,
+            bodyMd: true,
+            rootNumber: true,
+            totalMarks: true,
+            paper: {
+              select: {
+                year: true,
+                session: true,
+                paperNumber: true,
+                variant: true,
+                subject: { select: { name: true, code: true, level: true, board: true } },
+              },
+            },
+            topics: { select: { topic: { select: { name: true } } }, take: 1 },
+            tags: { select: { tag: { select: { label: true } } }, take: 1 },
+          },
+        },
+      },
+    }),
     prisma.reviewItem.findMany({
       where: {
         userId: user.id,
@@ -109,17 +149,24 @@ export async function GET(req: NextRequest) {
   ]);
 
   const reviewByQuestion = new Map(reviews.filter((item) => item.questionId).map((item) => [item.questionId, item]));
+  const reviewByBankQuestion = new Map(
+    reviews.filter((item) => item.bankQuestionId).map((item) => [item.bankQuestionId, item]),
+  );
   const seenMistakes = new Set<number>();
-  const mistakes = attempts
+  const legacyMistakes = attempts
     .filter((attempt) => {
       if (attempt.isCorrect !== false || seenMistakes.has(attempt.questionId)) return false;
       seenMistakes.add(attempt.questionId);
       return true;
     })
-    .slice(0, 40)
     .map((attempt) => ({
       attemptId: attempt.id,
+      // The two corpora are separate tables with separate id sequences, so a
+      // mistake has to say which one it came from: opening a bank id in the
+      // legacy browser lands on an unrelated question, or on nothing.
+      corpus: 'legacy' as const,
       questionId: attempt.questionId,
+      bankQuestionId: null as number | null,
       question: plainText(attempt.question.content, 260),
       subject: attempt.question.paper.subject.name,
       subjectCode: attempt.question.paper.subject.code,
@@ -134,6 +181,44 @@ export async function GET(req: NextRequest) {
       attemptedAt: attempt.attemptedAt,
       reviewId: reviewByQuestion.get(attempt.questionId)?.id ?? null,
     }));
+
+  const seenBankMistakes = new Set<number>();
+  const bankMistakes = bankMistakeAttempts
+    .filter((attempt) => {
+      if (!attempt.question || seenBankMistakes.has(attempt.question.id)) return false;
+      seenBankMistakes.add(attempt.question.id);
+      return true;
+    })
+    .map((attempt) => {
+      const question = attempt.question;
+      const paper = question.paper;
+      return {
+        attemptId: attempt.id,
+        corpus: 'bank' as const,
+        questionId: null as number | null,
+        bankQuestionId: question.id,
+        question: plainText(question.bodyMd, 260),
+        subject: analyticsSubjectName(paper.subject),
+        subjectCode: paper.subject.code,
+        topic: bankTopicName(question),
+        code: `${paper.subject.code} ${paper.session}${String(paper.year).slice(-2)} P${paper.paperNumber}${paper.variant || ''} Q${question.rootNumber}`,
+        score: attempt.score,
+        maxScore: question.totalMarks,
+        answer: plainText(attempt.answer, 300),
+        // The bank marks against a stored key or by self-marking; neither
+        // produces the model's prose, so these are honestly empty rather than
+        // filled with something invented.
+        explanation: null as string | null,
+        modelAnswer: null as string | null,
+        weaknesses: [] as string[],
+        attemptedAt: attempt.createdAt,
+        reviewId: reviewByBankQuestion.get(question.id)?.id ?? null,
+      };
+    });
+
+  const mistakes = [...legacyMistakes, ...bankMistakes]
+    .sort((a, b) => b.attemptedAt.getTime() - a.attemptedAt.getTime())
+    .slice(0, 40);
 
   const progress = new Map<string, {
     attemptedIds: Set<number>;
