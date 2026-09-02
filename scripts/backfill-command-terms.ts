@@ -5,6 +5,14 @@
  *   npx tsx scripts/backfill-command-terms.ts               # dry run, report only
  *   npx tsx scripts/backfill-command-terms.ts --subject 9709
  *   npx tsx scripts/backfill-command-terms.ts --apply
+ *   npx tsx scripts/backfill-command-terms.ts --from skills.jsonl --apply
+ *
+ * Two sources, because the bank turned out to have no text in it. `--from` reads
+ * the JSONL that `scripts/backfill_skills_from_pdf.py` produces from the source
+ * PDFs, which is the only source that works today: all 66,756 published
+ * questions have an empty `bodyMd`, so the default path below reads nothing and
+ * reports every subject as 100% untagged. It stays because it is the right path
+ * once the paid transcription pass has run for a subject.
  *
  * `pdf_extraction/bank/tag.py` has computed these since stage 4 was written and
  * thrown them away every time: `store.py::update_question_tagging` wrote
@@ -26,6 +34,7 @@
  * deleted here -- the pipeline's `_link_skills` owns replacement.
  */
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
 import { prisma } from '../lib/prisma';
 import { COMMAND_TERMS, extractCommandTerms } from '../lib/command-terms';
 
@@ -60,17 +69,54 @@ async function requireBankTables() {
   process.exit(1);
 }
 
-type Args = { apply: boolean; subject: string | null; limit: number | null };
+type Args = {
+  apply: boolean;
+  subject: string | null;
+  limit: number | null;
+  from: string | null;
+};
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { apply: false, subject: null, limit: null };
+  const args: Args = { apply: false, subject: null, limit: null, from: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--apply') args.apply = true;
     else if (arg === '--subject') args.subject = argv[++i] ?? null;
     else if (arg === '--limit') args.limit = Number(argv[++i]) || null;
+    else if (arg === '--from') args.from = argv[++i] ?? null;
   }
   return args;
+}
+
+/**
+ * Load the PDF-derived terms, keyed the way both databases can agree on.
+ *
+ * The local store and Neon number their questions independently, so an id from
+ * one means a different question in the other. The paper's source path and the
+ * printed root number are the same on both sides.
+ */
+type ExportedQuestion = { terms: string[]; confidence: number };
+
+function loadExport(path: string): Map<string, ExportedQuestion> {
+  const byQuestion = new Map<string, ExportedQuestion>();
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    const row = JSON.parse(line) as {
+      source_path: string;
+      root_number: number;
+      terms: string[];
+      confidence?: number;
+    };
+    if (row.terms.length) {
+      byQuestion.set(`${row.source_path}#${row.root_number}`, {
+        terms: row.terms,
+        // Older exports carry no confidence; treat them as the weaker reading
+        // rather than claiming the slice was certain.
+        confidence: row.confidence ?? 0.5,
+      });
+    }
+  }
+  return byQuestion;
 }
 
 /** Every term row, created once up front so the hot loop is pure lookup. */
@@ -86,6 +132,15 @@ async function ensureSkillRows(): Promise<Map<string, number>> {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   await requireBankTables();
+
+  const fromExport = args.from ? loadExport(args.from) : null;
+  if (fromExport) {
+    console.log(`${fromExport.size} tagged question(s) in ${args.from}`);
+    if (fromExport.size === 0) {
+      console.error('That export has no tagged questions in it. Nothing to do.');
+      process.exit(1);
+    }
+  }
 
   const where = {
     status: 'published',
@@ -108,12 +163,14 @@ async function main() {
 
   let processed = 0;
   let links = 0;
+  let wouldWrite = 0;
   let cursor: number | null = null;
 
   type Row = {
     id: number;
     bodyMd: string;
-    paper: { subject: { code: string; name: string } };
+    rootNumber: number;
+    paper: { sourcePath: string; subject: { code: string; name: string } };
   };
 
   for (;;) {
@@ -125,7 +182,10 @@ async function main() {
       select: {
         id: true,
         bodyMd: true,
-        paper: { select: { subject: { select: { code: true, name: true } } } },
+        rootNumber: true,
+        paper: {
+          select: { sourcePath: true, subject: { select: { code: true, name: true } } },
+        },
       },
       orderBy: { id: 'asc' },
       take,
@@ -137,7 +197,15 @@ async function main() {
 
     for (const question of questions) {
       const code = question.paper.subject.code;
-      const terms = extractCommandTerms(question.bodyMd || '');
+      const exported = fromExport
+        ? fromExport.get(`${question.paper.sourcePath}#${question.rootNumber}`)
+        : null;
+      const terms = fromExport
+        ? exported?.terms ?? []
+        : extractCommandTerms(question.bodyMd || '');
+      // 1 where the term is literally present in text certainly belonging to
+      // this question; lower where the page span had to stand in for it.
+      const confidence = exported?.confidence ?? 1;
 
       seen.set(code, (seen.get(code) ?? 0) + 1);
       if (!terms.length) {
@@ -153,9 +221,14 @@ async function main() {
       for (const slug of terms) {
         bySlug.set(slug, (bySlug.get(slug) ?? 0) + 1);
         const skillId = skillIds.get(slug);
-        // Confidence 1: the term is literally present in the text. This is not
-        // a model's guess, and the column should say so.
-        if (skillId) pending.push({ questionId: question.id, skillId, confidence: 1 });
+        // In a dry run no skill rows have been created, so there is no id to
+        // pair with. Count the link anyway -- reporting 0 for every dry run
+        // makes the report useless for deciding whether to apply.
+        if (skillId) {
+          pending.push({ questionId: question.id, skillId, confidence });
+        } else if (!args.apply) {
+          wouldWrite += 1;
+        }
       }
     }
 
@@ -201,7 +274,7 @@ async function main() {
   console.log(
     args.apply
       ? `✓ wrote ${links} question-skill link(s)`
-      : `would write ${links} question-skill link(s) -- rerun with --apply`,
+      : `would write ${links + wouldWrite} question-skill link(s) -- rerun with --apply`,
   );
 }
 
