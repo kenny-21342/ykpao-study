@@ -346,6 +346,7 @@ def upsert_question(
     )
     if tagging is not None:
         _link_tags(connection, question_id, tagging)
+        _link_skills(connection, question_id, tagging)
         _link_topics(connection, paper_id, question_id, tagging)
     return question_id
 
@@ -441,6 +442,7 @@ def update_question_tagging(
         ),
     )
     _link_tags(connection, question_id, tagging)
+    _link_skills(connection, question_id, tagging)
     _link_topics(connection, paper_id, question_id, tagging)
     return question_id
 
@@ -513,6 +515,44 @@ def _link_tags(connection: sqlite3.Connection, question_id: int, tagging) -> Non
             "INSERT OR REPLACE INTO bank_question_tags "
             "(question_id, tag_id, confidence) VALUES (?, ?, ?)",
             (question_id, tag_id, getattr(tagging, "confidence", 0.0)),
+        )
+
+
+def _link_skills(connection: sqlite3.Connection, question_id: int, tagging) -> None:
+    """Attach the command words this question uses.
+
+    Stage 4 has produced `skills` since it was written -- `tag.py` derives them
+    deterministically from the question text with `extract_command_words`, then
+    lets the model add any it recognises -- and `update_question_tagging` wrote
+    difficulty, tags and topics but never these. There was no table to write
+    them to.
+
+    Separate from `_link_tags` because the vocabularies do different jobs: tags
+    are what a student types into search, skills are a closed list a mark
+    scheme rewards against.
+    """
+    connection.execute(
+        "DELETE FROM bank_question_skills WHERE question_id = ?", (question_id,)
+    )
+    for slug in getattr(tagging, "skills", []) or []:
+        slug = str(slug).strip().lower()
+        if not slug:
+            continue
+        row = connection.execute(
+            "SELECT id FROM bank_skills WHERE slug = ?", (slug,)
+        ).fetchone()
+        if row:
+            skill_id = int(row["id"])
+        else:
+            cursor = connection.execute(
+                "INSERT INTO bank_skills (slug, label) VALUES (?, ?)",
+                (slug, slug.replace("-", " ")),
+            )
+            skill_id = int(cursor.lastrowid)
+        connection.execute(
+            "INSERT OR REPLACE INTO bank_question_skills "
+            "(question_id, skill_id, confidence) VALUES (?, ?, ?)",
+            (question_id, skill_id, getattr(tagging, "confidence", 0.0)),
         )
 
 
@@ -724,6 +764,7 @@ def store_counts(connection: sqlite3.Connection) -> dict[str, int]:
     tables = [
         "bank_subjects", "bank_papers", "bank_questions", "bank_mark_schemes",
         "bank_assets", "bank_question_assets", "bank_tags", "bank_question_tags",
+        "bank_skills", "bank_question_skills",
         "bank_review_flags", "bank_run_ledger",
     ]
     counts: dict[str, int] = {}

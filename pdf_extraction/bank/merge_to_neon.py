@@ -110,6 +110,7 @@ def main():
         "bank_assets", "bank_question_assets", "bank_mark_scheme_assets",
         "bank_question_strips", "bank_mark_scheme_strips",
         "bank_topics", "bank_question_topics", "bank_tags", "bank_question_tags",
+        "bank_skills", "bank_question_skills",
         "bank_review_flags", "bank_run_ledger"
     ]:
         try:
@@ -698,6 +699,50 @@ def main():
     dst.commit()
     print(f"  ✓ {len(rows)} tags")
 
+    # ---- Merge skills ----
+    # Command words. Same shape as tags, deliberately a separate table: search
+    # tags are open vocabulary, skills are the closed list a mark scheme rewards
+    # against.
+    ensure_connection()
+    print("Merging bank_skills...")
+    try:
+        rows = src.execute('SELECT id, slug, label FROM bank_skills').fetchall()
+    except sqlite3.OperationalError:
+        # A store written before the skills tables existed.
+        rows = []
+
+    skill_id_map: dict[int, int] = {}
+
+    with dst.cursor() as cur:
+        cur.execute('SELECT id, slug FROM bank_skills')
+        existing_skills = {row[1]: row[0] for row in cur.fetchall()}
+
+    with dst.cursor() as cur:
+        for row in rows:
+            old_id = row["id"]
+            slug = row["slug"]
+            if slug in existing_skills:
+                skill_id_map[old_id] = existing_skills[slug]
+                continue
+
+            try:
+                cur.execute("""
+                    INSERT INTO bank_skills (slug, label)
+                    VALUES (%s, %s)
+                    ON CONFLICT (slug) DO NOTHING
+                    RETURNING id
+                """, (slug, row["label"]))
+                result = cur.fetchone()
+                if result:
+                    skill_id_map[old_id] = result[0]
+                    existing_skills[slug] = result[0]
+            except Exception as e:
+                print(f"\n  ⚠ skill {row['slug']}: {e}")
+                safe_rollback()
+                continue
+    dst.commit()
+    print(f"  ✓ {len(rows)} skills")
+
     # ---- Merge question topics junction ----
     ensure_connection()
     print("Merging bank_question_topics...")
@@ -737,6 +782,31 @@ def main():
             """, (new_qid, new_tid, row["confidence"]))
     dst.commit()
     print(f"  ✓ {len(rows)} question-tag links")
+
+    # ---- Merge question skills junction ----
+    ensure_connection()
+    print("Merging bank_question_skills...")
+    try:
+        rows = src.execute(
+            'SELECT question_id, skill_id, confidence FROM bank_question_skills'
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+
+    with dst.cursor() as cur:
+        for row in rows:
+            new_qid = question_id_map.get(row["question_id"])
+            new_sid = skill_id_map.get(row["skill_id"])
+            if not new_qid or not new_sid:
+                continue
+
+            cur.execute("""
+                INSERT INTO bank_question_skills ("questionId", "skillId", confidence)
+                VALUES (%s, %s, %s)
+                ON CONFLICT DO NOTHING
+            """, (new_qid, new_sid, row["confidence"]))
+    dst.commit()
+    print(f"  ✓ {len(rows)} question-skill links")
 
     # ---- Merge question assets ----
     ensure_connection()
@@ -899,7 +969,7 @@ def main():
     print(f"\n{'=' * 50}")
     print(f"✓ Merge complete!")
     print(f"  {len(paper_id_map)} papers, {len(question_id_map)} questions, {len(ms_id_map)} mark schemes")
-    print(f"  {len(asset_id_map)} assets, {len(topic_id_map)} topics, {len(tag_id_map)} tags")
+    print(f"  {len(asset_id_map)} assets, {len(topic_id_map)} topics, {len(tag_id_map)} tags, {len(skill_id_map)} skills")
     print(f"  Source: {source_path}")
     print(f"  Destination: Neon Postgres (bank_* tables)")
     print(f"{'=' * 50}")

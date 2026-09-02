@@ -1365,15 +1365,16 @@ model BankQuestion {
   promptVersion       String?
   createdAt           DateTime @default(now())
 
-  paper         BankPaper              @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  screenshot    BankAsset?             @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
-  strips        BankQuestionStrip[]
-  assets        BankQuestionAsset[]
-  topics        BankQuestionTopic[]
-  tags          BankQuestionTag[]
-  reviewFlags   BankReviewFlag[]
-  markScheme    BankMarkScheme?
-  bookmarks     BankQuestionBookmark[]
+  paper                  BankPaper               @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  screenshot             BankAsset?              @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
+  strips                 BankQuestionStrip[]
+  assets                 BankQuestionAsset[]
+  topics                 BankQuestionTopic[]
+  tags                   BankQuestionTag[]
+  skills                 BankQuestionSkill[]
+  reviewFlags            BankReviewFlag[]
+  markScheme             BankMarkScheme?
+  bookmarks              BankQuestionBookmark[]
   attempts               BankQuestionAttempt[]
   mockExamItems          MockExamItem[]
   dailyChallengeAttempts DailyChallengeAttempt[]
@@ -1605,6 +1606,35 @@ model BankQuestionTag {
   @@id([questionId, tagId])
   @@index([tagId])
   @@map("bank_question_tags")
+}
+
+// Command words -- "calculate", "evaluate", "to what extent".
+//
+// Separate from BankTag because the vocabularies do different work: a tag is
+// what a student types into search, a skill is a closed list the mark scheme
+// rewards against. Mixing them would pollute search and blur the drilling.
+model BankSkill {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique
+  label String
+
+  questions BankQuestionSkill[]
+
+  @@map("bank_skills")
+}
+
+model BankQuestionSkill {
+  questionId Int
+  skillId    Int
+  confidence Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  skill    BankSkill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, skillId])
+  @@index([skillId])
+  @@map("bank_question_skills")
 }
 
 // QA advisory queue — never blocks writes, only routes to review

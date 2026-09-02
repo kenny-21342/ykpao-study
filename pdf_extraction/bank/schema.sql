@@ -195,6 +195,31 @@ CREATE TABLE IF NOT EXISTS bank_question_tags (
 
 CREATE INDEX IF NOT EXISTS idx_bank_question_tags_tag ON bank_question_tags(tag_id);
 
+-- Command words -- "calculate", "evaluate", "to what extent". Kept apart from
+-- bank_tags on purpose: tags are what a student would type into search, and
+-- mixing a controlled vocabulary into that list would make both worse. Every
+-- IB and CAIE mark scheme rewards a command word for a specific thing, and
+-- answering "evaluate" as if it said "describe" is the most common avoidable
+-- way to lose marks.
+--
+-- `tag.py` has computed these since stage 4 was written, and nothing ever
+-- stored them. `extract_command_words` is a pure text function, so this table
+-- can be filled for the whole corpus without a single model call.
+CREATE TABLE IF NOT EXISTS bank_skills (
+    id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug  TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bank_question_skills (
+    question_id INTEGER NOT NULL REFERENCES bank_questions(id) ON DELETE CASCADE,
+    skill_id    INTEGER NOT NULL REFERENCES bank_skills(id),
+    confidence  REAL    NOT NULL DEFAULT 0,
+    PRIMARY KEY (question_id, skill_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_question_skills_skill ON bank_question_skills(skill_id);
+
 -- Advisory QA. A flag never blocks a write; it routes the row to review.
 CREATE TABLE IF NOT EXISTS bank_review_flags (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
