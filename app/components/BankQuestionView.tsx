@@ -160,9 +160,13 @@ function AnswerPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
+    attemptId: string | null;
     isCorrect: boolean | null;
     correctLetter: string | null;
+    awardedMarks: number | null;
+    outOfMarks: number | null;
   } | null>(null);
+  const [marking, setMarking] = useState(false);
 
   const submit = async (value: string) => {
     if (!value.trim() || saving) return;
@@ -177,8 +181,11 @@ function AnswerPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not save your answer');
       setResult({
+        attemptId: data.attempt?.id ?? null,
         isCorrect: data.attempt?.isCorrect ?? null,
         correctLetter: data.correctLetter ?? null,
+        awardedMarks: data.attempt?.awardedMarks ?? null,
+        outOfMarks: data.attempt?.outOfMarks ?? null,
       });
       onAnswered();
     } catch (submitError) {
@@ -188,14 +195,54 @@ function AnswerPanel({
     }
   };
 
+  /**
+   * Send the mark the student gave themselves.
+   *
+   * A PATCH onto the attempt they already saved, not a new one: the answer is
+   * written before the mark scheme is revealed and the mark comes after reading
+   * it, and recording that as a second attempt would double every
+   * free-response question in their history.
+   */
+  const selfMark = async (payload: { awardedMarks?: number; selfMarkedCorrect?: boolean }) => {
+    if (!result?.attemptId || marking) return;
+    setMarking(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/bank/attempts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: result.attemptId, ...payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Could not save your mark');
+      setResult({
+        ...result,
+        isCorrect: data.attempt?.isCorrect ?? null,
+        awardedMarks: data.attempt?.awardedMarks ?? null,
+        outOfMarks: data.attempt?.outOfMarks ?? null,
+      });
+    } catch (markError) {
+      setError((markError as Error).message);
+    } finally {
+      setMarking(false);
+    }
+  };
+
   if (result) {
-    const { isCorrect, correctLetter } = result;
+    const { isCorrect, correctLetter, awardedMarks, outOfMarks } = result;
+    const total = question.totalMarks;
+    // Only where the corpus captured a mark total. 54,304 published questions
+    // have none, and inventing one to render a stepper would be worse than the
+    // true/false it replaces.
+    const canAwardMarks = isCorrect === null && total !== null && total > 1;
     return (
       <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
         {isCorrect === true && (
           <p className="text-sm font-medium text-green-700 dark:text-green-400">Correct.</p>
         )}
-        {isCorrect === false && (
+        {/* Suppressed once marks are on the screen: "Not quite" is the wrong
+          * word for 5 out of 6, and the marks say it better. */}
+        {isCorrect === false && awardedMarks === null && (
           <p className="text-sm font-medium text-red-700 dark:text-red-400">
             Not quite.
             {correctLetter && (
@@ -206,9 +253,60 @@ function AnswerPanel({
             )}
           </p>
         )}
-        {isCorrect === null && (
-          <p className="text-sm text-gray-700 dark:text-gray-200">
-            Answer saved. Check it against the mark scheme below.
+        {isCorrect === null && !canAwardMarks && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Answer saved. Check it against the mark scheme below, then mark it.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={marking}
+                onClick={() => selfMark({ selfMarkedCorrect: true })}
+                className="rounded-md border border-green-600 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50 dark:text-green-400 dark:hover:bg-green-900/30"
+              >
+                I got it right
+              </button>
+              <button
+                type="button"
+                disabled={marking}
+                onClick={() => selfMark({ selfMarkedCorrect: false })}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                I got it wrong
+              </button>
+            </div>
+          </div>
+        )}
+        {canAwardMarks && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Answer saved. Read the mark scheme below, then award yourself the marks
+              you would have earned.
+            </p>
+            {/* Every mark, not right/wrong. On a question worth 12 a verdict
+              * throws away almost everything marking it taught you. */}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Marks awarded">
+              {Array.from({ length: total + 1 }, (_, mark) => (
+                <button
+                  key={mark}
+                  type="button"
+                  disabled={marking}
+                  onClick={() => selfMark({ awardedMarks: mark })}
+                  className="h-9 min-w-9 rounded-md border border-gray-300 px-2 text-sm font-semibold tabular-nums text-gray-700 hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+                >
+                  {mark}
+                </button>
+              ))}
+              <span className="self-center pl-1 text-xs text-gray-500 dark:text-gray-400">
+                out of {total}
+              </span>
+            </div>
+          </div>
+        )}
+        {awardedMarks !== null && outOfMarks !== null && (
+          <p className="text-sm font-medium text-gray-900 dark:text-white">
+            You awarded yourself {awardedMarks} of {outOfMarks} marks.
           </p>
         )}
         <button

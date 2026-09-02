@@ -151,6 +151,8 @@ type Overview = {
   /** Weakest first; empty until the command-term backfill has run. */
   commandTerms: CommandTermStat[];
   weakestCommandTerm: CommandTermStat | null;
+  /** Null unless enough attempts were marked twice; see lib/self-marking. */
+  calibrationNote: string | null;
   adaptiveQueue: QueueItem[];
   subjects: string[];
   latestExam: { id: string; title: string; score: number | null; totalMarks: number; submittedAt: string | null } | null;
@@ -502,6 +504,13 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
           </div>
         </div>
       </section>
+
+      {overview.calibrationNote && (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-900/20">
+          <h3 className="font-bold text-gray-900 dark:text-white">How you mark yourself</h3>
+          <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">{overview.calibrationNote}</p>
+        </section>
+      )}
 
       <CommandTermPanel stats={overview.commandTerms} />
     </main>

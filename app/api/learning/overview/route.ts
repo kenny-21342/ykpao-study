@@ -8,6 +8,7 @@ import { LearnerContextError } from '@/lib/learner-context';
 import { analyticsSubjectName, bankTopicName } from '@/lib/bank-analytics';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { summariseCommandTerms, weakestCommandTerm } from '@/lib/command-term-stats';
+import { calibrate, describeCalibration } from '@/lib/self-marking';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +141,8 @@ export async function GET(req: NextRequest) {
       select: {
         isCorrect: true,
         score: true,
+        selfAwardedScore: true,
+        authoritativeScore: true,
         question: {
           select: {
             totalMarks: true,
@@ -364,6 +367,25 @@ export async function GET(req: NextRequest) {
     })),
   );
 
+  // Marking bias, from attempts that were marked twice. Silent until a second
+  // marking path writes `authoritativeScore` onto a self-marked attempt, which
+  // is the honest state: with one mark per attempt there is nothing to compare
+  // against, and a bias invented from one is worse than no figure.
+  const calibration = calibrate(
+    commandTermAttempts
+      .filter(
+        (attempt) =>
+          attempt.selfAwardedScore !== null &&
+          attempt.authoritativeScore !== null &&
+          !!attempt.question.totalMarks,
+      )
+      .map((attempt) => ({
+        selfAwarded: attempt.selfAwardedScore! * attempt.question.totalMarks!,
+        authoritative: attempt.authoritativeScore! * attempt.question.totalMarks!,
+        totalMarks: attempt.question.totalMarks!,
+      })),
+  );
+
   const todayTasks = tasks.filter((task) => task.dueAt >= startOfDay(now));
   const overdueTasks = tasks.filter((task) => task.dueAt < startOfDay(now));
   const subjects = [...new Set(mastery.map((topic) => topic.subject))];
@@ -378,6 +400,8 @@ export async function GET(req: NextRequest) {
     mastery,
     commandTerms: commandTermStats,
     weakestCommandTerm: weakestCommandTerm(commandTermStats),
+    calibration,
+    calibrationNote: describeCalibration(calibration),
     adaptiveQueue,
     subjects,
     latestExam,

@@ -1422,21 +1422,31 @@ model BankQuestionBookmark {
 // Unlike the bookmark table there is no unique constraint: re-attempting a
 // question is the point, and the history is what the accuracy tile reads.
 model BankQuestionAttempt {
-  id         String   @id @default(cuid())
-  userId     String
-  questionId Int
-  answer     String
+  id                 String   @id @default(cuid())
+  userId             String
+  questionId         Int
+  answer             String
   // Null when nothing could mark it -- a free-response question whose mark
   // scheme has no answer key, left for the student to self-mark. Distinct from
   // false, which means marked and wrong.
-  isCorrect  Boolean?
-  score      Float?
+  isCorrect          Boolean?
+  score              Float?
+  // Both readings of the same attempt, kept apart from `score` so marking bias
+  // stays measurable: `score` is a fraction and no longer says who marked it.
+  // Null unless the attempt was actually marked that way.
+  selfAwardedScore   Float?
+  authoritativeScore Float?
+  // The marks the student awarded, in the unit they thought in. `outOfMarks`
+  // is stored alongside because the question's total can change under a
+  // re-extraction and a stored ratio must not silently move with it.
+  awardedMarks       Int?
+  outOfMarks         Int?
   // key  -- compared against BankMarkScheme.answerLetter, no model involved
   // self -- the student marked their own work against the mark scheme
   // ai   -- graded by the model, for free-response questions with a transcript
-  gradedBy   String
-  timeSpent  Int?
-  createdAt  DateTime @default(now())
+  gradedBy           String
+  timeSpent          Int?
+  createdAt          DateTime @default(now())
 
   user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
