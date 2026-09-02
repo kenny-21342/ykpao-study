@@ -7,6 +7,12 @@ import { loadTodoContext } from '@/lib/study-actions';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { analyticsSubjectName, bankSubjectCodesForNames, bankTopicName } from '@/lib/bank-analytics';
 import { LearnerContextError } from '@/lib/learner-context';
+import {
+  intensityAt,
+  planWindow,
+  reviewReservation,
+  topicsToCover,
+} from '@/lib/revision-timetable';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,7 +140,7 @@ export async function DELETE(req: NextRequest) {
 
 async function generatePlan(userId: string) {
   const courseScope = await resolveCourseScope({ userId });
-  const [profile, attempts, courses, bankAttempts] = await Promise.all([
+  const [profile, attempts, courses, bankAttempts, dueReviews] = await Promise.all([
     prisma.learningProfile.upsert({
       where: { userId },
       create: { userId, availability: { 0: 45, 1: 45, 2: 45, 3: 45, 4: 45, 5: 60, 6: 60 } },
@@ -178,6 +184,13 @@ async function generatePlan(userId: string) {
           },
         },
       },
+    }),
+    // Cards already due. The plan reserves time for these before it schedules
+    // any practice: they are work the student owes today either way, and
+    // planning on top of them means either the cards are skipped or the day
+    // overruns.
+    prisma.reviewItem.count({
+      where: { userId, status: 'active', nextReviewAt: { lte: endOfDay() } },
     }),
   ]);
   const todoContext = await loadTodoContext(userId);
@@ -249,7 +262,16 @@ async function generatePlan(userId: string) {
     combinedPriorities.push({ subject: 'General', topic: 'Core skills', mastery: 0, attempts: 0 });
   }
 
-  const focus = combinedPriorities.slice(0, 6);
+  // Plan back from the exam rather than forward from today. `examDate` has been
+  // collected since onboarding shipped and read by nothing: the plan was the
+  // same flat rolling week whether the exam was in three weeks or ten months.
+  // With no date, `planWindow` returns exactly that week, unchanged.
+  const window = planWindow({ examDate: profile.examDate ?? null });
+
+  // Every weak topic should be seen at least once before the exam, so a longer
+  // window widens the focus rather than drilling the same six harder. Capped at
+  // twelve: past that the plan stops being a priority list.
+  const focus = topicsToCover(combinedPriorities, Math.max(6, Math.min(12, window.days)));
   // Candidates come from the crop-first bank: it is what the practice tab
   // opens, and its questions render as the page they were printed on. Tasks
   // used to point at `past_paper_questions` only because `study_tasks` had no
@@ -310,17 +332,28 @@ async function generatePlan(userId: string) {
   }> = [];
   let allocated = 0;
   let priorityIndex = 0;
+  // Three tasks a day, so a four-week plan is not capped at one week's worth.
+  const taskCap = Math.min(84, window.days * 3);
 
-  for (let offset = 0; offset < 7 && allocated < targetMinutes; offset += 1) {
+  // A longer window needs proportionally more minutes, or a three-week plan
+  // would spread one week's work thinly across it and schedule nothing after
+  // day seven.
+  const budget = Math.round(targetMinutes * (window.days / 7));
+
+  for (let offset = 0; offset < window.days && allocated < budget; offset += 1) {
     const day = addDays(planStart, offset);
     const configured = Number(availability[String(day.getDay())]) || 0;
-    let capacity = configuredTotal > 0 ? configured : fallbackDaily;
+    const base = configuredTotal > 0 ? configured : fallbackDaily;
+    // Ramp towards the exam. Flat at 1 when there is no date, so a student
+    // without one sees exactly the plan they saw before.
+    let capacity = Math.round(base * intensityAt(window, offset));
     const manualLoad = todoContext.loadByDay.get(day.getDay()) ?? 0;
     capacity = Math.max(0, capacity - manualLoad);
-    capacity = Math.min(capacity, targetMinutes - allocated);
+    if (offset === 0) capacity = Math.max(0, capacity - reviewReservation(dueReviews, capacity));
+    capacity = Math.min(capacity, budget - allocated);
 
-    while (capacity >= 15 && tasks.length < 21 && allocated < targetMinutes) {
-      const duration = Math.min(30, capacity, targetMinutes - allocated);
+    while (capacity >= 15 && tasks.length < taskCap && allocated < budget) {
+      const duration = Math.min(30, capacity, budget - allocated);
       const priority = focus[priorityIndex % focus.length];
       const makeMock = tasks.length > 0 && (tasks.length + 1) % 7 === 0;
       const candidate = candidateQuestions.find((question) =>
@@ -356,7 +389,7 @@ async function generatePlan(userId: string) {
         userId,
         source: 'auto-plan',
         status: 'pending',
-        dueAt: { gte: planStart, lte: endOfDay(addDays(planStart, 6)) },
+        dueAt: { gte: planStart, lte: endOfDay(addDays(planStart, window.days - 1)) },
       },
     }),
     prisma.studyTask.createMany({ data: tasks }),

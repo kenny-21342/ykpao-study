@@ -9,6 +9,7 @@ import { analyticsSubjectName, bankTopicName } from '@/lib/bank-analytics';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { summariseCommandTerms, weakestCommandTerm } from '@/lib/command-term-stats';
 import { calibrate, describeCalibration } from '@/lib/self-marking';
+import { describeCountdown, planWindow } from '@/lib/revision-timetable';
 
 export const dynamic = 'force-dynamic';
 
@@ -386,6 +387,10 @@ export async function GET(req: NextRequest) {
       })),
   );
 
+  // The countdown the Today view shows. `examDate` was stored by onboarding and
+  // read by nothing until the plan started working back from it.
+  const examWindow = planWindow({ examDate: profile?.examDate ?? null, now });
+
   const todayTasks = tasks.filter((task) => task.dueAt >= startOfDay(now));
   const overdueTasks = tasks.filter((task) => task.dueAt < startOfDay(now));
   const subjects = [...new Set(mastery.map((topic) => topic.subject))];
@@ -402,6 +407,8 @@ export async function GET(req: NextRequest) {
     weakestCommandTerm: weakestCommandTerm(commandTermStats),
     calibration,
     calibrationNote: describeCalibration(calibration),
+    examCountdown: describeCountdown(examWindow),
+    daysUntilExam: examWindow.daysUntilExam,
     adaptiveQueue,
     subjects,
     latestExam,

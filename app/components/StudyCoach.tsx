@@ -153,6 +153,9 @@ type Overview = {
   weakestCommandTerm: CommandTermStat | null;
   /** Null unless enough attempts were marked twice; see lib/self-marking. */
   calibrationNote: string | null;
+  /** Null when the profile carries no future exam date. */
+  examCountdown: string | null;
+  daysUntilExam: number | null;
   adaptiveQueue: QueueItem[];
   subjects: string[];
   latestExam: { id: string; title: string; score: number | null; totalMarks: number; submittedAt: string | null } | null;
@@ -460,7 +463,13 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
         <Metric label="Tasks due" value={overview.summary.tasksDue} detail={`${overview.overdueTasks.length} overdue`} icon={ListChecks} />
         <Metric label="Reviews due" value={overview.dueReviews} detail={`${overview.summary.activeReviews} active cards`} icon={Brain} />
         <Metric label="Topics started" value={overview.summary.topicsStarted} detail={`${overview.summary.topicsMastered} at mastery`} icon={Target} />
-        <Metric label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} detail={overview.latestExam?.title ?? 'No completed exam'} icon={GraduationCap} />
+        {overview.daysUntilExam === null ? (
+          <Metric label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} detail={overview.latestExam?.title ?? 'No completed exam'} icon={GraduationCap} />
+        ) : (
+          // The countdown replaces the mock tile rather than adding a fifth:
+          // once an exam is close it is the number that should be on screen.
+          <Metric label="Days to exam" value={overview.daysUntilExam} detail={overview.examCountdown ?? ''} icon={CalendarDays} />
+        )}
       </section>
 
       <section className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] gap-6">
