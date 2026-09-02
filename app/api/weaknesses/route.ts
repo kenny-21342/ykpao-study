@@ -2,12 +2,20 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parsePositiveInt } from '@/lib/query-params';
+import {
+  analyticsSubjectName,
+  bankSubjectCodesForNames,
+  bankAnalyticsQuestionSelect,
+  bankTopicName,
+  type BankAnalyticsQuestion,
+} from '@/lib/bank-analytics';
 
 export const dynamic = 'force-dynamic';
 
 type NormalizedAttempt = {
-  source: 'past-paper' | 'mock-exam' | 'legacy-question';
+  source: 'past-paper' | 'mock-exam' | 'legacy-question' | 'bank-question';
   questionId: number | null;
+  bankQuestionId: number | null;
   subject: string;
   topic: string;
   content: string;
@@ -54,7 +62,7 @@ export async function GET(req: Request) {
   const limit = parsePositiveInt(searchParams.get('limit'), 10, 30);
   const subjectFilter = searchParams.get('subject');
 
-  const [pastPaperAttempts, mockExamItems, legacyAttempts] = await Promise.all([
+  const [pastPaperAttempts, mockExamItems, bankAttempts, legacyAttempts] = await Promise.all([
     prisma.pastPaperAttempt.findMany({
       where: { userId: user.id, gradingStatus: 'official' },
       select: {
@@ -92,6 +100,11 @@ export async function GET(req: Request) {
         isCorrect: true,
         attemptedAt: true,
         questionId: true,
+        // Exams have been generated from the crop-first bank since
+        // `mock_exam_items_from_bank`. Without this join every question on
+        // such an exam was skipped by the `if (!question) continue` below, so
+        // a completed mock exam taught the heatmap nothing.
+        bankQuestion: { select: bankAnalyticsQuestionSelect },
         question: {
           select: {
             id: true,
@@ -107,6 +120,20 @@ export async function GET(req: Request) {
         },
       },
       orderBy: { attemptedAt: 'desc' },
+      take: 500,
+    }),
+    prisma.bankQuestionAttempt.findMany({
+      // Practice in the bank. `isCorrect` is null for a free-response question
+      // with no answer key -- answered but unmarked -- and those carry no
+      // accuracy signal, so they stay out.
+      where: { userId: user.id, isCorrect: { not: null } },
+      select: {
+        score: true,
+        isCorrect: true,
+        createdAt: true,
+        question: { select: bankAnalyticsQuestionSelect },
+      },
+      orderBy: { createdAt: 'desc' },
       take: 500,
     }),
     prisma.questionAttempt.findMany({
@@ -153,6 +180,7 @@ export async function GET(req: Request) {
   let pastPaperSourceCount = 0;
   let mockExamSourceCount = 0;
   let legacySourceCount = 0;
+  let bankSourceCount = 0;
 
   for (const item of pastPaperAttempts) {
     const question = item.question;
@@ -169,6 +197,7 @@ export async function GET(req: Request) {
     attempts.push({
       source: 'past-paper',
       questionId: question.id,
+      bankQuestionId: null,
       subject,
       topic: question.topic || 'General',
       content: question.content,
@@ -182,22 +211,50 @@ export async function GET(req: Request) {
 
   for (const item of mockExamItems) {
     const question = item.question;
-    if (!question) continue;
-    const subject = question.paper.subject.name ?? 'General';
+    const bankQuestion = item.bankQuestion as BankAnalyticsQuestion | null;
+    // Exactly one of the two is set, by the same constraint that gives the
+    // bank its own attempt and bookmark tables.
+    if (!question && !bankQuestion) continue;
+
+    const subject = question
+      ? question.paper.subject.name ?? 'General'
+      : analyticsSubjectName(bankQuestion!.paper.subject);
     if (subjectFilter && subject !== subjectFilter) continue;
 
     attempts.push({
       source: 'mock-exam',
-      questionId: question.id,
+      questionId: question?.id ?? null,
+      bankQuestionId: bankQuestion?.id ?? null,
       subject,
-      topic: question.topic || 'General',
-      content: question.content,
+      topic: question ? question.topic || 'General' : bankTopicName(bankQuestion!),
+      content: question ? question.content : bankQuestion!.bodyMd,
       score: item.score ?? null,
-      maxScore: question.marks ?? null,
+      maxScore: question ? question.marks ?? null : bankQuestion!.totalMarks ?? null,
       isCorrect: item.isCorrect ?? null,
       attemptedAt: item.attemptedAt ?? new Date(),
     });
     mockExamSourceCount += 1;
+  }
+
+  for (const item of bankAttempts) {
+    const question = item.question as BankAnalyticsQuestion | null;
+    if (!question) continue;
+    const subject = analyticsSubjectName(question.paper.subject);
+    if (subjectFilter && subject !== subjectFilter) continue;
+
+    attempts.push({
+      source: 'bank-question',
+      questionId: null,
+      bankQuestionId: question.id,
+      subject,
+      topic: bankTopicName(question),
+      content: question.bodyMd,
+      score: item.score ?? null,
+      maxScore: question.totalMarks ?? null,
+      isCorrect: item.isCorrect ?? null,
+      attemptedAt: item.createdAt,
+    });
+    bankSourceCount += 1;
   }
 
   for (const item of legacyAttempts) {
@@ -215,6 +272,7 @@ export async function GET(req: Request) {
     attempts.push({
       source: 'legacy-question',
       questionId: null,
+      bankQuestionId: null,
       subject,
       topic,
       content: question.content || question.title,
@@ -236,6 +294,7 @@ export async function GET(req: Request) {
         pastPaper: 0,
         mockExams: 0,
         legacyQuestions: 0,
+        bankQuestions: 0,
       },
     });
   }
@@ -306,10 +365,10 @@ export async function GET(req: Request) {
   const weakTopicNames = weakTopics.map((t) => t.topic);
   const weakSubjectNames = weakTopics.map((t) => t.subject);
 
-  // Questions already attempted by this user (to avoid re-recommending).
-  const attemptedIds = new Set(
+  // Bank questions already attempted by this user (to avoid re-recommending).
+  const attemptedBankIds = new Set(
     attempts
-      .map((a) => a.questionId)
+      .map((a) => a.bankQuestionId)
       .filter((questionId): questionId is number => typeof questionId === 'number')
   );
 
@@ -322,36 +381,56 @@ export async function GET(req: Request) {
   }> = [];
 
   if (weakTopicNames.length > 0) {
-    const candidates = await prisma.pastPaperQuestion.findMany({
-      where: {
-        docType: 'qp',
-        topic: { in: weakTopicNames },
-        paper: {
-          subject: { name: { in: weakSubjectNames } },
-        },
-        marks: { gt: 0 },
-      },
+    // Recommend out of the crop-first bank: it is the corpus students browse,
+    // and its questions render with their crops. The legacy table is still the
+    // only source of a `topic` string, so until the syllabus registries are
+    // loaded the topic filter below matches nothing and the subject-only
+    // fallback is what actually runs.
+    const bankSubjectCodes = bankSubjectCodesForNames(weakSubjectNames);
+    const baseWhere = {
+      status: 'published',
+      totalMarks: { gt: 0 },
+      paper: { subject: { code: { in: bankSubjectCodes } } },
+    } as const;
+
+    const select = {
+      id: true,
+      bodyMd: true,
+      totalMarks: true,
+      paper: { select: { subject: { select: { name: true, code: true } } } },
+      topics: { select: { topic: { select: { name: true } } }, take: 1 },
+      tags: { select: { tag: { select: { label: true } } }, take: 1 },
+    } as const;
+
+    let candidates = bankSubjectCodes.length === 0 ? [] : await prisma.bankQuestion.findMany({
+      where: { ...baseWhere, topics: { some: { topic: { name: { in: weakTopicNames } } } } },
       take: 100,
       orderBy: { id: 'desc' },
-      select: {
-        id: true,
-        topic: true,
-        content: true,
-        marks: true,
-        paper: { select: { subject: { select: { name: true } } } },
-      },
+      select,
     });
+
+    // No topic rows for this subject yet, so widen to the subject. Once
+    // `bank_question_topics` is populated the narrower query returns first and
+    // this never runs.
+    if (candidates.length === 0 && bankSubjectCodes.length > 0) {
+      candidates = await prisma.bankQuestion.findMany({
+        where: baseWhere,
+        take: 100,
+        orderBy: { id: 'desc' },
+        select,
+      });
+    }
 
     // Prefer questions the user hasn't tried.
     recommended = candidates
-      .filter((q) => !attemptedIds.has(q.id))
+      .filter((q) => !attemptedBankIds.has(q.id))
       .slice(0, limit)
       .map((q) => ({
         id: q.id,
-        topic: q.topic,
-        subject: q.paper.subject.name,
-        content: q.content.slice(0, 200),
-        marks: q.marks,
+        topic: q.topics[0]?.topic.name ?? q.tags[0]?.tag.label ?? 'General',
+        subject: analyticsSubjectName(q.paper.subject),
+        content: q.bodyMd.slice(0, 200),
+        marks: q.totalMarks ?? 0,
       }));
 
     // If we still need more, include questions they got wrong before.
@@ -384,6 +463,7 @@ export async function GET(req: Request) {
       pastPaper: pastPaperSourceCount,
       mockExams: mockExamSourceCount,
       legacyQuestions: legacySourceCount,
+      bankQuestions: bankSourceCount,
     },
   });
 }
