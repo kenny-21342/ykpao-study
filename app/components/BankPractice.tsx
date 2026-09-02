@@ -21,6 +21,7 @@ import { useSession } from 'next-auth/react';
 import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
+import { commandTermLabel } from '@/lib/command-terms';
 
 type Filters = {
   subjects: Array<{ id: number; code: string; name: string }>;
@@ -28,6 +29,7 @@ type Filters = {
   sessions: string[];
   paperNumbers: number[];
   topics: string[];
+  commandTerms: string[];
 };
 
 type Summary = {
@@ -49,7 +51,9 @@ type Summary = {
 
 type FullQuestion = BankQuestionView & { paper: Summary['paper'] };
 
-const EMPTY_FILTERS: Filters = { subjects: [], years: [], sessions: [], paperNumbers: [], topics: [] };
+const EMPTY_FILTERS: Filters = {
+  subjects: [], years: [], sessions: [], paperNumbers: [], topics: [], commandTerms: [],
+};
 
 /** "s" and "w" are how the corpus stores it; neither is what to show. */
 function sessionLabel(session: string): string {
@@ -171,6 +175,7 @@ export default function BankPractice({
    */
   const [scope, setScope] = useState<'enrolled' | 'all'>('enrolled');
   const [topic, setTopic] = useState('');
+  const [commandTerm, setCommandTerm] = useState('');
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
   /** Ids the signed-in user has starred, so a list row can draw a filled star. */
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
@@ -218,6 +223,7 @@ export default function BankPractice({
     if (session) params.set('session', session);
     if (paperNumber) params.set('paper', paperNumber);
     if (topic) params.set('topic', topic);
+    if (commandTerm) params.set('term', commandTerm);
     if (onlyBookmarked) params.set('bookmarked', '1');
 
     (async () => {
@@ -245,7 +251,7 @@ export default function BankPractice({
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked, sessionStatus]);
+  }, [page, subject, year, session, paperNumber, scope, topic, commandTerm, onlyBookmarked, sessionStatus]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -494,6 +500,22 @@ export default function BankPractice({
             <option value="">All topics</option>
             {filters.topics.map((option) => (
               <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        )}
+        {/* Same rule as topics: hidden until the command-term backfill has run
+          * for at least one subject in scope. Drilling one term at a time is
+          * how a student fixes answering "evaluate" like "describe". */}
+        {filters.commandTerms.length > 0 && (
+          <select
+            aria-label="Command term"
+            value={commandTerm}
+            onChange={(e) => changeFilter(setCommandTerm)(e.target.value)}
+            className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 sm:col-span-4"
+          >
+            <option value="">All command terms</option>
+            {filters.commandTerms.map((option) => (
+              <option key={option} value={option}>{commandTermLabel(option)}</option>
             ))}
           </select>
         )}

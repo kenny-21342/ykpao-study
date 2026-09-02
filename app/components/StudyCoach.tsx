@@ -129,6 +129,17 @@ type LearningProfile = {
   availability: Record<string, number>;
 };
 
+type CommandTermStat = {
+  slug: string;
+  label: string;
+  band: 'recall' | 'procedure' | 'higher';
+  attempts: number;
+  correct: number;
+  accuracy: number;
+  markBased: boolean;
+  guidance: string;
+};
+
 type Overview = {
   profile: LearningProfile | null;
   todayTasks: StudyTask[];
@@ -137,6 +148,9 @@ type Overview = {
   reviewQueue: ReviewItem[];
   mistakes: Mistake[];
   mastery: MasteryTopic[];
+  /** Weakest first; empty until the command-term backfill has run. */
+  commandTerms: CommandTermStat[];
+  weakestCommandTerm: CommandTermStat | null;
   adaptiveQueue: QueueItem[];
   subjects: string[];
   latestExam: { id: string; title: string; score: number | null; totalMarks: number; submittedAt: string | null } | null;
@@ -488,7 +502,65 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
           </div>
         </div>
       </section>
+
+      <CommandTermPanel stats={overview.commandTerms} />
     </main>
+  );
+}
+
+/**
+ * Accuracy per command term.
+ *
+ * Topic coverage says what a student has not learned. This says what they are
+ * not doing when the paper asks for it -- and it is the more actionable of the
+ * two, because the fix is a habit rather than a syllabus.
+ *
+ * Hidden entirely when there is no data. A student whose subjects have not been
+ * backfilled, or who has not practised enough for any term to mean anything,
+ * gets nothing rather than an empty table or a figure built on two attempts.
+ */
+function CommandTermPanel({ stats }: { stats: CommandTermStat[] }) {
+  // Only terms with enough attempts to say anything. The same threshold as
+  // `MIN_ATTEMPTS_FOR_SIGNAL` on the server, applied again here because the
+  // server sends the full list for the record.
+  const shown = stats.filter((stat) => stat.attempts >= 4).slice(0, 6);
+  if (shown.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-3">
+        <h3 className="font-bold text-gray-900 dark:text-white">Command terms</h3>
+        <p className="text-xs text-gray-500 mt-0.5">
+          How you score by what the question asks you to do, weakest first
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {shown.map((stat) => (
+          <div
+            key={stat.slug}
+            className="p-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{stat.label}</p>
+              <p className="text-sm font-bold tabular-nums text-gray-900 dark:text-white">
+                {stat.accuracy}%
+              </p>
+            </div>
+            <Progress
+              value={stat.accuracy}
+              color={stat.accuracy >= 80 ? 'bg-green-500' : stat.accuracy >= 50 ? 'bg-amber-500' : 'bg-red-500'}
+            />
+            <p className="text-[11px] text-gray-500 mt-1">
+              {stat.attempts} question{stat.attempts === 1 ? '' : 's'} ·{' '}
+              {stat.markBased ? 'by marks awarded' : 'by full answers'}
+            </p>
+            {stat.accuracy < 70 && (
+              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1.5">{stat.guidance}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

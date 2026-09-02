@@ -43,6 +43,17 @@ export type BankQuestionView = {
    * appear for the questions that have it, with no further change here.
    */
   hasText: boolean;
+  /**
+   * The command terms this question uses, as slugs into `COMMAND_TERMS`.
+   *
+   * Shown beside the question so a student knows what is actually being asked
+   * of them before they answer -- "evaluate" and "describe" are marked against
+   * different criteria, and answering one as if it said the other is the most
+   * common avoidable way to lose marks.
+   *
+   * Empty until `scripts/backfill-command-terms.ts` has run for the subject.
+   */
+  commandTerms: string[];
 };
 
 export type BankPaperView = {
@@ -147,6 +158,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
               },
             },
           },
+          skills: { select: { skill: { select: { slug: true } } } },
         },
       },
     },
@@ -170,6 +182,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
         pageStart: question.pageStart,
         pageEnd: question.pageEnd,
         hasText: question.bodyMd.trim().length > 0,
+        commandTerms: question.skills.map((link) => link.skill.slug).sort(),
         strips: toStrips(question.strips),
         markScheme:
           question.markScheme && question.markScheme.status === 'published'
@@ -227,6 +240,14 @@ export type BankFilters = {
    * nothing. It lights up on its own once tagging has run.
    */
   topics: string[];
+  /**
+   * Command-term slugs that have published questions behind them.
+   *
+   * Like `topics`, the UI hides the control while this is empty rather than
+   * offering a filter that returns nothing: the links are written by a
+   * backfill that runs per subject.
+   */
+  commandTerms: string[];
 };
 
 export type BankQuestionSummary = {
@@ -288,7 +309,7 @@ export function toBankSubjectCodes(catalogCodes: string[]): string[] {
 export async function listBankFilters(subjectCodes: string[] | null): Promise<BankFilters> {
   const where = publishedQuestionPaperWhere(subjectCodes);
 
-  const [subjects, years, sessions, paperNumbers, topics] = await Promise.all([
+  const [subjects, years, sessions, paperNumbers, topics, commandTerms] = await Promise.all([
     prisma.bankSubject.findMany({
       where: { papers: { some: where } },
       orderBy: [{ name: 'asc' }, { level: 'asc' }],
@@ -309,6 +330,11 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
       orderBy: { name: 'asc' },
       select: { name: true },
     }),
+    prisma.bankSkill.findMany({
+      where: { questions: { some: { question: { status: 'published', paper: where } } } },
+      orderBy: { slug: 'asc' },
+      select: { slug: true },
+    }),
   ]);
 
   return {
@@ -323,6 +349,7 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
     sessions: sessions.map((row) => row.session),
     paperNumbers: paperNumbers.map((row) => row.paperNumber),
     topics: topics.map((row) => row.name),
+    commandTerms: commandTerms.map((row) => row.slug),
   };
 }
 
@@ -339,6 +366,8 @@ export async function listBankQuestions(options: {
   session?: string | null;
   paperNumber?: number | null;
   topic?: string | null;
+  /** A command-term slug, e.g. 'evaluate'. */
+  commandTerm?: string | null;
   /** When set, only questions this user has starred. */
   bookmarkedBy?: string | null;
   page?: number;
@@ -353,6 +382,9 @@ export async function listBankQuestions(options: {
       ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
       : {}),
     ...(options.topic ? { topics: { some: { topic: { name: options.topic } } } } : {}),
+    ...(options.commandTerm
+      ? { skills: { some: { skill: { slug: options.commandTerm } } } }
+      : {}),
     paper: {
       ...publishedQuestionPaperWhere(options.subjectCodes),
       ...(options.subjectId ? { subjectId: options.subjectId } : {}),
@@ -433,6 +465,7 @@ export async function getBankQuestion(
           },
         },
       },
+      skills: { select: { skill: { select: { slug: true } } } },
       paper: {
         select: {
           id: true, year: true, session: true, paperNumber: true, variant: true,
@@ -451,6 +484,9 @@ export async function getBankQuestion(
     pageStart: question.pageStart,
     pageEnd: question.pageEnd,
     hasText: question.bodyMd.trim().length > 0,
+    // Sorted so the same question always presents its terms in the same order,
+    // whatever order the join comes back in.
+    commandTerms: question.skills.map((link) => link.skill.slug).sort(),
     strips: toStrips(question.strips),
     markScheme:
       question.markScheme && question.markScheme.status === 'published'

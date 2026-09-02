@@ -7,6 +7,7 @@ import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { analyticsSubjectName, bankTopicName } from '@/lib/bank-analytics';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
+import { summariseCommandTerms, weakestCommandTerm } from '@/lib/command-term-stats';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,16 @@ export async function GET(req: NextRequest) {
   const codeFilter = courseScope.effectiveScope === 'enrolled' ? { in: courseScope.subjectCodes } : undefined;
 
   const now = new Date();
-  const [profile, tasks, attempts, bankMistakeAttempts, reviews, latestExam, catalog] = await Promise.all([
+  const [
+    profile,
+    tasks,
+    attempts,
+    bankMistakeAttempts,
+    commandTermAttempts,
+    reviews,
+    latestExam,
+    catalog,
+  ] = await Promise.all([
     prisma.learningProfile.findUnique({ where: { userId: user.id } }),
     prisma.studyTask.findMany({
       where: { userId: user.id, dueAt: { lte: endOfDay(now) }, status: 'pending', ...(subjectFilter ? { subject: subjectFilter } : {}) },
@@ -110,6 +120,30 @@ export async function GET(req: NextRequest) {
             },
             topics: { select: { topic: { select: { name: true } } }, take: 1 },
             tags: { select: { tag: { select: { label: true } } }, take: 1 },
+          },
+        },
+      },
+    }),
+    // Every bank attempt, right or wrong, with the command terms of the
+    // question behind it. Unlike the mistakes query above this needs the
+    // correct answers too -- an accuracy figure built only from wrong attempts
+    // would report 0% for every term.
+    prisma.bankQuestionAttempt.findMany({
+      where: {
+        userId: user.id,
+        ...(codeFilter
+          ? { question: { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } } }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 600,
+      select: {
+        isCorrect: true,
+        score: true,
+        question: {
+          select: {
+            totalMarks: true,
+            skills: { select: { skill: { select: { slug: true } } } },
           },
         },
       },
@@ -318,6 +352,18 @@ export async function GET(req: NextRequest) {
       })),
   ].filter((item, index, items) => items.findIndex((other) => other.questionId === item.questionId) === index).slice(0, 10);
 
+  // Per-command-term accuracy. Empty until the backfill has run for the
+  // student's subjects, and the coach hides the panel rather than showing an
+  // empty table -- there is nothing honest to say from no data.
+  const commandTermStats = summariseCommandTerms(
+    commandTermAttempts.map((attempt) => ({
+      isCorrect: attempt.isCorrect,
+      score: attempt.score,
+      totalMarks: attempt.question.totalMarks,
+      terms: attempt.question.skills.map((link) => link.skill.slug),
+    })),
+  );
+
   const todayTasks = tasks.filter((task) => task.dueAt >= startOfDay(now));
   const overdueTasks = tasks.filter((task) => task.dueAt < startOfDay(now));
   const subjects = [...new Set(mastery.map((topic) => topic.subject))];
@@ -330,6 +376,8 @@ export async function GET(req: NextRequest) {
     reviewQueue: dueReviews.slice(0, 20),
     mistakes,
     mastery,
+    commandTerms: commandTermStats,
+    weakestCommandTerm: weakestCommandTerm(commandTermStats),
     adaptiveQueue,
     subjects,
     latestExam,

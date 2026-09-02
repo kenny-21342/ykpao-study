@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
 import { optionLettersFor } from '@/lib/bank-grading';
+import { commandTerm } from '@/lib/command-terms';
 
 /**
  * One past-paper question, shown as the crop it was cut from.
@@ -264,6 +265,60 @@ function AnswerPanel({
   );
 }
 
+/**
+ * What the question is asking you to *do*.
+ *
+ * Marks are awarded against the command term, not against how much you know:
+ * "describe" pays for detail and nothing for reasons, "explain" pays for
+ * reasons and little for detail, and a student who has revised thoroughly can
+ * still score half on a question by answering the wrong verb. That is invisible
+ * on the paper, so it is surfaced here -- before the answer box, not after the
+ * mark scheme, because the point is to change the answer being written.
+ *
+ * Collapsed by default: the terms alone are the reminder, and a student who
+ * knows what "evaluate" wants should not have to scroll past a paragraph
+ * telling them.
+ */
+function CommandTermPanel({ slugs }: { slugs: string[] }) {
+  const [open, setOpen] = useState(false);
+  const terms = slugs.map(commandTerm).filter((term) => term !== null);
+  if (!terms.length) return null;
+
+  return (
+    <div className="border-t border-gray-100 px-4 py-2.5 dark:border-gray-700">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Asks you to</span>
+        {terms.map((term) => (
+          <span
+            key={term.slug}
+            className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+          >
+            {term.label}
+          </span>
+        ))}
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="ml-auto text-xs text-gray-500 underline-offset-2 hover:underline dark:text-gray-400"
+        >
+          {open ? 'Hide' : 'What earns the marks?'}
+        </button>
+      </div>
+      {open && (
+        <ul className="mt-2 space-y-1.5">
+          {terms.map((term) => (
+            <li key={term.slug} className="text-xs text-gray-600 dark:text-gray-300">
+              <span className="font-semibold text-gray-900 dark:text-white">{term.label}:</span>{' '}
+              {term.guidance}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function BankQuestionCard({ question }: { question: Question }) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
@@ -304,6 +359,8 @@ export default function BankQuestionCard({ question }: { question: Question }) {
           onZoom={() => setZoomed('question')}
         />
       </div>
+
+      <CommandTermPanel slugs={question.commandTerms} />
 
       <AnswerPanel question={question} onAnswered={() => setShowAnswer(true)} />
 
