@@ -17,13 +17,21 @@
 -- `taskType = 'mock-exam'` and hand-written tasks carry no question at all.
 
 ALTER TABLE "study_tasks"
-    ADD COLUMN "bankQuestionId" INTEGER;
+    ADD COLUMN IF NOT EXISTS "bankQuestionId" INTEGER;
 
 -- The plan is read by user and due date; the id is only ever resolved for a
 -- task already in hand, so no index on it.
 --
 -- SET NULL, matching the legacy relation: a planned task outlives the question
 -- it pointed at rather than disappearing from the week.
-ALTER TABLE "study_tasks"
-    ADD CONSTRAINT "study_tasks_bankQuestionId_fkey"
-    FOREIGN KEY ("bankQuestionId") REFERENCES "bank_questions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "study_tasks"
+        ADD CONSTRAINT "study_tasks_bankQuestionId_fkey"
+        FOREIGN KEY ("bankQuestionId") REFERENCES "bank_questions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- IF NOT EXISTS throughout, deliberately. This database's migration table does
+-- not match prisma/migrations: 25 recorded migrations are absent from the
+-- folder and the eight before this one were applied by hand and never
+-- recorded. Until that is reconciled, migrations here get applied directly, and
+-- a re-run must be harmless rather than an error that leaves a failed row.

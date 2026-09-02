@@ -21,7 +21,7 @@
 --
 -- New table only; nothing existing is touched.
 
-CREATE TABLE "grade_boundaries" (
+CREATE TABLE IF NOT EXISTS "grade_boundaries" (
     "id"          SERIAL PRIMARY KEY,
     "board"       TEXT NOT NULL,
     "subjectCode" TEXT NOT NULL,
@@ -42,9 +42,9 @@ CREATE TABLE "grade_boundaries" (
 -- One row per grade per identified paper. NULLs are distinct in Postgres, so
 -- this does not constrain the subject-wide fallback rows against each other;
 -- the seed is responsible for not duplicating those.
-CREATE UNIQUE INDEX "grade_boundaries_identity_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "grade_boundaries_identity_key"
     ON "grade_boundaries"("board", "subjectCode", "level", "year", "session", "paperNumber", "grade");
 
 -- The lookup is always "this subject, most recent session first".
-CREATE INDEX "grade_boundaries_lookup_idx"
+CREATE INDEX IF NOT EXISTS "grade_boundaries_lookup_idx"
     ON "grade_boundaries"("board", "subjectCode", "year" DESC);
