@@ -6,6 +6,14 @@
  *   node scripts/apply-sql.mjs prisma/migrations/<name>/migration.sql
  *   node scripts/apply-sql.mjs --yes a/migration.sql b/migration.sql
  *   node scripts/apply-sql.mjs --pooled a/migration.sql   # force DATABASE_URL
+ *   node scripts/apply-sql.mjs --env-var PRODUCTION_DIRECT_URL a/migration.sql
+ *
+ * `--env-var` names a different variable to connect through, so a second
+ * database can be migrated without editing DATABASE_URL and without a
+ * connection string ever being typed on the command line, where it would land
+ * in shell history. There are two Neon projects behind this repo -- the corpus
+ * lives in `ykpao-study-production`, and `.env` points at the older `smart-edu`
+ * project -- so a schema change usually has to be applied to both.
  *
  * Connects through DIRECT_DATABASE_URL when it is set, falling back to
  * DATABASE_URL -- the same order prisma.config.ts uses, and for the same
@@ -50,14 +58,33 @@ const args = process.argv.slice(2);
 const assumeYes = args.includes('--yes');
 const inspect = args.includes('--inspect');
 const forcePooled = args.includes('--pooled');
-const files = args.filter((arg) => !arg.startsWith('--'));
+// The value after --env-var is its argument, not a file.
+const files = args.filter(
+  (arg, index) => !arg.startsWith('--') && index !== envVarIndexOf(args) + 1,
+);
+
+/** Where --env-var sits, or -1. Hoisted so the filter above can use it. */
+function envVarIndexOf(list) {
+  return list.indexOf('--env-var');
+}
 
 if (files.length === 0 && !inspect) {
   console.error('Usage: node scripts/apply-sql.mjs [--inspect] [--yes] <file.sql> ...');
   process.exit(1);
 }
 
-const direct = process.env.DIRECT_DATABASE_URL;
+const envVarIndex = args.indexOf('--env-var');
+const envVar = envVarIndex === -1 ? null : args[envVarIndex + 1];
+if (envVarIndex !== -1 && !envVar) {
+  console.error('--env-var needs the name of an environment variable.');
+  process.exit(1);
+}
+if (envVar && !process.env[envVar]) {
+  console.error(`${envVar} is not set. Add it to .env or export it.`);
+  process.exit(1);
+}
+
+const direct = envVar ? process.env[envVar] : process.env.DIRECT_DATABASE_URL;
 const pooled = process.env.DATABASE_URL;
 const connectionString = forcePooled ? pooled : direct || pooled;
 if (!connectionString) {
@@ -67,9 +94,13 @@ if (!connectionString) {
 
 // Host and database only. The credential never reaches the terminal.
 const target = new URL(connectionString);
-const which = forcePooled || !direct ? 'DATABASE_URL' : 'DIRECT_DATABASE_URL';
+const which = envVar && !forcePooled
+  ? envVar
+  : forcePooled || !direct
+    ? 'DATABASE_URL'
+    : 'DIRECT_DATABASE_URL';
 console.log(`Target:  ${target.hostname}${target.pathname}  (from ${which})`);
-if (direct && pooled && new URL(direct).hostname !== new URL(pooled).hostname) {
+if (!envVar && direct && pooled && new URL(direct).hostname !== new URL(pooled).hostname) {
   console.log(`Note:    DATABASE_URL points at a different host, ${new URL(pooled).hostname}`);
 }
 for (const file of files) console.log(`Applying: ${file}`);
