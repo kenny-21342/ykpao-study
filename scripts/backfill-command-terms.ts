@@ -31,6 +31,35 @@ import { COMMAND_TERMS, extractCommandTerms } from '../lib/command-terms';
 
 const BATCH = 2000;
 
+/**
+ * Fail with a sentence rather than a Prisma stack trace when the corpus is not
+ * in the database this process is pointed at.
+ *
+ * There are two Neon projects behind this repo and they are not a dev/prod pair
+ * of one schema: `ykpao-study-production` holds the question bank, and the
+ * older `smart-edu` project has no `bank_*` tables at all. Running against the
+ * wrong one throws P2021 from thirty frames down, which reads like the script
+ * is broken. It is the connection that is wrong, and only the connection.
+ */
+async function requireBankTables() {
+  const [{ present }] = await prisma.$queryRaw<{ present: boolean }[]>`
+    SELECT to_regclass('public.bank_questions') IS NOT NULL AS present
+  `;
+  if (present) return;
+
+  const host = process.env.DATABASE_URL
+    ? new URL(process.env.DATABASE_URL).hostname
+    : '(DATABASE_URL not set)';
+
+  console.error(
+    `No bank_questions table in the database at ${host}.\n\n` +
+      'That is the older `smart-edu` Neon project, which has never held the\n' +
+      'question bank. Point DATABASE_URL and DIRECT_DATABASE_URL in .env at the\n' +
+      '`ykpao-study-production` project (us-east-2) and run this again.',
+  );
+  process.exit(1);
+}
+
 type Args = { apply: boolean; subject: string | null; limit: number | null };
 
 function parseArgs(argv: string[]): Args {
@@ -56,6 +85,7 @@ async function ensureSkillRows(): Promise<Map<string, number>> {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  await requireBankTables();
 
   const where = {
     status: 'published',
