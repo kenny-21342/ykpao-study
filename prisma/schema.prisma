@@ -408,6 +408,11 @@ model StudyTask {
   id              String    @id @default(cuid())
   userId          String
   questionId      Int?
+  // A task can point at either corpus, or at neither -- a mock-exam task and a
+  // hand-written one carry no question. Two nullable columns rather than one,
+  // because the corpora are separate tables and a foreign key can only point
+  // at one of them; the same constraint that gives ReviewItem its pair.
+  bankQuestionId  Int?
   title           String
   subject         String
   topic           String
@@ -421,8 +426,9 @@ model StudyTask {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question     PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  bankQuestion BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: SetNull)
 
   @@index([userId, dueAt])
   @@index([userId, status])
@@ -1372,6 +1378,7 @@ model BankQuestion {
   mockExamItems          MockExamItem[]
   dailyChallengeAttempts DailyChallengeAttempt[]
   reviewItems            ReviewItem[]
+  studyTasks             StudyTask[]
 
   @@unique([paperId, rootNumber])
   @@index([paperId])

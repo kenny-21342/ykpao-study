@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { addDays, endOfDay, startOfDay } from '@/lib/learning';
 import { loadTodoContext } from '@/lib/study-actions';
 import { resolveCourseScope } from '@/lib/course-scope';
+import { analyticsSubjectName, bankSubjectCodesForNames, bankTopicName } from '@/lib/bank-analytics';
 import { LearnerContextError } from '@/lib/learner-context';
 
 export const dynamic = 'force-dynamic';
@@ -133,7 +134,7 @@ export async function DELETE(req: NextRequest) {
 
 async function generatePlan(userId: string) {
   const courseScope = await resolveCourseScope({ userId });
-  const [profile, attempts, courses] = await Promise.all([
+  const [profile, attempts, courses, bankAttempts] = await Promise.all([
     prisma.learningProfile.upsert({
       where: { userId },
       create: { userId, availability: { 0: 45, 1: 45, 2: 45, 3: 45, 4: 45, 5: 60, 6: 60 } },
@@ -157,6 +158,27 @@ async function generatePlan(userId: string) {
       where: { userId },
       select: { course: { select: { name: true, subject: true, curriculumScopes: { select: { subjectCode: true } } } } },
     }),
+    // Practice in the crop-first bank. Priorities were built from the legacy
+    // corpus alone, so a student who works entirely in the bank -- which is
+    // what the practice tab now opens -- got a plan built from no evidence.
+    prisma.bankQuestionAttempt.findMany({
+      where: { userId, isCorrect: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 400,
+      select: {
+        questionId: true,
+        score: true,
+        isCorrect: true,
+        question: {
+          select: {
+            totalMarks: true,
+            paper: { select: { subject: { select: { name: true, code: true } } } },
+            topics: { select: { topic: { select: { name: true } } }, take: 1 },
+            tags: { select: { tag: { select: { label: true } } }, take: 1 },
+          },
+        },
+      },
+    }),
   ]);
   const todoContext = await loadTodoContext(userId);
 
@@ -169,6 +191,20 @@ async function generatePlan(userId: string) {
     const row = grouped.get(key) ?? { subject, topic, score: 0, max: 0, attempts: 0 };
     row.score += attempt.score ?? (attempt.isCorrect ? 1 : 0);
     row.max += attempt.maxScore ?? 1;
+    row.attempts += 1;
+    grouped.set(key, row);
+  }
+
+  for (const attempt of bankAttempts) {
+    const question = attempt.question;
+    if (!question) continue;
+    const subject = analyticsSubjectName(question.paper.subject);
+    if (courseScope.effectiveScope === 'enrolled' && !courseScope.subjects.includes(subject)) continue;
+    const topic = bankTopicName(question);
+    const key = `${subject}::${topic}`;
+    const row = grouped.get(key) ?? { subject, topic, score: 0, max: 0, attempts: 0 };
+    row.score += attempt.score ?? (attempt.isCorrect ? 1 : 0);
+    row.max += question.totalMarks ?? 1;
     row.attempts += 1;
     grouped.set(key, row);
   }
@@ -214,23 +250,44 @@ async function generatePlan(userId: string) {
   }
 
   const focus = combinedPriorities.slice(0, 6);
-  const attemptedIds = [...new Set(attempts.map((attempt) => attempt.questionId))];
-  const candidateQuestions = await prisma.pastPaperQuestion.findMany({
-    where: {
-      docType: 'qp',
-      marks: { gt: 0 },
-      topic: { in: focus.map((item) => item.topic) },
-      ...(courseScope.effectiveScope === 'enrolled' ? { paper: { subject: { code: { in: courseScope.subjectCodes } } } } : {}),
-      ...(attemptedIds.length > 0 ? { id: { notIn: attemptedIds } } : {}),
-    },
-    select: {
-      id: true,
-      topic: true,
-      paper: { select: { subject: { select: { name: true } } } },
-    },
+  // Candidates come from the crop-first bank: it is what the practice tab
+  // opens, and its questions render as the page they were printed on. Tasks
+  // used to point at `past_paper_questions` only because `study_tasks` had no
+  // column for a bank id.
+  const attemptedBankIds = [...new Set(bankAttempts.map((attempt) => attempt.questionId))];
+  const focusSubjectCodes = bankSubjectCodesForNames(focus.map((item) => item.subject));
+  const candidateWhere = {
+    status: 'published',
+    totalMarks: { gt: 0 },
+    ...(focusSubjectCodes.length > 0 ? { paper: { subject: { code: { in: focusSubjectCodes } } } } : {}),
+    ...(attemptedBankIds.length > 0 ? { id: { notIn: attemptedBankIds } } : {}),
+  } as const;
+  const candidateSelect = {
+    id: true,
+    paper: { select: { subject: { select: { name: true, code: true } } } },
+    topics: { select: { topic: { select: { name: true } } }, take: 1 },
+    tags: { select: { tag: { select: { label: true } } }, take: 1 },
+  } as const;
+
+  const focusTopics = focus.map((item) => item.topic);
+  let candidateQuestions = focusSubjectCodes.length === 0 ? [] : await prisma.bankQuestion.findMany({
+    where: { ...candidateWhere, topics: { some: { topic: { name: { in: focusTopics } } } } },
+    select: candidateSelect,
     take: 100,
     orderBy: { id: 'desc' },
   });
+
+  // `bank_question_topics` is empty until the syllabus registries land, so the
+  // topic-narrowed query matches nothing and this widens to the subject. Once
+  // topics exist the narrow query returns first and this never runs.
+  if (candidateQuestions.length === 0 && focusSubjectCodes.length > 0) {
+    candidateQuestions = await prisma.bankQuestion.findMany({
+      where: candidateWhere,
+      select: candidateSelect,
+      take: 100,
+      orderBy: { id: 'desc' },
+    });
+  }
 
   const availability = profile.availability && typeof profile.availability === 'object'
     ? profile.availability as Record<string, number>
@@ -242,6 +299,7 @@ async function generatePlan(userId: string) {
   const tasks: Array<{
     userId: string;
     questionId: number | null;
+    bankQuestionId: number | null;
     title: string;
     subject: string;
     topic: string;
@@ -266,14 +324,18 @@ async function generatePlan(userId: string) {
       const priority = focus[priorityIndex % focus.length];
       const makeMock = tasks.length > 0 && (tasks.length + 1) % 7 === 0;
       const candidate = candidateQuestions.find((question) =>
-        question.topic === priority.topic && question.paper.subject.name === priority.subject
+        bankTopicName(question) === priority.topic
+        && analyticsSubjectName(question.paper.subject) === priority.subject
       ) ?? candidateQuestions[priorityIndex % Math.max(1, candidateQuestions.length)];
       const dueAt = new Date(day);
       dueAt.setHours(17 + Math.min(3, tasks.filter((task) => task.dueAt.toDateString() === day.toDateString()).length), 0, 0, 0);
 
       tasks.push({
         userId,
-        questionId: makeMock ? null : candidate?.id ?? null,
+        // The id belongs to the bank now, so it goes in the bank column. A
+        // mock-exam task carries no question at all.
+        questionId: null,
+        bankQuestionId: makeMock ? null : candidate?.id ?? null,
         title: makeMock ? `Timed checkpoint: ${priority.subject}` : `Practice ${priority.topic}`,
         subject: priority.subject,
         topic: priority.topic,

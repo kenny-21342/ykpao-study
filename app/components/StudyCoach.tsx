@@ -41,6 +41,8 @@ type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery' 
 type StudyTask = {
   id: string;
   questionId: number | null;
+  /** Set when the task points at the crop-first bank instead. */
+  bankQuestionId: number | null;
   title: string;
   subject: string;
   topic: string;
@@ -150,6 +152,23 @@ type SearchResult = {
   subject?: string | null;
   topic?: string | null;
 };
+
+type TaskHandlers = {
+  onOpenQuestion: (id: number) => void;
+  onOpenBankQuestion: (id: number) => void;
+  onOpenMockExams: () => void;
+};
+
+/**
+ * Where a planned task leads. The bank id is checked first because that is
+ * what `generatePlan` writes now; `questionId` is only set on tasks generated
+ * before the plan moved to the crop-first corpus, and on hand-made ones.
+ */
+function openTaskTarget(task: StudyTask, handlers: TaskHandlers) {
+  if (task.bankQuestionId) return handlers.onOpenBankQuestion(task.bankQuestionId);
+  if (task.questionId) return handlers.onOpenQuestion(task.questionId);
+  if (task.taskType === 'mock-exam') return handlers.onOpenMockExams();
+}
 
 const NAV: Array<{ id: CoachView; label: string; icon: typeof CalendarDays }> = [
   { id: 'today', label: 'Today', icon: CalendarDays },
@@ -385,10 +404,10 @@ export default function StudyCoach({
       <div className="flex-1 overflow-y-auto">
         {profileOpen && <ProfileEditor profile={overview?.profile ?? null} onSaved={async () => { setProfileOpen(false); await load(); }} />}
         {view === 'today' && overview && (
-          <TodayView overview={overview} busy={busy} onComplete={updateTask} onOpenQuestion={onOpenQuestion} onOpenMockExams={onOpenMockExams} onGenerate={generatePlan} onReview={() => setView('review')} />
+          <TodayView overview={overview} busy={busy} onComplete={updateTask} onOpenQuestion={onOpenQuestion} onOpenBankQuestion={onOpenBankQuestion} onOpenMockExams={onOpenMockExams} onGenerate={generatePlan} onReview={() => setView('review')} />
         )}
         {view === 'plan' && (
-          <PlanView tasks={tasks} busy={busy} taskFormOpen={taskFormOpen} setTaskFormOpen={setTaskFormOpen} onGenerate={generatePlan} onUpdate={updateTask} onDelete={deleteTask} onCreated={load} onOpenQuestion={onOpenQuestion} onOpenMockExams={onOpenMockExams} />
+          <PlanView tasks={tasks} busy={busy} taskFormOpen={taskFormOpen} setTaskFormOpen={setTaskFormOpen} onGenerate={generatePlan} onUpdate={updateTask} onDelete={deleteTask} onCreated={load} onOpenQuestion={onOpenQuestion} onOpenBankQuestion={onOpenBankQuestion} onOpenMockExams={onOpenMockExams} />
         )}
         {view === 'mistakes' && overview && (
           <MistakesView mistakes={overview.mistakes} busy={busy} onOpenQuestion={onOpenQuestion} onOpenBankQuestion={onOpenBankQuestion} onAddReview={addMistakeToReview} />
@@ -406,11 +425,12 @@ export default function StudyCoach({
   );
 }
 
-function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenMockExams, onGenerate, onReview }: {
+function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuestion, onOpenMockExams, onGenerate, onReview }: {
   overview: Overview;
   busy: string | null;
   onComplete: (id: string, status: 'completed') => void;
   onOpenQuestion: (id: number) => void;
+  onOpenBankQuestion: (id: number) => void;
   onOpenMockExams: () => void;
   onGenerate: () => void;
   onReview: () => void;
@@ -441,7 +461,7 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenMockExams
                 <button onClick={() => onComplete(task.id, 'completed')} disabled={busy === task.id} title="Complete task" className="w-8 h-8 grid place-items-center flex-none text-gray-400 hover:text-green-600">
                   {busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Circle className="w-5 h-5" />}
                 </button>
-                <button onClick={() => task.questionId ? onOpenQuestion(task.questionId) : task.taskType === 'mock-exam' ? onOpenMockExams() : undefined} className="min-w-0 flex-1 text-left">
+                <button onClick={() => openTaskTarget(task, { onOpenQuestion, onOpenBankQuestion, onOpenMockExams })} className="min-w-0 flex-1 text-left">
                   <div className="flex items-center gap-2"><p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{task.title}</p>{new Date(task.dueAt) < new Date() && <span className="text-[10px] font-semibold text-red-600">OVERDUE</span>}</div>
                   <p className="text-xs text-gray-500 mt-1 truncate">{task.subject} · {task.topic} · {task.durationMinutes} min</p>
                 </button>
@@ -476,10 +496,11 @@ function Metric({ label, value, detail, icon: Icon }: { label: string; value: st
   return <div className="p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg"><div className="flex items-center justify-between"><p className="text-xs font-medium text-gray-500">{label}</p><Icon className="w-4 h-4 text-green-600" /></div><p className="text-2xl font-bold mt-2 text-gray-900 dark:text-white">{value}</p><p className="text-[11px] text-gray-500 mt-1 truncate">{detail}</p></div>;
 }
 
-function PlanView({ tasks, busy, taskFormOpen, setTaskFormOpen, onGenerate, onUpdate, onDelete, onCreated, onOpenQuestion, onOpenMockExams }: {
+function PlanView({ tasks, busy, taskFormOpen, setTaskFormOpen, onGenerate, onUpdate, onDelete, onCreated, onOpenQuestion, onOpenBankQuestion, onOpenMockExams }: {
   tasks: StudyTask[]; busy: string | null; taskFormOpen: boolean; setTaskFormOpen: (open: boolean) => void;
   onGenerate: () => void; onUpdate: (id: string, status: 'pending' | 'completed' | 'skipped') => void;
-  onDelete: (id: string) => void; onCreated: () => Promise<void>; onOpenQuestion: (id: number) => void; onOpenMockExams: () => void;
+  onDelete: (id: string) => void; onCreated: () => Promise<void>; onOpenQuestion: (id: number) => void;
+  onOpenBankQuestion: (id: number) => void; onOpenMockExams: () => void;
 }) {
   const grouped = useMemo(() => tasks.reduce<Record<string, StudyTask[]>>((days, task) => {
     const key = new Date(task.dueAt).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -488,7 +509,7 @@ function PlanView({ tasks, busy, taskFormOpen, setTaskFormOpen, onGenerate, onUp
   return <main className="max-w-5xl mx-auto p-4 md:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-5"><div><h3 className="font-bold text-gray-900 dark:text-white">Two-week plan</h3><p className="text-xs text-gray-500 mt-1">Generated tasks are refreshed without changing your manual tasks</p></div><div className="flex gap-2"><button onClick={() => setTaskFormOpen(!taskFormOpen)} className="h-9 px-3 inline-flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold"><Plus className="w-4 h-4" /> Add task</button><button onClick={onGenerate} disabled={busy === 'generate'} className="h-9 px-3 inline-flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{busy === 'generate' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Rebuild week</button></div></div>
     {taskFormOpen && <TaskForm onCreated={async () => { setTaskFormOpen(false); await onCreated(); }} />}
-    <div className="space-y-6 mt-5">{Object.keys(grouped).length === 0 ? <EmptyState icon={CalendarDays} title="No planned tasks" body="Build a week from your available time and weakest topics." /> : Object.entries(grouped).map(([day, dayTasks]) => <section key={day}><div className="flex items-center gap-3 mb-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{day}</h4><span className="text-xs text-gray-400">{dayTasks.reduce((sum, task) => sum + task.durationMinutes, 0)} min</span></div><div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{dayTasks.map((task) => <div key={task.id} className={`flex items-center gap-3 px-2 py-3 ${task.status !== 'pending' ? 'opacity-55' : ''}`}><button onClick={() => onUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} className="w-8 h-8 grid place-items-center">{busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-400" />}</button><button onClick={() => task.questionId ? onOpenQuestion(task.questionId) : task.taskType === 'mock-exam' ? onOpenMockExams() : undefined} className="min-w-0 flex-1 text-left"><p className={`text-sm font-semibold text-gray-900 dark:text-white truncate ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p><p className="text-xs text-gray-500 mt-1">{task.subject} · {task.topic} · {task.durationMinutes} min</p></button><span className="hidden sm:inline text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded font-medium uppercase">{task.taskType}</span><button onClick={() => onDelete(task.id)} title="Delete task" className="w-8 h-8 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>)}</div></section>)}</div>
+    <div className="space-y-6 mt-5">{Object.keys(grouped).length === 0 ? <EmptyState icon={CalendarDays} title="No planned tasks" body="Build a week from your available time and weakest topics." /> : Object.entries(grouped).map(([day, dayTasks]) => <section key={day}><div className="flex items-center gap-3 mb-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{day}</h4><span className="text-xs text-gray-400">{dayTasks.reduce((sum, task) => sum + task.durationMinutes, 0)} min</span></div><div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{dayTasks.map((task) => <div key={task.id} className={`flex items-center gap-3 px-2 py-3 ${task.status !== 'pending' ? 'opacity-55' : ''}`}><button onClick={() => onUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} className="w-8 h-8 grid place-items-center">{busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-400" />}</button><button onClick={() => openTaskTarget(task, { onOpenQuestion, onOpenBankQuestion, onOpenMockExams })} className="min-w-0 flex-1 text-left"><p className={`text-sm font-semibold text-gray-900 dark:text-white truncate ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p><p className="text-xs text-gray-500 mt-1">{task.subject} · {task.topic} · {task.durationMinutes} min</p></button><span className="hidden sm:inline text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded font-medium uppercase">{task.taskType}</span><button onClick={() => onDelete(task.id)} title="Delete task" className="w-8 h-8 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>)}</div></section>)}</div>
   </main>;
 }
 
