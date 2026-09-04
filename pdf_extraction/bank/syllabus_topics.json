@@ -35,5 +35,728 @@
       "Sampling and estimation",
       "Hypothesis tests"
     ]
+  },
+  "0610": {
+    "context": "Cambridge IGCSE Biology 0610",
+    "topics": [
+      "Characteristics and classification of living organisms",
+      "Organisation of the organism",
+      "Movement into and out of cells",
+      "Biological molecules",
+      "Enzymes",
+      "Plant nutrition",
+      "Human nutrition",
+      "Transport in plants",
+      "Transport in animals",
+      "Diseases and immunity",
+      "Gas exchange in humans",
+      "Respiration",
+      "Excretion in humans",
+      "Coordination and response",
+      "Drugs",
+      "Reproduction",
+      "Inheritance",
+      "Variation and selection",
+      "Organisms and their environment",
+      "Human influences on ecosystems",
+      "Biotechnology and genetic modification"
+    ]
+  },
+  "0620": {
+    "context": "Cambridge IGCSE Chemistry 0620",
+    "topics": [
+      "States of matter",
+      "Atoms, elements and compounds",
+      "Stoichiometry",
+      "Electrochemistry",
+      "Chemical energetics",
+      "Chemical reactions",
+      "Acids, bases and salts",
+      "The Periodic Table",
+      "Metals",
+      "Chemistry of the environment",
+      "Organic chemistry",
+      "Experimental techniques and chemical analysis"
+    ]
+  },
+  "0625": {
+    "context": "Cambridge IGCSE Physics 0625",
+    "topics": [
+      "Motion, forces and energy",
+      "Thermal physics",
+      "Waves",
+      "Electricity and magnetism",
+      "Nuclear physics",
+      "Space physics"
+    ]
+  },
+  "0607": {
+    "context": "Cambridge IGCSE Mathematics (International) 0607",
+    "topics": [
+      "Number",
+      "Algebra",
+      "Functions",
+      "Coordinate geometry",
+      "Geometry",
+      "Mensuration",
+      "Trigonometry",
+      "Vectors and transformations",
+      "Probability",
+      "Statistics",
+      "Sets"
+    ]
+  },
+  "0606": {
+    "context": "Cambridge IGCSE Additional Mathematics 0606",
+    "topics": [
+      "Functions",
+      "Quadratic functions",
+      "Factors of polynomials",
+      "Equations, inequalities and graphs",
+      "Simultaneous equations",
+      "Logarithmic and exponential functions",
+      "Straight line graphs",
+      "Coordinate geometry of the circle",
+      "Circular measure",
+      "Trigonometry",
+      "Permutations and combinations",
+      "Series",
+      "Vectors in two dimensions",
+      "Calculus: differentiation",
+      "Calculus: integration",
+      "Kinematics"
+    ]
+  },
+  "0460": {
+    "context": "Cambridge IGCSE Geography 0460",
+    "topics": [
+      "Population dynamics",
+      "Settlement",
+      "Urban settlements and urbanisation",
+      "Earthquakes and volcanoes",
+      "Rivers",
+      "Coasts",
+      "Weather",
+      "Climate and natural vegetation",
+      "Development",
+      "Food production",
+      "Industry",
+      "Tourism",
+      "Energy",
+      "Water",
+      "Environmental risks of economic development",
+      "Geographical skills and fieldwork"
+    ]
+  },
+  "0470": {
+    "context": "Cambridge IGCSE History 0470",
+    "topics": [
+      "Were the peace treaties of 1919-23 fair?",
+      "To what extent was the League of Nations a success?",
+      "Why had international peace collapsed by 1939?",
+      "Who was to blame for the Cold War?",
+      "How effectively did the USA contain the spread of Communism?",
+      "How secure was the USSR's control over Eastern Europe?",
+      "How effective has the United Nations been?",
+      "Germany, 1918-45",
+      "Russia, 1905-41",
+      "The USA, 1919-41",
+      "Source evaluation and interpretation"
+    ]
+  },
+  "0455": {
+    "context": "Cambridge IGCSE Economics 0455",
+    "topics": [
+      "The basic economic problem",
+      "The allocation of resources",
+      "Microeconomic decision makers",
+      "Government and the macroeconomy",
+      "Economic development",
+      "International trade and globalisation"
+    ]
+  },
+  "0478": {
+    "context": "Cambridge IGCSE Computer Science 0478",
+    "topics": [
+      "Data representation",
+      "Data transmission",
+      "Hardware",
+      "Software",
+      "The internet and its uses",
+      "Automated and emerging technologies",
+      "Algorithm design and problem solving",
+      "Programming",
+      "Databases",
+      "Boolean logic"
+    ]
+  },
+  "0450": {
+    "context": "Cambridge IGCSE Business Studies 0450",
+    "topics": [
+      "Understanding business activity",
+      "People in business",
+      "Marketing",
+      "Operations management",
+      "Financial information and decisions",
+      "External influences on business activity"
+    ]
+  },
+  "0500": {
+    "context": "Cambridge IGCSE English First Language 0500",
+    "topics": [
+      "Reading for explicit and implicit meaning",
+      "Summary writing",
+      "Analysis of language and style",
+      "Directed writing",
+      "Descriptive writing",
+      "Narrative writing",
+      "Composition: structure and organisation",
+      "Comparison of texts",
+      "Speaking and listening"
+    ]
+  },
+  "0475": {
+    "context": "Cambridge IGCSE Literature in English 0475",
+    "topics": [
+      "Poetry: unseen analysis",
+      "Poetry: set texts",
+      "Prose: set texts",
+      "Drama: set texts",
+      "Character and characterisation",
+      "Theme and idea",
+      "Setting and atmosphere",
+      "Language, imagery and tone",
+      "Form and structure",
+      "Writers' effects and reader response",
+      "Empathic response"
+    ]
+  },
+  "0509": {
+    "context": "Cambridge IGCSE Chinese First Language 0509",
+    "topics": [
+      "Reading comprehension",
+      "Summary and note-making",
+      "Language and style analysis",
+      "Directed writing",
+      "Composition: narrative",
+      "Composition: descriptive",
+      "Composition: argumentative and discursive",
+      "Text type and register"
+    ]
+  },
+  "0411": {
+    "context": "Cambridge IGCSE Drama 0411",
+    "topics": [
+      "Devising drama",
+      "Response to a stimulus",
+      "Set text study",
+      "Characterisation and role",
+      "Vocal and physical skills",
+      "Staging, space and proxemics",
+      "Design: set, costume, lighting and sound",
+      "Directing and interpretation",
+      "Evaluation of performance"
+    ]
+  },
+  "0410": {
+    "context": "Cambridge IGCSE Music 0410",
+    "topics": [
+      "Listening and appraising",
+      "Western Classical tradition",
+      "Music from around the world",
+      "Melody and harmony",
+      "Rhythm and metre",
+      "Texture and structure",
+      "Timbre, instrumentation and sonority",
+      "Dictation and notation",
+      "Composing",
+      "Performing"
+    ]
+  },
+  "0413": {
+    "context": "Cambridge IGCSE Physical Education 0413",
+    "topics": [
+      "Anatomy and physiology: skeletal and muscular systems",
+      "Anatomy and physiology: cardiovascular and respiratory systems",
+      "Energy systems and effects of exercise",
+      "Components of physical fitness",
+      "Principles of training and training methods",
+      "Skill acquisition and information processing",
+      "Motivation, arousal and psychological preparation",
+      "Health, safety and injury prevention",
+      "Diet, nutrition and performance",
+      "Social, cultural and ethical influences on sport"
+    ]
+  },
+  "0400": {
+    "context": "Cambridge IGCSE Art & Design 0400",
+    "topics": [
+      "Observational drawing and recording",
+      "Development of ideas and preparatory studies",
+      "Composition and design",
+      "Colour theory and application",
+      "Materials, media and techniques",
+      "Painting and mixed media",
+      "Printmaking",
+      "Three-dimensional and sculptural work",
+      "Graphic communication",
+      "Critical and contextual reference",
+      "Realisation of intentions"
+    ]
+  },
+  "biology": {
+    "context": "IB Diploma Programme Biology",
+    "topics": [
+      "Cell biology",
+      "Molecular biology",
+      "Genetics",
+      "Ecology",
+      "Evolution and biodiversity",
+      "Human physiology",
+      "Nucleic acids",
+      "Metabolism, cell respiration and photosynthesis",
+      "Plant biology",
+      "Genetics and evolution",
+      "Animal physiology",
+      "Neurobiology and behaviour",
+      "Biotechnology and bioinformatics",
+      "Ecology and conservation",
+      "Human physiology (option)",
+      "Experimental design and data analysis"
+    ]
+  },
+  "chemistry": {
+    "context": "IB Diploma Programme Chemistry",
+    "topics": [
+      "Stoichiometric relationships",
+      "Atomic structure",
+      "Periodicity",
+      "Chemical bonding and structure",
+      "Energetics and thermochemistry",
+      "Chemical kinetics",
+      "Equilibrium",
+      "Acids and bases",
+      "Redox processes",
+      "Organic chemistry",
+      "Measurement and data processing",
+      "Materials",
+      "Biochemistry",
+      "Energy",
+      "Medicinal chemistry"
+    ]
+  },
+  "physics": {
+    "context": "IB Diploma Programme Physics",
+    "topics": [
+      "Measurements and uncertainties",
+      "Mechanics",
+      "Thermal physics",
+      "Waves",
+      "Electricity and magnetism",
+      "Circular motion and gravitation",
+      "Atomic, nuclear and particle physics",
+      "Energy production",
+      "Wave phenomena",
+      "Fields",
+      "Electromagnetic induction",
+      "Quantum and nuclear physics",
+      "Relativity",
+      "Engineering physics",
+      "Imaging",
+      "Astrophysics"
+    ]
+  },
+  "sports-exercise-and-health-science": {
+    "context": "IB Diploma Programme Sports, Exercise and Health Science",
+    "topics": [
+      "Anatomy",
+      "Exercise physiology",
+      "Energy systems",
+      "Movement analysis",
+      "Skill in sport",
+      "Measurement and evaluation of human performance",
+      "Training to optimise physiological performance",
+      "Environmental factors and physical performance",
+      "Non-nutritional ergogenic aids",
+      "Physiology of training",
+      "Nutrition for sport, exercise and health",
+      "Psychology of sport",
+      "Optimising physiological performance"
+    ]
+  },
+  "environmental-systems-and-societies": {
+    "context": "IB Diploma Programme Environmental Systems and Societies",
+    "topics": [
+      "Foundations of environmental systems and societies",
+      "Ecosystems and ecology",
+      "Biodiversity and conservation",
+      "Water and aquatic food production systems and societies",
+      "Soil systems and terrestrial food production systems and societies",
+      "Atmospheric systems and societies",
+      "Climate change and energy production",
+      "Human systems and resource use",
+      "Environmental value systems",
+      "Pollution management",
+      "Sustainability and environmental impact assessment"
+    ]
+  },
+  "mathematics-analysis-and-approaches": {
+    "context": "IB Diploma Programme Mathematics: Analysis and Approaches",
+    "topics": [
+      "Number and algebra",
+      "Sequences and series",
+      "Exponents and logarithms",
+      "Proof",
+      "Complex numbers",
+      "Functions",
+      "Quadratics and polynomials",
+      "Transformations of graphs",
+      "Geometry and trigonometry",
+      "Trigonometric functions and identities",
+      "Vectors",
+      "Statistics",
+      "Probability",
+      "Probability distributions",
+      "Differential calculus",
+      "Integral calculus",
+      "Differential equations",
+      "Maclaurin series"
+    ]
+  },
+  "mathematics-applications-and-interpretation": {
+    "context": "IB Diploma Programme Mathematics: Applications and Interpretation",
+    "topics": [
+      "Number and algebra",
+      "Sequences and series",
+      "Approximation and error",
+      "Matrices",
+      "Functions and models",
+      "Geometry and trigonometry",
+      "Voronoi diagrams",
+      "Graph theory",
+      "Statistics and sampling",
+      "Correlation and regression",
+      "Probability",
+      "Probability distributions",
+      "Statistical tests and analysis",
+      "Differential calculus",
+      "Integral calculus",
+      "Differential equations and modelling"
+    ]
+  },
+  "computer-science": {
+    "context": "IB Diploma Programme Computer Science",
+    "topics": [
+      "System fundamentals",
+      "Computer organisation",
+      "Networks",
+      "Computational thinking, problem solving and programming",
+      "Abstract data structures",
+      "Resource management",
+      "Control",
+      "Object-oriented programming",
+      "Databases",
+      "Modelling and simulation",
+      "Web science",
+      "Case study"
+    ]
+  },
+  "economics": {
+    "context": "IB Diploma Programme Economics",
+    "topics": [
+      "Introduction to economics",
+      "Microeconomics: demand, supply and market equilibrium",
+      "Elasticity",
+      "Government intervention in markets",
+      "Market failure and externalities",
+      "Theory of the firm and market structures",
+      "Macroeconomics: measuring economic activity",
+      "Aggregate demand and aggregate supply",
+      "Macroeconomic objectives",
+      "Fiscal, monetary and supply-side policy",
+      "International trade",
+      "Exchange rates and the balance of payments",
+      "Economic integration",
+      "Economic development",
+      "Sustainable development"
+    ]
+  },
+  "business-management": {
+    "context": "IB Diploma Programme Business Management",
+    "topics": [
+      "Business organisation and environment",
+      "Types of organisation",
+      "Organisational objectives",
+      "Stakeholders",
+      "External environment and growth",
+      "Human resource management",
+      "Organisational structure and leadership",
+      "Motivation",
+      "Organisational culture and industrial relations",
+      "Finance and accounts",
+      "Sources of finance and costs",
+      "Final accounts and ratio analysis",
+      "Cash flow and investment appraisal",
+      "Marketing",
+      "Market research and the marketing mix",
+      "Operations management",
+      "Production methods and quality management",
+      "Business strategy and decision making"
+    ]
+  },
+  "geography": {
+    "context": "IB Diploma Programme Geography",
+    "topics": [
+      "Population distribution and change",
+      "Global climate: vulnerability and resilience",
+      "Global resource consumption and security",
+      "Freshwater: drainage basins",
+      "Oceans and coastal margins",
+      "Extreme environments",
+      "Geophysical hazards",
+      "Leisure, tourism and sport",
+      "Food and health",
+      "Urban environments",
+      "Power, places and networks",
+      "Human development and diversity",
+      "Global risks and resilience",
+      "Geographical skills and fieldwork"
+    ]
+  },
+  "history": {
+    "context": "IB Diploma Programme History",
+    "topics": [
+      "Military leaders",
+      "Conquest and its impact",
+      "The move to global war",
+      "Rights and protest",
+      "Conflict and intervention",
+      "Society and economy (750-1400)",
+      "Causes and effects of medieval wars",
+      "Dynasties and rulers",
+      "Societies in transition",
+      "Early Modern states",
+      "Causes and effects of Early Modern wars",
+      "Origins, development and impact of industrialisation",
+      "Independence movements",
+      "Evolution and development of democratic states",
+      "Authoritarian states",
+      "Causes and effects of 20th-century wars",
+      "The Cold War: superpower tensions and rivalries",
+      "Source evaluation: origin, purpose, value and limitations",
+      "Historiography and historical interpretation"
+    ]
+  },
+  "psychology": {
+    "context": "IB Diploma Programme Psychology",
+    "topics": [
+      "Biological approach to understanding behaviour",
+      "Cognitive approach to understanding behaviour",
+      "Sociocultural approach to understanding behaviour",
+      "Research methodology and ethics",
+      "Abnormal psychology",
+      "Developmental psychology",
+      "Health psychology",
+      "Psychology of human relationships",
+      "The role of animal research",
+      "Studies and evaluation of evidence"
+    ]
+  },
+  "philosophy": {
+    "context": "IB Diploma Programme Philosophy",
+    "topics": [
+      "Being human",
+      "Epistemology and theory of knowledge",
+      "Ethics",
+      "Philosophy of religion",
+      "Philosophy of science",
+      "Political philosophy",
+      "Aesthetics",
+      "Philosophy of mind",
+      "Prescribed philosophical text analysis",
+      "Argument construction and evaluation"
+    ]
+  },
+  "english-a-literature": {
+    "context": "IB Diploma Programme English A: Literature",
+    "topics": [
+      "Readers, writers and texts",
+      "Time and space",
+      "Intertextuality: connecting texts",
+      "Guided literary analysis of poetry",
+      "Guided literary analysis of prose",
+      "Comparative essay on literary works",
+      "Drama and performance",
+      "Narrative technique and point of view",
+      "Style, diction and imagery",
+      "Structure and form",
+      "Context and reception"
+    ]
+  },
+  "english-a-language-and-literature": {
+    "context": "IB Diploma Programme English A: Language and Literature",
+    "topics": [
+      "Readers, writers and texts",
+      "Time and space",
+      "Intertextuality: connecting texts",
+      "Analysis of non-literary texts",
+      "Analysis of literary texts",
+      "Media, audience and purpose",
+      "Rhetoric and persuasion",
+      "Visual and multimodal texts",
+      "Comparative essay on literary works",
+      "Language, power and identity"
+    ]
+  },
+  "chinese-a-language-and-literature": {
+    "context": "IB Diploma Programme Chinese A: Language and Literature",
+    "topics": [
+      "Readers, writers and texts",
+      "Time and space",
+      "Intertextuality: connecting texts",
+      "Analysis of non-literary texts",
+      "Analysis of literary texts",
+      "Media, audience and purpose",
+      "Rhetoric and persuasion",
+      "Comparative essay on literary works",
+      "Language, culture and identity"
+    ]
+  },
+  "music": {
+    "context": "IB Diploma Programme Music",
+    "topics": [
+      "Exploring music in context",
+      "Experimenting with music",
+      "Presenting music",
+      "Musical elements and structures",
+      "Western art music",
+      "World and traditional music",
+      "Popular and jazz music",
+      "Composition and arrangement",
+      "Performance and interpretation",
+      "Score analysis and aural perception"
+    ]
+  },
+  "9702": {
+    "context": "Cambridge AS & A Level Physics 9702",
+    "topics": [
+      "Physical quantities and units",
+      "Kinematics",
+      "Dynamics",
+      "Forces, density and pressure",
+      "Work, energy and power",
+      "Deformation of solids",
+      "Waves",
+      "Superposition",
+      "Electricity",
+      "D.C. circuits",
+      "Particle physics",
+      "Motion in a circle",
+      "Gravitational fields",
+      "Temperature",
+      "Ideal gases",
+      "Thermodynamics",
+      "Oscillations",
+      "Electric fields",
+      "Capacitance",
+      "Magnetic fields",
+      "Alternating currents",
+      "Quantum physics",
+      "Nuclear physics",
+      "Medical physics",
+      "Astronomy and cosmology",
+      "Practical skills and uncertainties"
+    ]
+  },
+  "9708": {
+    "context": "Cambridge AS & A Level Economics 9708",
+    "topics": [
+      "Basic economic ideas and resource allocation",
+      "The price system and the microeconomy",
+      "Government microeconomic intervention",
+      "The macroeconomy",
+      "Government macroeconomic intervention",
+      "International economic issues",
+      "Utility and budget lines",
+      "Efficiency and market failure",
+      "Private and social costs and benefits",
+      "Labour market forces",
+      "Market structure and firm behaviour",
+      "Growth and development",
+      "Money and banking",
+      "Balance of payments and exchange rates"
+    ]
+  },
+  "9231": {
+    "context": "Cambridge AS & A Level Further Mathematics 9231",
+    "topics": [
+      "Roots of polynomial equations",
+      "Rational functions and graphs",
+      "Summation of series",
+      "Matrices",
+      "Polar coordinates",
+      "Vectors",
+      "Proof by induction",
+      "Hyperbolic functions",
+      "Differentiation and integration (further)",
+      "Differential equations",
+      "Complex numbers",
+      "Motion of a projectile",
+      "Equilibrium of a rigid body",
+      "Circular motion",
+      "Hooke's law",
+      "Linear motion under a variable force",
+      "Momentum and impulse",
+      "Continuous random variables",
+      "Inference using normal and t-distributions",
+      "Chi-squared tests",
+      "Non-parametric tests",
+      "Probability generating functions"
+    ]
+  },
+  "9618": {
+    "context": "Cambridge AS & A Level Computer Science 9618",
+    "topics": [
+      "Information representation",
+      "Communication",
+      "Hardware",
+      "Processor fundamentals",
+      "System software",
+      "Security, privacy and data integrity",
+      "Ethics and ownership",
+      "Databases",
+      "Algorithm design and problem solving",
+      "Data types and structures",
+      "Programming",
+      "Software development",
+      "Data representation (advanced)",
+      "Boolean algebra and logic circuits",
+      "Computer architecture and the fetch-execute cycle",
+      "System software and virtual machines",
+      "Computational thinking and problem solving",
+      "Further programming and object-oriented programming"
+    ]
+  },
+  "9608": {
+    "context": "Cambridge AS & A Level Computer Science 9608 (retired 2021)",
+    "topics": [
+      "Information representation",
+      "Communication and internet technologies",
+      "Hardware",
+      "Logic gates and logic circuits",
+      "Processor fundamentals",
+      "Assembly language programming",
+      "System software",
+      "Security, privacy and data integrity",
+      "Ethics and ownership",
+      "Databases",
+      "Algorithm design and problem solving",
+      "Data representation (advanced)",
+      "Programming and data types",
+      "Software development",
+      "Computational thinking",
+      "Object-oriented programming",
+      "Declarative and low-level programming"
+    ]
   }
 }
