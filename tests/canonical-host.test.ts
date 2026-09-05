@@ -39,3 +39,24 @@ test('does not loop when only the scheme differs', () => {
 test('ignores an unparseable canonical origin', () => {
   assert.equal(canonicalRedirectUrl('https://alias.example/x', 'not a url'), null);
 });
+
+test('lets a cron route through on the hostname Vercel actually calls', () => {
+  // Vercel Cron calls the deployment's own .vercel.app host and does not follow
+  // redirects, so a 308 here silently cancels the job rather than rerouting it.
+  assert.equal(
+    canonicalRedirectUrl(
+      'https://ykpao-study-ykp-ao-study.vercel.app/api/cron/backup',
+      CANONICAL,
+    ),
+    null,
+  );
+});
+
+test('the cron exemption is scoped to cron paths only', () => {
+  // A prefix match, not a substring one: nothing outside /api/cron/ should
+  // inherit the exemption just for having the word in its path.
+  assert.equal(
+    canonicalRedirectUrl('https://alias.vercel.app/docs/api/cron/backup', CANONICAL),
+    'https://study.busypizza.bond/docs/api/cron/backup',
+  );
+});
