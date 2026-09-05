@@ -39,9 +39,17 @@ const TREES = [
   // what the catalogue serves. Pass `--all-extensions` to override.
   //
   // `.mp3` is in that set because a Music listening paper is unusable without
-  // its tracks: the catalogue indexes them as `au` documents, and they are a
-  // few hundred megabytes against the corpus's several gigabytes.
-  { name: 'papers', dir: 'pdf_extraction', prefix: 'papers', extensions: ['.pdf', '.mp3'] },
+  // its tracks. Only the tracks the catalogue actually indexes are included:
+  // the same directories hold ~6 GB of language B and ab initio recordings for
+  // subjects the school does not teach, which no page can request. The Music
+  // tracks are 101 MB of that, and `include` is what separates them.
+  {
+    name: 'papers',
+    dir: 'pdf_extraction',
+    prefix: 'papers',
+    extensions: ['.pdf', '.mp3'],
+    include: (relative) => !relative.toLowerCase().endsWith('.mp3') || /(^|\/)Track[ _-]?\d+\.mp3$/i.test(relative),
+  },
   { name: 'uploads', dir: 'public/uploads', prefix: 'uploads' },
   { name: 'extracted_images', dir: 'public/extracted_images', prefix: 'extracted_images' },
   { name: 'step-images', dir: 'public/step-images', prefix: 'step-images' },
@@ -183,6 +191,12 @@ async function main() {
         excluded++;
         continue;
       }
+      // A second, finer filter for trees where the extension alone lets in
+      // files nothing can request.
+      if (tree.include && !options.allExtensions && !tree.include(file.relative)) {
+        excluded++;
+        continue;
+      }
       files.push(file);
     }
     console.log(
@@ -193,7 +207,11 @@ async function main() {
     await pooled(files, options.concurrency, async (file) => {
       const key = `${tree.prefix}/${file.relative}`;
       try {
-        if (!options.force && !options.dryRun && (await store.head(key))) {
+        // The HEAD runs during a dry run as well. Without it the preview
+        // reports every candidate file as pending -- "would upload 14534
+        // objects (17 GB)" for a corpus already uploaded bar a few tracks --
+        // which is alarming enough to stop someone running the real thing.
+        if (!options.force && (await store.head(key))) {
           skipped++;
           return;
         }
