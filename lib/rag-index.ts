@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { extractFileText } from '@/lib/rag-file-text';
+import { extractFileText, isRetrievableText } from '@/lib/rag-file-text';
 
 export type IndexedDocumentInput = {
   documentKey: string;
@@ -370,6 +370,22 @@ export async function indexBankQuestion(questionId: number) {
     return prisma.ragDocument.deleteMany({ where: { documentKey: { in: keys } } });
   }
 
+  // The bank is stored as page images with a screenshot per question, and its
+  // transcription pass has never run at scale: 66,756 published questions carry
+  // an empty bodyMd, and of 52,925 published mark schemes none has a marking
+  // point or an answer longer than 40 characters -- the text that does exist is
+  // the single letter of an MCQ key. Indexing that produced 19,441 documents
+  // whose every chunk averaged one character: not retrievable, just corpus
+  // noise that dilutes ranking and inflates the manifests.
+  //
+  // So a document is only worth making when there is a passage behind it. Until
+  // transcription runs this yields nothing for the bank, which is the honest
+  // outcome -- and the moment it does run, the same rule starts admitting them.
+  const bodyText = question.bodyMd.trim();
+  if (!isRetrievableText(bodyText)) {
+    return prisma.ragDocument.deleteMany({ where: { documentKey: { in: keys } } });
+  }
+
   const paper = question.paper;
   const subject = paper.subject;
   const academic = academicMetadata(subject.code, subject.name, subject.level);
@@ -391,7 +407,7 @@ export async function indexBankQuestion(questionId: number) {
     sourceType: 'question',
     sourceRecordId: String(question.id),
     title: stem,
-    text: question.bodyMd,
+    text: bodyText,
     route: '/bank',
     documentType: 'question-paper',
     metadata: {
@@ -406,7 +422,12 @@ export async function indexBankQuestion(questionId: number) {
   });
 
   const markScheme = question.markScheme;
-  if (!markScheme || markScheme.status !== 'published') {
+  const markSchemeBody = markScheme
+    ? `${markScheme.answerMd}\n${markSchemeText(markScheme.markingPoints)}`.trim()
+    : '';
+  // Same rule as the question body. An MCQ key on its own is an answer, not a
+  // passage: it belongs to the question's grading path, not to retrieval.
+  if (!markScheme || markScheme.status !== 'published' || !isRetrievableText(markSchemeBody)) {
     await prisma.ragDocument.deleteMany({ where: { documentKey: keys[1] } });
     return document;
   }
@@ -419,7 +440,7 @@ export async function indexBankQuestion(questionId: number) {
     title: `${stem} mark scheme`,
     // The marking points carry what each mark is actually awarded for, which is
     // the part a student asking about a mark scheme wants.
-    text: `${markScheme.answerMd}\n${markSchemeText(markScheme.markingPoints)}`,
+    text: markSchemeBody,
     route: '/bank',
     documentType: 'mark-scheme',
     metadata: {

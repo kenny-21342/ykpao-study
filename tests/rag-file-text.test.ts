@@ -99,3 +99,14 @@ test('reads the text out of a real PDF', async () => {
   assert.match(result.text, /activation energy/);
   assert.equal(result.pages, 1);
 });
+
+test('a passage has to be long enough to retrieve', async () => {
+  const { isRetrievableText, RETRIEVABLE_CHARS } = await import('../lib/rag-file-text.ts');
+  // The MCQ answer key that put 19,441 one-character chunks into the index.
+  assert.equal(isRetrievableText('B'), false);
+  assert.equal(isRetrievableText(''), false);
+  assert.equal(isRetrievableText(null), false);
+  assert.equal(isRetrievableText(' '.repeat(200)), false, 'whitespace is not prose');
+  assert.equal(isRetrievableText('x'.repeat(RETRIEVABLE_CHARS - 1)), false);
+  assert.equal(isRetrievableText('x'.repeat(RETRIEVABLE_CHARS)), true);
+});

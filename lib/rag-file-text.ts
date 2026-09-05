@@ -28,12 +28,21 @@ const MAX_PAGES = 60;
 const MAX_CHARS = 120_000;
 
 /**
- * Below this, treat the extraction as empty rather than partial. A scanned PDF
- * still yields a few stray characters from page furniture -- a header, a page
- * number -- and indexing that as though it were the document's contents is
- * worse than admitting there is no text layer.
+ * The shortest passage worth putting in the corpus.
+ *
+ * Below this there is nothing to retrieve, only something to rank. A scanned
+ * PDF yields a few stray characters of page furniture -- a header, a page
+ * number -- and a bank mark scheme with no transcription yields the single
+ * letter of an MCQ key. Indexing either as though it were a document's contents
+ * dilutes every real result and inflates the manifests; the bank alone put
+ * 19,441 one-character chunks into the index that way.
  */
-const MIN_USEFUL_CHARS = 40;
+export const RETRIEVABLE_CHARS = 40;
+
+/** Whether `value` carries enough prose to be worth a document. */
+export function isRetrievableText(value: string | null | undefined): boolean {
+  return (value ?? '').trim().length >= RETRIEVABLE_CHARS;
+}
 
 const TEXT_MIME = /^text\/|^application\/(json|xml|x-yaml|yaml)$/i;
 const TEXT_EXTENSION = /\.(txt|md|markdown|csv|tsv|json|xml|ya?ml|rtf)$/i;
@@ -75,7 +84,7 @@ async function extractPdfText(bytes: Buffer): Promise<ExtractedFileText> {
       if (length >= MAX_CHARS) break;
     }
     const text = parts.join('\n').slice(0, MAX_CHARS);
-    if (text.trim().length < MIN_USEFUL_CHARS) return NOTHING('no-text-layer');
+    if (!isRetrievableText(text)) return NOTHING('no-text-layer');
     return {
       text,
       reason: 'ok',
@@ -115,7 +124,7 @@ export async function extractFileText(
     if (isPdf) return await extractPdfText(object.bytes);
 
     const text = object.bytes.toString('utf8').slice(0, MAX_CHARS);
-    if (text.trim().length < MIN_USEFUL_CHARS) return NOTHING('no-text-layer');
+    if (!isRetrievableText(text)) return NOTHING('no-text-layer');
     return { text, reason: 'ok', truncated: object.bytes.length > MAX_CHARS };
   } catch (error) {
     console.warn(
