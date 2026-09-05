@@ -44,6 +44,15 @@ from pathlib import Path
 
 import fitz
 
+#: Where a subject is examined by region and the plain name never appears, the
+#: region the school actually sits. History HL publishes four -- Africa and the
+#: Middle East, the Americas, Asia and Oceania, Europe -- and they differ by a
+#: mark or two, so alphabetical order is a coin toss rather than an answer.
+#: YK Pao sits Asia and Oceania.
+PREFERRED_OPTIONS = {
+    ("ib-history", "HL"): "HISTORY ASIA AND OCEANIA",
+}
+
 #: The names the IB prints, mapped to the `ib-` slugs in COURSE_CATALOG
 #: (lib/course-catalog-data.ts). The PDFs abbreviate heavily and inconsistently
 #: across years, so this is an explicit table rather than a slugify() -- a
@@ -204,10 +213,14 @@ def pick_option(rows: list[dict]) -> tuple[list[dict], list[str]]:
                     f"{key[0]} {key[1]} {key[3]} {key[2]}: options differ, "
                     f"grade 7 from " + ", ".join(f"{o} at {m}" for o, m in sorted(sevens.items()))
                 )
-        # The option printed under the subject's own name (History SL, plain
-        # Economics) is the ungrouped one; regional and pilot variants are not.
-        plain = next((o for o in options if o in SUBJECTS), None)
-        choice = plain or sorted(options)[0]
+        # A region the school actually sits wins outright. Otherwise the option
+        # printed under the subject's own name (History SL, plain Economics) is
+        # the ungrouped one; regional and pilot variants are not.
+        preferred = PREFERRED_OPTIONS.get((key[0], key[1]))
+        choice = (
+            preferred if preferred in options
+            else next((o for o in options if o in SUBJECTS), None) or sorted(options)[0]
+        )
         kept.extend(options[choice])
     return kept, notes
 
