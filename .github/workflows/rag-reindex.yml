@@ -1,0 +1,67 @@
+name: RAG reindex
+
+# Uploads and note edits index themselves as they are written, through
+# refreshRagIndex. This job is for what those hooks cannot see: records deleted
+# outside a request, rows changed by a script or a migration, and content that
+# was added before its indexer existed. It also prunes documents whose source
+# record is gone -- the index once carried 857 of those.
+#
+# It runs here rather than as a Vercel cron because a full rebuild walks every
+# published bank question, which does not fit in a function timeout. The runner
+# already holds the production database credential for the nightly backup.
+on:
+  schedule:
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rag-reindex
+  cancel-in-progress: false
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # The reindexer reads and writes through Prisma, so it wants the pooled
+      # URL the app uses, not the direct one pg_dump needs.
+      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
+      STORAGE_DRIVER: s3
+      STORAGE_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      STORAGE_REGION: auto
+      STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${DATABASE_URL:-}" ]]; then
+            echo "Missing required repository secret: DATABASE_URL" >&2
+            exit 1
+          fi
+          # Storage is only needed to read the text out of uploaded files. When
+          # it is absent the run still rebuilds everything else, and resources
+          # fall back to title and description -- so warn rather than fail.
+          if [[ -z "${STORAGE_BUCKET:-}" || -z "${STORAGE_ENDPOINT:-}" ]]; then
+            echo "::warning::Object storage is not configured; uploaded files will be indexed by title only."
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate the Prisma client
+        run: npx prisma generate
+
+      - name: Rebuild the index
+        run: npx tsx scripts/reindex-rag.ts
