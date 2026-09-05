@@ -87,9 +87,8 @@ export function resolveSelfMark(
   }
 
   if (input.selfMarkedCorrect !== undefined && input.selfMarkedCorrect !== null) {
-    // The fallback for the 13,896 self-markable questions whose mark total the
-    // corpus never captured. Kept rather than removed: a verdict is worth more
-    // than no attempt record at all.
+    // The fallback wherever the corpus never captured a mark total. Kept rather
+    // than removed: a verdict is worth more than no attempt record at all.
     return {
       score: input.selfMarkedCorrect ? 1 : 0,
       isCorrect: input.selfMarkedCorrect,

@@ -39,8 +39,9 @@ const AttemptBody = z.object({
    */
   awardedMarks: z.number().int().nonnegative().max(200).optional(),
   /**
-   * The older binary verdict. Still accepted, and still the only option for the
-   * 13,896 self-markable questions whose mark total the corpus never captured.
+   * The older binary verdict. Still accepted, and still the only option for a
+   * question the corpus never captured a mark total for -- most of the bank,
+   * since a total is only recorded where the paper printed one.
    */
   selfMarkedCorrect: z.boolean().optional(),
 });

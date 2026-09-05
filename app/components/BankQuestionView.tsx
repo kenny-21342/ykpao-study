@@ -231,9 +231,9 @@ function AnswerPanel({
   if (result) {
     const { isCorrect, correctLetter, awardedMarks, outOfMarks } = result;
     const total = question.totalMarks;
-    // Only where the corpus captured a mark total. 54,304 published questions
-    // have none, and inventing one to render a stepper would be worse than the
-    // true/false it replaces.
+    // Only where the corpus captured a mark total -- most of the bank has none,
+    // because a total is only recorded where the paper printed one. Inventing
+    // one to render a stepper would be worse than the true/false it replaces.
     const canAwardMarks = isCorrect === null && total !== null && total > 1;
     return (
       <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
