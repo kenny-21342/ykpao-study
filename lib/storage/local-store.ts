@@ -34,6 +34,7 @@ const PREFIX_ROOTS: Array<{ prefix: string; dir: string }> = [
 
 const CONTENT_TYPES = new Map<string, string>([
   ['.pdf', 'application/pdf'],
+  ['.mp3', 'audio/mpeg'],
   ['.png', 'image/png'],
   ['.jpg', 'image/jpeg'],
   ['.jpeg', 'image/jpeg'],

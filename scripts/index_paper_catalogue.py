@@ -23,7 +23,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PDF_ROOT = REPO_ROOT / "pdf_extraction"
 sys.path.insert(0, str(PDF_ROOT))
 
-from catalogue.parser import CatalogueEntry, ParseError, parse_path  # noqa: E402
+from catalogue.parser import (  # noqa: E402
+    CatalogueEntry,
+    ParseError,
+    is_indexable_audio,
+    parse_path,
+)
 
 # Directories that hold papers. Everything else under pdf_extraction/ (work
 # dirs, extracted images, caches) is ignored.
@@ -52,7 +57,8 @@ def collect(pdf_root: Path, with_stats: bool = True) -> tuple[list[dict], list[s
             failures.append(f"missing paper tree: {tree}")
             continue
 
-        for path in sorted(base.rglob("*.pdf")):
+        audio = [path for path in base.rglob("*.mp3") if is_indexable_audio(path)]
+        for path in sorted([*base.rglob("*.pdf"), *audio]):
             if not path.is_file():
                 continue
             try:
@@ -72,7 +78,12 @@ def collect(pdf_root: Path, with_stats: bool = True) -> tuple[list[dict], list[s
                 continue
             seen[record["filepath"]] = str(path)
 
-            if with_stats:
+            if record["doc_type"] == "au":
+                # Audio has no pages. Size still matters -- the browser shows it,
+                # and a listening track is a much larger download than a PDF.
+                record["page_count"] = None
+                record["size_bytes"] = path.stat().st_size
+            elif with_stats:
                 page_count, size_bytes = read_pdf_stats(path)
                 if page_count is None:
                     failures.append(f"unreadable PDF, skipped: {path}")

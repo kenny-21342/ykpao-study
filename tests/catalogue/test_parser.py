@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "pdf_extraction"))
 
-from catalogue.parser import ParseError, parse_path  # noqa: E402
+from catalogue.parser import ParseError, is_indexable_audio, parse_path  # noqa: E402
 
 ROOT = Path(".")
 IB_2023_NOV = Path(
@@ -152,3 +152,50 @@ class RejectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ListeningAudioTests(unittest.TestCase):
+    """Music listening tracks, which ship beside the PDFs as loose mp3s.
+
+    A tester who studies Music opened a listening paper and found no audio: the
+    tracks were on disk all along, and the indexer walked only `*.pdf`.
+    """
+
+    AUDIO = Path(
+        "IB PAST PAPERS - YEAR/2019 Examination Session/"
+        "May 2019 Examination Session/audio"
+    )
+
+    def test_a_track_is_placed_against_its_sitting(self) -> None:
+        entry = parse_path(self.AUDIO / "Track 3.mp3", ROOT)
+        self.assertEqual(entry.subject_code, "ib-music")
+        self.assertEqual(entry.doc_type, "au")
+        self.assertEqual((entry.year, entry.session), (2019, "may"))
+        self.assertEqual(entry.paper_number, 1)
+        self.assertEqual(entry.filename, "Track 3.mp3")
+
+    def test_tracks_join_the_sitting_rather_than_splitting_it(self) -> None:
+        """Four tracks must share one instance key, not make four sittings."""
+        keys = {
+            (e.subject_code, e.year, e.session, e.paper_number, e.variant, e.level, e.timezone)
+            for e in (parse_path(self.AUDIO / f"Track {n}.mp3", ROOT) for n in range(1, 5))
+        }
+        self.assertEqual(len(keys), 1)
+
+    def test_level_covers_both_cohorts(self) -> None:
+        """One recording is played to HL and SL alike."""
+        self.assertEqual(parse_path(self.AUDIO / "Track 1.mp3", ROOT).level, "HLSL")
+
+    def test_language_recordings_are_left_unindexed(self) -> None:
+        """The same directories hold coded language B tracks for untaught
+        subjects; guessing a subject from those names would file them wrong."""
+        self.assertFalse(is_indexable_audio(self.AUDIO / "m19abengsliengtz0xxl.mp3"))
+        self.assertTrue(is_indexable_audio(self.AUDIO / "Track 2.mp3"))
+
+    def test_an_unplaceable_track_is_a_parse_error_not_a_guess(self) -> None:
+        with self.assertRaises(ParseError):
+            parse_path(self.AUDIO / "m19abengsliengtz0xxl.mp3", ROOT)
+
+    def test_a_track_outside_a_session_directory_is_rejected(self) -> None:
+        with self.assertRaises(ParseError):
+            parse_path(Path("IB PAST PAPERS - YEAR/audio/Track 1.mp3"), ROOT)

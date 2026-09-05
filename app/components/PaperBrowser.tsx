@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -10,9 +10,10 @@ import {
   GraduationCap,
   Layers,
   Loader2,
+  Music,
   RotateCcw,
 } from 'lucide-react';
-import type { PaperInstance } from '@/lib/paper-catalogue';
+import { documentLabel, type PaperInstance } from '@/lib/paper-catalogue';
 
 type Curriculum = {
   id: string;
@@ -98,13 +99,15 @@ function Step({
   index,
   title,
   children,
+  innerRef,
 }: {
   index: number;
   title: string;
   children: React.ReactNode;
+  innerRef?: React.Ref<HTMLElement>;
 }) {
   return (
-    <section className="space-y-3">
+    <section ref={innerRef} className="scroll-mt-4 space-y-3">
       <div className="flex items-center gap-2">
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs font-semibold text-white">
           {index}
@@ -140,6 +143,39 @@ export default function PaperBrowser() {
   }, []);
 
   const selectionKey = useMemo(() => JSON.stringify(selection), [selection]);
+
+  /**
+   * Bring the step a choice just opened into view.
+   *
+   * The cascade reveals each step below the last, so on a laptop the newly
+   * relevant choices open under the fold and the picker looks like it did
+   * nothing. Scrolling is keyed on how deep the selection now runs rather than
+   * on which field changed, so clearing a step scrolls back up to it too.
+   *
+   * The first paint is skipped: restoring a full selection from the URL would
+   * otherwise yank a freshly loaded page down to the papers list.
+   */
+  const stepRefs = useRef<(HTMLElement | null)[]>([]);
+  const depth = [selection.curriculum, selection.subject, selection.year, selection.session]
+    .filter((value) => value !== null && value !== '').length;
+  const lastDepth = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (lastDepth.current === null) {
+      lastDepth.current = depth;
+      return;
+    }
+    if (lastDepth.current === depth) return;
+    lastDepth.current = depth;
+    if (depth === 0) return;
+
+    // Steps are 1-indexed on screen; depth 1 (a curriculum chosen) opens step 2.
+    const target = stepRefs.current[Math.min(depth + 1, 5)];
+    if (!target) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }, [depth]);
 
   // History is pushed here rather than inside a setState updater: updaters run
   // during render, and navigating there triggers a router update mid-render.
@@ -286,7 +322,7 @@ export default function PaperBrowser() {
       )}
 
       {/* 1. Curriculum */}
-      <Step index={1} title="Curriculum">
+      <Step index={1} title="Curriculum" innerRef={(node) => { stepRefs.current[1] = node; }}>
         {loadingCatalogue && catalogue.curricula.length === 0 ? (
           <Skeleton count={3} />
         ) : (
@@ -321,7 +357,7 @@ export default function PaperBrowser() {
 
       {/* 2. Subject */}
       {selection.curriculum && (
-        <Step index={2} title="Subject">
+        <Step index={2} title="Subject" innerRef={(node) => { stepRefs.current[2] = node; }}>
           {loadingCatalogue && catalogue.subjects.length === 0 ? (
             <Skeleton count={8} />
           ) : (
@@ -357,7 +393,7 @@ export default function PaperBrowser() {
 
       {/* 3. Year */}
       {selection.subject && (
-        <Step index={3} title="Year">
+        <Step index={3} title="Year" innerRef={(node) => { stepRefs.current[3] = node; }}>
           {loadingCatalogue && catalogue.years.length === 0 ? (
             <Skeleton count={6} height="h-12" />
           ) : (
@@ -382,7 +418,7 @@ export default function PaperBrowser() {
 
       {/* 4. Exam series */}
       {selection.year !== null && (
-        <Step index={4} title="Exam series">
+        <Step index={4} title="Exam series" innerRef={(node) => { stepRefs.current[4] = node; }}>
           <div className="flex flex-wrap gap-2">
             {catalogue.sessions.map((session) => (
               <button
@@ -404,7 +440,7 @@ export default function PaperBrowser() {
 
       {/* 5. Paper */}
       {selection.session && (
-        <Step index={5} title="Paper">
+        <Step index={5} title="Paper" innerRef={(node) => { stepRefs.current[5] = node; }}>
           {loadingPapers ? (
             <div className="flex items-center gap-2 py-8 text-sm text-gray-500 dark:text-gray-400">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -438,8 +474,12 @@ export default function PaperBrowser() {
                           href={`/papers/${document.id}`}
                           className="inline-flex items-center gap-1.5 rounded-l-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >
-                          <FileText className="h-3.5 w-3.5" />
-                          {document.docTypeLabel}
+                          {document.docType === 'au' ? (
+                            <Music className="h-3.5 w-3.5" />
+                          ) : (
+                            <FileText className="h-3.5 w-3.5" />
+                          )}
+                          {documentLabel(document)}
                           {document.pageCount ? (
                             <span className="text-xs text-gray-400">{document.pageCount}p</span>
                           ) : null}

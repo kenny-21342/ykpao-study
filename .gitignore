@@ -81,6 +81,10 @@ public/uploads/
 /pdf_extraction/*
 !/pdf_extraction/bank/
 !/pdf_extraction/question_images/
+# The catalogue parser is 12 KB of source with a committed test suite that
+# imports it; leaving it untracked meant tests/catalogue tested a file no
+# checkout contained.
+!/pdf_extraction/catalogue/
 /pdf_extraction/**/__pycache__/
 __pycache__/
 *.pyc

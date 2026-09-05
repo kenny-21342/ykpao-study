@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
-import { contentDisposition, paperDownloadUrl, readPaperPdf } from '@/lib/paper-files';
+import { contentDisposition, paperDownloadUrl, readPaperFile } from '@/lib/paper-files';
+import { contentTypeForKey } from '@/lib/storage';
 import { parseEntityId } from '@/lib/query-params';
 
 export const dynamic = 'force-dynamic';
@@ -55,14 +56,16 @@ export async function GET(
     });
   }
 
-  const file = await readPaperPdf(paper.filepath);
+  const file = await readPaperFile(paper.filepath);
   if (!file) {
-    return NextResponse.json({ error: 'Paper PDF is unavailable' }, { status: 404 });
+    return NextResponse.json({ error: 'That paper file is unavailable' }, { status: 404 });
   }
 
   return new Response(new Uint8Array(file.bytes), {
     headers: {
-      'Content-Type': 'application/pdf',
+      // Listening papers ship audio alongside the PDF, so the type comes from
+      // the filename rather than being assumed.
+      'Content-Type': contentTypeForKey(paper.filename),
       'Content-Disposition': contentDisposition(paper.filename, download),
       'Content-Length': String(file.size),
       'Cache-Control': 'private, max-age=3600',

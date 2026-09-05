@@ -14,6 +14,7 @@ import { getStorage, paperKey } from './storage/index.ts';
  */
 
 export { paperKey } from './storage/index.ts';
+import { contentTypeForKey } from './storage/index.ts';
 
 export type PaperFile = {
   bytes: Buffer;
@@ -21,14 +22,20 @@ export type PaperFile = {
 };
 
 /**
- * Read a stored PDF, verifying it is really a PDF before it is served.
- * Returns null when the path is invalid, missing, or not a PDF.
+ * Read a stored paper document, verifying its type before it is served.
+ * Returns null when the path is invalid, missing, or not what its name claims.
+ *
+ * A PDF is checked for its magic bytes, because that check is what stops an
+ * arbitrary stored object being served as a paper. Audio carries no comparable
+ * one-line signature (an mp3 may open on an ID3 tag or straight into a frame
+ * header), so it is served on the strength of its extension and the fact that
+ * every object under the papers prefix was put there by the sync script.
  *
  * Prefer `paperDownloadUrl()` where the caller can redirect: buffering a whole
- * PDF through a serverless function costs memory and runs into Vercel's ~4.5 MB
- * response cap, which plenty of these papers exceed.
+ * file through a serverless function costs memory and runs into Vercel's
+ * ~4.5 MB response cap, which plenty of these papers exceed.
  */
-export async function readPaperPdf(storedPath: string): Promise<PaperFile | null> {
+export async function readPaperFile(storedPath: string): Promise<PaperFile | null> {
   const key = paperKey(storedPath);
   if (!key) return null;
 
@@ -37,8 +44,10 @@ export async function readPaperPdf(storedPath: string): Promise<PaperFile | null
     if (!object) return null;
 
     const { bytes } = object;
-    if (bytes.length < 5 || bytes.subarray(0, 5).toString('latin1') !== '%PDF-') {
-      return null;
+    if (key.toLowerCase().endsWith('.pdf')) {
+      if (bytes.length < 5 || bytes.subarray(0, 5).toString('latin1') !== '%PDF-') {
+        return null;
+      }
     }
     return { bytes, size: object.size };
   } catch (error) {
@@ -46,6 +55,9 @@ export async function readPaperPdf(storedPath: string): Promise<PaperFile | null
     return null;
   }
 }
+
+/** Back-compatible name for the PDF-only callers. */
+export const readPaperPdf = readPaperFile;
 
 /**
  * A short-lived URL the browser can fetch the PDF from directly.
@@ -66,7 +78,9 @@ export async function paperDownloadUrl(
 
   try {
     return await getStorage().signedGetUrl(key, {
-      contentType: 'application/pdf',
+      // Audio must not be signed as application/pdf: the browser would download
+      // the track instead of playing it in an <audio> element.
+      contentType: contentTypeForKey(key),
       contentDisposition: contentDisposition(options.filename, options.download),
     });
   } catch (error) {

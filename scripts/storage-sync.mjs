@@ -33,11 +33,15 @@ import process from 'node:process';
 
 const TREES = [
   // `pdf_extraction/` is the Python pipeline's working directory as well as the
-  // paper corpus — it holds source, audio, caches and intermediate artefacts,
-  // roughly 17 GB against 6.5 GB of actual PDFs. `readPaperPdf` only ever
-  // serves PDFs, so uploading the rest would cost hours and gigabytes for
-  // objects nothing can request. Pass `--all-extensions` to override.
-  { name: 'papers', dir: 'pdf_extraction', prefix: 'papers', extensions: ['.pdf'] },
+  // paper corpus — it holds source, caches and intermediate artefacts, roughly
+  // 17 GB against 6.5 GB of actual PDFs. Uploading all of it would cost hours
+  // and gigabytes for objects nothing can request, so the tree is filtered to
+  // what the catalogue serves. Pass `--all-extensions` to override.
+  //
+  // `.mp3` is in that set because a Music listening paper is unusable without
+  // its tracks: the catalogue indexes them as `au` documents, and they are a
+  // few hundred megabytes against the corpus's several gigabytes.
+  { name: 'papers', dir: 'pdf_extraction', prefix: 'papers', extensions: ['.pdf', '.mp3'] },
   { name: 'uploads', dir: 'public/uploads', prefix: 'uploads' },
   { name: 'extracted_images', dir: 'public/extracted_images', prefix: 'extracted_images' },
   { name: 'step-images', dir: 'public/step-images', prefix: 'step-images' },

@@ -23,6 +23,48 @@ import { AlertCircle, Check, Eye, Loader2, Plug, Save, Sparkles, Trash2, XCircle
 
 type TestResult = { ok: boolean; message: string; model?: string | null };
 
+/**
+ * Providers a student can realistically sign up to, with the two fields they
+ * would otherwise have to find in someone's API documentation.
+ *
+ * Testers read "API endpoint" and "Text model" as questions they had no way to
+ * answer -- the panel explained what a key is for and then asked for two
+ * values it never offered. Picking a provider fills both; "Something else"
+ * restores the blank fields for a school proxy or a provider not listed.
+ *
+ * Model names are the cheap general-purpose one at each provider, not the
+ * flagship: this is marking and hinting, and the student pays the bill.
+ */
+const PROVIDERS = [
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    textModel: 'deepseek-chat',
+    visionModel: '',
+    note: 'Cheapest for marking and hints. No handwriting OCR.',
+    keysUrl: 'https://platform.deepseek.com/api_keys',
+  },
+  {
+    id: 'siliconflow',
+    name: 'SiliconFlow',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    textModel: 'deepseek-ai/DeepSeek-V3',
+    visionModel: 'Qwen/Qwen3-VL-32B-Instruct',
+    note: 'Reachable from the mainland, and does handwriting OCR.',
+    keysUrl: 'https://cloud.siliconflow.cn/account/ak',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    textModel: 'deepseek/deepseek-chat',
+    visionModel: 'qwen/qwen-2.5-vl-72b-instruct',
+    note: 'One key, many models. Needs a VPN in the mainland.',
+    keysUrl: 'https://openrouter.ai/keys',
+  },
+] as const;
+
 type Credentials = {
   hasOwnKey: boolean;
   keyHint: string | null;
@@ -48,6 +90,7 @@ export default function AiProviderPanel() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
+  const [provider, setProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [textModel, setTextModel] = useState('');
@@ -149,6 +192,24 @@ export default function AiProviderPanel() {
 
   const canSave = Boolean(baseUrl.trim() && textModel.trim() && (apiKey.trim() || state?.hasOwnKey));
 
+  /**
+   * Fill the endpoint and models from a preset.
+   *
+   * The key field is deliberately untouched: switching provider does not
+   * invalidate a key the student already saved, and clearing it here would
+   * look like the key had been deleted when it had not.
+   */
+  const choose = (id: string) => {
+    const preset = PROVIDERS.find((candidate) => candidate.id === id);
+    setProvider(id);
+    if (!preset) return;
+    setBaseUrl(preset.baseUrl);
+    setTextModel(preset.textModel);
+    setVisionModel(preset.visionModel);
+  };
+
+  const chosen = PROVIDERS.find((candidate) => candidate.id === provider) ?? null;
+
   return (
     <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-2xl p-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -156,12 +217,21 @@ export default function AiProviderPanel() {
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Provider</h2>
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        AI tutoring, hints, grading, mock exams and handwriting OCR run on your own API key,
-        billed by your provider — this platform does not pay for them. Any OpenAI-compatible
-        endpoint works (DeepSeek, SiliconFlow, OpenRouter, a school proxy, and so on). Your key
-        is encrypted before it is stored and is never shown again after you save it.
-      </p>
+      <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+        <p>
+          <span className="font-semibold text-gray-700 dark:text-gray-300">
+            Everything except AI already works without this.
+          </span>{' '}
+          Past papers, the question bank, notes, mock exam papers and your study plan need no key
+          at all. Setting one up additionally turns on marking, hints, tutoring and reading your
+          handwriting.
+        </p>
+        <p>
+          Those run on your own account with an AI provider, billed by them — this platform does
+          not pay for them, which is why it cannot just switch them on for you. Your key is
+          encrypted before it is stored and is never shown again after you save it.
+        </p>
+      </div>
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -212,6 +282,63 @@ export default function AiProviderPanel() {
             </p>
             {state?.visionNotice && (
               <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">{state.visionNotice}</p>
+            )}
+          </div>
+
+          {/* Step 1: pick a provider, which fills the two fields nobody can
+              guess. Skippable -- "Something else" leaves them blank. */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Who is providing the AI?
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {PROVIDERS.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => choose(candidate.id)}
+                  aria-pressed={provider === candidate.id}
+                  className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                    provider === candidate.id
+                      ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
+                  }`}
+                >
+                  {candidate.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setProvider('other')}
+                aria-pressed={provider === 'other'}
+                className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                  provider === 'other'
+                    ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
+                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
+                }`}
+              >
+                Something else
+              </button>
+            </div>
+            {chosen && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {chosen.note}{' '}
+                <a
+                  href={chosen.keysUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-green-700 dark:text-green-400 underline underline-offset-2"
+                >
+                  Get a key from {chosen.name}
+                </a>
+                , then paste it below. The endpoint and models are filled in for you.
+              </p>
+            )}
+            {provider === 'other' && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Any OpenAI-compatible endpoint works, including a school proxy. Fill in the
+                endpoint and model name your provider documents.
+              </p>
             )}
           </div>
 

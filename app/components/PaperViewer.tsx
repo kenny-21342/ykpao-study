@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Music } from 'lucide-react';
+import { documentLabel } from '@/lib/paper-catalogue';
 import type { PaperInstance } from '@/lib/paper-catalogue';
 import { useScreenContext } from '@/app/components/ScreenContext';
 
@@ -121,7 +122,9 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         </a>
       </div>
 
-      {/* One tab per document in this sitting: paper, mark scheme, inserts. */}
+      {/* One tab per document in this sitting: paper, audio, mark scheme,
+          inserts. A listening sitting carries four tracks, all of docType
+          `au`, so tabs are labelled by track number rather than by type. */}
       <div className="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
         {data.instance.documents.map((document) => (
           <button
@@ -133,17 +136,42 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
-            {document.docTypeLabel}
+            {documentLabel(document)}
           </button>
         ))}
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-        <PDFViewer
-          key={active.id}
-          fileUrl={`/api/papers/${active.id}/file`}
-          fileName={active.filename}
-        />
+        {active.docType === 'au' ? (
+          <div className="space-y-3 p-6">
+            <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+              <Music className="h-5 w-5 text-green-600" />
+              <h2 className="font-semibold">{documentLabel(active)}</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              The recording for this listening paper. Play it alongside the question paper and
+              score booklet, which are the other tabs above.
+            </p>
+            {/* preload="metadata" so the duration shows without pulling several
+                megabytes for a track the student may not play. */}
+            <audio
+              key={active.id}
+              controls
+              preload="metadata"
+              className="w-full"
+              src={`/api/papers/${active.id}/file`}
+            >
+              Your browser cannot play audio.{' '}
+              <a href={`/api/papers/${active.id}/file?download=1`}>Download the track instead.</a>
+            </audio>
+          </div>
+        ) : (
+          <PDFViewer
+            key={active.id}
+            fileUrl={`/api/papers/${active.id}/file`}
+            fileName={active.filename}
+          />
+        )}
       </div>
     </div>
   );

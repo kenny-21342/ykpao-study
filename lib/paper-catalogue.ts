@@ -20,6 +20,7 @@ const SESSION_ORDER: Record<string, number> = { m: 0, may: 1, s: 1, nov: 2, w: 2
 
 export const DOC_TYPE_LABELS: Record<string, string> = {
   qp: 'Question Paper',
+  au: 'Audio',
   ms: 'Mark Scheme',
   in: 'Insert',
   rb: 'Resource Booklet',
@@ -28,8 +29,12 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   cs: 'Case Study',
 };
 
-/** Tab order in the viewer: the paper first, then its mark scheme, then extras. */
-const DOC_TYPE_ORDER = ['qp', 'ms', 'in', 'rb', 'qb', 'tb', 'cs'];
+/**
+ * Tab order in the viewer: the paper first, then its audio, then the mark
+ * scheme, then extras. Audio outranks the mark scheme because a listening
+ * paper cannot be attempted without it.
+ */
+const DOC_TYPE_ORDER = ['qp', 'au', 'ms', 'in', 'rb', 'qb', 'tb', 'cs'];
 
 export function sessionLabel(session: string): string {
   return SESSION_LABELS[session] ?? session;
@@ -41,6 +46,22 @@ export function sessionOrder(session: string): number {
 
 export function docTypeLabel(docType: string): string {
   return DOC_TYPE_LABELS[docType] ?? docType.toUpperCase();
+}
+
+/**
+ * Label for one document in a sitting.
+ *
+ * Type alone is enough for a paper or a mark scheme, but a listening sitting
+ * carries four documents all typed `au`; the track number in the filename is
+ * the only thing that distinguishes them, so four tabs reading "Audio" would
+ * be four identical controls doing different things.
+ */
+export function documentLabel(document: { docType: string; filename: string }): string {
+  if (document.docType !== 'au') return docTypeLabel(document.docType);
+  // Anchored on the word, not on any digit: `.mp3` ends in one, so a bare
+  // \d+ turns "listening.mp3" into "Track 3".
+  const track = document.filename.match(/track[ _-]?(\d+)/i);
+  return track ? `Track ${track[1]}` : docTypeLabel(document.docType);
 }
 
 export function docTypeOrder(docType: string): number {

@@ -18,6 +18,7 @@ import NotificationBell from './components/NotificationBell';
 import StudyCoach from './components/StudyCoach';
 import MaterialsHub from './components/MaterialsHub';
 import DailyChallenge from './components/DailyChallenge';
+import CourseShortcuts from '@/app/components/CourseShortcuts';
 import TrendingNotes from './components/TrendingNotes';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import { ScreenContextProvider, useScreenContext } from './components/ScreenContext';
@@ -835,6 +836,13 @@ export default function SmartEduPlatform() {
                   })}
                 </div>
               </section>
+
+              {isAuthenticated && (
+                <CourseShortcuts
+                  onOpenPractice={openPracticeOrPapers}
+                  onOpenMockExams={() => openRoute({ tab: 'mock-exams' })}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {statCards.map((card) => {

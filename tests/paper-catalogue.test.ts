@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   curriculumLabel,
   docTypeLabel,
+  documentLabel,
   groupIntoInstances,
   instanceLabel,
   parseCurriculumId,
@@ -151,4 +152,46 @@ test('curriculum ids round-trip', () => {
   assert.deepEqual(parseCurriculumId('CAIE|IGCSE'), { board: 'CAIE', qualification: 'IGCSE' });
   assert.equal(curriculumLabel('CAIE', 'IGCSE'), 'Cambridge IGCSE');
   assert.equal(curriculumLabel('IB', 'Diploma Programme'), 'IB Diploma Programme');
+});
+
+/*
+ * Listening audio.
+ *
+ * A Music sitting carries four mp3 tracks, all typed `au`. They have to stay in
+ * the sitting they belong to and stay distinguishable from one another; a
+ * tester found the audio missing entirely, and four controls all reading
+ * "Audio" would be the next version of the same complaint.
+ */
+
+test('audio tracks join their sitting rather than splitting it', () => {
+  const instances = groupIntoInstances([
+    row({ id: 1, docType: 'ms', filename: 'Music___HLSL_markscheme.pdf', level: 'HLSL' }),
+    row({ id: 2, docType: 'au', filename: 'Track 1.mp3', level: 'HLSL', pageCount: null }),
+    row({ id: 3, docType: 'au', filename: 'Track 2.mp3', level: 'HLSL', pageCount: null }),
+  ]);
+  assert.equal(instances.length, 1);
+  assert.equal(instances[0].documents.length, 3);
+});
+
+test('audio is offered before the mark scheme', () => {
+  const instances = groupIntoInstances([
+    row({ id: 1, docType: 'ms' }),
+    row({ id: 2, docType: 'au', filename: 'Track 1.mp3' }),
+    row({ id: 3, docType: 'qp' }),
+  ]);
+  assert.deepEqual(instances[0].documents.map((document) => document.docType), ['qp', 'au', 'ms']);
+});
+
+test('each track is labelled by its number, not by its type', () => {
+  assert.equal(documentLabel({ docType: 'au', filename: 'Track 3.mp3' }), 'Track 3');
+  assert.equal(documentLabel({ docType: 'au', filename: 'Track 12.mp3' }), 'Track 12');
+});
+
+test('a document that is not audio keeps its type label', () => {
+  assert.equal(documentLabel({ docType: 'ms', filename: 'Track 3.mp3' }), 'Mark Scheme');
+  assert.equal(documentLabel({ docType: 'qp', filename: '9709_s20_qp_52.pdf' }), 'Question Paper');
+});
+
+test('an unnumbered track falls back to the type label rather than showing nothing', () => {
+  assert.equal(documentLabel({ docType: 'au', filename: 'listening.mp3' }), 'Audio');
 });
