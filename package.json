@@ -70,12 +70,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "better-sqlite3": "^13.0.3",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "^16.3.0",
     "jsdom": "^30.0.1",
     "prisma": "^7.9.1",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

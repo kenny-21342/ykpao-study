@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { extractFileText } from '@/lib/rag-file-text';
 
 export type IndexedDocumentInput = {
   documentKey: string;
@@ -217,7 +218,11 @@ export async function indexPage(pageId: string) {
 
 export async function indexCloudDocument(documentId: string) {
   const document = await prisma.cloudDocument.findUnique({ where: { id: documentId } });
-  if (!document || document.deletedAt) {
+  // A `page:` clientId is `syncPageToCloud` mirroring a Page for iPad sync, and
+  // `indexPage` has already indexed that same text. Indexing the mirror too put
+  // every notebook page into the corpus twice -- one copy per key -- which the
+  // incremental path avoided only because nothing ever called this function.
+  if (!document || document.deletedAt || document.clientId.startsWith('page:')) {
     return prisma.ragDocument.deleteMany({ where: { documentKey: `cloud-document:${documentId}` } });
   }
   return upsertIndexedDocument({
@@ -239,18 +244,32 @@ export async function indexSchoolResource(resourceId: string) {
   if (!resource) return prisma.ragDocument.deleteMany({ where: { documentKey: `resource:${resourceId}` } });
   const academic = academicMetadata(null, resource.subject, null);
   const documentType = /syllabus|specification/i.test(`${resource.category} ${resource.title}`) ? 'syllabus' : 'resource';
+  // What the file says, not just what it was called. Falls back to the old
+  // description-and-filename text whenever the file has no readable layer.
+  const extracted = await extractFileText(resource.fileUrl, resource.mimeType, resource.fileName);
+  const heading = `${resource.description}\n${resource.fileName}`;
   return upsertIndexedDocument({
     documentKey: `resource:${resource.id}`,
     sourceType: documentType === 'syllabus' ? 'syllabus' : 'resource',
     sourceRecordId: resource.id,
     title: resource.title,
-    text: `${resource.description}\n${resource.fileName}`,
+    text: extracted.text ? `${heading}\n${extracted.text}` : heading,
     route: resource.fileUrl,
     ...academic,
     topic: resource.subject,
     documentType,
     visibility: 'platform',
-    metadata: { category: resource.category, mimeType: resource.mimeType, fileName: resource.fileName },
+    // `truncated` marks a document the chat can quote but must not be trusted
+    // to have read to the end.
+    extractionState: extracted.truncated ? 'partial' : 'ready',
+    extractedAt: extracted.reason === 'ok' ? new Date() : null,
+    metadata: {
+      category: resource.category,
+      mimeType: resource.mimeType,
+      fileName: resource.fileName,
+      extraction: extracted.reason,
+      ...(extracted.pages ? { pages: extracted.pages } : {}),
+    },
   });
 }
 
@@ -321,6 +340,122 @@ export async function indexPastPaperQuestion(questionId: number) {
       paired: Boolean(paired),
     },
   });
+}
+
+/**
+ * Index one bank question, and its mark scheme as a second document.
+ *
+ * The bank is the corpus students actually practise on -- 66,756 published
+ * questions against 12,398 past-paper ones -- and until now the chat could not
+ * see a single one of them, because this file only ever read `pastPaperQuestion`.
+ *
+ * Two documents rather than one, mirroring `indexPastPaperQuestion`: a student
+ * asking "how do I answer this" and one asking "what does the mark scheme want"
+ * are different queries, and a single blob would return the answer to both.
+ *
+ * There is no per-question route to link to -- no page reads a question id from
+ * the URL -- so citations point at the bank surface and carry the paper and
+ * question number in the title.
+ */
+export async function indexBankQuestion(questionId: number) {
+  const keys = [`bank-question:${questionId}`, `bank-markscheme:${questionId}`];
+  const question = await prisma.bankQuestion.findUnique({
+    where: { id: questionId },
+    include: { paper: { include: { subject: true } }, markScheme: true },
+  });
+  // An unpublished question is withdrawn from the index rather than downgraded:
+  // `needs_review` means nobody has confirmed the transcription is right, and a
+  // wrong transcription cited as fact is worse than no citation.
+  if (!question || question.status !== 'published') {
+    return prisma.ragDocument.deleteMany({ where: { documentKey: { in: keys } } });
+  }
+
+  const paper = question.paper;
+  const subject = paper.subject;
+  const academic = academicMetadata(subject.code, subject.name, subject.level);
+  const label = paperLabel(paper.paperNumber, paper.variant);
+  const stem = `${subject.code} ${paper.year} ${paper.session} Paper ${label} Q${question.rootNumber}`;
+  const shared = {
+    ...academic,
+    subjectCode: subject.code,
+    year: paper.year,
+    session: paper.session,
+    paper: label,
+    visibility: 'platform',
+    extractionState: (question.confidence >= 0.7 ? 'ready' : 'partial') as 'ready' | 'partial',
+  };
+
+  const document = await upsertIndexedDocument({
+    ...shared,
+    documentKey: keys[0],
+    sourceType: 'question',
+    sourceRecordId: String(question.id),
+    title: stem,
+    text: question.bodyMd,
+    route: '/bank',
+    documentType: 'question-paper',
+    metadata: {
+      official: true,
+      bank: true,
+      paperId: paper.id,
+      questionNumber: question.rootNumber,
+      marks: question.totalMarks,
+      difficulty: question.difficulty,
+      timezone: paper.timezone,
+    },
+  });
+
+  const markScheme = question.markScheme;
+  if (!markScheme || markScheme.status !== 'published') {
+    await prisma.ragDocument.deleteMany({ where: { documentKey: keys[1] } });
+    return document;
+  }
+
+  await upsertIndexedDocument({
+    ...shared,
+    documentKey: keys[1],
+    sourceType: 'markscheme',
+    sourceRecordId: String(markScheme.id),
+    title: `${stem} mark scheme`,
+    // The marking points carry what each mark is actually awarded for, which is
+    // the part a student asking about a mark scheme wants.
+    text: `${markScheme.answerMd}\n${markSchemeText(markScheme.markingPoints)}`,
+    route: '/bank',
+    documentType: 'mark-scheme',
+    metadata: {
+      official: true,
+      bank: true,
+      pairedSourceRecordId: String(question.id),
+      answerLetter: markScheme.answerLetter,
+      marks: markScheme.totalMarks,
+    },
+  });
+  return document;
+}
+
+/**
+ * The prose out of a `markingPoints` JSON array, ignoring anything that does
+ * not parse. The column is free-form JSON, so a malformed row must degrade to
+ * the plain answer rather than take the indexer down.
+ */
+function markSchemeText(markingPoints: string): string {
+  try {
+    const parsed: unknown = JSON.parse(markingPoints);
+    if (!Array.isArray(parsed)) return '';
+    return parsed
+      .map((point) => {
+        if (typeof point === 'string') return point;
+        if (!point || typeof point !== 'object') return '';
+        const row = point as Record<string, unknown>;
+        const code = typeof row.mark_code === 'string' ? `${row.mark_code} ` : '';
+        const text = typeof row.text === 'string' ? row.text : typeof row.description === 'string' ? row.description : '';
+        return text ? `${code}${text}` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  } catch {
+    return '';
+  }
 }
 
 export async function indexCompetitionQuestion(questionId: number) {
@@ -416,9 +551,35 @@ export async function rebuildCorpusManifests() {
   return { manifests: groups.size, documents: documents.length };
 }
 
+/**
+ * Remove documents whose source record is gone.
+ *
+ * The per-record indexers delete on a missing row, but a full rebuild only ever
+ * visits rows that still exist, so a deleted record's document was never
+ * revisited and simply stayed. That is not theoretical: the index built on
+ * 2026-07-23 carried 857 `resource:` documents after the underlying
+ * `school_resources` rows had all gone -- 95% of the corpus pointing at records
+ * that no longer existed, every one of them citable by the chat.
+ *
+ * Anything this run touched carries `indexedAt >= startedAt`, so what is older
+ * is exactly what nothing re-indexed. Scoped to the prefixes the run actually
+ * enumerated, so a partial rebuild cannot delete a family it never looked at.
+ */
+async function pruneStaleDocuments(startedAt: Date, prefixes: string[]) {
+  if (prefixes.length === 0) return 0;
+  const { count } = await prisma.ragDocument.deleteMany({
+    where: {
+      indexedAt: { lt: startedAt },
+      OR: prefixes.map((prefix) => ({ documentKey: { startsWith: prefix } })),
+    },
+  });
+  return count;
+}
+
 export async function reindexRagCorpus(options: { userId?: string; includeCompetition?: boolean } = {}) {
+  const startedAt = new Date();
   const ownerFilter = options.userId ? { userId: options.userId } : undefined;
-  const [notes, sharedNotes, pages, cloudDocuments, resources, questions, competition] = await Promise.all([
+  const [notes, sharedNotes, pages, cloudDocuments, resources, questions, bankQuestions, competition] = await Promise.all([
     prisma.note.findMany({ where: ownerFilter, select: { id: true } }),
     prisma.sharedNote.findMany({ where: options.userId ? { userId: options.userId } : undefined, select: { id: true } }),
     prisma.page.findMany({
@@ -428,6 +589,9 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
     prisma.cloudDocument.findMany({ where: options.userId ? { ownerId: options.userId } : undefined, select: { id: true } }),
     prisma.schoolResource.findMany({ select: { id: true } }),
     prisma.pastPaperQuestion.findMany({ select: { id: true } }),
+    // Only published questions. `needs_review` transcriptions are excluded by
+    // indexBankQuestion anyway; filtering here saves enumerating ~19k of them.
+    options.userId ? Promise.resolve([]) : prisma.bankQuestion.findMany({ where: { status: 'published' }, select: { id: true } }),
     options.includeCompetition ? prisma.competitionQuestion.findMany({ select: { id: true } }) : Promise.resolve([]),
   ]);
   await processIds(notes.map((row) => row.id), indexNote);
@@ -436,10 +600,32 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   await processIds(cloudDocuments.map((row) => row.id), indexCloudDocument);
   await processIds(resources.map((row) => row.id), indexSchoolResource);
   await processIds(questions.map((row) => row.id), indexPastPaperQuestion);
+  await processIds(bankQuestions.map((row) => row.id), indexBankQuestion);
   await processIds(competition.map((row) => row.id), indexCompetitionQuestion);
+
+  // A per-user rebuild sees only that user's rows, so everyone else's documents
+  // would look stale to it. Pruning belongs to the full rebuild alone.
+  const prefixes = options.userId
+    ? []
+    : [
+        'note:',
+        'shared-note:',
+        'page:',
+        'cloud-document:',
+        'resource:',
+        'past-paper-question:',
+        'bank-question:',
+        'bank-markscheme:',
+        ...(options.includeCompetition ? ['competition:'] : []),
+      ];
+  const pruned = await pruneStaleDocuments(startedAt, prefixes);
+
   const manifests = await rebuildCorpusManifests();
   return {
-    indexed: notes.length + sharedNotes.length + pages.length + cloudDocuments.length + resources.length + questions.length + competition.length,
+    indexed:
+      notes.length + sharedNotes.length + pages.length + cloudDocuments.length + resources.length +
+      questions.length + bankQuestions.length + competition.length,
+    pruned,
     ...manifests,
   };
 }
