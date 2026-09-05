@@ -63,6 +63,10 @@ const BACKED_UP_TABLES = [
   'mockExam',
   'mockExamItem',
   'questionAttempt',
+  // The bank is the corpus students actually practise on, so this is the
+  // largest body of real work here -- and it was missing. It also carries the
+  // self-marking readings, which cannot be reconstructed from anything else.
+  'bankQuestionAttempt',
   'pastPaperAttempt',
   'dailyChallengeAttempt',
   'bookmark',
@@ -72,6 +76,12 @@ const BACKED_UP_TABLES = [
   'aIMessage',
   'aIActionProposal',
   'usageRecord',
+  // Grade boundaries. Content rather than typing, but not re-ingestible: they
+  // are parsed from coordinator PDFs that only exist on one laptop, and a
+  // predicted grade is wrong without them. Topic links are deliberately absent
+  // by contrast -- those live in the local extract.db and merge back without
+  // paying the tagger again.
+  'gradeBoundary',
   // Uploaded resources (the files themselves already live in the bucket).
   'schoolResource',
   'cloudDocument',
