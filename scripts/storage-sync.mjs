@@ -13,6 +13,10 @@
  *   --prefix <name>   Sync only one tree (papers, uploads, extracted_images,
  *                     step-images). Repeatable.
  *   --dry-run         List what would be uploaded; transfer nothing.
+ *   --match <regex>   Only consider files whose path matches. Use this when
+ *                     adding a handful of files to an already-synced tree: the
+ *                     existence check is one request per candidate, so without
+ *                     it a three-file addition costs ~14,000 HEADs.
  *   --force           Re-upload objects that are already present.
  *   --concurrency <n> Parallel uploads (default 8).
  *   --all-extensions  Ignore per-tree extension filters (the papers tree is
@@ -75,6 +79,7 @@ function parseArgs(argv) {
   const options = {
     prefixes: [],
     dryRun: false,
+    match: null,
     force: false,
     concurrency: 8,
     allExtensions: false,
@@ -82,6 +87,14 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--dry-run') options.dryRun = true;
+    else if (arg === '--match') {
+      const pattern = argv[++i];
+      if (!pattern) {
+        console.error('--match needs a regular expression.');
+        process.exit(2);
+      }
+      options.match = new RegExp(pattern);
+    }
     else if (arg === '--force') options.force = true;
     else if (arg === '--all-extensions') options.allExtensions = true;
     else if (arg === '--prefix') options.prefixes.push(argv[++i]);
@@ -194,6 +207,10 @@ async function main() {
       // A second, finer filter for trees where the extension alone lets in
       // files nothing can request.
       if (tree.include && !options.allExtensions && !tree.include(file.relative)) {
+        excluded++;
+        continue;
+      }
+      if (options.match && !options.match.test(file.relative)) {
         excluded++;
         continue;
       }
