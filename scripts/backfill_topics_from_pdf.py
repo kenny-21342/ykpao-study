@@ -136,7 +136,11 @@ class Pending(NamedTuple):
 
 def _tag_one(item: "Pending"):
     """Run one tagging call off the main thread. Never raises: a single bad
-    question must not take the corpus down with it."""
+    question must not take the corpus down with it.
+
+    The exception is an unpayable account, which every remaining question would
+    also hit. That one is reported so the caller can stop.
+    """
     try:
         tagging, call = tag_and_rate(item.text, item.allowed, item.context)
         return tagging, call, None
@@ -261,6 +265,16 @@ def main() -> int:
 
         for item, (tagging, call, error) in zip(pending, results):
             if error is not None:
+                # An empty balance or a dead key applies to every question
+                # left, so stopping here keeps the work already written and
+                # costs nothing further.
+                if error.__class__.__name__ == "Unpayable" or "HTTP 402" in str(error):
+                    connection.commit()
+                    raise SystemExit(
+                        f"\nstopped: the provider rejected the call as unpayable.\n"
+                        f"  {error}\n"
+                        f"  {written:,} link(s) written so far are committed and will be "
+                        f"skipped on the next run.")
                 failures += 1
                 if failures <= 5:
                     print(f"  ! {item.path} q{item.root_number}: {error}")

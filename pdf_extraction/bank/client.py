@@ -47,6 +47,17 @@ class ProviderError(RuntimeError):
         self.raw_response = raw_response
 
 
+class Unpayable(ProviderError):
+    """The account cannot pay for the call.
+
+    Separated from every other 4xx because retrying is pointless and continuing
+    is worse: a corpus run that meets an empty balance would otherwise spend
+    three attempts per question across tens of thousands of questions, turning
+    a stopped run into hours of guaranteed failures. Callers should abandon the
+    run rather than skip the question.
+    """
+
+
 class RateLimited(ProviderError):
     """The provider asked us to slow down.
 
@@ -145,6 +156,8 @@ def call_json(
                 output_tokens=int(usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0),
                 errors=tuple(diagnostics),
             )
+        except Unpayable:
+            raise
         except (HTTPError, URLError, TimeoutError, OSError, ValueError,
                 requests.RequestException, ProviderError) as error:
             last_error = error
@@ -230,6 +243,13 @@ def _post_json(
                 f"HTTP 429: {detail[:300]}",
                 _retry_after(response.headers, default=RATE_LIMIT_BACKOFF_SECONDS),
                 raw_response={"httpStatus": 429, "body": detail},
+            )
+        # 402 is the provider's "out of credit". 401/403 are a bad or revoked
+        # key. None of the three can come good on a second attempt.
+        if response.status_code in (401, 402, 403):
+            raise Unpayable(
+                f"HTTP {response.status_code}: {detail[:300]}",
+                raw_response={"httpStatus": response.status_code, "body": detail},
             )
         raise ProviderError(
             f"HTTP {response.status_code}: {detail[:600]}",
