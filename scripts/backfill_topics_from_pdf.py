@@ -63,6 +63,20 @@ STORE = Path(__file__).resolve().parent.parent / "pdf_extraction" / "bank" / "ex
 #: a question. Tagging it would spend a call to be told nothing.
 MIN_CHARS = 60
 
+#: Ceiling on the text sent for one question.
+#:
+#: A topic is decided by the stem -- what the question is about -- which sits in
+#: its opening lines. The median question is 567 characters, so this cap never
+#: touches it; what it trims is a tail reaching 15,797, made of multi-part
+#: sub-questions, data tables, and (where the slicer cannot find the question's
+#: printed number, 29% of the time) the remainder of the page, which is other
+#: questions' text this question should not be paying to classify.
+#:
+#: Measured over a 900-question sample, capping here takes the mean from 1,426
+#: characters to 770 -- roughly half the spend on text, with the classifying
+#: part of every question intact.
+MAX_CHARS = 1500
+
 #: deepseek-chat list price per million tokens, cache-miss. Only used to print
 #: an estimate before spending; the ledger records what was actually billed.
 PRICE_IN, PRICE_OUT = 0.27, 1.10
@@ -346,7 +360,7 @@ def main() -> int:
             sliced, ok = slice_to_question(text, row["root_number"])
             if not ok:
                 fallback += 1
-            sliced = sliced.strip()
+            sliced = sliced.strip()[:MAX_CHARS]
 
             seen[subject] += 1
             if len(sliced) < MIN_CHARS:

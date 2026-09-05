@@ -64,12 +64,20 @@ def slice_to_question(text: str, root_number: int) -> tuple[str, bool]:
     words of whatever sits above and below it on the page.
 
     The number is matched only at the start of a line and only when followed by
-    a capital or an opening bracket, which is how a root number is printed. That
-    avoids cutting at a mark total, a page number, or a figure label.
+    a capital, an opening bracket or an opening quote, which is how a root
+    number is printed. That avoids cutting at a mark total, a page number, or a
+    figure label.
+
+    The trailing full stop is optional because essay papers number their
+    questions "11." while structured papers print a bare "11". Without it, IB
+    History, Philosophy and the English papers matched nothing and every
+    question on the page fell back to the whole page -- so questions 9, 10 and
+    11 were all classified from whatever sat at the top of it.
     """
-    start = re.search(rf"(?m)^\s*{root_number}\s*(?=[A-Z(])", text)
+    pattern = rf"(?m)^\s*{{}}\s*[.)]?\s*(?=[A-Z(\u201c\u2018\"'])"
+    start = re.search(pattern.format(root_number), text)
     begin = start.start() if start else 0
-    following = re.search(rf"(?m)^\s*{root_number + 1}\s*(?=[A-Z(])", text[begin:])
+    following = re.search(pattern.format(root_number + 1), text[begin:])
     end = begin + following.start() if following else len(text)
     return text[begin:end], start is not None
 
