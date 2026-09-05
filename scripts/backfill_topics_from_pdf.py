@@ -40,6 +40,8 @@ import sqlite3
 import sys
 import time
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, NamedTuple
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -115,6 +117,33 @@ def subject_id_for(connection: sqlite3.Connection, paper_source: str) -> int | N
     return None if row is None else int(row[0])
 
 
+class Pending(NamedTuple):
+    """One question prepared for tagging, awaiting its model call.
+
+    A NamedTuple rather than a dataclass: the test suite loads this file through
+    importlib under a name that is not in sys.modules, and dataclasses resolves
+    its string annotations by looking that module up, which fails.
+    """
+
+    question_id: int
+    path: str
+    root_number: str
+    subject: str
+    text: str
+    allowed: Any
+    context: Any
+
+
+def _tag_one(item: "Pending"):
+    """Run one tagging call off the main thread. Never raises: a single bad
+    question must not take the corpus down with it."""
+    try:
+        tagging, call = tag_and_rate(item.text, item.allowed, item.context)
+        return tagging, call, None
+    except Exception as error:  # noqa: BLE001
+        return None, None, error
+
+
 def write_topics(
     connection: sqlite3.Connection,
     subject_id: int,
@@ -163,6 +192,9 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0, help="stop after N questions")
     parser.add_argument("--apply", action="store_true", help="call the model and write")
     parser.add_argument("--export", help="also write JSONL for the Neon carry")
+    parser.add_argument("--concurrency", type=int, default=8,
+                        help="parallel model calls (default 8). Reading PDFs and "
+                             "writing the store stay on the main thread regardless.")
     parser.add_argument(
         "--refresh",
         action="store_true",
@@ -206,6 +238,66 @@ def main() -> int:
     document: fitz.Document | None = None
     open_path: str | None = None
     subject_ids: dict[str, int | None] = {}
+
+    # A tagging call takes ~1.6s and is entirely I/O, so running them one at a
+    # time puts the corpus at roughly 28 hours. The calls parallelise; reading
+    # the PDFs does not (one fitz document is held open across a paper's
+    # questions) and neither does writing (one SQLite connection). So the loop
+    # below prepares work sequentially, fans the calls out, and folds the
+    # results back in submission order -- which keeps the tallies, the export
+    # file and the progress line identical to the serial version.
+    batch_size = max(1, args.concurrency) * 4
+    pending: list[Pending] = []
+
+    def drain() -> None:
+        nonlocal in_tokens, out_tokens, written, failures
+        if not pending:
+            return
+        if args.concurrency <= 1:
+            results = [_tag_one(item) for item in pending]
+        else:
+            with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+                results = list(pool.map(_tag_one, pending))
+
+        for item, (tagging, call, error) in zip(pending, results):
+            if error is not None:
+                failures += 1
+                if failures <= 5:
+                    print(f"  ! {item.path} q{item.root_number}: {error}")
+                continue
+
+            in_tokens += call.input_tokens
+            out_tokens += call.output_tokens
+
+            chosen = [str(t) for t in (tagging.topics or [])]
+            for name in chosen:
+                per_subject[item.subject][name] += 1
+
+            if item.subject not in subject_ids:
+                subject_ids[item.subject] = subject_id_for(connection, item.path)
+            subject_id = subject_ids[item.subject]
+            if subject_id is not None and chosen:
+                written += write_topics(connection, subject_id, item.question_id, chosen)
+
+            if export is not None:
+                export.write(
+                    json.dumps(
+                        {
+                            "source_path": item.path,
+                            "root_number": item.root_number,
+                            "subject": item.subject,
+                            "topics": chosen,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+
+        pending.clear()
+        connection.commit()
+        print(f"  … {considered:,} tagged, {written:,} links, "
+              f"${in_tokens/1e6*PRICE_IN + out_tokens/1e6*PRICE_OUT:,.2f} so far",
+              flush=True)
 
     try:
         for index, row in enumerate(published_questions(connection, args.subject)):
@@ -254,46 +346,11 @@ def main() -> int:
                 continue
 
             allowed, context = listed
-            try:
-                tagging, call = tag_and_rate(sliced, allowed, context)
-            except Exception as error:  # noqa: BLE001 - one question must not end the run
-                failures += 1
-                if failures <= 5:
-                    print(f"  ! {path} q{row['root_number']}: {error}")
-                continue
-
-            in_tokens += call.input_tokens
-            out_tokens += call.output_tokens
-
-            chosen = [str(t) for t in (tagging.topics or [])]
-            for name in chosen:
-                per_subject[subject][name] += 1
-
-            if subject not in subject_ids:
-                subject_ids[subject] = subject_id_for(connection, path)
-            subject_id = subject_ids[subject]
-            if subject_id is not None and chosen:
-                written += write_topics(connection, subject_id, int(row["id"]), chosen)
-
-            if export is not None:
-                export.write(
-                    json.dumps(
-                        {
-                            "source_path": path,
-                            "root_number": row["root_number"],
-                            "subject": subject,
-                            "topics": chosen,
-                        },
-                        ensure_ascii=False,
-                    )
-                    + "\n"
-                )
-
-            if considered % 200 == 0:
-                connection.commit()
-                print(f"  … {considered:,} tagged, {written:,} links, "
-                      f"${in_tokens/1e6*PRICE_IN + out_tokens/1e6*PRICE_OUT:,.2f} so far",
-                      flush=True)
+            pending.append(Pending(int(row["id"]), path, row["root_number"],
+                                   subject, sliced, allowed, context))
+            if len(pending) >= batch_size:
+                drain()
+        drain()
     finally:
         if document is not None:
             document.close()
