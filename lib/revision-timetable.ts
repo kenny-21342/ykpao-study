@@ -90,6 +90,35 @@ export function intensityAt(window: PlanWindow, offset: number): number {
 }
 
 /**
+ * The mean of `intensityAt` across the whole window.
+ *
+ * The minute budget and the daily capacity have to be derived from the same
+ * curve, or the plan runs out of one before the other. `generatePlan` scales a
+ * weekly target by `days / 7` to get its budget, but then spends each day at
+ * `base * intensityAt(...)`, which is above 1 for every day but the first once
+ * an exam date is set. The budget is therefore exhausted after roughly
+ * `1 / meanIntensity` of the window, and no task is scheduled in the days that
+ * remain -- the final week before the exam, which is the week that matters
+ * most.
+ *
+ * Multiplying the budget by this restores the invariant. The ramp is linear,
+ * so the mean is just the midpoint of its endpoints, but it is computed here
+ * rather than assumed so that changing the curve cannot silently reintroduce
+ * the gap.
+ *
+ * Returns exactly 1 when there is no ramp, so a student with no exam date gets
+ * precisely the budget they got before.
+ */
+export function averageIntensity(window: PlanWindow): number {
+  if (window.peakIntensity <= 1 || window.days <= 1) return 1;
+  let total = 0;
+  for (let offset = 0; offset < window.days; offset += 1) {
+    total += intensityAt(window, offset);
+  }
+  return total / window.days;
+}
+
+/**
  * Minutes to hold back for spaced review before scheduling any practice.
  *
  * SM-2 cards are already due; scheduling practice on top of them means either

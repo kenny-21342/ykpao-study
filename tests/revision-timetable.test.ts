@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_PLAN_DAYS,
+  averageIntensity,
   describeCountdown,
   intensityAt,
   planWindow,
@@ -111,4 +112,80 @@ test('the countdown reads naturally at each distance', () => {
   assert.equal(describeCountdown(planWindow({ examDate: inDays(5), now })), '5 days until your exam.');
   assert.match(describeCountdown(planWindow({ examDate: inDays(21), now }))!, /about 3 weeks/);
   assert.match(describeCountdown(planWindow({ examDate: inDays(8), now }))!, /about 1 week\./);
+});
+
+/**
+ * The budget and the daily capacity must be priced on the same curve.
+ *
+ * `generatePlan` sets its minute budget from `days / 7` and then spends each
+ * day at `base * intensityAt(...)`. With a ramp, spending outruns the budget
+ * and the plan stops early -- observed in production on 5 Sep 2026 as a
+ * 21-day window that scheduled nothing after day 14, leaving the final week
+ * before the exam empty.
+ */
+test('a flat window has no ramp to pay for', () => {
+  const window = planWindow({ examDate: null, now });
+  assert.equal(averageIntensity(window), 1);
+});
+
+test('an exam far off does not ramp, so the budget is unchanged', () => {
+  const window = planWindow({ examDate: inDays(200), now });
+  assert.equal(window.peakIntensity, 1);
+  assert.equal(averageIntensity(window), 1);
+});
+
+test('the average sits between the first day and the peak', () => {
+  const window = planWindow({ examDate: inDays(21), now });
+  const mean = averageIntensity(window);
+  assert.ok(mean > 1, 'a ramping window must cost more than a flat one');
+  assert.ok(mean < window.peakIntensity, 'the mean cannot reach the peak');
+});
+
+test('the average matches the ramp it is derived from', () => {
+  const window = planWindow({ examDate: inDays(21), now });
+  let total = 0;
+  for (let offset = 0; offset < window.days; offset += 1) total += intensityAt(window, offset);
+  assert.equal(averageIntensity(window), total / window.days);
+});
+
+test('a budget scaled by the average covers every day of the window', () => {
+  // The regression itself, as arithmetic: spend each day at its ramped
+  // capacity and confirm the budget lasts to the final day.
+  for (const daysOut of [8, 14, 21, 28]) {
+    const window = planWindow({ examDate: inDays(daysOut), now });
+    const perWeek = 345;                       // the measured profile
+    const daily = perWeek / 7;
+    const budget = perWeek * (window.days / 7) * averageIntensity(window);
+    let spent = 0;
+    let lastFundedDay = -1;
+    for (let offset = 0; offset < window.days; offset += 1) {
+      const capacity = daily * intensityAt(window, offset);
+      if (spent + capacity > budget + 1e-9) break;
+      spent += capacity;
+      lastFundedDay = offset;
+    }
+    assert.equal(
+      lastFundedDay,
+      window.days - 1,
+      `a ${daysOut}-day window ran out of budget on day ${lastFundedDay + 1}`,
+    );
+  }
+});
+
+test('the old flat budget is what left the final week empty', () => {
+  // Guards the diagnosis, not just the fix: without the factor, a 21-day
+  // window must still fall short, or this test is asserting nothing.
+  const window = planWindow({ examDate: inDays(21), now });
+  const perWeek = 345;
+  const daily = perWeek / 7;
+  const flatBudget = perWeek * (window.days / 7);
+  let spent = 0;
+  let funded = 0;
+  for (let offset = 0; offset < window.days; offset += 1) {
+    const capacity = daily * intensityAt(window, offset);
+    if (spent + capacity > flatBudget + 1e-9) break;
+    spent += capacity;
+    funded += 1;
+  }
+  assert.ok(funded < window.days, 'the flat budget should not have reached the exam');
 });

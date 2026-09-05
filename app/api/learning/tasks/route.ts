@@ -8,6 +8,7 @@ import { resolveCourseScope } from '@/lib/course-scope';
 import { analyticsSubjectName, bankSubjectCodesForNames, bankTopicName } from '@/lib/bank-analytics';
 import { LearnerContextError } from '@/lib/learner-context';
 import {
+  averageIntensity,
   intensityAt,
   planWindow,
   reviewReservation,
@@ -338,7 +339,17 @@ async function generatePlan(userId: string) {
   // A longer window needs proportionally more minutes, or a three-week plan
   // would spread one week's work thinly across it and schedule nothing after
   // day seven.
-  const budget = Math.round(targetMinutes * (window.days / 7));
+  //
+  // The `averageIntensity` factor is what keeps the budget and the daily
+  // capacity on the same curve. Capacity below is spent at
+  // `base * intensityAt(...)`, which exceeds 1 on every day but the first once
+  // an exam date is set, so a budget priced at flat intensity runs out after
+  // about `1 / averageIntensity` of the window. Measured against a real
+  // profile -- 345 configured minutes a week, exam 21 days out, peak 1.4 -- the
+  // plan stopped on day 14 and scheduled nothing in the final week before the
+  // exam. It is 1 exactly when there is no ramp, so a student with no exam date
+  // keeps the budget they had.
+  const budget = Math.round(targetMinutes * (window.days / 7) * averageIntensity(window));
 
   for (let offset = 0; offset < window.days && allocated < budget; offset += 1) {
     const day = addDays(planStart, offset);
