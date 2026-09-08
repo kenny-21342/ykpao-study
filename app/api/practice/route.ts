@@ -5,6 +5,7 @@ import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting } from '@/lib/vision';
+import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { parsePositiveInt } from '@/lib/query-params';
@@ -63,6 +64,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 });
     }
 
+    // A scratchpad autosaves while the student is still working, ahead of
+    // this attempt row existing at all -- if they used it instead of (or in
+    // addition to) the photo-upload flow below, its flattened snapshot is
+    // the picture of their working.
+    const scratchpad = await prisma.questionScratchpad.findFirst({
+      where: { userId: user.id, pastPaperQuestionId: question.id },
+    });
+
     let markscheme: string | null = null;
     let markschemeId: number | null = null;
     if (question.paper.docType === 'qp') {
@@ -89,8 +98,14 @@ export async function POST(req: NextRequest) {
     // and append the transcription to the text answer so the text-only DeepSeek
     // grader can see the full working. Previously the client sent `drawing`
     // silently and the server dropped it — see GitHub issue on the practice flow.
-    const answerImage = typeof image === 'string' && image ? image : typeof drawing === 'string' && drawing ? drawing : null;
-    let answerImageUrl: string | null = null;
+    const answerImage = typeof image === 'string' && image
+      ? image
+      : typeof drawing === 'string' && drawing
+        ? drawing
+        : scratchpad?.previewImageUrl ?? null;
+    // Set eagerly (not only when OCR succeeds below): a server-relative URL
+    // is worth persisting for vision grading even without a vision credential.
+    const answerImageUrl: string | null = answerImage && answerImage.startsWith('/') ? answerImage : null;
     let gradedAnswer = String(answer);
 
     // Vision is resolved separately: a text-only key must still grade a typed
@@ -98,16 +113,19 @@ export async function POST(req: NextRequest) {
     const visionAccess = answerImage ? await requireVisionAi(user.id) : null;
     if (visionAccess && !visionAccess.ok) aiNotices.push(visionAccess.error);
 
-    if (answerImage && visionAccess?.ok) {
+    const gradingMode = decideGradingMode({
+      requiresDiagram: Boolean(question.hasDiagram),
+      answerImageUrl,
+    });
+    const useVisionGrading = gradingMode === 'vision' && Boolean(answerImageUrl) && visionAccess?.ok;
+
+    if (answerImage && visionAccess?.ok && !useVisionGrading) {
       try {
         const transcription = await transcribeHandwriting(answerImage, visionAccess.credential);
         if (transcription && transcription.trim()) {
           gradedAnswer = gradedAnswer.trim()
             ? `${gradedAnswer.trim()}\n\n[Transcribed from handwritten work]\n${transcription.trim()}`
             : transcription.trim();
-          // Persist the original image URL (data URLs go to /api/upload first;
-          // server-relative URLs are kept as-is).
-          answerImageUrl = answerImage.startsWith('/') ? answerImage : null;
           await recordUsage({
             userId: user.id,
             feature: 'ocr-transcribe',
@@ -126,7 +144,34 @@ export async function POST(req: NextRequest) {
     }
 
     let grade: Partial<GradeResult> = {};
-    if (textAccess.ok) {
+    if (useVisionGrading && answerImageUrl && visionAccess?.ok) {
+      try {
+        grade = await runVisionGrading({
+          imageUrl: answerImageUrl,
+          questionText: question.content,
+          markscheme,
+          totalMarks: question.marks,
+          credential: visionAccess.credential,
+        });
+        await recordUsage({
+          userId: user.id,
+          feature: 'practice-grade-vision',
+          model: visionAccess.credential.model,
+        });
+      } catch (err) {
+        console.error('Vision grading failed:', err);
+        await recordUsage({
+          userId: user.id,
+          feature: 'practice-grade-vision:error',
+          model: visionAccess.credential.model,
+        });
+        aiNotices.push(
+          err instanceof Error && err.message
+            ? err.message
+            : 'The AI marker could not be reached, so this attempt is unscored.',
+        );
+      }
+    } else if (textAccess.ok) {
       try {
         const userContent = `Grade the student's answer against the markscheme.
 
@@ -167,6 +212,7 @@ ${gradedAnswer}`;
       }
     }
 
+    const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
     const gradingStatus = markscheme ? 'official' : Object.keys(grade).length > 0 ? 'provisional' : 'ungraded';
     const max = question.marks || grade.maxScore || 1;
     const rawScore = Number(grade.score) || 0;
@@ -189,8 +235,18 @@ ${gradedAnswer}`;
         modelAnswer: grade.modelAnswer ?? null,
         timeSpent: timeSpent ?? null,
         answerImageUrl,
+        gradingMode: actualGradingMode,
       },
     });
+
+    if (scratchpad) {
+      // Keep the row (a reopened past attempt can still show the drawing) --
+      // only stamp it as belonging to a submitted attempt now.
+      await prisma.questionScratchpad.update({
+        where: { id: scratchpad.id },
+        data: { finalizedAt: new Date() },
+      });
+    }
 
     if (isCorrect === false) {
       await upsertMistakeReview({

@@ -43,6 +43,7 @@ model User {
   following               Follow[]                @relation("Followers")
   notebooks               Notebook[]
   pastPaperAttempts       PastPaperAttempt[]
+  questionScratchpads     QuestionScratchpad[]
   mockExams               MockExam[]
   threads                 DiscussionThread[]
   posts                   DiscussionPost[]
@@ -69,6 +70,7 @@ model User {
   aiProposals             AIActionProposal[]
   ragDocuments            RagDocument[]
   aiCredential            UserAiCredential?
+  pageDrawings            PageDrawing[]
 
   // Orphaned alongside syncToken above; nothing queries this index any more.
   @@index([syncToken])
@@ -367,6 +369,7 @@ model PastPaperQuestion {
   images                 QuestionImage[]
   attempts               PastPaperAttempt[]
   mockExamItems          MockExamItem[]
+  scratchpads            QuestionScratchpad[]
   bookmarks              PastPaperBookmark[]
   dailyChallengeAttempts DailyChallengeAttempt[]
   studyTasks             StudyTask[]
@@ -624,6 +627,7 @@ model PastPaperAttempt {
   gradingSourceId Int?
   timeSpent       Int?
   answerImageUrl  String? // optional photo/screenshot of handwritten working
+  gradingMode     String   @default("text") // text | ocr-text | vision -- which path actually graded this attempt
   attemptedAt     DateTime @default(now())
 
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -690,14 +694,47 @@ model MockExamItem {
   gradingStatus   String    @default("ungraded") // official | provisional | ungraded
   gradingSourceId Int?
   answerImageUrl  String? // optional photo/screenshot of handwritten working
+  gradingMode     String    @default("text") // text | ocr-text | vision -- which path actually graded this item
   attemptedAt     DateTime?
 
-  mockExam     MockExam           @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
-  question     PastPaperQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  bankQuestion BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
+  mockExam     MockExam             @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  question     PastPaperQuestion?   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  bankQuestion BankQuestion?        @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
+  scratchpads  QuestionScratchpad[]
 
   @@index([mockExamId])
   @@map("mock_exam_items")
+}
+
+// A student's scratch/working-out drawing for one question, kept separate
+// from the submitted answer so it can autosave while they are still
+// mid-attempt (before any attempt row exists) and be reopened for continued
+// editing afterward. Exactly one of the three question refs is set --
+// mirroring MockExamItem's questionId/bankQuestionId split, extended with a
+// third ref since a scratchpad can also be scoped to one item within a
+// specific mock exam attempt rather than the underlying question bank.
+model QuestionScratchpad {
+  id                  String    @id @default(cuid())
+  userId              String
+  pastPaperQuestionId Int?
+  bankQuestionId      Int?
+  mockExamItemId      String?
+  strokesJson         Json // serialized { strokes, textBoxes } from DrawingCanvas
+  previewImageUrl     String? // debounced flattened PNG -- what grading/quick display reads
+  finalizedAt         DateTime? // set when the parent attempt is submitted; further edits still allowed, but this row is now "the submitted working"
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pastPaperQuestion PastPaperQuestion? @relation(fields: [pastPaperQuestionId], references: [id], onDelete: Cascade)
+  bankQuestion      BankQuestion?      @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
+  mockExamItem      MockExamItem?      @relation(fields: [mockExamItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pastPaperQuestionId])
+  @@unique([userId, bankQuestionId])
+  @@unique([userId, mockExamItemId])
+  @@index([userId])
+  @@map("question_scratchpads")
 }
 
 model QuestionAttempt {
@@ -919,11 +956,87 @@ model Page {
   comments      PageComment[]
   presences     PagePresence[]
   awareness     PageAwareness[]
+  drawings      PageDrawing[]
+  yjsUpdates    PageYjsUpdate[]
+  yjsSnapshot   PageYjsSnapshot?
 
   @@index([sectionId, order])
   @@index([favorite])
   @@index([archived])
   @@map("pages")
+}
+
+/// Append-only log of raw Yjs update bytes for one page's collaborative
+/// session (Feature 5, flagged off by default via `isYjsCollabEnabled()`).
+///
+/// `Page.content` is NOT replaced by this -- it stays the HTML mirror of the
+/// ProseMirror state, written by the exact same debounced-autosave path as
+/// every other page, so search/RAG indexing/version history/the read-only
+/// path never need to know Yjs exists. This table is purely additive: a
+/// joining client reconstructs the live CRDT doc by applying
+/// `PageYjsSnapshot.state` (if any) followed by every update after it, then
+/// applies new rows as they arrive via the `page_<id>_yjs` NOTIFY channel.
+/// Deleting all rows for a page (e.g. turning the flag back off) loses
+/// nothing: `Page.content` is already the authoritative document.
+model PageYjsUpdate {
+  id        String   @id @default(cuid())
+  pageId    String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, createdAt])
+  @@map("page_yjs_updates")
+}
+
+/// Periodically compacted merge of a page's `PageYjsUpdate` log (see
+/// scripts/compact-page-yjs-updates.ts), so a client joining a
+/// long-running session doesn't have to replay the entire update history.
+/// One row per page; updates already folded into `state` are pruned from
+/// `PageYjsUpdate` by the same compaction pass.
+model PageYjsSnapshot {
+  id        String   @id @default(cuid())
+  pageId    String   @unique
+  state     Bytes
+  updatedAt DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_yjs_snapshots")
+}
+
+/// An editable drawing embedded inline in a note page (the "drawingBlock"
+/// TipTap node), as an alternative to flattening a drawing to a PNG and
+/// losing the ability to reopen and keep editing it.
+///
+/// The stroke JSON is kept out of `Page.content` deliberately: that column
+/// is round-tripped whole on every autosave and version snapshot, so
+/// embedding kilobytes of stroke data per drawing directly in the HTML would
+/// bloat every one of those. `Page.content` instead holds a `drawingBlock`
+/// node referencing this row by id, plus the flattened `thumbnailUrl` for
+/// read-only rendering (search, RAG indexing, snapshot history) without
+/// needing to fetch and rasterize strokes.
+///
+/// Concurrent edits to one drawing are last-write-wins, same as the rest of
+/// a page before Yjs -- two people editing the same diagram at the same
+/// instant is a rare edge case not worth solving before launch.
+model PageDrawing {
+  id           String   @id @default(cuid())
+  pageId       String
+  strokesJson  Json
+  thumbnailUrl String
+  width        Int
+  height       Int
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  page      Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([pageId])
+  @@map("page_drawings")
 }
 
 model PageSnapshot {
@@ -1145,6 +1258,7 @@ model SchoolResource {
   description String   @default("")
   subject     String?
   category    String? // free-text grouping: "Worksheet", "Slides", "Exam", "Handout"
+  folderId    String?
   fileUrl     String
   fileName    String
   fileSize    Int      @default(0)
@@ -1153,12 +1267,38 @@ model SchoolResource {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  uploader User                  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  // SetNull (not Cascade): a folder is an organizational label, not a
+  // container the files depend on -- deleting one should never take a
+  // student's uploaded file with it. A deleted folder's files fall back to
+  // the root listing instead.
+  folder   SchoolResourceFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([subject])
   @@index([category])
   @@index([createdAt])
+  @@index([folderId])
   @@map("school_resources")
+}
+
+// A real folder tree for school resources, replacing the old
+// "From folder upload: <path>" marker stuffed into `description` and
+// re-parsed client-side on every render. Unlike NoteFolder (per-user), this
+// tree has no userId: the resource library is one shared school-wide space,
+// so its folders are shared too -- any staff member's upload can land in a
+// folder any other staff member created.
+model SchoolResourceFolder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  resources SchoolResource[]
+  parent    SchoolResourceFolder?  @relation("SchoolResourceSubfolders", fields: [parentId], references: [id], onDelete: Cascade)
+  children  SchoolResourceFolder[] @relation("SchoolResourceSubfolders")
+
+  @@index([parentId])
+  @@map("school_resource_folders")
 }
 
 // Platform-wide announcements published by admins.
@@ -1350,6 +1490,10 @@ model BankQuestion {
   paperId             Int
   rootNumber          Int
   bodyMd              String
+  // Mirrors PastPaperQuestion.hasDiagram -- routes grading to gradeWithVision
+  // instead of OCR-then-text-grade, since a diagram/graph/circuit answer has
+  // no text for OCR to usefully extract.
+  requiresDiagram     Int      @default(0)
   parts               String   @default("[]") // JSON [{"label": "a(i)", "marks": 3}]
   totalMarks          Int?
   screenshotId        Int?
@@ -1377,6 +1521,7 @@ model BankQuestion {
   bookmarks              BankQuestionBookmark[]
   attempts               BankQuestionAttempt[]
   mockExamItems          MockExamItem[]
+  scratchpads            QuestionScratchpad[]
   dailyChallengeAttempts DailyChallengeAttempt[]
   reviewItems            ReviewItem[]
   studyTasks             StudyTask[]
@@ -1446,6 +1591,8 @@ model BankQuestionAttempt {
   // ai   -- graded by the model, for free-response questions with a transcript
   gradedBy           String
   timeSpent          Int?
+  answerImageUrl     String? // optional photo/scratchpad snapshot of drawn working -- mirrors PastPaperAttempt/MockExamItem
+  gradingMode        String   @default("text") // text | ocr-text | vision -- which path graded this attempt, within gradedBy: 'ai'
   createdAt          DateTime @default(now())
 
   user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)

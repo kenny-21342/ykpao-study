@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createNotifications } from '@/lib/notifications';
 import { reportError } from '@/lib/error-reporting';
+import { indexDiscussionThread, refreshRagIndex } from '@/lib/rag-index';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,8 @@ export async function POST(
       where: { id: threadId },
       data: { updatedAt: new Date() },
     });
+
+    await refreshRagIndex(`discussion-thread:${threadId}`, () => indexDiscussionThread(threadId));
 
     // ---- Notifications ----
     // Notify (a) the thread author when someone replies, and (b) the parent

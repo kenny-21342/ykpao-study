@@ -279,6 +279,13 @@ export async function POST(req: Request) {
   });
   if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
+  // A scratchpad autosaves while the student is still working, ahead of this
+  // attempt row existing at all -- if they drew a diagram, its flattened
+  // snapshot is the picture of their working.
+  const scratchpad = await prisma.questionScratchpad.findFirst({
+    where: { userId: user.id, bankQuestionId: question.id },
+  });
+
   // An unpublished mark scheme is not an answer key we should mark against,
   // nor one to put on the back of a review card.
   const publishedMarkScheme =
@@ -334,6 +341,7 @@ export async function POST(req: Request) {
         awardedMarks: selfMark?.awardedMarks ?? null,
         outOfMarks: selfMark?.awardedMarks === null ? null : question.totalMarks,
         timeSpent: body.timeSpent,
+        answerImageUrl: scratchpad?.previewImageUrl ?? null,
       },
       select: {
         id: true,
@@ -345,6 +353,15 @@ export async function POST(req: Request) {
         createdAt: true,
       },
     });
+
+    if (scratchpad) {
+      // Keep the row (a reopened past attempt can still show the drawing) --
+      // only stamp it as belonging to a submitted attempt now.
+      await prisma.questionScratchpad.update({
+        where: { id: scratchpad.id },
+        data: { finalizedAt: new Date() },
+      });
+    }
 
     // A wrong answer is what spaced review exists for. Raising the card here
     // rather than only on mock-exam submission matters because Practice is

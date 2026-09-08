@@ -15,9 +15,6 @@ export const ALLOWED_RESOURCE_EXTS = new Set([
 /** Per-file ceiling enforced by /api/upload. */
 export const RESOURCE_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
 
-/** Marker prepended to descriptions by folder uploads, preserving the path. */
-export const FOLDER_UPLOAD_PREFIX = 'From folder upload: ';
-
 /** macOS metadata segments that must never be uploaded. */
 export function isHiddenUploadSegment(seg: string): boolean {
   return seg.startsWith('.') || seg === '__MACOSX';

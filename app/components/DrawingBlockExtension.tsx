@@ -1,0 +1,220 @@
+'use client';
+
+/**
+ * OneNote-style editable drawing embedded inline in a note.
+ *
+ * Unlike a plain `<img>`, this TipTap node keeps a reference (`drawingId`) to
+ * a `PageDrawing` row holding the actual stroke data, so clicking the
+ * thumbnail reopens `DrawingCanvas` pre-loaded via `importStrokes()` for
+ * continued editing instead of only offering "delete and redraw."
+ *
+ * The node still renders a plain `<img>` inside its wrapper `div` (see
+ * `renderHTML`) so the read-only page view (`RichContent.tsx`, which never
+ * mounts TipTap) degrades to a static image -- and so DOMPurify's allow-list,
+ * which only recognizes the `img`/`src`/`alt` attributes and not the
+ * `data-drawing-id`/`data-thumbnail-url`/`data-width`/`data-height` markers,
+ * still leaves something visible after sanitizing.
+ */
+
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Node, mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
+import { Loader2, Pencil, X } from 'lucide-react';
+import type { DrawingCanvasHandle, DrawingCanvasStrokeData } from './DrawingCanvas';
+
+const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-40 items-center justify-center text-sm text-gray-500">Loading drawing…</div>
+  ),
+});
+
+interface DrawingBlockAttrs {
+  drawingId: string | null;
+  thumbnailUrl: string | null;
+  width: number;
+  height: number;
+}
+
+function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
+  const attrs = node.attrs as DrawingBlockAttrs;
+  const { drawingId, thumbnailUrl, width, height } = attrs;
+  const editable = editor.isEditable;
+
+  const [editing, setEditing] = useState(false);
+  const [loadingStrokes, setLoadingStrokes] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [strokes, setStrokes] = useState<DrawingCanvasStrokeData | null>(null);
+  const [canvasHandle, setCanvasHandle] = useState<DrawingCanvasHandle | null>(null);
+  const importedRef = useRef(false);
+
+  useEffect(() => {
+    if (editing && strokes && !importedRef.current && canvasHandle) {
+      importedRef.current = true;
+      canvasHandle.importStrokes(strokes);
+    }
+  }, [editing, strokes, canvasHandle]);
+
+  const openEditor = async () => {
+    if (!editable || !drawingId) return;
+    setLoadingStrokes(true);
+    try {
+      const res = await fetch(`/api/page-drawings/${drawingId}`);
+      const data = await res.json();
+      if (res.ok && data.drawing) {
+        importedRef.current = false;
+        setStrokes(data.drawing.strokesJson as DrawingCanvasStrokeData);
+        setEditing(true);
+      }
+    } finally {
+      setLoadingStrokes(false);
+    }
+  };
+
+  const save = async () => {
+    const handle = canvasHandle;
+    if (!handle || !drawingId) return;
+    const dataUrl = handle.exportDataURL();
+    if (!dataUrl) return;
+    setSaving(true);
+    try {
+      const blob = await fetch(dataUrl).then((r) => r.blob());
+      const file = new File([blob], `drawing-${drawingId}.png`, { type: 'image/png' });
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.fileUrl) throw new Error('Upload failed');
+
+      const patchRes = await fetch(`/api/page-drawings/${drawingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          strokesJson: handle.exportStrokes(),
+          thumbnailUrl: uploadData.fileUrl,
+          width,
+          height,
+        }),
+      });
+      const patchData = await patchRes.json();
+      if (!patchRes.ok) throw new Error('Save failed');
+      updateAttributes({ thumbnailUrl: patchData.drawing.thumbnailUrl });
+      setEditing(false);
+    } catch {
+      // The drawing stays open on failure so the student's edit isn't lost --
+      // they can retry Save rather than losing the session to a flaky upload.
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <NodeViewWrapper className="drawing-block-editing" contentEditable={false}>
+        <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
+          <DrawingCanvas
+            ref={(handle) => setCanvasHandle(handle)}
+            width={width}
+            height={height}
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      </NodeViewWrapper>
+    );
+  }
+
+  return (
+    <NodeViewWrapper className="drawing-block inline-block" contentEditable={false}>
+      <div className="group relative inline-block">
+        {thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- arbitrary uploaded/user-drawn content, not a static asset Next can optimize
+          <img
+            src={thumbnailUrl}
+            alt="Note drawing"
+            className="max-w-full rounded-md border border-gray-200 dark:border-gray-700"
+          />
+        )}
+        {editable && (
+          <button
+            type="button"
+            onClick={openEditor}
+            disabled={loadingStrokes}
+            title="Edit drawing"
+            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-700 opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
+          >
+            {loadingStrokes ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
+            Edit
+          </button>
+        )}
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+export const DrawingBlockExtension = Node.create({
+  name: 'drawingBlock',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      drawingId: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-drawing-id'),
+        renderHTML: (attrs: DrawingBlockAttrs) => ({ 'data-drawing-id': attrs.drawingId }),
+      },
+      thumbnailUrl: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-thumbnail-url'),
+        renderHTML: (attrs: DrawingBlockAttrs) => ({ 'data-thumbnail-url': attrs.thumbnailUrl }),
+      },
+      width: {
+        default: 760,
+        parseHTML: (el: HTMLElement) => Number(el.getAttribute('data-width')) || 760,
+        renderHTML: (attrs: DrawingBlockAttrs) => ({ 'data-width': attrs.width }),
+      },
+      height: {
+        default: 420,
+        parseHTML: (el: HTMLElement) => Number(el.getAttribute('data-height')) || 420,
+        renderHTML: (attrs: DrawingBlockAttrs) => ({ 'data-height': attrs.height }),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'div[data-type="drawing-block"]' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, { 'data-type': 'drawing-block' }),
+      ['img', { src: HTMLAttributes['data-thumbnail-url'], alt: 'Note drawing' }],
+    ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(DrawingBlockView);
+  },
+});

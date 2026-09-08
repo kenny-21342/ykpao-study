@@ -19,7 +19,6 @@ import StudyCoach from './components/StudyCoach';
 import MaterialsHub from './components/MaterialsHub';
 import DailyChallenge from './components/DailyChallenge';
 import CourseShortcuts from '@/app/components/CourseShortcuts';
-import TrendingNotes from './components/TrendingNotes';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import { ScreenContextProvider, useScreenContext } from './components/ScreenContext';
 import { BookOpen, Database, Sparkles, TrendingUp, Clock, Award, Target, Star, FileText, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
@@ -917,7 +916,6 @@ export default function SmartEduPlatform() {
 
                 <div className="space-y-6">
                   <DailyChallenge />
-                  <TrendingNotes />
                   <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Study shortcuts</h2>
                     <div className="mt-4 grid grid-cols-2 gap-2">

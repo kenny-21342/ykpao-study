@@ -6,7 +6,7 @@ import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
 
-type ContentType = 'threads' | 'posts' | 'shared-notes' | 'resources';
+type ContentType = 'threads' | 'posts' | 'resources';
 
 type ContentItem = {
   id: string;
@@ -30,7 +30,6 @@ type Response = { items: ContentItem[]; total: number; page: number; pageSize: n
 const TABS: { key: ContentType; label: string }[] = [
   { key: 'threads', label: 'Threads' },
   { key: 'posts', label: 'Posts' },
-  { key: 'shared-notes', label: 'Shared Notes' },
   { key: 'resources', label: 'School Resources' },
 ];
 

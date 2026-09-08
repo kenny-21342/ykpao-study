@@ -52,6 +52,45 @@ function reindex(id: string): Promise<unknown> {
   return refreshRagIndex(`resource:${id}`, () => indexSchoolResource(id));
 }
 
+/**
+ * Resolve a "Physics/Unit 3" style relative path into a chain of
+ * `SchoolResourceFolder` rows, creating whichever segments don't exist yet,
+ * and return the id of the leaf (deepest) folder. Segments are matched
+ * case-sensitively by name under their parent -- same as a real filesystem,
+ * and simple enough that two uploads of "Physics/Unit 3" always land in the
+ * same folder rather than minting duplicates.
+ *
+ * Sequential awaits (not a single batched query): each segment's existence
+ * depends on the previous one's id, and a folder path is at most a handful
+ * of segments deep, so the latency of doing this one at a time is
+ * negligible next to the file upload it accompanies.
+ */
+export async function resolveFolderPath(path: string): Promise<string | null> {
+  const segments = path
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (segments.length === 0) return null;
+
+  let parentId: string | null = null;
+  for (const name of segments) {
+    const existing: { id: string } | null = await prisma.schoolResourceFolder.findFirst({
+      where: { name, parentId },
+      select: { id: true },
+    });
+    if (existing) {
+      parentId = existing.id;
+      continue;
+    }
+    const created: { id: string } = await prisma.schoolResourceFolder.create({
+      data: { name, parentId },
+      select: { id: true },
+    });
+    parentId = created.id;
+  }
+  return parentId;
+}
+
 export type SchoolResourceWithUploader = Prisma.SchoolResourceGetPayload<{
   include: { uploader: { select: { id: true; name: true; image: true } } };
 }>;

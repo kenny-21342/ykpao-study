@@ -22,7 +22,7 @@
  * it is in.
  */
 
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import {
@@ -37,6 +37,7 @@ import {
   LogIn,
   LogOut,
   MessagesSquare,
+  Search,
   Settings,
   ShieldCheck,
   User,
@@ -44,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import { FEATURE_READINESS, isFeatureVisible } from '@/lib/feature-readiness';
+import GlobalSearchPalette from './GlobalSearchPalette';
 
 export type SidebarTab =
   | 'dashboard'
@@ -178,6 +180,21 @@ export default function AppSidebar({
 }: Props) {
   const { data: session, status } = useSession();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Cmd+K (or Ctrl+K on Windows/Linux) opens the global search palette from
+  // anywhere the sidebar is mounted, matching the convention most students
+  // already know from other apps.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const isSessionLoading = status === 'loading';
   const isAuthenticated = status === 'authenticated';
@@ -220,6 +237,8 @@ export default function AppSidebar({
   );
 
   return (
+    <>
+    <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     <aside
       className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/30 dark:border-white/10 shadow-xl transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
@@ -260,6 +279,22 @@ export default function AppSidebar({
       </div>
 
       <nav className={`${collapsed ? 'px-2' : 'px-4'} flex-1 space-y-2 overflow-y-auto py-6`}>
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          title="Search (⌘K)"
+          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-xl text-gray-700 hover:bg-gray-100 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800`}
+        >
+          <span className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
+            <Search className="w-5 h-5" />
+            <span className={labelClass}>Search</span>
+          </span>
+          {!collapsed && (
+            <span className="rounded-md border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:border-gray-700">
+              ⌘K
+            </span>
+          )}
+        </button>
         {navItem('dashboard', 'Dashboard', Home)}
         {navItem('study', 'Study', Brain)}
         {isFeatureVisible('question-bank') &&
@@ -396,6 +431,7 @@ export default function AppSidebar({
         )}
       </div>
     </aside>
+    </>
   );
 }
 

@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users, Search, Loader2, AlertCircle, BookOpen, FileText,
-  Download, Eye, Plus, X, Clock, Tag, Star,
-  Library, Sparkles, Heart, MessageCircle, ArrowUpDown, ChevronLeft, ChevronRight,
+  Download, Eye, Plus, X, Clock,
+  Library, Heart, MessageCircle, ArrowUpDown, ChevronLeft, ChevronRight,
   Paperclip, Upload, Trash2, FolderUp, CheckCircle2, XCircle, File as FileIcon,
   Folder, FolderOpen, Home,
 } from 'lucide-react';
@@ -13,39 +12,8 @@ import { sanitizeHtml } from '@/lib/sanitize-html';
 import {
   ALLOWED_RESOURCE_EXTS as ALLOWED_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
-  FOLDER_UPLOAD_PREFIX,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
-
-const FormattedMessage = dynamic(() => import('./FormattedMessage'), { ssr: false });
-const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
-
-// Metadata for a non-image file attached to a shared note. Image uploads
-// are embedded inline in `content`; documents live here as attachments.
-type Attachment = {
-  url: string;
-  name: string;
-  type: string;
-  size: number;
-};
-
-// ----------------------------- Types -----------------------------
-type SharedNoteListItem = {
-  id: string;
-  title: string;
-  content: string;
-  subject: string | null;
-  courseCode: string | null;
-  tags: string[];
-  visibility: string;
-  attachments?: Attachment[];
-  views: number;
-  createdAt: string;
-  updatedAt: string;
-  author: { id: string; name: string | null; image: string | null };
-  commentCount: number;
-  ratingCount: number;
-};
 
 type Tab = 'notes' | 'school';
 
@@ -103,7 +71,7 @@ export default function ResourceLibrary() {
           </TabButton>
         </div>
 
-        {tab === 'notes' ? <SharedNotesTab scope={scope} /> : <SchoolResourcesTab scope={scope} />}
+        {tab === 'notes' ? <SharedNotesTab /> : <SchoolResourcesTab scope={scope} />}
       </div>
     </div>
   );
@@ -154,61 +122,11 @@ function fmtDate(iso: string | null) {
 // ===================================================================
 // Shared Notes tab
 // ===================================================================
-type NoteDetail = {
-  id: string;
-  title: string;
-  content: string;
-  subject: string | null;
-  courseCode: string | null;
-  tags: string[];
-  visibility: string;
-  attachments?: Attachment[];
-  views: number;
-  createdAt: string;
-  updatedAt: string;
-  author: { id: string; name: string | null; image: string | null };
-  comments: Array<{
-    id: string;
-    content: string;
-    createdAt: string;
-    user: { id: string; name: string | null; image: string | null };
-  }>;
-  avgRating: number | null;
-  ratingCount: number;
-};
-
-function SharedNotesTab({ scope }: { scope: 'enrolled' | 'all' }) {
-  const [subTab, setSubTab] = useState<'community' | 'ykpao'>('ykpao');
-
-  return (
-    <div className="space-y-5">
-      {/* Sub-tab toggle */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setSubTab('ykpao')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-            subTab === 'ykpao'
-              ? 'bg-green-600 text-white shadow'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-green-400'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" /> YKPao Review
-        </button>
-        <button
-          onClick={() => setSubTab('community')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-            subTab === 'community'
-              ? 'bg-green-600 text-white shadow'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-green-400'
-          }`}
-        >
-          <Users className="w-4 h-4" /> Community
-        </button>
-      </div>
-
-      {subTab === 'ykpao' ? <ExternalNotesView /> : <CommunityNotesView scope={scope} />}
-    </div>
-  );
+function SharedNotesTab() {
+  // Students now publish directly to review.ykpao.com; the in-app community
+  // notes library (publish/browse notes shared by other students) has been
+  // retired in favor of that single external source.
+  return <ExternalNotesView />;
 }
 
 // ===================================================================
@@ -466,287 +384,6 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
 }
 
 // ===================================================================
-// Community notes (internal, from /api/shared-notes)
-// ===================================================================
-function CommunityNotesView({ scope }: { scope: 'enrolled' | 'all' }) {
-  const [notes, setNotes] = useState<SharedNoteListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState('');
-  const [courseFilter, setCourseFilter] = useState('');
-  const [activeTag, setActiveTag] = useState('');
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [selected, setSelected] = useState<NoteDetail | null>(null);
-  const [showPublish, setShowPublish] = useState(false);
-  const [showFilterUI, setShowFilterUI] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (query.trim()) params.set('q', query.trim());
-      if (subjectFilter) params.set('subject', subjectFilter);
-      if (courseFilter.trim()) params.set('courseCode', courseFilter.trim());
-      if (activeTag) params.set('tag', activeTag);
-      params.set('scope', scope);
-      const res = await fetch(`/api/shared-notes?${params}`);
-      // 401 is not a failure, it is the answer: the library is for signed-in
-      // members. Reporting it as a load error tells the visitor the page is
-      // broken when it is working exactly as intended.
-      if (res.status === 401) throw new Error('Sign in to browse community notes.');
-      if (!res.ok) throw new Error('Failed to load shared notes');
-      const data = await res.json();
-      setNotes(data.notes ?? []);
-      if (Array.isArray(data.subjects)) setSubjects(data.subjects);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load shared notes');
-    } finally {
-      setLoading(false);
-    }
-  }, [query, scope, subjectFilter, courseFilter, activeTag]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, [load]);
-
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
-
-  const openNote = async (id: string) => {
-    setSelected(null);
-    try {
-      const res = await fetch(`/api/shared-notes/${id}`);
-      if (!res.ok) throw new Error('Failed to load note');
-      const data = await res.json();
-      setSelected(data.note);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load note');
-    }
-  };
-
-  // All unique tags across currently loaded notes (for the tag cloud)
-  const allTags = Array.from(new Set(notes.flatMap((n) => n.tags))).sort();
-
-  if (loading && notes.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-16 text-gray-500">
-        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading shared notes…
-      </div>
-    );
-  }
-  if (error && notes.length === 0) return <ErrorBanner message={error} onRetry={load} />;
-
-  return (
-    <div className="space-y-5">
-      {/* Top row: search + actions */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. motion, acids, or chapter 4 notes"
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
-        </div>
-        <button
-          onClick={() => setShowFilterUI((v) => !v)}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
-          <Tag className="w-4 h-4" /> Filters
-        </button>
-        <button
-          onClick={() => setShowPublish(true)}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
-        >
-          <Plus className="w-4 h-4" /> Share a Note
-        </button>
-      </div>
-
-      {/* Filters panel */}
-      {showFilterUI && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-          {subjects.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Subject</label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => setSubjectFilter('')}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                    subjectFilter === ''
-                      ? 'bg-green-600 text-white border-transparent'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent hover:border-green-400'
-                  }`}
-                >
-                  All
-                </button>
-                {subjects.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSubjectFilter((cur) => (cur === s ? '' : s))}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                      subjectFilter === s
-                        ? 'bg-green-600 text-white border-transparent'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent hover:border-green-400'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Course code</label>
-            <input
-              type="text"
-              value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
-              placeholder="e.g. PHYS-101"
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
-            />
-          </div>
-          {allTags.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Tag</label>
-              <div className="flex flex-wrap gap-1.5">
-                {allTags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setActiveTag((cur) => (cur === t ? '' : t))}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                      activeTag === t
-                        ? 'bg-green-600 text-white border-transparent'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent hover:border-green-400'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {(courseFilter || activeTag) && (
-            <button
-              onClick={() => { setSubjectFilter(''); setCourseFilter(''); setActiveTag(''); }}
-              className="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
-            >
-              <X className="w-3 h-3" /> Clear filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Results */}
-      {error && <ErrorBanner message={error} onRetry={load} />}
-
-      {notes.length === 0 && !loading ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-          <Users className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No shared notes found</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
-            Try adjusting your search, or be the first to share a note with the community.
-          </p>
-          <button
-            onClick={() => setShowPublish(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
-          >
-            <Plus className="w-4 h-4" /> Share a Note
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {notes.map((note) => (
-            <SharedNoteCard key={note.id} note={note} onOpen={() => openNote(note.id)} />
-          ))}
-        </div>
-      )}
-
-      {/* Reader modal */}
-      {selected && (
-        <NoteReader note={selected} onClose={() => setSelected(null)} />
-      )}
-
-      {/* Publish dialog */}
-      {showPublish && (
-        <PublishNoteDialog
-          onClose={() => setShowPublish(false)}
-          onPublished={() => { setShowPublish(false); load(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-function SharedNoteCard({ note, onOpen }: { note: SharedNoteListItem; onOpen: () => void }) {
-  const authorName = note.author.name ?? 'Anonymous';
-  const authorInitial = authorName[0]?.toUpperCase() ?? 'A';
-  const preview = note.content.replace(/[#*`>\-]/g, '').slice(0, 140);
-
-  return (
-    <button
-      onClick={onOpen}
-      className="text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-5 flex flex-col"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {note.author.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={note.author.image} alt={authorName} className="w-full h-full rounded-full object-cover" />
-            ) : authorInitial}
-          </div>
-          <span className="text-xs text-gray-500 truncate">{authorName}</span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {note.subject && (
-            <span className="text-xs font-semibold px-2 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md">
-              {note.subject}
-            </span>
-          )}
-          {note.courseCode && (
-            <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md">
-              {note.courseCode}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <h3 className="font-bold text-gray-900 dark:text-gray-100 mt-3 line-clamp-2">{note.title}</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-3 flex-1">{preview}</p>
-
-      {note.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {note.tags.slice(0, 4).map((t) => (
-            <span key={t} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
-        <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {note.views}</span>
-        <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {fmtDate(note.createdAt)}</span>
-        {note.attachments && note.attachments.length > 0 && (
-          <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-            <Paperclip className="w-3.5 h-3.5" /> {note.attachments.length}
-          </span>
-        )}
-      </div>
-    </button>
-  );
-}
-
-// ===================================================================
 // School Resources tab — staff-uploaded files (worksheets, slides, exams,
 // handouts) for the whole school to retrieve. Separate from Shared Notes
 // (which are user-authored study notes).
@@ -765,10 +402,16 @@ type SchoolResource = {
   createdAt: string;
   updatedAt: string;
   uploader: { id: string; name: string | null; image: string | null };
+  folder: { id: string; name: string } | null;
 };
 
 type ResourceSort = 'createdAt' | 'updatedAt' | 'title' | 'fileName' | 'downloads' | 'fileSize';
 type ResourceSortOrder = 'asc' | 'desc';
+
+/** A resource's immediate subfolder, as returned for the current browse location. */
+type ResourceFolderEntry = { id: string; name: string; fileCount: number };
+/** One link in the breadcrumb from the library root down to the current folder. */
+type ResourceBreadcrumbEntry = { id: string; name: string };
 
 type ResourcePageResponse = {
   resources: SchoolResource[];
@@ -777,122 +420,16 @@ type ResourcePageResponse = {
   totalPages: number;
   subjects?: string[];
   categories?: string[];
+  folders?: ResourceFolderEntry[];
+  breadcrumb?: ResourceBreadcrumbEntry[];
 };
 
 type ResourceViewMode = 'list' | 'browser';
 const BROWSER_RESOURCE_LIMIT = 1000;
 
-type ResourceBrowserNode = {
-  name: string;
-  path: string;
-  totalFiles: number;
-  folders: ResourceBrowserNode[];
-  files: SchoolResource[];
-  folderMap: Map<string, ResourceBrowserNode>;
-};
-
-function createBrowserNode(name: string, path: string): ResourceBrowserNode {
-  return {
-    name,
-    path,
-    totalFiles: 0,
-    folders: [],
-    files: [],
-    folderMap: new Map(),
-  };
-}
-
-function normalizePathSegment(segment: string): string {
-  return segment.trim().replace(/\s+/g, ' ');
-}
-
-function splitBrowsePath(path: string): string[] {
-  return path
-    .split('/')
-    .map((segment) => normalizePathSegment(segment))
-    .filter(Boolean);
-}
-
-function stripResourceFileNameFromPath(path: string, resource: SchoolResource): string {
-  const segments = splitBrowsePath(path);
-  if (segments.length === 0) return '';
-
-  const lastSegment = segments[segments.length - 1].toLowerCase();
-  if (lastSegment === resource.fileName.toLowerCase()) {
-    return segments.slice(0, -1).join('/');
-  }
-
-  return segments.join('/');
-}
-
-function deriveBrowsePath(resource: SchoolResource): string {
-  const rawDescription = resource.description?.trim() ?? '';
-  if (rawDescription.startsWith(FOLDER_UPLOAD_PREFIX)) {
-    const folderPath = rawDescription.slice(FOLDER_UPLOAD_PREFIX.length).trim();
-    return stripResourceFileNameFromPath(folderPath, resource);
-  }
-
-  const parts = [resource.subject?.trim(), resource.category?.trim()].filter((value): value is string => Boolean(value));
-  return parts.join('/');
-}
-
 function formatResourceDescription(resource: SchoolResource): string {
   const description = resource.description?.trim();
-  if (!description) return '—';
-  if (!description.startsWith(FOLDER_UPLOAD_PREFIX)) return description;
-
-  const folderPath = deriveBrowsePath(resource);
-  return folderPath ? `Folder: ${folderPath}` : 'Folder upload';
-}
-
-function buildBrowserTree(resources: SchoolResource[]): ResourceBrowserNode {
-  const root = createBrowserNode('All resources', '');
-
-  for (const resource of resources) {
-    const path = deriveBrowsePath(resource);
-    const segments = splitBrowsePath(path);
-    let node = root;
-    node.totalFiles += 1;
-
-    if (segments.length === 0) {
-      node.files.push(resource);
-      continue;
-    }
-
-    let currentPath = '';
-    for (const segment of segments) {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      let child = node.folderMap.get(segment);
-      if (!child) {
-        child = createBrowserNode(segment, currentPath);
-        node.folderMap.set(segment, child);
-        node.folders.push(child);
-      }
-      node = child;
-      node.totalFiles += 1;
-    }
-
-    node.files.push(resource);
-  }
-
-  const sortNode = (node: ResourceBrowserNode) => {
-    node.folders.sort((a, b) => a.name.localeCompare(b.name));
-    node.folders.forEach(sortNode);
-  };
-  sortNode(root);
-  return root;
-}
-
-function findBrowserNode(root: ResourceBrowserNode, path: string): ResourceBrowserNode | null {
-  if (!path) return root;
-  const segments = splitBrowsePath(path);
-  let node = root;
-  for (const segment of segments) {
-    const child = node.folderMap.get(segment);
-    if (!child) return null;
-    node = child;
-  }
-  return node;
+  return description || '—';
 }
 
 function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
@@ -900,7 +437,9 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ResourceViewMode>('list');
-  const [currentFolderPath, setCurrentFolderPath] = useState('');
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderEntries, setFolderEntries] = useState<ResourceFolderEntry[]>([]);
+  const [breadcrumb, setBreadcrumb] = useState<ResourceBreadcrumbEntry[]>([]);
   const [query, setQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -932,6 +471,9 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       params.set('page', String(pageForRequest));
       params.set('limit', String(limit));
       params.set('scope', scope);
+      // An empty (root) folderId is still sent explicitly -- its mere
+      // presence switches the API into folder-scoped mode.
+      if (isBrowserRequest) params.set('folderId', currentFolderId ?? '');
       const res = await fetch(`/api/school-resources?${params}`);
       if (res.status === 401) throw new Error('Sign in to browse school resources.');
       if (!res.ok) throw new Error('Failed to load resources');
@@ -942,13 +484,15 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       setTotalPages(nextTotalPages);
       setSubjects(data.subjects ?? []);
       setCategories(data.categories ?? []);
+      setFolderEntries(data.folders ?? []);
+      setBreadcrumb(data.breadcrumb ?? []);
       if (page > nextTotalPages) setPage(nextTotalPages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load resources');
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, page, pageSize, query, scope, sortBy, sortOrder, subjectFilter, viewMode]);
+  }, [categoryFilter, currentFolderId, page, pageSize, query, scope, sortBy, sortOrder, subjectFilter, viewMode]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -956,12 +500,6 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
     }, query.trim() ? 250 : 0);
     return () => clearTimeout(t);
   }, [load, query, refreshTick, viewMode]);
-
-  const browserTree = useMemo(() => buildBrowserTree(resources), [resources]);
-  const browserPath = useMemo(() => (
-    currentFolderPath && findBrowserNode(browserTree, currentFolderPath) ? currentFolderPath : ''
-  ), [browserTree, currentFolderPath]);
-  const browserNode = useMemo(() => findBrowserNode(browserTree, browserPath) ?? browserTree, [browserTree, browserPath]);
 
   const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = total === 0 ? 0 : Math.min(total, pageStart + resources.length - 1);
@@ -985,7 +523,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
   const switchViewMode = (mode: ResourceViewMode) => {
     setViewMode(mode);
     setPage(1);
-    setCurrentFolderPath('');
+    setCurrentFolderId(null);
   };
 
   const trackAccess = useCallback((resource: SchoolResource) => {
@@ -1152,9 +690,10 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         </div>
       ) : isBrowserView ? (
         <ResourceBrowserView
-          node={browserNode}
-          currentPath={browserPath}
-          onChangePath={setCurrentFolderPath}
+          folders={folderEntries}
+          files={resources}
+          breadcrumb={breadcrumb}
+          onChangeFolder={setCurrentFolderId}
           onOpenResource={openResource}
           onDownloadResource={trackAccess}
           openingId={openingId}
@@ -1331,32 +870,33 @@ function ResourceRow({
 }
 
 function ResourceBrowserView({
-  node,
-  currentPath,
-  onChangePath,
+  folders,
+  files,
+  breadcrumb,
+  onChangeFolder,
   onOpenResource,
   onDownloadResource,
   openingId,
   total,
   loadLimit,
 }: {
-  node: ResourceBrowserNode;
-  currentPath: string;
-  onChangePath: (path: string) => void;
+  folders: ResourceFolderEntry[];
+  files: SchoolResource[];
+  breadcrumb: ResourceBreadcrumbEntry[];
+  onChangeFolder: (id: string | null) => void;
   onOpenResource: (resource: SchoolResource) => void;
   onDownloadResource: (resource: SchoolResource) => void;
   openingId: string | null;
   total: number;
   loadLimit: number;
 }) {
-  const segments = splitBrowsePath(currentPath);
-  const folders = node.folders;
-  const files = node.files;
-  const currentLabel = segments.length > 0 ? segments[segments.length - 1] : 'All resources';
+  const currentFolderId = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].id : null;
+  const currentLabel = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'All resources';
+  const directFileCount = files.length;
 
   const goUp = () => {
-    if (segments.length === 0) return;
-    onChangePath(segments.slice(0, -1).join('/'));
+    if (breadcrumb.length === 0) return;
+    onChangeFolder(breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : null);
   };
 
   return (
@@ -1366,9 +906,9 @@ function ResourceBrowserView({
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
             <button
               type="button"
-              onClick={() => onChangePath('')}
+              onClick={() => onChangeFolder(null)}
               className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 font-medium ${
-                currentPath === ''
+                currentFolderId === null
                   ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
@@ -1377,37 +917,36 @@ function ResourceBrowserView({
               <Home className="h-4 w-4" />
               <span>All resources</span>
             </button>
-            {segments.map((segment, index) => {
-              const path = segments.slice(0, index + 1).join('/');
-              const active = path === currentPath;
+            {breadcrumb.map((crumb, index) => {
+              const active = index === breadcrumb.length - 1;
               return (
-                <span key={path} className="inline-flex min-w-0 items-center gap-1">
+                <span key={crumb.id} className="inline-flex min-w-0 items-center gap-1">
                   <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-300" />
                   <button
                     type="button"
-                    onClick={() => onChangePath(path)}
+                    onClick={() => onChangeFolder(crumb.id)}
                     className={`max-w-[14rem] truncate rounded-lg px-2 py-1 font-medium ${
                       active
                         ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                         : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
-                    title={path}
+                    title={crumb.name}
                   >
-                    {segment}
+                    {crumb.name}
                   </button>
                 </span>
               );
             })}
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            {node.totalFiles.toLocaleString()} file{node.totalFiles === 1 ? '' : 's'} in {currentLabel}
+            {directFileCount.toLocaleString()} file{directFileCount === 1 ? '' : 's'} in {currentLabel}
             {total > loadLimit ? ` • showing first ${loadLimit.toLocaleString()} filtered results` : ''}
           </p>
         </div>
         <button
           type="button"
           onClick={goUp}
-          disabled={segments.length === 0}
+          disabled={breadcrumb.length === 0}
           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -1429,17 +968,17 @@ function ResourceBrowserView({
               <div className="space-y-1">
                 {folders.map((folder) => (
                   <button
-                    key={folder.path}
+                    key={folder.id}
                     type="button"
-                    onClick={() => onChangePath(folder.path)}
+                    onClick={() => onChangeFolder(folder.id)}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800"
-                    title={folder.path}
+                    title={folder.name}
                   >
                     <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{folder.name}</span>
                       <span className="block text-xs text-gray-400">
-                        {folder.totalFiles.toLocaleString()} file{folder.totalFiles === 1 ? '' : 's'}
+                        {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
                       </span>
                     </span>
                     <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300" />
@@ -1463,30 +1002,23 @@ function ResourceBrowserView({
 
           {folders.length > 0 && (
             <div className="grid gap-2 border-b border-gray-200 p-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-3">
-              {folders.map((folder) => {
-                const active = folder.path === currentPath;
-                return (
-                  <button
-                    key={folder.path}
-                    type="button"
-                    onClick={() => onChangePath(folder.path)}
-                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${
-                      active
-                        ? 'border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
-                        : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20'
-                    }`}
-                    title={folder.path}
-                  >
-                    <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{folder.name}</span>
-                      <span className="block text-xs text-gray-400">
-                        {folder.totalFiles.toLocaleString()} file{folder.totalFiles === 1 ? '' : 's'}
-                      </span>
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  type="button"
+                  onClick={() => onChangeFolder(folder.id)}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
+                  title={folder.name}
+                >
+                  <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{folder.name}</span>
+                    <span className="block text-xs text-gray-400">
+                      {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
                     </span>
-                  </button>
-                );
-              })}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
 
@@ -1664,16 +1196,16 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
       if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
 
       updateItem(idx, { status: 'publishing' });
-      // Use the folder's relative path (minus the top-level folder name)
-      // so teachers can reconstruct the structure later.
+      // Use the folder's relative path (minus the top-level folder name) so
+      // the server can resolve/create the matching SchoolResourceFolder chain.
       const parts = item.relativePath.split('/').filter(Boolean);
-      const prettyPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
       const pubRes = await fetch('/api/school-resources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: item.file.name.replace(/\.[^.]+$/, ''),
-          description: prettyPath ? `${FOLDER_UPLOAD_PREFIX}${prettyPath}` : '',
+          folderPath: folderPath || undefined,
           subject,
           category,
           fileUrl: upData.fileUrl,
@@ -2009,360 +1541,3 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
   );
 }
 
-// ----------------------------- Note reader -----------------------------
-function NoteReader({ note, onClose }: { note: NoteDetail; onClose: () => void }) {
-  const authorName = note.author.name ?? 'Anonymous';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              {note.courseCode && (
-                <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md">
-                  {note.courseCode}
-                </span>
-              )}
-              <span className="text-xs text-gray-500">by {authorName}</span>
-              <span className="text-xs text-gray-400">• {fmtDate(note.createdAt)}</span>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{note.title}</h2>
-          </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          {note.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {note.tags.map((t) => (
-                <span key={t} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
-                  #{t}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200">
-            <FormattedMessage content={note.content} />
-          </div>
-
-          {/* Attachments */}
-          {note.attachments && note.attachments.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
-                <Paperclip className="w-4 h-4 text-gray-500" />
-                Attachments ({note.attachments.length})
-              </h3>
-              <ul className="space-y-2">
-                {note.attachments.map((a) => (
-                  <li key={a.url}>
-                    <a
-                      href={a.url}
-                      download={a.name}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-green-300 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors group"
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{a.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {(a.size / 1024).toFixed(0)} KB
-                          {a.type && a.type !== 'application/octet-stream' ? ` · ${a.type.split('/').pop()}` : ''}
-                        </p>
-                      </div>
-                      <Download className="w-4 h-4 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Comments */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Comments ({note.comments.length})
-            </h3>
-            {note.comments.length === 0 ? (
-              <p className="text-sm text-gray-400">No comments yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {note.comments.map((c) => (
-                  <div key={c.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                      {c.user.name?.[0]?.toUpperCase() ?? 'A'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                        {c.user.name ?? 'Anonymous'} <span className="text-gray-400 font-normal">· {fmtDate(c.createdAt)}</span>
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{c.content}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400">
-          <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {note.views} views</span>
-          {note.avgRating !== null && (
-            <span className="inline-flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" /> {note.avgRating.toFixed(1)} ({note.ratingCount})
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ----------------------------- Publish dialog -----------------------------
-function PublishNoteDialog({ onClose, onPublished }: { onClose: () => void; onPublished: () => void }) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [subject, setSubject] = useState('');
-  const [courseCode, setCourseCode] = useState('');
-  const [tagsRaw, setTagsRaw] = useState('');
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (files.length === 0) return;
-
-    setUploadingFiles(true);
-    setError(null);
-    try {
-      const uploaded: Attachment[] = [];
-      for (const file of files) {
-        if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-          throw new Error(`${file.name} is too large (max 25 MB).`);
-        }
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!res.ok || !data.fileUrl) throw new Error(data.error || `Failed to upload ${file.name}`);
-        // The upload route puts images under /uploads/images and docs under
-        // /uploads/files. Only docs belong in the attachment list — images
-        // are embedded inline via the rich-text editor.
-        if (data.kind === 'file') {
-          uploaded.push({ url: data.fileUrl, name: data.fileName, type: data.mimeType, size: data.fileSize });
-        } else {
-          setError((prev) => (prev ? prev + '\n' : '') + `${file.name} is an image — use the image button in the editor to embed it inline.`);
-        }
-      }
-      if (uploaded.length) setAttachments((prev) => [...prev, ...uploaded]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload file(s)');
-    } finally {
-      setUploadingFiles(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!title.trim() || !content.trim()) {
-      setError('Title and content are required.');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-    try {
-      const res = await fetch('/api/shared-notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          content,
-          subject: subject.trim() || undefined,
-          courseCode: courseCode.trim() || undefined,
-          tags,
-          attachments,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to publish');
-      onPublished();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to publish');
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-green-600" /> Share a Note
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Publish to the community library (public).</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. A-Level Mechanics — Summary Sheet"
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject (optional)</label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Physics, Math, Economics"
-                list="shared-note-subjects"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
-              />
-              <datalist id="shared-note-subjects">
-                <option value="Physics" />
-                <option value="Chemistry" />
-                <option value="Biology" />
-                <option value="Mathematics" />
-                <option value="Economics" />
-                <option value="Computer Science" />
-                <option value="English" />
-                <option value="Chinese" />
-                <option value="History" />
-                <option value="Geography" />
-              </datalist>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Course code (optional)</label>
-              <input
-                type="text"
-                value={courseCode}
-                onChange={(e) => setCourseCode(e.target.value)}
-                placeholder="e.g. PHYS-101"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={tagsRaw}
-              onChange={(e) => setTagsRaw(e.target.value)}
-              placeholder="e.g. mechanics, revision, formulas"
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Content</label>
-            <RichTextEditor content={content} onChange={setContent} />
-            <p className="text-xs text-gray-400 mt-1">
-              Use the image button in the toolbar to upload images inline. Markdown and LaTeX are supported.
-            </p>
-          </div>
-
-          {/* File attachments */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Attachments (PDF, Word, Excel, PowerPoint, text)
-            </label>
-            <div className="flex flex-wrap gap-2 items-center">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingFiles}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {uploadingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {uploadingFiles ? 'Uploading…' : 'Add files'}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown"
-                onChange={handleFilePick}
-                className="hidden"
-              />
-              {attachments.length === 0 && !uploadingFiles && (
-                <span className="text-xs text-gray-400">No files attached.</span>
-              )}
-            </div>
-            {attachments.length > 0 && (
-              <ul className="mt-2 space-y-1.5">
-                {attachments.map((a, i) => (
-                  <li
-                    key={a.url}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
-                  >
-                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{a.name}</span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{(a.size / 1024).toFixed(0)} KB</span>
-                    <button
-                      type="button"
-                      onClick={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
-                      title="Remove attachment"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          {error && <ErrorBanner message={error} />}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={submitting}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePublish}
-            disabled={submitting || !title.trim() || !content.trim()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {submitting ? 'Publishing…' : 'Publish Note'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

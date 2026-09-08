@@ -1,15 +1,10 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import TextAlign from '@tiptap/extension-text-align';
-import Highlight from '@tiptap/extension-highlight';
-import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
-import { Color } from '@tiptap/extension-color';
-import { TextStyle } from '@tiptap/extension-text-style';
-import { RemoteCursors, type RemoteCursor } from './RemoteCursors';
+import Collaboration from '@tiptap/extension-collaboration';
+import type { RemoteCursor } from './RemoteCursors';
+import { createRichTextEditorExtensions } from './richTextEditorExtensions';
+import { useYjsPageSync } from './useYjsPageSync';
 import NoticeDialog from './NoticeDialog';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -34,6 +29,12 @@ type RichTextEditorProps = {
   // --- Collaboration (optional) ---
   remoteCursors?: RemoteCursor[];
   onCursorChange?: (from: number, to: number) => void;
+  // --- Real-time CRDT collaboration (Feature 5, flagged off by default) ---
+  // Only the Notebook page editor passes these; every other caller of this
+  // component (bank/mock-exam free-response answers, discussion posts,
+  // announcements) leaves them unset and is completely unaffected.
+  yjsPageId?: string | null;
+  yjsRemoteUpdate?: { id: string; nonce: number } | null;
 };
 
 // Hoisted out so it isn't re-created on every render (react/no-typos).
@@ -70,7 +71,10 @@ export default function RichTextEditor({
   insertRequest,
   remoteCursors,
   onCursorChange,
+  yjsPageId,
+  yjsRemoteUpdate,
 }: RichTextEditorProps) {
+  const yjsDoc = useYjsPageSync(yjsPageId ?? null, content, yjsRemoteUpdate ?? null);
   const [showLatexModal, setShowLatexModal] = useState(false);
   const [latexInput, setLatexInput] = useState('');
   const [latexDisplay, setLatexDisplay] = useState(false);
@@ -102,49 +106,44 @@ export default function RichTextEditor({
     }
   }, [latexInput, latexDisplay]);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Highlight.configure({
-        multicolor: true,
-      }),
-      Image.configure({
-        inline: true,
-        allowBase64: true,
-      }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        HTMLAttributes: {
-          rel: 'noopener noreferrer',
-          target: '_blank',
+  const editor = useEditor(
+    {
+      extensions: [
+        ...createRichTextEditorExtensions({ remoteCursors, history: !yjsDoc }),
+        // Present only once this page's Yjs document has finished loading
+        // (existing session applied, or this client's seed-from-HTML step
+        // resolved) -- see useYjsPageSync's module comment for why seeding
+        // happens before this ever mounts, not after.
+        ...(yjsDoc ? [Collaboration.configure({ document: yjsDoc })] : []),
+      ],
+      // Once collaboration is active, the Yjs document is the source of
+      // truth for the initial doc -- passing `content` too would race
+      // TipTap's own HTML parsing against the sync plugin's own initial
+      // state. Before that point (not yet resolved, or not a collaborative
+      // page at all), `content` behaves exactly as before.
+      content: yjsDoc ? undefined : content,
+      onUpdate: ({ editor }) => {
+        onChange(editor.getHTML());
+      },
+      onSelectionUpdate: ({ editor }) => {
+        const { from, to } = editor.state.selection;
+        onSelectionChange?.(editor.state.doc.textBetween(from, to, ' ').trim());
+        onCursorChange?.(from, to);
+      },
+      editorProps: {
+        attributes: {
+          class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[400px] p-4',
+          ...(placeholder ? { 'data-placeholder': placeholder } : {}),
         },
-      }),
-      TextStyle,
-      Color,
-      // Remote collaboration cursors (no-op when remoteCursors is empty).
-      RemoteCursors.configure({ cursors: remoteCursors ?? [] }),
-    ],
-    content,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-    onSelectionUpdate: ({ editor }) => {
-      const { from, to } = editor.state.selection;
-      onSelectionChange?.(editor.state.doc.textBetween(from, to, ' ').trim());
-      onCursorChange?.(from, to);
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[400px] p-4',
-        ...(placeholder ? { 'data-placeholder': placeholder } : {}),
       },
     },
-  });
+    // Recreate once the Yjs doc transitions from "not yet loaded" to
+    // "ready" so Collaboration binds from the start of the new editor
+    // instance's life, matching every published TipTap+Yjs example --
+    // toggling it into an already-running editor's extensions is not
+    // supported.
+    [yjsDoc]
+  );
 
   useEffect(() => {
     if (!editor || !insertRequest || handledInsertId.current === insertRequest.id) return;
@@ -153,9 +152,11 @@ export default function RichTextEditor({
   }, [editor, insertRequest]);
 
   useEffect(() => {
-    if (!editor || editor.getHTML() === content) return;
+    // While collaborating, the Yjs sync plugin owns the doc; imposing
+    // `content` on top of it here would fight that instead of merging with it.
+    if (!editor || yjsDoc || editor.getHTML() === content) return;
     editor.commands.setContent(content, { emitUpdate: false });
-  }, [content, editor]);
+  }, [content, editor, yjsDoc]);
 
   if (!editor) {
     return null;

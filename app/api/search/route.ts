@@ -3,10 +3,11 @@ import { getSessionUser } from '@/lib/auth';
 import { aiLimiter } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
 import { plainText } from '@/lib/learning';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
+import { scoreRagMatches } from '@/lib/rag';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -19,13 +20,25 @@ export const maxDuration = 60;
 
 type SearchResult = {
   id: string;
-  type: 'question' | 'markscheme' | 'note' | 'textbook' | 'resource';
+  type: 'question' | 'markscheme' | 'note' | 'textbook' | 'resource' | 'announcement' | 'discussion' | 'syllabus';
   title: string;
   snippet: string;
   url: string;
   subject?: string | null;
   topic?: string | null;
 };
+
+/** Maps a `rag_documents.sourceType` value onto this route's own result type. */
+function ragResultType(sourceType: string): SearchResult['type'] {
+  if (sourceType === 'question' || sourceType === 'bank-question') return 'question';
+  if (sourceType === 'markscheme' || sourceType === 'bank-markscheme') return 'markscheme';
+  if (sourceType === 'note' || sourceType === 'cloud-note') return 'note';
+  if (sourceType === 'textbook') return 'textbook';
+  if (sourceType === 'announcement') return 'announcement';
+  if (sourceType === 'discussion') return 'discussion';
+  if (sourceType === 'syllabus') return 'syllabus';
+  return 'resource';
+}
 
 export async function GET(req: NextRequest) {
   const searchParams = new URL(req.url).searchParams;
@@ -193,7 +206,47 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
+  // RAG-backed results: announcements, discussion threads, and the past-paper
+  // catalogue have no direct `contains`-filter query above, so this is the
+  // only path that surfaces them. Restricted to those source types here
+  // (rather than also re-surfacing notes/resources/questions the direct
+  // queries above already cover) to avoid showing the same document twice
+  // under two different ids.
+  const enrolledSubjectCodes = courseScope.effectiveScope === 'enrolled'
+    ? (courseScope.subjectCodes ?? []).map((code) => code.toLowerCase())
+    : [];
+  const ragExtraFilters: Prisma.Sql[] = [
+    Prisma.sql`d."sourceType" IN ('announcement', 'discussion', 'syllabus')`,
+    // A syllabus/past-paper-catalogue document carries a subjectCode; an
+    // announcement or discussion thread usually doesn't (they aren't
+    // subject-scoped), so only the ones that DO set it get filtered.
+    ...(enrolledSubjectCodes.length > 0
+      ? [Prisma.sql`(d."subjectCode" IS NULL OR lower(d."subjectCode") IN (${Prisma.join(enrolledSubjectCodes)}))`]
+      : []),
+  ];
+  const ragRows = await scoreRagMatches(query, {
+    userId: user.id,
+    extraFilters: ragExtraFilters,
+    limit: 30,
+  });
+  const ragByDocument = new Map<string, (typeof ragRows)[number]>();
+  for (const row of ragRows) {
+    const existing = ragByDocument.get(row.documentId);
+    if (!existing || row.rank > existing.rank) ragByDocument.set(row.documentId, row);
+  }
+  const ragResults = [...ragByDocument.values()]
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, 6)
+    .map((row) => ({
+      id: `rag-${row.documentId}`,
+      type: ragResultType(row.sourceType),
+      title: row.title,
+      snippet: plainText(row.content, 240),
+      url: row.route ?? '/?tab=materials',
+    }));
+
   const results: SearchResult[] = [
+    ...ragResults,
     ...questions.map((question) => ({
       id: `question-${question.id}`,
       type: 'question' as const,

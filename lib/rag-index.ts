@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { extractFileText, isRetrievableText } from '@/lib/rag-file-text';
+import { folderPathFor } from '@/lib/school-resource-folders';
 
 export type IndexedDocumentInput = {
   documentKey: string;
@@ -163,30 +164,6 @@ export async function indexNote(noteId: string) {
   });
 }
 
-export async function indexSharedNote(sharedNoteId: string) {
-  const note = await prisma.sharedNote.findUnique({ where: { id: sharedNoteId } });
-  if (!note) return prisma.ragDocument.deleteMany({ where: { documentKey: `shared-note:${sharedNoteId}` } });
-  const course = note.courseCode
-    ? await prisma.course.findUnique({ where: { code: note.courseCode }, include: { curriculumScopes: true } })
-    : null;
-  const scope = course?.curriculumScopes[0];
-  const academic = scope ?? academicMetadata(/^[0-9]{4}$/.test(note.courseCode ?? '') ? note.courseCode : null, note.subject, null);
-  return upsertIndexedDocument({
-    documentKey: `shared-note:${note.id}`,
-    sourceType: 'note',
-    sourceRecordId: note.id,
-    ownerId: note.userId,
-    title: note.title,
-    text: note.content,
-    route: `/shared-notes/${note.id}`,
-    ...academic,
-    subjectCode: scope?.subjectCode ?? (/^[0-9]{4}$/.test(note.courseCode ?? '') ? note.courseCode : null),
-    documentType: 'note',
-    visibility: note.visibility === 'public' ? 'shared' : 'private',
-    metadata: { tags: note.tags, shared: true, courseId: course?.id ?? null, crossCourse: !course },
-  });
-}
-
 export async function indexPage(pageId: string) {
   const page = await prisma.page.findUnique({
     where: { id: pageId },
@@ -247,12 +224,13 @@ export async function indexSchoolResource(resourceId: string) {
   // What the file says, not just what it was called. Falls back to the old
   // description-and-filename text whenever the file has no readable layer.
   const extracted = await extractFileText(resource.fileUrl, resource.mimeType, resource.fileName);
+  const folderPath = await folderPathFor(resource.folderId);
   const heading = `${resource.description}\n${resource.fileName}`;
   return upsertIndexedDocument({
     documentKey: `resource:${resource.id}`,
     sourceType: documentType === 'syllabus' ? 'syllabus' : 'resource',
     sourceRecordId: resource.id,
-    title: resource.title,
+    title: folderPath ? `${resource.title} (${folderPath})` : resource.title,
     text: extracted.text ? `${heading}\n${extracted.text}` : heading,
     route: resource.fileUrl,
     ...academic,
@@ -267,9 +245,90 @@ export async function indexSchoolResource(resourceId: string) {
       category: resource.category,
       mimeType: resource.mimeType,
       fileName: resource.fileName,
+      folderPath,
       extraction: extracted.reason,
       ...(extracted.pages ? { pages: extracted.pages } : {}),
     },
+  });
+}
+
+export async function indexAnnouncement(announcementId: string) {
+  const announcement = await prisma.announcement.findUnique({ where: { id: announcementId } });
+  // An unpublished or expired announcement is withdrawn from search the same
+  // way it's withdrawn from the notification/dashboard surfaces that read it.
+  if (!announcement || !announcement.published || (announcement.expiresAt && announcement.expiresAt < new Date())) {
+    return prisma.ragDocument.deleteMany({ where: { documentKey: `announcement:${announcementId}` } });
+  }
+  return upsertIndexedDocument({
+    documentKey: `announcement:${announcement.id}`,
+    sourceType: 'announcement',
+    sourceRecordId: announcement.id,
+    title: announcement.title,
+    text: announcement.body,
+    route: '/announcements',
+    documentType: 'announcement',
+    visibility: 'platform',
+    metadata: { severity: announcement.severity, audience: announcement.audience, pinned: announcement.pinned },
+  });
+}
+
+export async function indexDiscussionThread(threadId: string) {
+  const thread = await prisma.discussionThread.findUnique({
+    where: { id: threadId },
+    include: {
+      subject: { select: { name: true, code: true } },
+      posts: { where: { hidden: false }, orderBy: { createdAt: 'asc' }, select: { content: true }, take: 50 },
+    },
+  });
+  // A hidden thread (moderated) is withdrawn the same way a withdrawn bank
+  // question is: a moderator's decision shouldn't still be citable by search.
+  if (!thread || thread.hidden) {
+    return prisma.ragDocument.deleteMany({ where: { documentKey: `discussion-thread:${threadId}` } });
+  }
+  const text = [thread.content, ...thread.posts.map((post) => post.content)].filter(Boolean).join('\n\n');
+  return upsertIndexedDocument({
+    documentKey: `discussion-thread:${thread.id}`,
+    sourceType: 'discussion',
+    sourceRecordId: thread.id,
+    ownerId: thread.userId,
+    title: thread.title,
+    text,
+    route: `/?tab=discussions&threadId=${thread.id}`,
+    subjectCode: thread.subject?.code,
+    topic: thread.category,
+    documentType: 'discussion-thread',
+    visibility: 'platform',
+    metadata: { category: thread.category, subjectName: thread.subject?.name, postCount: thread.posts.length },
+  });
+}
+
+/**
+ * Past-paper catalogue metadata — the paper itself (subject, year, session,
+ * paper number), not its questions (those are indexed per-question by
+ * `indexPastPaperQuestion`). Lets a search for "0625 2023 paper 4" surface
+ * the paper as a whole even before/without per-question transcription.
+ */
+export async function indexPastPaperCatalogue(paperId: number) {
+  const paper = await prisma.pastPaper.findUnique({ where: { id: paperId }, include: { subject: true } });
+  if (!paper) return prisma.ragDocument.deleteMany({ where: { documentKey: `past-paper:${paperId}` } });
+  const academic = academicMetadata(paper.subject.code, paper.subject.name, paper.level || null);
+  const label = paperLabel(paper.paperNumber, paper.variant);
+  const kindLabel = paper.docType === 'ms' ? 'Mark Scheme' : paper.docType === 'qp' ? 'Question Paper' : paper.docType.toUpperCase();
+  return upsertIndexedDocument({
+    documentKey: `past-paper:${paper.id}`,
+    sourceType: 'syllabus',
+    sourceRecordId: String(paper.id),
+    title: `${paper.subject.code} ${paper.subject.name} ${paper.year} ${paper.session.toUpperCase()} Paper ${label} ${kindLabel}`,
+    text: `${paper.subject.name} ${paper.subject.code} ${paper.year} ${paper.session} paper ${label} ${kindLabel} ${paper.level} ${paper.timezone}`.trim(),
+    route: `/?tab=papers&paperId=${paper.id}`,
+    ...academic,
+    subjectCode: paper.subject.code,
+    year: paper.year,
+    session: paper.session,
+    paper: label,
+    documentType: 'past-paper-catalogue',
+    visibility: 'platform',
+    metadata: { docType: paper.docType, pageCount: paper.pageCount, timezone: paper.timezone },
   });
 }
 
@@ -600,9 +659,8 @@ async function pruneStaleDocuments(startedAt: Date, prefixes: string[]) {
 export async function reindexRagCorpus(options: { userId?: string; includeCompetition?: boolean } = {}) {
   const startedAt = new Date();
   const ownerFilter = options.userId ? { userId: options.userId } : undefined;
-  const [notes, sharedNotes, pages, cloudDocuments, resources, questions, bankQuestions, competition] = await Promise.all([
+  const [notes, pages, cloudDocuments, resources, questions, bankQuestions, competition, announcements, discussionThreads, pastPapers] = await Promise.all([
     prisma.note.findMany({ where: ownerFilter, select: { id: true } }),
-    prisma.sharedNote.findMany({ where: options.userId ? { userId: options.userId } : undefined, select: { id: true } }),
     prisma.page.findMany({
       where: options.userId ? { section: { notebook: { userId: options.userId } } } : undefined,
       select: { id: true },
@@ -614,18 +672,30 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
     // indexBankQuestion anyway; filtering here saves enumerating ~19k of them.
     options.userId ? Promise.resolve([]) : prisma.bankQuestion.findMany({ where: { status: 'published' }, select: { id: true } }),
     options.includeCompetition ? prisma.competitionQuestion.findMany({ select: { id: true } }) : Promise.resolve([]),
+    // Announcements, discussions, and the paper catalogue are platform-wide,
+    // not per-user, so a per-user rebuild skips them the same way it skips
+    // the bank -- they'd just be indexed again, identically, on every call.
+    options.userId ? Promise.resolve([]) : prisma.announcement.findMany({ where: { published: true }, select: { id: true } }),
+    options.userId ? Promise.resolve([]) : prisma.discussionThread.findMany({ where: { hidden: false }, select: { id: true } }),
+    options.userId ? Promise.resolve([]) : prisma.pastPaper.findMany({ select: { id: true } }),
   ]);
   await processIds(notes.map((row) => row.id), indexNote);
-  await processIds(sharedNotes.map((row) => row.id), indexSharedNote);
   await processIds(pages.map((row) => row.id), indexPage);
   await processIds(cloudDocuments.map((row) => row.id), indexCloudDocument);
   await processIds(resources.map((row) => row.id), indexSchoolResource);
   await processIds(questions.map((row) => row.id), indexPastPaperQuestion);
   await processIds(bankQuestions.map((row) => row.id), indexBankQuestion);
   await processIds(competition.map((row) => row.id), indexCompetitionQuestion);
+  await processIds(announcements.map((row) => row.id), indexAnnouncement);
+  await processIds(discussionThreads.map((row) => row.id), indexDiscussionThread);
+  await processIds(pastPapers.map((row) => row.id), indexPastPaperCatalogue);
 
   // A per-user rebuild sees only that user's rows, so everyone else's documents
   // would look stale to it. Pruning belongs to the full rebuild alone.
+  //
+  // 'shared-note:' stays in this list (even though nothing indexes it anymore
+  // now that the community shared-notes feature is removed) so any documents
+  // left over from before this change get pruned by the next full rebuild.
   const prefixes = options.userId
     ? []
     : [
@@ -637,6 +707,9 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
         'past-paper-question:',
         'bank-question:',
         'bank-markscheme:',
+        'announcement:',
+        'discussion-thread:',
+        'past-paper:',
         ...(options.includeCompetition ? ['competition:'] : []),
       ];
   const pruned = await pruneStaleDocuments(startedAt, prefixes);
@@ -644,8 +717,9 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   const manifests = await rebuildCorpusManifests();
   return {
     indexed:
-      notes.length + sharedNotes.length + pages.length + cloudDocuments.length + resources.length +
-      questions.length + bankQuestions.length + competition.length,
+      notes.length + pages.length + cloudDocuments.length + resources.length +
+      questions.length + bankQuestions.length + competition.length +
+      announcements.length + discussionThreads.length + pastPapers.length,
     pruned,
     ...manifests,
   };

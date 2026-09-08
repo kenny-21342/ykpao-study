@@ -239,3 +239,17 @@
 .remote-cursor-range {
   border-radius: 2px;
 }
+
+.latex-lint-error {
+  background-image: linear-gradient(
+    45deg,
+    transparent 65%,
+    #dc2626 80%,
+    transparent 90%
+  );
+  background-repeat: repeat-x;
+  background-size: 4px 3px;
+  background-position: 0 100%;
+  padding-bottom: 1px;
+  cursor: help;
+}

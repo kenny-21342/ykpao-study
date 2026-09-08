@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { DISCUSSION_LABEL_SLUGS } from '@/lib/discussion-labels';
 import { parsePositiveInt } from '@/lib/query-params';
 import { reportError } from '@/lib/error-reporting';
+import { indexDiscussionThread, refreshRagIndex } from '@/lib/rag-index';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,6 +126,8 @@ export async function POST(req: Request) {
         user: { select: { id: true, name: true, image: true } },
       },
     });
+
+    await refreshRagIndex(`discussion-thread:${thread.id}`, () => indexDiscussionThread(thread.id));
 
     return NextResponse.json({ thread }, { status: 201 });
   } catch (error) {

@@ -50,7 +50,7 @@ async function findServeablePaper(page: Page): Promise<{ id: number; via: string
   return null;
 }
 
-test('a past paper renders visible PDF pages in the browser', async ({ page }, testInfo) => {
+test('a past paper embeds via the browser\'s native PDF viewer', async ({ page }, testInfo) => {
   const r = record(page);
 
   // Every request the page makes, so we can prove where the bytes came from
@@ -85,31 +85,18 @@ test('a past paper renders visible PDF pages in the browser', async ({ page }, t
   // The viewer chrome first…
   await expect(page.getByRole('link', { name: /past papers/i })).toBeVisible({ timeout: 60_000 });
 
-  // …then a real rendered page canvas.
-  const canvas = page.locator('canvas').first();
-  await expect(canvas).toBeVisible({ timeout: 120_000 });
+  // …then the native <object> embed pointed at the authenticated file route.
+  // Its own content (canvas/iframe/plugin UI) lives in a browser-internal
+  // context Playwright can't inspect, so we assert on the embed element and
+  // the underlying request/response instead of pixels.
+  const embed = page.locator('object[type="application/pdf"]').first();
+  await expect(embed).toBeVisible({ timeout: 60_000 });
+  const dataAttr = await embed.getAttribute('data');
+  expect(dataAttr, 'object[data] should point at the paper file route').toContain(`/api/papers/${found!.id}/file`);
 
-  await expect
-    .poll(async () => canvas.evaluate((el: HTMLCanvasElement) => el.width * el.height), { timeout: 60_000 })
-    .toBeGreaterThan(10_000);
-
-  // Non-blank: sample the bitmap and require some ink.
-  const ink = await canvas.evaluate((el: HTMLCanvasElement) => {
-    const ctx = el.getContext('2d');
-    if (!ctx) return -1;
-    const { data } = ctx.getImageData(0, 0, el.width, Math.min(el.height, 400));
-    let dark = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] < 200 && data[i + 1] < 200 && data[i + 2] < 200) dark++;
-    }
-    return dark;
-  });
-  expect(ink, 'dark pixels on the first rendered page').toBeGreaterThan(50);
-
-  // Page count from the viewer toolbar.
-  const body = await page.locator('body').innerText();
-  expect(body, 'page-count indicator in the viewer toolbar').toMatch(/\/\s*\d+/);
-  expect(body).not.toMatch(/Failed to load PDF|corrupted|URL has expired/i);
+  const fileResponse = await page.request.get(dataAttr!, { maxRedirects: 5 });
+  expect(fileResponse.ok(), 'the embedded PDF resource should load successfully').toBeTruthy();
+  expect(fileResponse.headers()['content-type'] ?? '').toContain('pdf');
 
   await testInfo.attach('pdf-requests', { body: JSON.stringify({ requests, responses }, null, 2), contentType: 'text/plain' });
   await attachDiagnostics(testInfo, r, page);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { indexAnnouncement, refreshRagIndex } from '@/lib/rag-index';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,8 @@ export async function POST(req: NextRequest) {
       expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
     },
   });
+
+  await refreshRagIndex(`announcement:${announcement.id}`, () => indexAnnouncement(announcement.id));
 
   // Broadcast in-app notifications to all matching users if published.
   if (d.published) {

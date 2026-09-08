@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import NoticeDialog from './NoticeDialog';
 import PreviewNotice from './PreviewNotice';
+import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 import toast from 'react-hot-toast';
 import { normalizeOptionLetter } from '@/lib/bank-grading';
 import {
@@ -1415,6 +1416,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
                   {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
                 </p>
+                <QuestionScratchpadPanel questionRef={{ mockExamItemId: item.id }} className="mt-2" />
               </div>
             )}
 

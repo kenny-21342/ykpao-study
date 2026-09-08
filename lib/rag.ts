@@ -138,7 +138,7 @@ export async function retrieveContext(
   };
 }
 
-type IndexedRow = {
+export type IndexedRow = {
   documentId: string;
   sourceType: string;
   sourceRecordId: string;
@@ -148,6 +148,78 @@ type IndexedRow = {
   metadata: Prisma.JsonValue;
   rank: number;
 };
+
+/**
+ * Rank `rag_chunks`/`rag_documents` rows against a query, using the same
+ * trigram-`similarity()` + `ts_rank_cd` blend the AI copilot's retrieval has
+ * always used. Shared with `/api/search` (global search) so the two paths
+ * can't quietly drift onto two different notions of "relevant" — search just
+ * supplies its own `extraFilters`/`rankBoost` instead of the copilot's
+ * intent-based ones.
+ *
+ * The visibility/access-control filter is baked in here, not left to the
+ * caller: it's the one thing that must never differ between the two callers,
+ * since getting it wrong is a private-document leak, not a ranking quirk.
+ */
+export async function scoreRagMatches(
+  query: string,
+  options: {
+    userId?: string;
+    includeCompetition?: boolean;
+    extraFilters?: Prisma.Sql[];
+    rankBoost?: Prisma.Sql;
+    limit?: number;
+  } = {},
+): Promise<IndexedRow[]> {
+  if (!options.userId) return [];
+  const terms = searchTerms(query);
+  const tsQuery = terms.map((term) => `${term.replace(/[^a-z0-9-]/gi, '')}:*`).filter((term) => term !== ':*').join(' | ');
+  if (!tsQuery) return [];
+
+  const filters: Prisma.Sql[] = [
+    Prisma.sql`(
+      d."visibility" IN ('platform', 'shared')
+      OR d."ownerId" = ${options.userId}
+      OR d."accessUserIds" @> ARRAY[${options.userId}]::TEXT[]
+      OR (${Boolean(options.includeCompetition)} AND d."visibility" = 'locked' AND d."sourceType" = 'competition')
+    )`,
+    Prisma.sql`(d."visibility" <> 'locked' OR ${Boolean(options.includeCompetition)})`,
+    ...(options.extraFilters ?? []),
+  ];
+  const rankBoost = options.rankBoost ?? Prisma.sql`0`;
+  const limit = options.limit ?? 60;
+
+  try {
+    return await prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
+      SELECT
+        d."id" AS "documentId",
+        d."sourceType",
+        d."sourceRecordId",
+        d."title",
+        d."route",
+        c."content",
+        d."metadata",
+        (
+          ts_rank_cd(c."searchVector", to_tsquery('english', ${tsQuery}))
+          + similarity(d."title", ${query}) * 0.35
+          + ${rankBoost}
+        )::double precision AS "rank"
+      FROM "rag_chunks" c
+      JOIN "rag_documents" d ON d."id" = c."documentId"
+      WHERE (${Prisma.join(filters, ' AND ')})
+        AND (
+          c."searchVector" @@ to_tsquery('english', ${tsQuery})
+          OR similarity(c."content", ${query}) > 0.045
+          OR similarity(d."title", ${query}) > 0.08
+        )
+      ORDER BY "rank" DESC, d."indexedAt" DESC
+      LIMIT ${limit}
+    `);
+  } catch (error) {
+    console.warn('scoreRagMatches: rag index query failed', error instanceof Error ? error.message : error);
+    return [];
+  }
+}
 
 function sourceType(type: string): RAGSource['type'] {
   if (type === 'cloud-note' || type === 'note') return 'note';
@@ -185,18 +257,7 @@ async function retrieveIndexedContext(
 ): Promise<Pick<RAGResult, 'sources' | 'context' | 'totalFound'>> {
   if (!options.userId) return { sources: [], context: '', totalFound: 0 };
   try {
-    const terms = searchTerms(query);
-    const tsQuery = terms.map((term) => `${term.replace(/[^a-z0-9-]/gi, '')}:*`).filter((term) => term !== ':*').join(' | ');
-    if (!tsQuery) return { sources: [], context: '', totalFound: 0 };
-    const filters: Prisma.Sql[] = [
-      Prisma.sql`(
-        d."visibility" IN ('platform', 'shared')
-        OR d."ownerId" = ${options.userId}
-        OR d."accessUserIds" @> ARRAY[${options.userId}]::TEXT[]
-        OR (${Boolean(options.includeCompetition)} AND d."visibility" = 'locked' AND d."sourceType" = 'competition')
-      )`,
-      Prisma.sql`(d."visibility" <> 'locked' OR ${Boolean(options.includeCompetition)})`,
-    ];
+    const filters: Prisma.Sql[] = [];
     if (options.strictCourseScope) {
       const scopeClauses = (options.curriculumScopes ?? []).map((scope) => Prisma.sql`(
         lower(coalesce(d."board", '')) = lower(${scope.board})
@@ -242,36 +303,22 @@ async function retrieveIndexedContext(
     const masteryBoost = priorityTopics.length > 0
       ? Prisma.sql`CASE WHEN lower(coalesce(d."topic", '')) IN (${Prisma.join(priorityTopics)}) THEN 0.12 ELSE 0 END`
       : Prisma.sql`0`;
-    const rows = await prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
-      SELECT
-        d."id" AS "documentId",
-        d."sourceType",
-        d."sourceRecordId",
-        d."title",
-        d."route",
-        c."content",
-        d."metadata",
-        (
-          ts_rank_cd(c."searchVector", to_tsquery('english', ${tsQuery}))
-          + similarity(d."title", ${query}) * 0.35
-          + ${masteryBoost}
-          + CASE
-              WHEN ${intent.name} IN ('assessment', 'practice') AND d."sourceType" IN ('question', 'markscheme', 'syllabus') THEN 0.25
-              WHEN ${intent.name} = 'explanation' AND d."sourceType" IN ('note', 'cloud-note', 'textbook') THEN 0.20
-              ELSE 0
-            END
-        )::double precision AS "rank"
-      FROM "rag_chunks" c
-      JOIN "rag_documents" d ON d."id" = c."documentId"
-      WHERE (${Prisma.join(filters, ' AND ')})
-        AND (
-          c."searchVector" @@ to_tsquery('english', ${tsQuery})
-          OR similarity(c."content", ${query}) > 0.045
-          OR similarity(d."title", ${query}) > 0.08
-        )
-      ORDER BY "rank" DESC, d."indexedAt" DESC
-      LIMIT 60
-    `);
+    const rankBoost = Prisma.sql`
+      ${masteryBoost}
+      + CASE
+          WHEN ${intent.name} IN ('assessment', 'practice') AND d."sourceType" IN ('question', 'markscheme', 'syllabus') THEN 0.25
+          WHEN ${intent.name} = 'explanation' AND d."sourceType" IN ('note', 'cloud-note', 'textbook') THEN 0.20
+          ELSE 0
+        END
+    `;
+    const rows = await scoreRagMatches(query, {
+      userId: options.userId,
+      includeCompetition: options.includeCompetition,
+      extraFilters: filters,
+      rankBoost,
+      limit: 60,
+    });
+    if (rows.length === 0) return { sources: [], context: '', totalFound: 0 };
 
     const byDocument = new Map<string, IndexedRow>();
     for (const row of rows) if (!byDocument.has(row.documentId)) byDocument.set(row.documentId, row);

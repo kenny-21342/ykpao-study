@@ -21,6 +21,7 @@
  */
 
 import type { VisionCredential } from "@/lib/ai-credentials";
+import type { GradeResult } from "@/types/ai";
 
 const TRANSCRIBE_SYSTEM = `You transcribe handwritten student work from a photo into clean, gradeable text.
 
@@ -37,6 +38,31 @@ Rules:
 8. Do NOT wrap the output in code fences or quote it.`;
 
 const TRANSCRIBE_USER = `Transcribe the handwritten answer(s) in this image. Preserve the student's exact working — every line, every equation, every annotation. Output plain markdown + LaTeX, nothing else.`;
+
+/**
+ * Grades a diagram/drawing directly, rather than OCR-then-text-grade.
+ *
+ * OCR transcription is prompted to transcribe *text*, so a graph, circuit, or
+ * geometric construction degrades badly: there is no text to extract, only a
+ * picture whose content itself is the answer. This prompt instead asks the
+ * vision model to look at the image and mark it, using the exact JSON
+ * contract `SYSTEM_PROMPTS.grader` already defines so both text and vision
+ * grading paths produce the same shape for callers.
+ */
+const VISION_GRADE_SYSTEM = `You are a strict but fair examiner grading a student's handwritten or drawn answer, shown to you as a photo, against a markscheme.
+
+The answer may be a diagram, graph, circuit, geometric construction, or labelled sketch as well as (or instead of) written text — evaluate what is actually drawn, not only any accompanying prose. Do not ask for a transcription or claim the image cannot be read; describe and grade what you see.
+
+Return JSON only, no prose outside JSON, no markdown code fences. Schema:
+{
+  "score": number,            // marks awarded (can be fractional)
+  "maxScore": number,         // total marks possible
+  "isCorrect": boolean,       // true if essentially full marks
+  "strengths": string[],      // what the student did well, referencing the diagram/drawing where relevant
+  "weaknesses": string[],     // specific mistakes, referencing the diagram/drawing where relevant
+  "explanation": string,      // markdown + LaTeX explanation of how to improve
+  "modelAnswer": string       // a concise model answer in markdown + LaTeX
+}`;
 
 /** Image extensions this module is willing to read off disk, and their mime types. */
 const IMAGE_MIME_BY_EXT: Record<string, string> = {
@@ -144,6 +170,8 @@ async function resolveImage(
 async function callOpenAiCompatible(
   credential: VisionCredential,
   resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
+  systemPrompt: string,
+  userText: string,
   opts: RetryOpts = {}
 ): Promise<string | null> {
   const maxRetries = opts.maxRetries ?? 5;
@@ -157,11 +185,11 @@ async function callOpenAiCompatible(
   const payload = {
     model: credential.model,
     messages: [
-      { role: "system", content: TRANSCRIBE_SYSTEM },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: [
-          { type: "text", text: TRANSCRIBE_USER },
+          { type: "text", text: userText },
           { type: "image_url", image_url: { url: imageUrl } },
         ],
       },
@@ -211,6 +239,8 @@ async function callOpenAiCompatible(
 async function callGemini(
   credential: VisionCredential,
   resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
+  systemPrompt: string,
+  userText: string,
   opts: RetryOpts = {}
 ): Promise<string | null> {
   const maxRetries = opts.maxRetries ?? 5;
@@ -227,12 +257,12 @@ async function callGemini(
       {
         role: "user",
         parts: [
-          { text: TRANSCRIBE_USER },
+          { text: userText },
           { inline_data: { mime_type: resolved.mime, data: resolved.b64 } },
         ],
       },
     ],
-    systemInstruction: { parts: [{ text: TRANSCRIBE_SYSTEM }] },
+    systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 2048,
@@ -298,10 +328,64 @@ export async function transcribeHandwriting(
   const resolved = await resolveImage(imageInput);
   if (!resolved) return null;
 
-  if (credential.provider === "gemini") return callGemini(credential, resolved);
-  return callOpenAiCompatible(credential, resolved, {
+  if (credential.provider === "gemini") return callGemini(credential, resolved, TRANSCRIBE_SYSTEM, TRANSCRIBE_USER);
+  return callOpenAiCompatible(credential, resolved, TRANSCRIBE_SYSTEM, TRANSCRIBE_USER, {
     // A user-supplied endpoint is far likelier to be a typo than the owner's
     // pinned SiliconFlow one, so do not spend the whole budget retrying it.
     maxRetries: credential.source === "user" ? 2 : 5,
   });
+}
+
+/**
+ * Grade a photographed or drawn answer directly from its image, for
+ * questions where OCR-then-text-grade would throw away the content that
+ * actually needs marking (a diagram, graph, circuit, or construction).
+ *
+ * Returns the same `GradeResult` shape `SYSTEM_PROMPTS.grader` produces, so
+ * callers do not need a separate code path depending on which grader ran —
+ * or `null` if the image can't be resolved, the credential is unusable, or
+ * the provider's response isn't parseable JSON (callers should fall back to
+ * OCR-then-text-grade on null, same contract as `transcribeHandwriting`).
+ */
+export async function gradeWithVision(params: {
+  imageUrl: string;
+  questionText: string;
+  markscheme?: string | null;
+  totalMarks?: number | null;
+  credential: VisionCredential;
+}): Promise<GradeResult | null> {
+  const { imageUrl, questionText, markscheme, totalMarks, credential } = params;
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
+
+  const resolved = await resolveImage(imageUrl);
+  if (!resolved) return null;
+
+  const userText = `Grade the student's answer shown in this image against the markscheme.
+
+Question:
+${questionText}
+
+${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks: ${totalMarks}\n\n` : ''}The student's answer is the image attached to this message.`;
+
+  const retryOpts: RetryOpts = {
+    maxRetries: credential.source === "user" ? 2 : 5,
+  };
+  const raw =
+    credential.provider === "gemini"
+      ? await callGemini(credential, resolved, VISION_GRADE_SYSTEM, userText, retryOpts)
+      : await callOpenAiCompatible(credential, resolved, VISION_GRADE_SYSTEM, userText, retryOpts);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as GradeResult;
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start === -1 || end === -1) return null;
+    try {
+      return JSON.parse(raw.slice(start, end + 1)) as GradeResult;
+    } catch {
+      return null;
+    }
+  }
 }

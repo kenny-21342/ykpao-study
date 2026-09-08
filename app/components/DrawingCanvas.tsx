@@ -14,14 +14,14 @@ type Tool = 'pen' | 'eraser' | 'text';
 
 type Point = [number, number, number]; // x, y, pressure
 
-type Stroke = {
+export type Stroke = {
   tool: Tool;
   color: string;
   size: number;
   points: Point[];
 };
 
-type TextBox = {
+export type TextBox = {
   id: string;
   x: number;
   y: number;
@@ -30,9 +30,16 @@ type TextBox = {
   fontSize: number;
 };
 
+export type DrawingCanvasStrokeData = {
+  strokes: Stroke[];
+  textBoxes: TextBox[];
+};
+
 export type DrawingCanvasHandle = {
   exportDataURL: () => string | null;
   importDataURL: (data: string) => void;
+  exportStrokes: () => DrawingCanvasStrokeData;
+  importStrokes: (data: DrawingCanvasStrokeData) => void;
   clear: () => void;
   isEmpty: () => boolean;
 };
@@ -42,6 +49,10 @@ type DrawingCanvasProps = {
   height?: number;
   className?: string;
   onSave?: (dataUrl: string) => void;
+  // Fires once per committed stroke (pointer-up), undo/redo, clear, or
+  // text-box edit -- not on every pointermove -- so callers can debounce an
+  // autosave off of it without reacting to every drawn segment.
+  onStrokesChange?: (data: DrawingCanvasStrokeData) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -105,7 +116,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 // ---------------------------------------------------------------------------
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ width = 800, height = 500, className = '', onSave }, ref) => {
+  ({ width = 800, height = 500, className = '', onSave, onStrokesChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -205,14 +216,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       drawCurrentStroke();
     };
 
+    const notifyStrokesChange = () => {
+      onStrokesChange?.({ strokes: strokesRef.current, textBoxes });
+    };
+
     const onPointerUp = () => {
       if (!isDrawingRef.current || !currentStrokeRef.current) return;
       isDrawingRef.current = false;
+      let committed = false;
       if (currentStrokeRef.current.points.length > 1) {
         strokesRef.current.push(currentStrokeRef.current);
+        committed = true;
       }
       currentStrokeRef.current = null;
       redraw();
+      if (committed) notifyStrokesChange();
     };
 
     const drawCurrentStroke = () => {
@@ -248,8 +266,22 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       );
     };
 
+    // Fires once the text box loses focus, not on every keystroke -- keeps
+    // the same "commit, don't stream" contract as stroke changes.
+    const commitTextBox = (id: string, text: string) => {
+      if (!text) {
+        deleteTextBox(id);
+        return;
+      }
+      onStrokesChange?.({ strokes: strokesRef.current, textBoxes });
+    };
+
     const deleteTextBox = (id: string) => {
-      setTextBoxes((boxes) => boxes.filter((box) => box.id !== id));
+      setTextBoxes((boxes) => {
+        const next = boxes.filter((box) => box.id !== id);
+        onStrokesChange?.({ strokes: strokesRef.current, textBoxes: next });
+        return next;
+      });
     };
 
     // -----------------------------------------------------------------------
@@ -261,8 +293,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         const last = strokesRef.current.pop()!;
         redoStackRef.current.push(last);
         redraw();
+        notifyStrokesChange();
       } else if (textBoxes.length > 0) {
-        setTextBoxes((boxes) => boxes.slice(0, -1));
+        setTextBoxes((boxes) => {
+          const next = boxes.slice(0, -1);
+          onStrokesChange?.({ strokes: strokesRef.current, textBoxes: next });
+          return next;
+        });
       }
     };
 
@@ -271,6 +308,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       if (stroke) {
         strokesRef.current.push(stroke);
         redraw();
+        notifyStrokesChange();
       }
     };
 
@@ -291,6 +329,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       setTextBoxes([]);
       setBgImage(null);
       redraw();
+      if (hasWork) onStrokesChange?.({ strokes: [], textBoxes: [] });
     };
 
     // -----------------------------------------------------------------------
@@ -376,6 +415,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           setBgImage(img);
         };
         img.src = data;
+      },
+      exportStrokes: () => ({ strokes: strokesRef.current, textBoxes }),
+      importStrokes: (data: DrawingCanvasStrokeData) => {
+        strokesRef.current = data.strokes;
+        redoStackRef.current = [];
+        setTextBoxes(data.textBoxes);
+        redraw();
       },
       clear: clearAll,
       isEmpty: () => strokesRef.current.length === 0 && textBoxes.length === 0 && !bgImage,
@@ -506,7 +552,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               key={tb.id}
               value={tb.text}
               onChange={(e) => updateTextBox(tb.id, e.target.value)}
-              onBlur={() => { if (!tb.text) deleteTextBox(tb.id); }}
+              onBlur={() => commitTextBox(tb.id, tb.text)}
               placeholder="e.g. Force, angle, or x = 3"
               className="absolute bg-transparent border border-dashed border-gray-300 rounded p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
               style={{

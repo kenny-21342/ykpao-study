@@ -1,5 +1,10 @@
 import katex from 'katex';
 
+// A placeholder-wrapping character guaranteed not to appear in real user
+// text, so a stashed MATH/CODE placeholder can never collide with content
+// someone actually typed (e.g. the literal text "MATH0").
+const NUL = String.fromCharCode(0);
+
 /**
  * Render a single LaTeX string to HTML via KaTeX.
  */
@@ -20,11 +25,48 @@ export function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+export interface MathSpan {
+  /** Index into the source string where the delimiter (e.g. `$` or `\[`) begins. */
+  start: number;
+  /** Index one past the closing delimiter. */
+  end: number;
+  /** The LaTeX source, delimiters stripped and trimmed. */
+  latex: string;
+  display: boolean;
+}
+
+// Display math (`$$...$$`, `\[...\]`) is tried before inline math
+// (`\(...\)`, `$...$`) in the alternation below: at a position starting with
+// `$$`, the two-dollar form must win or the single-dollar alternative would
+// consume only one `$` and misparse the pair. Shared by
+// `renderMarkdownWithMath` (the read-only renderer) and the live editor's
+// lint extension, so the two can't quietly drift apart on what counts as a
+// math span.
+const MATH_PATTERN = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$/g;
+
+/** Find every math span in a source string, in document order. */
+export function findMathSpans(text: string): MathSpan[] {
+  const spans: MathSpan[] = [];
+  const pattern = new RegExp(MATH_PATTERN.source, 'g');
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(text)) !== null) {
+    const [, displayDollar, displayBracket, inlineParen, inlineDollar] = m;
+    const latex = (displayDollar ?? displayBracket ?? inlineParen ?? inlineDollar ?? '').trim();
+    spans.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      latex,
+      display: displayDollar !== undefined || displayBracket !== undefined,
+    });
+  }
+  return spans;
+}
+
 /**
  * Convert a source string (markdown + LaTeX) to safe HTML.
  *
  * Order matters: math delimiters are turned into KaTeX HTML FIRST (so the
- * markdown pass never touches their contents — previously the `*`/`_` rules
+ * markdown pass never touches their contents -- previously the `*`/`_` rules
  * corrupted subscripts and products inside `$...$`). Backslash-brace / bracket
  * and `$`/`$$` delimiters are all supported.
  */
@@ -32,32 +74,28 @@ export function renderMarkdownWithMath(src: string): string {
   if (!src) return '';
 
   // 1) Extract math into placeholders so the markdown pass can't mangle it.
+  // NUL-wrapped so a placeholder can never collide with real user text.
+  let s = '';
   const store: string[] = [];
-  const stash = (html: string) => {
-    store.push(html);
-    return `\u0000MATH${store.length - 1}\u0000`;
-  };
-
-  let s = src;
-
-  // Display math first (longest delimiter wins).
-  s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_m, latex) => stash(renderTeX(latex.trim(), true)));
-  s = s.replace(/\\\[([\s\S]+?)\\\]/g, (_m, latex) => stash(renderTeX(latex.trim(), true)));
-  // Inline math.
-  s = s.replace(/\\\(([\s\S]+?)\\\)/g, (_m, latex) => stash(renderTeX(latex.trim(), false)));
-  // $...$ — avoid matching across newlines or currency-like usage.
-  s = s.replace(/\$([^\$\n]+?)\$/g, (_m, latex) => stash(renderTeX(latex.trim(), false)));
+  let last = 0;
+  for (const span of findMathSpans(src)) {
+    s += src.slice(last, span.start);
+    store.push(renderTeX(span.latex, span.display));
+    s += `${NUL}MATH${store.length - 1}${NUL}`;
+    last = span.end;
+  }
+  s += src.slice(last);
 
   // 2) Markdown formatting.
   // Code blocks first so their contents aren't formatted.
   const codeStore: string[] = [];
   s = s.replace(/```([\s\S]*?)```/g, (_m, code) => {
     codeStore.push(code);
-    return `\u0000CODE${codeStore.length - 1}\u0000`;
+    return `${NUL}CODE${codeStore.length - 1}${NUL}`;
   });
   s = s.replace(/`([^`\n]+)`/g, (_m, code) => {
     codeStore.push(code);
-    return `\u0000CODE${codeStore.length - 1}\u0000`;
+    return `${NUL}CODE${codeStore.length - 1}${NUL}`;
   });
 
   // Headers.
@@ -79,7 +117,7 @@ export function renderMarkdownWithMath(src: string): string {
 
   // Markdown tables (GFM pipe syntax). Matches a header row, a separator row
   // (|:---| or |---|:---:|), and 1+ body rows. Gemini sometimes produces these
-  // despite the prompt asking for LaTeX arrays — this ensures they still render.
+  // despite the prompt asking for LaTeX arrays -- this ensures they still render.
   s = s.replace(
     /(?:^|\n)((?:\|[^\n]+\|\s*\n)(?:\|[ :|-]+\|\s*\n)(?:\|[^\n]+\|\s*\n?)+)/g,
     (_m, tableBlock: string) => {
@@ -117,12 +155,12 @@ export function renderMarkdownWithMath(src: string): string {
   });
 
   // 3) Restore code.
-  s = s.replace(/\u0000CODE(\d+)\u0000/g, (_m, i) =>
+  s = s.replace(new RegExp(`${NUL}CODE(\\d+)${NUL}`, 'g'), (_m, i) =>
     `<code>${escapeHtml(codeStore[Number(i)] ?? '')}</code>`
   );
 
   // 4) Restore math.
-  s = s.replace(/\u0000MATH(\d+)\u0000/g, (_m, i) => store[Number(i)] ?? '');
+  s = s.replace(new RegExp(`${NUL}MATH(\\d+)${NUL}`, 'g'), (_m, i) => store[Number(i)] ?? '');
 
   return s;
 }
@@ -152,8 +190,8 @@ export function renderLatexSpans(root: HTMLElement) {
  * The input is text, not markup: by the time we see it the sanitiser has
  * already entity-escaped anything a student typed that looked like a tag, and
  * reading `.nodeValue` decodes those entities back. Since the result is
- * assigned to `innerHTML`, every non-math span must be re-escaped — otherwise a
- * post containing the literal text `<img src=x onerror=…>` plus any `$…$`
+ * assigned to `innerHTML`, every non-math span must be re-escaped -- otherwise a
+ * post containing the literal text `<img src=x onerror=...>` plus any `$...$`
  * reconstitutes that tag as a live element, which is stored XSS straight past
  * DOMPurify.
  */

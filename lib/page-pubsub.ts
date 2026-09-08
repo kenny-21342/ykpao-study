@@ -73,6 +73,18 @@ export type RevisionPayload = {
 };
 
 /**
+ * Pointer only -- never the update bytes themselves. Yjs update messages can
+ * exceed Postgres's 8KB NOTIFY payload cap, so this just tells other clients
+ * "go fetch `updateId` (and anything after it) from `GET
+ * /api/pages/[id]/yjs-updates`" the same way `RevisionPayload` says "go
+ * re-fetch the page" rather than carrying the new content itself.
+ */
+export type YjsUpdatePayload = {
+  pageId: string;
+  updateId: string;
+};
+
+/**
  * Build the Postgres channel name for awareness events on a page.
  * Only [a-z0-9_] are safe in LISTEN/NOTIFY channel names; the pageId (a cuid)
  * already matches that charset.
@@ -83,6 +95,10 @@ export function awarenessChannel(pageId: string): string {
 
 export function revisionChannel(pageId: string): string {
   return `page_${pageId.replace(/[^a-z0-9_]/gi, '')}_rev`;
+}
+
+export function yjsUpdateChannel(pageId: string): string {
+  return `page_${pageId.replace(/[^a-z0-9_]/gi, '')}_yjs`;
 }
 
 /** Fire-and-forget NOTIFY for an awareness update. Safe to call from any route. */
@@ -99,6 +115,12 @@ export async function notifyRevision(pageId: string, payload: RevisionPayload) {
   await pool.query('SELECT pg_notify($1, $2)', [channel, JSON.stringify(payload)]);
 }
 
+/** Fire-and-forget NOTIFY that a new Yjs update is available (pointer only). */
+export async function notifyYjsUpdate(pageId: string, payload: YjsUpdatePayload) {
+  const channel = yjsUpdateChannel(pageId);
+  await pool.query('SELECT pg_notify($1, $2)', [channel, JSON.stringify(payload)]);
+}
+
 /**
  * Acquire a dedicated Postgres client and start LISTENing on both channels.
  * Returns the client plus a cleanup function that UNLISTENs and releases.
@@ -110,28 +132,35 @@ export async function listenToPage(pageId: string): Promise<{
   client: PoolClient;
   awarenessChan: string;
   revisionChan: string;
+  yjsUpdateChan: string;
   cleanup: () => Promise<void>;
 }> {
   const client = await pool.connect();
   const awarenessChan = awarenessChannel(pageId);
   const revisionChan = revisionChannel(pageId);
+  const yjsUpdateChan = yjsUpdateChannel(pageId);
 
   // pg-node doesn't interpolate identifiers safely in LISTEN, but these names
   // are built from a sanitized cuid so they're safe as raw SQL.
   await client.query(`LISTEN "${awarenessChan}"`);
   await client.query(`LISTEN "${revisionChan}"`);
+  // Listened unconditionally (cheap -- an unused channel just never fires):
+  // it only ever carries a message when a client with YJS_COLLAB enabled
+  // posts an update, which the flag being off everywhere means never happens.
+  await client.query(`LISTEN "${yjsUpdateChan}"`);
 
   const cleanup = async () => {
     try {
       await client.query(`UNLISTEN "${awarenessChan}"`);
       await client.query(`UNLISTEN "${revisionChan}"`);
+      await client.query(`UNLISTEN "${yjsUpdateChan}"`);
     } catch {
       // best-effort
     }
     client.release();
   };
 
-  return { client, awarenessChan, revisionChan, cleanup };
+  return { client, awarenessChan, revisionChan, yjsUpdateChan, cleanup };
 }
 
 /**

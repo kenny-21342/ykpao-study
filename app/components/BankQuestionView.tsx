@@ -16,6 +16,7 @@ import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
 import { optionLettersFor } from '@/lib/bank-grading';
 import { commandTerm } from '@/lib/command-terms';
+import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 
 /**
  * One past-paper question, shown as the crop it was cut from.
@@ -348,6 +349,7 @@ function AnswerPanel({
             placeholder="Write your working, then mark it against the mark scheme."
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           />
+          <QuestionScratchpadPanel questionRef={{ bankQuestionId: question.id }} />
           <button
             type="button"
             disabled={saving || !answer.trim()}

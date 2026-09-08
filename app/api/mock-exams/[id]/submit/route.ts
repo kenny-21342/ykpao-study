@@ -5,6 +5,7 @@ import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting } from '@/lib/vision';
+import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
 import type { GradeResult } from '@/types/ai';
 import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
@@ -183,6 +184,14 @@ export async function POST(
       take: MAX_KEYED_EXAM_ITEMS,
     });
 
+    // A scratchpad autosaves per-item while the student is still working,
+    // ahead of any of this submission's attempt rows existing at all -- one
+    // batch query rather than one per item inside the grading fan-out below.
+    const scratchpads = await prisma.questionScratchpad.findMany({
+      where: { userId: user.id, mockExamItemId: { in: items.map((item) => item.id) } },
+    });
+    const scratchpadByItemId = new Map(scratchpads.map((row) => [row.mockExamItemId, row]));
+
     // Pre-resolve every item into one shape, and find the legacy mark schemes.
     //
     // A legacy item's mark scheme lives in a separate `ms` document and has to
@@ -239,6 +248,7 @@ export async function POST(
         modelAnswer?: string | null;
         gradingStatus: string;
         answerImageUrl?: string | null;
+        gradingMode?: 'text' | 'vision';
       },
     ) => {
       if (entry.item.bankQuestionId) {
@@ -250,6 +260,8 @@ export async function POST(
             isCorrect: data.isCorrect,
             score: data.score,
             gradedBy: entry.normalized?.answerLetter ? 'key' : 'ai',
+            answerImageUrl: data.answerImageUrl ?? null,
+            gradingMode: data.gradingMode ?? 'text',
           },
         });
         return;
@@ -270,6 +282,7 @@ export async function POST(
           gradingStatus: data.gradingStatus,
           gradingSourceId: entry.markschemeId,
           answerImageUrl: data.answerImageUrl ?? null,
+          gradingMode: data.gradingMode ?? 'text',
         },
       });
     };
@@ -324,24 +337,42 @@ export async function POST(
         // Unreachable while the CHECK constraint holds; skip rather than throw.
         if (!normalized) return 0;
         const rawAnswer = (answers[item.id] ?? '').trim();
-        const imageUrl = typeof images[item.id] === 'string' ? images[item.id] : null;
+        const scratchpad = scratchpadByItemId.get(item.id) ?? null;
+        const imageUrl =
+          (typeof images[item.id] === 'string' ? images[item.id] : null) ??
+          scratchpad?.previewImageUrl ??
+          null;
 
         // If an image was attached, OCR it and merge with the typed answer so
         // the text-only grader sees the full working.
         let answer = rawAnswer;
-        let answerImageUrl: string | null = null;
-        if (imageUrl && visionAccess.ok) {
+        // Set eagerly (not only when OCR succeeds below): a server-relative
+        // URL is worth persisting for vision grading even without OCR.
+        const answerImageUrl: string | null = imageUrl && imageUrl.startsWith('/') ? imageUrl : null;
+        const requiresDiagram = Boolean(item.question?.hasDiagram || item.bankQuestion?.requiresDiagram);
+        const useVisionGrading =
+          decideGradingMode({ requiresDiagram, answerImageUrl }) === 'vision' &&
+          Boolean(answerImageUrl) &&
+          visionAccess.ok;
+        if (imageUrl && visionAccess.ok && !useVisionGrading) {
           try {
             const transcript = await transcribeHandwriting(imageUrl, visionAccess.credential);
             if (transcript && transcript.trim()) {
               answer = rawAnswer
                 ? `${rawAnswer}\n\n[Transcribed from handwritten work]\n${transcript.trim()}`
                 : transcript.trim();
-              answerImageUrl = imageUrl.startsWith('/') ? imageUrl : null;
             }
           } catch (ocrErr) {
             console.error(`Mock exam OCR failed for item ${item.id}:`, ocrErr);
           }
+        }
+        if (scratchpad) {
+          // Keep the row (a reopened past attempt can still show the
+          // drawing) -- only stamp it as belonging to a submitted attempt.
+          await prisma.questionScratchpad.update({
+            where: { id: scratchpad.id },
+            data: { finalizedAt: new Date() },
+          });
         }
 
         if (!answer) {
@@ -405,9 +436,10 @@ export async function POST(
         }
 
         // Nothing left to mark against: a crop-only question has no transcript
-        // for the grader to read, and inventing one from the image is a
-        // different (and paid) job. Save the work and let the student mark it.
-        if (!normalized.content.trim()) {
+        // for the text grader to read, and inventing one from the image is a
+        // different (and paid) job. Vision grading is the exception -- it
+        // reads the answer image directly and doesn't need a transcript.
+        if (!normalized.content.trim() && !useVisionGrading) {
           await prisma.mockExamItem.update({
             where: { id: item.id },
             data: {
@@ -437,8 +469,18 @@ export async function POST(
 
         const questionContent = normalized.content;
 
+        const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
+
         try {
-          const grade = await chatJSON<GradeResult>(
+          const grade = useVisionGrading && answerImageUrl && visionAccess.ok
+            ? await runVisionGrading({
+                imageUrl: answerImageUrl,
+                questionText: questionContent,
+                markscheme,
+                totalMarks: max,
+                credential: visionAccess.credential,
+              })
+            : await chatJSON<GradeResult>(
             [
               { role: 'system', content: SYSTEM_PROMPTS.grader },
               {
@@ -486,6 +528,7 @@ export async function POST(
                 gradingStatus: markscheme ? 'official' : 'provisional',
                 gradingSourceId: markschemeId,
                 answerImageUrl,
+                gradingMode: actualGradingMode,
                 attemptedAt: new Date(),
               },
             }),
@@ -502,15 +545,16 @@ export async function POST(
             modelAnswer: grade.modelAnswer ?? null,
             gradingStatus: markscheme ? 'official' : 'provisional',
             answerImageUrl,
+            gradingMode: actualGradingMode,
           });
 
           if (!isCorrect) await recordMistake(entry, grade.modelAnswer);
 
           await recordUsage({
             userId: user.id,
-            feature: 'mock-exam-grade',
+            feature: actualGradingMode === 'vision' && visionAccess.ok ? 'mock-exam-grade-vision' : 'mock-exam-grade',
             tokensOut: 800,
-            model: access.credential.model,
+            model: actualGradingMode === 'vision' && visionAccess.ok ? visionAccess.credential.model : access.credential.model,
           });
 
           return score;
@@ -520,7 +564,7 @@ export async function POST(
           console.error(`Failed to grade item ${item.id}:`, err);
           await recordUsage({
             userId: user.id,
-            feature: 'mock-exam-grade:error',
+            feature: actualGradingMode === 'vision' ? 'mock-exam-grade-vision:error' : 'mock-exam-grade:error',
             model: access.credential.model,
           });
           // ...but the answer itself must still survive. This used to return

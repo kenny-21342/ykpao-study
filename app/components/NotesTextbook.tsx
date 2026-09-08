@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import type { DrawingCanvasHandle } from './DrawingCanvas';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import {
@@ -22,6 +23,7 @@ import {
   Clock3,
   CloudOff,
   Copy,
+  Eye,
   FileClock,
   FileText,
   FolderInput,
@@ -35,6 +37,7 @@ import {
   PanelLeftClose,
   PanelRightClose,
   PenTool,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -245,6 +248,7 @@ export default function NotesTextbookPage() {
 
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -283,12 +287,7 @@ export default function NotesTextbookPage() {
   const editContentRef = useRef('');
   const dirtyRef = useRef(false);
   const saveInFlightRef = useRef(false);
-  const drawingCanvasRef = useRef<{
-    exportDataURL: () => string | null;
-    importDataURL: (data: string) => void;
-    clear: () => void;
-    isEmpty: () => boolean;
-  } | null>(null);
+  const drawingCanvasRef = useRef<DrawingCanvasHandle | null>(null);
 
   useEffect(() => { selectedPageRef.current = selectedPage; }, [selectedPage]);
   useEffect(() => { editTitleRef.current = editTitle; }, [editTitle]);
@@ -328,10 +327,21 @@ export default function NotesTextbookPage() {
     []
   );
 
+  // Feature 5 (Yjs collaborative editing, flagged off by default via
+  // isYjsCollabEnabled()): the server is the single source of truth for
+  // whether this is active -- yjs-update/-updates return 501 when the flag
+  // is off, and useYjsPageSync (inside RichTextEditor) falls back to null
+  // on any non-ok response, so it's safe to always pass these through.
+  const [yjsRemoteUpdate, setYjsRemoteUpdate] = useState<{ id: string; nonce: number } | null>(null);
+  const handleYjsUpdate = useCallback((updateId: string) => {
+    setYjsRemoteUpdate({ id: updateId, nonce: Date.now() });
+  }, []);
+
   const { others: collabOthers, postCursor, postTyping } = usePageCollaboration(
     selectedPage?.id,
     collabSelf,
-    handleRemoteRevision
+    handleRemoteRevision,
+    handleYjsUpdate
   );
 
   // Build the RemoteCursor list for the editor's decoration plugin.
@@ -455,6 +465,7 @@ export default function NotesTextbookPage() {
       setSelectedPage(page);
       setEditTitle(page.title);
       setEditContent(page.content);
+      setPreviewMode(false);
       setTagInput(page.tags.join(', '));
       setDirty(false);
       setSaveState('saved');
@@ -999,6 +1010,8 @@ export default function NotesTextbookPage() {
   const insertDrawingIntoNote = async (dataUrl: string) => {
     const page = selectedPageRef.current;
     if (!page || !canEdit(page)) return notify('Choose an editable page first');
+    const strokes = drawingCanvasRef.current?.exportStrokes();
+    if (!strokes) return notify('Draw something first');
     setDrawingUploading(true);
     try {
       const blob = await fetch(dataUrl).then((response) => response.blob());
@@ -1008,9 +1021,30 @@ export default function NotesTextbookPage() {
       const response = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await response.json();
       if (!response.ok || !data.fileUrl) throw new Error(data.error || 'Could not upload drawing');
+
+      // Create the PageDrawing row up front so the drawingBlock node can
+      // reference it from the moment it's inserted -- create-on-first-edit
+      // would leave a node with nothing to reopen if the page were closed
+      // before the drawing was ever re-saved.
+      const drawingResponse = await fetch('/api/page-drawings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pageId: page.id,
+          strokesJson: strokes,
+          thumbnailUrl: data.fileUrl,
+          width: 760,
+          height: 420,
+        }),
+      });
+      const drawingData = await drawingResponse.json();
+      if (!drawingResponse.ok || !drawingData.drawing) {
+        throw new Error(drawingData.error || 'Could not save drawing');
+      }
+
       setInsertRequest({
         id: `drawing:${Date.now()}`,
-        html: `<img src="${escapeHtml(String(data.fileUrl))}" alt="Note drawing" /><p></p>`,
+        html: `<div data-type="drawing-block" data-drawing-id="${escapeHtml(String(drawingData.drawing.id))}" data-thumbnail-url="${escapeHtml(String(data.fileUrl))}" data-width="760" data-height="420"><img src="${escapeHtml(String(data.fileUrl))}" alt="Note drawing" /></div><p></p>`,
       });
       setShowDrawing(false);
       notify('Drawing inserted into note');
@@ -1357,6 +1391,15 @@ export default function NotesTextbookPage() {
               <button onClick={() => openAI(false)} className="toolbar-command" title="Ask AI about this note"><Sparkles className="h-4 w-4" /><span>Ask AI</span></button>
             </div>
             <div className="flex items-center gap-1 border-l border-gray-200 pl-2 dark:border-gray-800">
+              {canEdit(selectedPage) && (
+                <button
+                  onClick={() => setPreviewMode((value) => !value)}
+                  className={`rounded-md p-2 ${previewMode ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  title={previewMode ? 'Back to editing' : 'Preview rendered note'}
+                >
+                  {previewMode ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              )}
               <SaveIndicator state={saveState} />
               {canEdit(selectedPage) && <button onClick={() => void savePage({ manual: true })} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-emerald-700 dark:hover:bg-gray-800" title="Save version"><Save className="h-4 w-4" /></button>}
               <button onClick={() => { setActivePanel(null); setSplitOpen((open) => !open); }} className={`rounded-md p-2 ${splitOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title="Split study view"><SplitSquareHorizontal className="h-4 w-4" /></button>
@@ -1393,7 +1436,7 @@ export default function NotesTextbookPage() {
               </div>
               <div className="flex-1 overflow-y-auto bg-gray-50/50 p-3 dark:bg-gray-950 sm:p-5">
                 <div className="mx-auto max-w-5xl">
-                  {canEdit(selectedPage) ? (
+                  {canEdit(selectedPage) && !previewMode ? (
                     <RichTextEditor
                       key={selectedPage.id}
                       content={editContent}
@@ -1404,10 +1447,14 @@ export default function NotesTextbookPage() {
                       insertRequest={insertRequest}
                       compactToolbar
                       placeholder="e.g. Key terms, worked examples, diagrams, and revision reminders"
+                      yjsPageId={selectedPage.id}
+                      yjsRemoteUpdate={yjsRemoteUpdate}
                     />
                   ) : (
                     <div className="min-h-[440px] rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-                      <div className="mb-4 text-xs font-semibold uppercase text-gray-400">Shared read-only page</div>
+                      <div className="mb-4 text-xs font-semibold uppercase text-gray-400">
+                        {canEdit(selectedPage) ? 'Preview' : 'Shared read-only page'}
+                      </div>
                       {editContent ? <RichContent html={editContent} /> : <p className="text-gray-400">This page is empty.</p>}
                     </div>
                   )}

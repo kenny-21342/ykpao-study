@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getSessionUser, isModerator } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
+import { indexDiscussionThread, refreshRagIndex } from '@/lib/rag-index';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +118,7 @@ export async function DELETE(
     }
 
     await prisma.discussionThread.delete({ where: { id } });
+    await refreshRagIndex(`discussion-thread:${id}`, () => indexDiscussionThread(id));
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete thread:', error);
@@ -160,6 +162,9 @@ export async function PATCH(
       },
       select: { id: true, pinned: true, locked: true, hidden: true },
     });
+    if (parsed.hidden !== undefined) {
+      await refreshRagIndex(`discussion-thread:${id}`, () => indexDiscussionThread(id));
+    }
     return NextResponse.json({ thread });
   } catch (error) {
     console.error('Failed to moderate thread:', error);

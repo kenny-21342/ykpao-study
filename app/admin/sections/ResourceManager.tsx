@@ -11,7 +11,6 @@ import { useDebouncedValue } from '../../components/useDebouncedValue';
 import {
   ALLOWED_RESOURCE_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
-  FOLDER_UPLOAD_PREFIX,
   isHiddenUploadSegment,
 } from '@/lib/upload-constants';
 
@@ -330,16 +329,16 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
 
       updateItem(idx, { status: 'publishing' });
-      // Keep the folder's relative path (minus the file name) in the
-      // description so the structure can be reconstructed later — same
+      // Keep the folder's relative path (minus the file name) so the server
+      // can resolve/create the matching SchoolResourceFolder chain — same
       // convention the staff folder upload uses.
       const parts = item.relativePath.split('/').filter(Boolean);
-      const prettyPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
       await adminFetch('/api/school-resources', {
         method: 'POST',
         body: JSON.stringify({
           title: item.file.name.replace(/\.[^.]+$/, ''),
-          description: prettyPath ? `${FOLDER_UPLOAD_PREFIX}${prettyPath}` : '',
+          folderPath: folderPath || undefined,
           subject: subj,
           category: cat,
           fileUrl: upData.fileUrl,

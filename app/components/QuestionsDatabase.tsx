@@ -4,15 +4,15 @@ import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, PenTool, Lightbulb, Loader2, Brain, AlertCircle } from 'lucide-react';
+import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, Lightbulb, Loader2, Brain, AlertCircle } from 'lucide-react';
 import FormattedMessage from '../components/FormattedMessage';
 import UnlockWidget from './UnlockWidget';
 import PreviewNotice from './PreviewNotice';
 import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
+import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
-const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), { ssr: false });
 
 const PDF_FILENAME_RE = /^[a-z0-9][a-z0-9_-]*\.pdf$/i;
 
@@ -100,15 +100,11 @@ export default function QuestionsDatabase({
 
   // Practice mode state
   const [mode, setMode] = useState<'browse' | 'practice'>(initialMode);
-  // Drawing canvas state
-  const [showCanvas, setShowCanvas] = useState(false);
-  const [drawingData, setDrawingData] = useState<string | null>(null);
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
-  const canvasRef = useRef<{ exportDataURL: () => string | null; importDataURL: (data: string) => void; clear: () => void; isEmpty: () => boolean }>(null);
   // Vault state — STEP/competition questions shown only after easter-egg unlock.
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
   const [showVault, setShowVault] = useState(false);
@@ -261,8 +257,6 @@ export default function QuestionsDatabase({
     setAnswer('');
     setGrade(null);
     setSubmitError(null);
-    setShowCanvas(false);
-    setDrawingData(null);
     setUploadedImageUrl(null);
     setOcrError(null);
     setHints([]);
@@ -392,13 +386,6 @@ export default function QuestionsDatabase({
     setGrade(null);
     const t0 = Date.now();
 
-    // Capture drawing if canvas is open
-    let drawingUrl: string | null = drawingData;
-    if (showCanvas && canvasRef.current) {
-      drawingUrl = canvasRef.current.exportDataURL();
-      setDrawingData(drawingUrl);
-    }
-
     try {
       const res = await fetch('/api/practice', {
         method: 'POST',
@@ -406,7 +393,8 @@ export default function QuestionsDatabase({
         body: JSON.stringify({
           questionId: selectedQuestion.id,
           answer,
-          drawing: drawingUrl,
+          // Any scratchpad drawing is picked up server-side by question ref
+          // (QuestionScratchpadPanel autosaves it independently of submit).
           image: uploadedImageUrl,
           timeSpent: Math.round((Date.now() - t0) / 1000),
         }),
@@ -473,7 +461,7 @@ export default function QuestionsDatabase({
   };
 
   const transcribeImage = async () => {
-    const imageUrl = uploadedImageUrl ?? drawingData;
+    const imageUrl = uploadedImageUrl;
     if (!imageUrl || !selectedQuestion || ocrLoading) return;
     setOcrLoading(true);
     setOcrError(null);
@@ -1026,7 +1014,7 @@ export default function QuestionsDatabase({
                       <span>Your Answer</span>
                     </h4>
                     <div className="flex items-center gap-2 flex-wrap">
-                      {(uploadedImageUrl || drawingData) && (
+                      {uploadedImageUrl && (
                         <button
                           onClick={transcribeImage}
                           disabled={ocrLoading}
@@ -1054,17 +1042,6 @@ export default function QuestionsDatabase({
                           e.target.value = '';
                         }}
                       />
-                      <button
-                        onClick={() => setShowCanvas((s) => !s)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                          showCanvas
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                            : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <PenTool className="w-4 h-4" />
-                        {showCanvas ? 'Hide Canvas' : 'Draw Diagram'}
-                      </button>
                     </div>
                   </div>
 
@@ -1086,25 +1063,10 @@ export default function QuestionsDatabase({
                     </div>
                   )}
 
-                  {/* Drawing canvas */}
-                  {showCanvas && (
-                    <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                      <DrawingCanvas
-                        ref={canvasRef}
-                        width={760}
-                        height={420}
-                        onSave={(dataUrl) => {
-                          setDrawingData(dataUrl);
-                        }}
-                      />
-                      {drawingData && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Drawing saved — submit as-is or click Transcribe to convert it to text.
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <QuestionScratchpadPanel
+                    questionRef={{ pastPaperQuestionId: selectedQuestion.id }}
+                    className="mb-4"
+                  />
 
                   <RichTextEditor
                     content={answer}

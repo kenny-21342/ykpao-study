@@ -1,23 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { ArrowLeft, Download, Loader2, Music } from 'lucide-react';
 import { documentLabel } from '@/lib/paper-catalogue';
 import type { PaperInstance } from '@/lib/paper-catalogue';
 import { useScreenContext } from '@/app/components/ScreenContext';
-
-// react-pdf touches browser APIs at import time.
-const PDFViewer = dynamic(() => import('@/app/components/PDFViewer'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-96 items-center justify-center text-sm text-gray-500">
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      Loading viewer…
-    </div>
-  ),
-});
+import PDFViewer from '@/app/components/PDFViewer';
 
 type PaperResponse = {
   paperId: number;

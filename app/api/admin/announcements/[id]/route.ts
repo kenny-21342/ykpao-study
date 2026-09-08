@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { indexAnnouncement, refreshRagIndex } from '@/lib/rag-index';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (d.expiresAt !== undefined) data.expiresAt = d.expiresAt ? new Date(d.expiresAt) : null;
 
   const updated = await prisma.announcement.update({ where: { id }, data });
+  await refreshRagIndex(`announcement:${id}`, () => indexAnnouncement(id));
   return NextResponse.json({ announcement: updated });
 }
 
@@ -68,5 +70,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   await prisma.announcement.delete({ where: { id } });
+  await refreshRagIndex(`announcement:${id}`, () => indexAnnouncement(id));
   return NextResponse.json({ success: true });
 }

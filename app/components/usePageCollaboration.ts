@@ -40,7 +40,14 @@ const MAX_CONSECUTIVE_FAILURES = 4;
 export function usePageCollaboration(
   pageId: string | null | undefined,
   self: { id: string; name?: string | null; image?: string | null } | null | undefined,
-  onRevision?: (revision: number, savedBy: string) => void
+  onRevision?: (revision: number, savedBy: string) => void,
+  // Feature 5 (Yjs collaborative editing), flagged off by default -- see
+  // isYjsCollabEnabled() in lib/stream-config.ts. This forwards the
+  // pointer-only `yjs-update` SSE event (fired by app/api/pages/[id]/stream)
+  // so a future CRDT-doc consumer knows when to fetch
+  // GET /api/pages/[id]/yjs-updates; passing nothing here has zero effect on
+  // today's awareness/revision behavior.
+  onYjsUpdate?: (updateId: string) => void
 ) {
   const [others, setOthers] = useState<Map<string, RemoteAwareness>>(new Map());
   const [revision, setRevision] = useState<number | null>(null);
@@ -49,6 +56,7 @@ export function usePageCollaboration(
   // Refs to the latest values so the SSE handlers don't capture stale closures.
   const selfIdRef = useRef<string | null>(null);
   const onRevisionRef = useRef(onRevision);
+  const onYjsUpdateRef = useRef(onYjsUpdate);
 
   useEffect(() => {
     selfIdRef.current = self?.id ?? null;
@@ -57,6 +65,10 @@ export function usePageCollaboration(
   useEffect(() => {
     onRevisionRef.current = onRevision;
   }, [onRevision]);
+
+  useEffect(() => {
+    onYjsUpdateRef.current = onYjsUpdate;
+  }, [onYjsUpdate]);
 
   useEffect(() => {
     if (!pageId || !self?.id) return;
@@ -124,6 +136,15 @@ export function usePageCollaboration(
         const { revision: rev, savedBy } = JSON.parse((e as MessageEvent).data);
         setRevision(rev);
         onRevisionRef.current?.(rev, savedBy);
+      } catch {
+        // malformed
+      }
+    });
+
+    es.addEventListener('yjs-update', (e) => {
+      try {
+        const { updateId } = JSON.parse((e as MessageEvent).data);
+        if (updateId) onYjsUpdateRef.current?.(updateId);
       } catch {
         // malformed
       }

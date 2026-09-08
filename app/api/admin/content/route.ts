@@ -7,7 +7,7 @@ import { deleteSchoolResource } from '@/lib/school-resources';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/content?type=threads|posts|shared-notes|resources&page=
+ * GET /api/admin/content?type=threads|posts|resources&page=
  * Browse user-generated content for moderation.
  */
 export async function GET(req: NextRequest) {
@@ -41,15 +41,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
   }
 
-  if (type === 'shared-notes') {
-    const where = q ? { OR: [{ title: { contains: q, mode: 'insensitive' as const } }, { content: { contains: q, mode: 'insensitive' as const } }] } : {};
-    const [items, total] = await Promise.all([
-      prisma.sharedNote.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy, skip, take: pageSize }),
-      prisma.sharedNote.count({ where }),
-    ]);
-    return NextResponse.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
-  }
-
   if (type === 'resources') {
     const where = q ? { OR: [{ title: { contains: q, mode: 'insensitive' as const } }, { description: { contains: q, mode: 'insensitive' as const } }] } : {};
     const [items, total] = await Promise.all([
@@ -77,7 +68,6 @@ export async function DELETE(req: NextRequest) {
 
   if (type === 'threads') await prisma.discussionThread.delete({ where: { id } });
   else if (type === 'posts') await prisma.discussionPost.delete({ where: { id } });
-  else if (type === 'shared-notes') await prisma.sharedNote.delete({ where: { id } });
   else if (type === 'resources') {
     // Via the shared helper: the row deletion alone used to leave the stored
     // file on the bill and the resource's text alive in the RAG index.

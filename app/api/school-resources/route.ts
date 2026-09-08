@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { indexSchoolResource, refreshRagIndex } from '@/lib/rag-index';
+import { resolveFolderPath } from '@/lib/school-resources';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { reportError } from '@/lib/error-reporting';
@@ -21,6 +22,11 @@ export async function GET(req: NextRequest) {
     const subject = searchParams.get('subject')?.trim() || undefined;
     const category = searchParams.get('category')?.trim() || undefined;
     const q = searchParams.get('q')?.trim() || undefined;
+    // Presence of the param (even empty, meaning root) switches on folder
+    // scoping for the Browser view. Its absence keeps the List/search view's
+    // existing behavior of searching across every folder.
+    const hasFolderFilter = searchParams.has('folderId');
+    const folderId = searchParams.get('folderId')?.trim() || null;
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
     const requestedLimit = Number.parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT;
     const limit = Math.min(MAX_LIMIT, Math.max(1, requestedLimit));
@@ -55,6 +61,7 @@ export async function GET(req: NextRequest) {
       ...(!subject && courseScope.effectiveScope === 'enrolled' ? { subject: { in: courseScope.subjects } } : {}),
       ...(category ? { category } : {}),
       ...(searchConditions.length > 0 ? { OR: searchConditions } : {}),
+      ...(hasFolderFilter ? { folderId } : {}),
     };
 
     const orderBy: Prisma.SchoolResourceOrderByWithRelationInput[] = (() => {
@@ -74,6 +81,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         include: {
           uploader: { select: { id: true, name: true, image: true } },
+          folder: { select: { id: true, name: true } },
         },
       }),
       prisma.schoolResource.findMany({
@@ -90,6 +98,42 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    // The Browser view additionally needs this folder's immediate
+    // subfolders (with a direct-file count each) and the breadcrumb chain
+    // back to the root, so it never has to re-derive a tree client-side.
+    let folders: Array<{ id: string; name: string; fileCount: number }> = [];
+    let breadcrumb: Array<{ id: string; name: string }> = [];
+    if (hasFolderFilter) {
+      const children = await prisma.schoolResourceFolder.findMany({
+        where: { parentId: folderId },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true },
+      });
+      const counts = children.length > 0
+        ? await prisma.schoolResource.groupBy({
+            by: ['folderId'],
+            where: { folderId: { in: children.map((c) => c.id) } },
+            _count: { _all: true },
+          })
+        : [];
+      const countByFolder = new Map(counts.map((c) => [c.folderId, c._count._all]));
+      folders = children.map((c) => ({ id: c.id, name: c.name, fileCount: countByFolder.get(c.id) ?? 0 }));
+
+      const chain: Array<{ id: string; name: string }> = [];
+      let cursor = folderId;
+      while (cursor) {
+        const node: { id: string; name: string; parentId: string | null } | null =
+          await prisma.schoolResourceFolder.findUnique({
+            where: { id: cursor },
+            select: { id: true, name: true, parentId: true },
+          });
+        if (!node) break;
+        chain.unshift({ id: node.id, name: node.name });
+        cursor = node.parentId;
+      }
+      breadcrumb = chain;
+    }
+
     return NextResponse.json({
       resources: resources.map((r) => ({
         id: r.id,
@@ -105,6 +149,7 @@ export async function GET(req: NextRequest) {
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         uploader: r.uploader,
+        folder: r.folder,
       })),
       total,
       page,
@@ -115,6 +160,7 @@ export async function GET(req: NextRequest) {
       order,
       pageSize: limit,
       scope: courseScope,
+      ...(hasFolderFilter ? { folders, breadcrumb } : {}),
     });
   } catch (error) {
     if (error instanceof LearnerContextError) {
@@ -139,11 +185,13 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) ?? {};
-    const { title, description, subject, category, fileUrl, fileName, fileSize, mimeType } = body as {
+    const { title, description, subject, category, folderPath, fileUrl, fileName, fileSize, mimeType } = body as {
       title?: string;
       description?: string;
       subject?: string;
       category?: string;
+      /** A relative path like "Physics/Unit 3", resolved into real folder rows. */
+      folderPath?: string;
       fileUrl?: string;
       fileName?: string;
       fileSize?: number;
@@ -166,6 +214,8 @@ export async function POST(req: Request) {
       );
     }
 
+    const folderId = folderPath?.trim() ? await resolveFolderPath(folderPath) : null;
+
     const resource = await prisma.schoolResource.create({
       data: {
         uploaderId: user.id,
@@ -173,6 +223,7 @@ export async function POST(req: Request) {
         description: description?.trim() ?? '',
         subject: subject?.trim() || null,
         category: category?.trim() || null,
+        folderId,
         fileUrl,
         fileName: fileName.trim().slice(0, 200),
         fileSize: typeof fileSize === 'number' ? fileSize : 0,

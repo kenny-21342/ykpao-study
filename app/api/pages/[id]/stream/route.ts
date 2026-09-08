@@ -128,6 +128,11 @@ export async function GET(_req: Request, { params }: RouteContext) {
             // Map the channel back to an SSE event type.
             if (msg.channel === sub.revisionChan) {
               send('revision', payload);
+            } else if (msg.channel === sub.yjsUpdateChan) {
+              // Pointer only (Feature 5, flagged off by default) -- the
+              // client fetches the actual update bytes via
+              // GET /api/pages/[id]/yjs-updates.
+              send('yjs-update', payload);
             } else {
               // Awareness channel — distinguish join/leave from cursor moves.
               if (payload.left) {
