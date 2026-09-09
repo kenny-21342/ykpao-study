@@ -173,8 +173,19 @@ export async function scoreRagMatches(
 ): Promise<IndexedRow[]> {
   if (!options.userId) return [];
   const terms = searchTerms(query);
-  const tsQuery = terms.map((term) => `${term.replace(/[^a-z0-9-]/gi, '')}:*`).filter((term) => term !== ':*').join(' | ');
+  const lexemes = terms.map((term) => `${term.replace(/[^a-z0-9-]/gi, '')}:*`).filter((term) => term !== ':*');
+  const tsQuery = lexemes.join(' | ');
   if (!tsQuery) return [];
+  // Matching *any* term is what keeps a multi-word query from returning
+  // nothing, but on its own it ranks a chunk that happens to contain one
+  // common word level with one that is actually about the whole phrase --
+  // "hydrogen bonding" came back as hydrogen-spectrum physics rather than as
+  // chemistry. Rank rows matching every term above those matching only some,
+  // without excluding the partial matches.
+  const allTermsQuery = lexemes.length > 1 ? lexemes.join(' & ') : null;
+  const allTermsBoost = allTermsQuery
+    ? Prisma.sql`(CASE WHEN c."searchVector" @@ to_tsquery('english', ${allTermsQuery}) THEN 0.5 ELSE 0 END)`
+    : Prisma.sql`0`;
 
   const filters: Prisma.Sql[] = [
     Prisma.sql`(
@@ -202,6 +213,7 @@ export async function scoreRagMatches(
         (
           ts_rank_cd(c."searchVector", to_tsquery('english', ${tsQuery}))
           + similarity(d."title", ${query}) * 0.35
+          + ${allTermsBoost}
           + ${rankBoost}
         )::double precision AS "rank"
       FROM "rag_chunks" c
