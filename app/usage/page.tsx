@@ -36,6 +36,24 @@ const FEATURE_ICONS: Record<string, { icon: React.ReactNode; label: string }> = 
   'practice-grade': { icon: <FileQuestion className="w-4 h-4" />, label: 'Practice Grading' },
 };
 
+/**
+ * A readable name for a feature the map above has never heard of.
+ *
+ * The map covers four features and the app records a dozen -- vision grading,
+ * OCR, RAG chat, hints, and an `:error` variant of most of them -- so the list
+ * read as a mix of "Mock Exam Grading" and `mock-exam-grade-vision`. Deriving
+ * the label means a feature added later is legible the day it ships instead of
+ * the day someone remembers this map exists.
+ */
+function featureLabel(feature: string): string {
+  const [name, variant] = feature.split(':');
+  const words = name
+    .split('-')
+    .map((word) => (word === 'ai' || word === 'ocr' || word === 'rag' ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ');
+  return variant ? `${words} (${variant})` : words;
+}
+
 export default function UsagePage() {
   const { status } = useSession();
   const router = useRouter();
@@ -117,7 +135,7 @@ export default function UsagePage() {
           ) : (
             <div className="space-y-3">
               {Object.entries(data.byFeature).map(([key, val]) => {
-                const meta = FEATURE_ICONS[key] ?? { icon: <Zap className="w-4 h-4" />, label: key };
+                const meta = FEATURE_ICONS[key] ?? { icon: <Zap className="w-4 h-4" />, label: featureLabel(key) };
                 return (
                   <div key={key} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
                     <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center flex-shrink-0">
@@ -149,7 +167,11 @@ export default function UsagePage() {
                 const maxTokens = Math.max(...dayEntries.map(([, v]) => v.tokens), 1);
                 const heightPct = (val.tokens / maxTokens) * 100;
                 return (
-                  <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                  // `h-full` is load-bearing: the bar's height is a
+                  // percentage, and a percentage against an auto-height parent
+                  // resolves to nothing. Every bar collapsed to its 4px
+                  // minimum, so a week of usage drew as a flat line.
+                  <div key={day} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                     <div className="text-xs text-gray-500 font-mono">{val.tokens > 999 ? `${(val.tokens / 1000).toFixed(1)}k` : val.tokens}</div>
                     <div
                       className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t-lg min-h-[4px]"
@@ -173,7 +195,7 @@ export default function UsagePage() {
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {data.recent.map((r) => {
-                const meta = FEATURE_ICONS[r.feature] ?? { icon: <Zap className="w-3.5 h-3.5" />, label: r.feature };
+                const meta = FEATURE_ICONS[r.feature] ?? { icon: <Zap className="w-3.5 h-3.5" />, label: featureLabel(r.feature) };
                 return (
                   <div key={r.id} className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                     <span className="text-gray-400">{meta.icon}</span>

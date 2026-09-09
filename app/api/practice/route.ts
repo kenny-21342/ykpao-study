@@ -158,6 +158,13 @@ export async function POST(req: NextRequest) {
         await recordUsage({
           userId: user.id,
           feature: outcome.graded ? 'practice-grade-vision' : 'practice-grade-vision:error',
+          // The same flat estimate the mock-exam route books for a vision
+          // grade. Neither is a real count -- `gradeWithVision` returns the
+          // parsed grade, not the provider's usage block -- but recording
+          // nothing here meant every vision grade taken from the practice tab
+          // showed up on /usage as "0 tokens, $0.0000" while an identical
+          // grade taken from a mock exam showed its cost.
+          tokensOut: outcome.graded ? 800 : undefined,
           model: visionAccess.credential.model,
         });
         if (outcome.graded) {

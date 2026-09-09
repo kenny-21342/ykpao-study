@@ -111,8 +111,17 @@ export default function CourseShortcuts({
               <div key={course.id} className={CARD}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-gray-900 dark:text-gray-100">
-                      {course.subject || course.name}
+                    {/*
+                      The course name, not its subject. `subject` is a grouping
+                      key and several courses share one: a student taking both
+                      IGCSE English First Language and Literature in English
+                      saw two cards both reading "English / IGCSE", with no way
+                      to tell which was which or that they weren't a duplicate.
+                      It is always set, so the old `subject || name` never once
+                      reached the name.
+                    */}
+                    <p className="truncate font-semibold text-gray-900 dark:text-gray-100" title={course.name || course.subject}>
+                      {course.name || course.subject}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
                       {course.level}
