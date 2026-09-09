@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         banned: true, bannedReason: true, createdAt: true, onboardedAt: true,
         _count: {
           select: {
-            notes: true, sharedNotes: true, threads: true, posts: true,
+            notes: true, threads: true, posts: true,
             mockExams: true, pastPaperAttempts: true, usageRecords: true,
             schoolResources: true,
           },

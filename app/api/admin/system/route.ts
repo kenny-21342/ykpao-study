@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
     Promise.all([
       { name: 'users', count: prisma.user.count() },
       { name: 'notes', count: prisma.note.count() },
-      { name: 'sharedNotes', count: prisma.sharedNote.count() },
       { name: 'discussionThreads', count: prisma.discussionThread.count() },
       { name: 'discussionPosts', count: prisma.discussionPost.count() },
       { name: 'mockExams', count: prisma.mockExam.count() },

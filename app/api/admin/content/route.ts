@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parsePositiveInt } from '@/lib/query-params';
 import { deleteSchoolResource } from '@/lib/school-resources';
+import { indexDiscussionThread, refreshRagIndex } from '@/lib/rag-index';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,9 +67,25 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id');
   if (!type || !id) return NextResponse.json({ error: 'type and id required' }, { status: 400 });
 
-  if (type === 'threads') await prisma.discussionThread.delete({ where: { id } });
-  else if (type === 'posts') await prisma.discussionPost.delete({ where: { id } });
-  else if (type === 'resources') {
+  // Every branch below has to reach the RAG index as well as the row. This is
+  // the moderation path -- the one whose entire purpose is that content stops
+  // being visible -- so leaving a deleted thread's title and body sitting in
+  // global search, reachable by every user, is the worst place to miss it.
+  if (type === 'threads') {
+    await prisma.discussionThread.delete({ where: { id } });
+    // Re-indexing a thread that no longer exists is how the indexer deletes:
+    // it looks the thread up, finds nothing, and drops the document.
+    await refreshRagIndex(`discussion-thread:${id}`, () => indexDiscussionThread(id));
+  } else if (type === 'posts') {
+    // A post is indexed as part of its thread's document, not on its own, so
+    // the parent is what has to be rebuilt -- otherwise the deleted reply's
+    // text stays searchable inside it.
+    const post = await prisma.discussionPost.findUnique({ where: { id }, select: { threadId: true } });
+    await prisma.discussionPost.delete({ where: { id } });
+    if (post) {
+      await refreshRagIndex(`discussion-thread:${post.threadId}`, () => indexDiscussionThread(post.threadId));
+    }
+  } else if (type === 'resources') {
     // Via the shared helper: the row deletion alone used to leave the stored
     // file on the bill and the resource's text alive in the RAG index.
     const result = await deleteSchoolResource(id);

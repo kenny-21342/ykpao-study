@@ -59,7 +59,11 @@ function readableChunk(content: string): string {
 }
 
 /** Maps a `rag_documents.sourceType` value onto this route's own result type. */
-function ragResultType(sourceType: string): SearchResult['type'] {
+function ragResultType(sourceType: string, documentType?: string | null): SearchResult['type'] {
+  // `indexPage` files a student's own notebook page under sourceType
+  // 'textbook', so the badge read TEXTBOOK on a page they wrote themselves.
+  // documentType carries the honest answer.
+  if (documentType === 'notebook-page') return 'note';
   if (sourceType === 'question' || sourceType === 'bank-question') return 'question';
   if (sourceType === 'markscheme' || sourceType === 'bank-markscheme') return 'markscheme';
   if (sourceType === 'note' || sourceType === 'cloud-note') return 'note';
@@ -298,7 +302,7 @@ export async function GET(req: NextRequest) {
     .slice(0, 6)
     .map((row) => ({
       id: `rag-${row.documentId}`,
-      type: ragResultType(row.sourceType),
+      type: ragResultType(row.sourceType, row.documentType),
       title: row.title,
       snippet: plainText(readableChunk(row.content), 240),
       url: row.route ?? '/?tab=materials',

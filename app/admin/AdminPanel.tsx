@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  LayoutDashboard, Users, ShieldCheck, Megaphone, BookOpen,
+  LayoutDashboard, Users, ShieldCheck, Megaphone,
   FolderOpen, Activity, ArrowLeft, Menu, X, Wallet,
 } from 'lucide-react';
 import AdminDashboard from './sections/AdminDashboard';

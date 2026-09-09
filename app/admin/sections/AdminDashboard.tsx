@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, FileText, MessageSquare, BookOpen, DollarSign, Activity, TrendingUp, Megaphone } from 'lucide-react';
+import { Users, FileText, MessageSquare, DollarSign, Activity, TrendingUp, Megaphone } from 'lucide-react';
 import { adminFetch } from '../lib/fetch';
 
 type Stats = {
   users: { total: number; new7d: number; new30d: number; banned: number };
-  content: { threads: number; posts: number; sharedNotes: number; schoolResources: number; mockExams: number; pastPaperAttempts: number; notebooks: number };
+  content: { threads: number; posts: number; schoolResources: number; mockExams: number; pastPaperAttempts: number; notebooks: number };
   announcements: { total: number; active: number };
   ai: { totalCost: number; totalRequests: number; cost30d: number; requests30d: number };
   charts: {
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard icon={Users} label="Total Users" value={stats.users.total.toLocaleString()} sub={`+${stats.users.new7d} this week`} color="indigo" />
-        <KpiCard icon={MessageSquare} label="Content Items" value={(stats.content.threads + stats.content.posts + stats.content.sharedNotes + stats.content.schoolResources).toLocaleString()} sub={`${stats.content.threads} threads`} color="green" />
+        <KpiCard icon={MessageSquare} label="Content Items" value={(stats.content.threads + stats.content.posts + stats.content.schoolResources).toLocaleString()} sub={`${stats.content.threads} threads`} color="green" />
         <KpiCard icon={Activity} label="AI Requests" value={stats.ai.totalRequests.toLocaleString()} sub={`$${stats.ai.totalCost.toFixed(4)} total`} color="amber" />
         <KpiCard icon={Megaphone} label="Active Announcements" value={stats.announcements.active.toLocaleString()} sub={`${stats.announcements.total} total`} color="purple" />
       </div>
@@ -98,7 +98,6 @@ export default function AdminDashboard() {
         <InfoCard title="Content Breakdown">
           <StatRow icon={MessageSquare} label="Discussion Threads" value={stats.content.threads} />
           <StatRow icon={MessageSquare} label="Discussion Posts" value={stats.content.posts} />
-          <StatRow icon={FileText} label="Shared Notes" value={stats.content.sharedNotes} />
           <StatRow icon={FileText} label="School Resources" value={stats.content.schoolResources} />
           <StatRow icon={Activity} label="Mock Exams" value={stats.content.mockExams} />
           <StatRow icon={TrendingUp} label="Past-Paper Attempts" value={stats.content.pastPaperAttempts} />

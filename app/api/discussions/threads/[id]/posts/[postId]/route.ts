@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSessionUser, isModerator } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
+import { indexDiscussionThread, refreshRagIndex } from '@/lib/rag-index';
 
 export const dynamic = 'force-dynamic';
-
-const ModeratePost = z.object({ hidden: z.boolean().optional() });
 
 // PATCH /api/discussions/threads/[id]/posts/[postId]
 // Edit a post's content. Only the post's author may edit it.
@@ -43,6 +41,11 @@ export async function PATCH(
       data: { content: content.trim() },
       include: { user: { select: { id: true, name: true, image: true } } },
     });
+
+    // Same reason as the delete below: the thread's document carries this
+    // post's text, so an edit that never rebuilds it leaves the old wording
+    // searchable.
+    await refreshRagIndex(`discussion-thread:${threadId}`, () => indexDiscussionThread(threadId));
 
     return NextResponse.json({
       post: {
@@ -87,6 +90,10 @@ export async function DELETE(
     }
 
     await prisma.discussionPost.delete({ where: { id: postId } });
+    // A post has no document of its own -- it is indexed as part of its
+    // thread's -- so the parent has to be rebuilt, or the deleted reply's text
+    // stays searchable inside it.
+    await refreshRagIndex(`discussion-thread:${threadId}`, () => indexDiscussionThread(threadId));
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Failed to delete post:', error);

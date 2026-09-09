@@ -20,7 +20,7 @@ export async function GET() {
 
   const [
     totalUsers, newUsers7d, newUsers30d, bannedUsers,
-    threads, posts, sharedNotes, schoolResources,
+    threads, posts, schoolResources,
     mockExams, pastPaperAttempts, notebooks,
     announcements, activeAnnouncements,
     aiUsageAll, aiUsage30d,
@@ -31,7 +31,6 @@ export async function GET() {
     prisma.user.count({ where: { banned: true } }),
     prisma.discussionThread.count(),
     prisma.discussionPost.count(),
-    prisma.sharedNote.count(),
     prisma.schoolResource.count(),
     prisma.mockExam.count(),
     prisma.pastPaperAttempt.count(),
@@ -81,7 +80,7 @@ export async function GET() {
 
   return NextResponse.json({
     users: { total: totalUsers, new7d: newUsers7d, new30d: newUsers30d, banned: bannedUsers },
-    content: { threads, posts, sharedNotes, schoolResources, mockExams, pastPaperAttempts, notebooks },
+    content: { threads, posts, schoolResources, mockExams, pastPaperAttempts, notebooks },
     announcements: { total: announcements, active: activeAnnouncements },
     ai: {
       totalCost: aiUsageAll._sum.cost ?? 0,

@@ -18,7 +18,7 @@ type AdminUser = {
   onboardedAt: string | null;
   effectiveAdmin: boolean;
   _count: {
-    notes: number; sharedNotes: number; threads: number; posts: number;
+    notes: number; threads: number; posts: number;
     mockExams: number; pastPaperAttempts: number; usageRecords: number; schoolResources: number;
   };
 };
@@ -292,7 +292,6 @@ export default function UserManagement() {
               <DetailRow label="Onboarded" value={detailUser.onboardedAt ? new Date(detailUser.onboardedAt).toLocaleString() : 'Not yet'} />
               <hr className="border-gray-100 dark:border-gray-800 my-2" />
               <DetailRow label="Notes" value={detailUser._count.notes} />
-              <DetailRow label="Shared Notes" value={detailUser._count.sharedNotes} />
               <DetailRow label="Threads" value={detailUser._count.threads} />
               <DetailRow label="Posts" value={detailUser._count.posts} />
               <DetailRow label="Mock Exams" value={detailUser._count.mockExams} />

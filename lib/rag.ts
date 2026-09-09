@@ -142,6 +142,13 @@ export type IndexedRow = {
   documentId: string;
   sourceType: string;
   sourceRecordId: string;
+  /**
+   * The finer-grained kind (`notebook-page`, `question-paper`, `mark-scheme`,
+   * …). `sourceType` groups documents by which index path wrote them, which
+   * is not always the label a reader wants: a student's own notebook page is
+   * indexed under `textbook`.
+   */
+  documentType: string | null;
   title: string;
   route: string | null;
   content: string;
@@ -206,6 +213,7 @@ export async function scoreRagMatches(
         d."id" AS "documentId",
         d."sourceType",
         d."sourceRecordId",
+        d."documentType",
         d."title",
         d."route",
         c."content",
@@ -372,6 +380,7 @@ async function retrieveIndexedContext(
           documentId: pair.id,
           sourceType: pair.sourceType,
           sourceRecordId: pair.sourceRecordId,
+          documentType: pair.documentType,
           title: pair.title,
           route: pair.route,
           content: pair.chunks[0].content,

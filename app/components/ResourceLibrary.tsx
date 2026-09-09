@@ -53,7 +53,7 @@ export default function ResourceLibrary() {
             Resource Library
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Discover shared study notes from the community and school resources.
+            Study notes shared on review.ykpao.com, and your school&apos;s own resources.
           </p>
           <div className="mt-3 inline-flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800" role="group" aria-label="Resource scope">
             <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>My courses</button>
