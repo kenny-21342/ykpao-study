@@ -6,13 +6,36 @@ const STATE_PATH = path.join(__dirname, '.auth', 'student.json');
 /**
  * E2E config for the YKPao Study platform.
  *
- * Assumes a dev server is ALREADY running (`PORT=3200 npm run dev`) — these
- * tests drive a real Neon dev database, so they deliberately do not spawn or
- * tear down a server of their own.
+ * These tests drive a real database, so they deliberately do not spawn or tear
+ * down a server of their own — point them at one that is already running.
+ *
+ * `E2E_BASE_URL` is required rather than defaulted. It used to fall back to
+ * `http://localhost:3200`, which meant "whatever database the local dev server
+ * happens to be pointed at" — and for a long time that was the `smart-edu`
+ * Neon project, whose migration history predates the squash to
+ * `00000000000000_init` and carries a failed `add_competition_questions` row.
+ * `prisma migrate deploy` cannot move it forward; it can only be recreated. A
+ * suite that silently runs against a schema that old reports green while
+ * exercising none of the features it was written for, which is worse than
+ * refusing to start.
+ *
+ * Point it at a deployment, or at a local server backed by a Neon branch of
+ * production:
+ *
+ *   E2E_BASE_URL=https://study.busypizza.bond npm run e2e
  *
  * Timeouts are generous because several routes on this app are genuinely slow
- * (see the findings report: /api/onboarding alone can take 65s).
+ * (/api/onboarding alone can take 65s).
  */
+const baseURL = process.env.E2E_BASE_URL;
+if (!baseURL) {
+  throw new Error(
+    'E2E_BASE_URL is required. Point it at a running deployment, e.g.\n' +
+      '  E2E_BASE_URL=https://study.busypizza.bond npm run e2e\n' +
+      'Set E2E_EMAIL and E2E_PASSWORD too — auth.setup.ts signs in with them.',
+  );
+}
+
 export default defineConfig({
   testDir: '.',
   timeout: 180_000,
@@ -22,7 +45,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3200',
+    baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',

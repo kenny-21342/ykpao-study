@@ -22,7 +22,9 @@
     "test:catalogue": "python3 -m unittest discover -s tests/catalogue -p 'test_*.py'",
     "sw:build": "node scripts/build-sw.mjs",
     "icons:build": "node scripts/build-icons.mjs",
-    "storage:sync": "node --experimental-strip-types scripts/storage-sync.mjs"
+    "storage:sync": "node --experimental-strip-types scripts/storage-sync.mjs",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

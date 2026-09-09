@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { pagesInNotebook, purgePageSideEffects } from '@/lib/page-deletion';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import { reportError } from '@/lib/error-reporting';
@@ -140,6 +141,45 @@ export async function POST(req: Request) {
     await reportError(error, { routePath: '/api/notebooks', source: 'route' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create notebook' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/notebooks?notebookId=...
+ *
+ * Notebooks and sections had no delete at all -- in the API or the UI -- so a
+ * notebook created by mistake was permanent. The row cascade to sections and
+ * pages is in the schema; what it cannot do is retire each page's cloud mirror
+ * and its document in the RAG index, so those are cleared first.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const notebookId = new URL(req.url).searchParams.get('notebookId');
+    if (!notebookId) return NextResponse.json({ error: 'notebookId is required' }, { status: 400 });
+
+    // Scoped to the caller: a notebook they do not own is "not found", never
+    // a 403 that confirms it exists.
+    const notebook = await prisma.notebook.findFirst({
+      where: { id: notebookId, userId: user.id },
+      select: { id: true },
+    });
+    if (!notebook) return NextResponse.json({ error: 'Notebook not found' }, { status: 404 });
+
+    const pages = await pagesInNotebook(notebookId, user.id);
+    await prisma.notebook.delete({ where: { id: notebookId } });
+    await purgePageSideEffects(pages);
+
+    return NextResponse.json({ ok: true, deletedPages: pages.length });
+  } catch (error) {
+    console.error('Failed to delete notebook:', error);
+    await reportError(error, { routePath: '/api/notebooks', source: 'route' });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete notebook' },
       { status: 500 }
     );
   }
