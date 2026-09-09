@@ -136,6 +136,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // Uploaded background image
     const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
 
+    // Callers pass this as an inline arrow, so it is a different function on
+    // every one of their renders. Reading it through a ref keeps it out of the
+    // dependency lists below -- otherwise every callback here, and with them
+    // the imperative handle, would be rebuilt on every parent render, and a
+    // parent that reacts to the handle changing would never settle.
+    const onStrokesChangeRef = useRef(onStrokesChange);
+    useEffect(() => {
+      onStrokesChangeRef.current = onStrokesChange;
+    }, [onStrokesChange]);
+
     // -----------------------------------------------------------------------
     // Rendering
     // -----------------------------------------------------------------------
@@ -217,7 +227,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     };
 
     const notifyStrokesChange = () => {
-      onStrokesChange?.({ strokes: strokesRef.current, textBoxes });
+      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes });
     };
 
     const onPointerUp = () => {
@@ -273,13 +283,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         deleteTextBox(id);
         return;
       }
-      onStrokesChange?.({ strokes: strokesRef.current, textBoxes });
+      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes });
     };
 
     const deleteTextBox = (id: string) => {
       setTextBoxes((boxes) => {
         const next = boxes.filter((box) => box.id !== id);
-        onStrokesChange?.({ strokes: strokesRef.current, textBoxes: next });
+        onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next });
         return next;
       });
     };
@@ -297,7 +307,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       } else if (textBoxes.length > 0) {
         setTextBoxes((boxes) => {
           const next = boxes.slice(0, -1);
-          onStrokesChange?.({ strokes: strokesRef.current, textBoxes: next });
+          onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next });
           return next;
         });
       }
@@ -312,7 +322,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       }
     };
 
-    const clearAll = () => {
+    const clearAll = useCallback(() => {
       const hasWork =
         strokesRef.current.length > 0 ||
         textBoxes.length > 0 ||
@@ -329,8 +339,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       setTextBoxes([]);
       setBgImage(null);
       redraw();
-      if (hasWork) onStrokesChange?.({ strokes: [], textBoxes: [] });
-    };
+      if (hasWork) onStrokesChangeRef.current?.({ strokes: [], textBoxes: [] });
+    }, [bgImage, redraw, textBoxes]);
 
     // -----------------------------------------------------------------------
     // Import / Export
@@ -407,6 +417,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // Imperative handle (for parent to access export/clear)
     // -----------------------------------------------------------------------
 
+    // The dependency list is not optional here. Without it the factory reruns
+    // on every render and React reassigns `ref.current` every time -- which,
+    // for a caller passing a callback ref, means a detach/attach pair per
+    // render. A caller that records the handle in state then never converges.
     useImperativeHandle(ref, () => ({
       exportDataURL,
       importDataURL: (data: string) => {
@@ -425,7 +439,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       },
       clear: clearAll,
       isEmpty: () => strokesRef.current.length === 0 && textBoxes.length === 0 && !bgImage,
-    }));
+    }), [bgImage, clearAll, exportDataURL, redraw, textBoxes]);
 
     // -----------------------------------------------------------------------
     // Render
