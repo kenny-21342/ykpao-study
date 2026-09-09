@@ -33,6 +33,17 @@ export type TextBox = {
 export type DrawingCanvasStrokeData = {
   strokes: Stroke[];
   textBoxes: TextBox[];
+  /**
+   * The canvas the coordinates below were drawn on.
+   *
+   * Points are stored in raw canvas pixels, so working drawn on a 760px-wide
+   * desktop canvas used to reappear clipped on a phone. Recording the size
+   * lets `importStrokes` scale it to whatever canvas it is being loaded into.
+   * Optional because rows written before this existed have no size -- those
+   * are imported unscaled, exactly as they were.
+   */
+  width?: number;
+  height?: number;
 };
 
 export type DrawingCanvasHandle = {
@@ -430,16 +441,36 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         };
         img.src = data;
       },
-      exportStrokes: () => ({ strokes: strokesRef.current, textBoxes }),
+      exportStrokes: () => ({ strokes: strokesRef.current, textBoxes, width, height }),
       importStrokes: (data: DrawingCanvasStrokeData) => {
-        strokesRef.current = data.strokes;
+        // Scale to this canvas if the work was drawn on a differently sized
+        // one. Both axes use the same factor: the panel keeps the aspect
+        // ratio, and scaling them independently would shear the drawing.
+        const scale = data.width && data.width > 0 ? width / data.width : 1;
+        strokesRef.current =
+          scale === 1
+            ? data.strokes
+            : data.strokes.map((stroke) => ({
+                ...stroke,
+                size: stroke.size * scale,
+                points: stroke.points.map(([x, y, pressure]) => [x * scale, y * scale, pressure] as Point),
+              }));
         redoStackRef.current = [];
-        setTextBoxes(data.textBoxes);
+        setTextBoxes(
+          scale === 1
+            ? data.textBoxes
+            : data.textBoxes.map((box) => ({
+                ...box,
+                x: box.x * scale,
+                y: box.y * scale,
+                fontSize: box.fontSize * scale,
+              })),
+        );
         redraw();
       },
       clear: clearAll,
       isEmpty: () => strokesRef.current.length === 0 && textBoxes.length === 0 && !bgImage,
-    }), [bgImage, clearAll, exportDataURL, redraw, textBoxes]);
+    }), [bgImage, clearAll, exportDataURL, height, redraw, textBoxes, width]);
 
     // -----------------------------------------------------------------------
     // Render

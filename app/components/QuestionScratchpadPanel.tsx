@@ -46,6 +46,31 @@ export default function QuestionScratchpadPanel({
   // which is an unbounded update loop).
   const [canvasEpoch, setCanvasEpoch] = useState(0);
 
+  // The canvas is a fixed pixel surface -- `width` is both its CSS width and
+  // its coordinate space -- so a hard 760 was simply cut off on a phone, and
+  // the right half of the drawing area could not be reached at all. Measure
+  // the space we actually have and never exceed it. Strokes carry the size
+  // they were drawn at, so `importStrokes` rescales work moved between a
+  // desktop and a phone rather than clipping it.
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  // Null until measured, and the canvas does not mount until then. It has to
+  // be born at its final size: `importStrokes` scales the saved work to the
+  // canvas it is loading into, and it only imports once, so a canvas that
+  // mounted at 760 and shrank to 340 a tick later would hold strokes scaled
+  // for a surface twice as wide. (A viewport resized mid-session is the same
+  // problem and is not solved here -- the drawing rescales on the next load.)
+  const [canvasWidth, setCanvasWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const measure = () => setCanvasWidth(Math.max(240, Math.min(width, frame.clientWidth)));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [open, width]);
+
   const attachCanvas = useCallback((handle: DrawingCanvasHandle | null) => {
     canvasRef.current = handle;
     setCanvasEpoch((value) => value + 1);
@@ -88,16 +113,16 @@ export default function QuestionScratchpadPanel({
           {isDirty ? 'Saving…' : 'Working saved automatically'}
         </span>
       )}
-      {open && (
-        <div className="mt-2">
+      <div ref={frameRef} className="mt-2">
+        {open && canvasWidth !== null && (
           <DrawingCanvas
             ref={attachCanvas}
-            width={width}
-            height={height}
+            width={canvasWidth}
+            height={Math.round(height * (canvasWidth / width))}
             onStrokesChange={onStrokesChange}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
