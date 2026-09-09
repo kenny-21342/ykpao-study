@@ -351,7 +351,11 @@ export async function POST(
         const answerImageUrl: string | null = imageUrl && imageUrl.startsWith('/') ? imageUrl : null;
         const requiresDiagram = Boolean(item.question?.hasDiagram || item.bankQuestion?.requiresDiagram);
         const useVisionGrading =
-          decideGradingMode({ requiresDiagram, answerImageUrl }) === 'vision' &&
+          decideGradingMode({
+            requiresDiagram,
+            answerImageUrl,
+            hasQuestionText: Boolean(normalized.content.trim()),
+          }) === 'vision' &&
           Boolean(answerImageUrl) &&
           visionAccess.ok;
         if (imageUrl && visionAccess.ok && !useVisionGrading) {
@@ -482,6 +486,7 @@ export async function POST(
                 const outcome = await runVisionGrading({
                   imageUrl: answerImageUrl,
                   questionText: questionContent,
+                  studentText: answer,
                   markscheme,
                   totalMarks: max,
                   credential: visionAccess.credential,

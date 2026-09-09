@@ -19,6 +19,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
+import { plainTextPreview } from '@/lib/latex';
 
 type SearchResult = {
   id: string;
@@ -147,7 +148,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
                 <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{result.title}</span>
               </div>
               {result.snippet && (
-                <p className="mt-0.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{result.snippet}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{plainTextPreview(result.snippet)}</p>
               )}
             </a>
           ))}

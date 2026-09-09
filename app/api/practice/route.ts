@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
     const gradingMode = decideGradingMode({
       requiresDiagram: Boolean(question.hasDiagram),
       answerImageUrl,
+      hasQuestionText: Boolean(question.content?.trim()),
     });
     const useVisionGrading = gradingMode === 'vision' && Boolean(answerImageUrl) && visionAccess?.ok;
 
@@ -149,6 +150,7 @@ export async function POST(req: NextRequest) {
         const outcome = await runVisionGrading({
           imageUrl: answerImageUrl,
           questionText: question.content,
+          studentText: String(answer),
           markscheme,
           totalMarks: question.marks,
           credential: visionAccess.credential,

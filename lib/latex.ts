@@ -253,3 +253,30 @@ export function renderMathTextNodes(root: HTMLElement) {
     textNode.replaceWith(span);
   }
 }
+
+/**
+ * Reduce a markdown + LaTeX source string to readable plain text.
+ *
+ * For places that show a one- or two-line clamped preview of stored content --
+ * the flashcard list, for instance -- where rendering real KaTeX would break
+ * the clamp but showing the raw source spills `$$\begin{array}{c}` and `**B**`
+ * at the reader. Math spans collapse to their bare LaTeX (still not prose, but
+ * `\frac{a}{b}` beats `$$\frac{a}{b}$$`) and markdown emphasis, code and
+ * heading markers are dropped.
+ */
+export function plainTextPreview(src: string): string {
+  const spans = findMathSpans(src);
+  let out = '';
+  let last = 0;
+  for (const span of spans) {
+    out += src.slice(last, span.start) + span.latex;
+    last = span.end;
+  }
+  out += src.slice(last);
+
+  return out
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*\*|\*\*|\*|__|_|`)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

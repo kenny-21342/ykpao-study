@@ -381,12 +381,24 @@ export async function transcribeHandwriting(
 export async function gradeWithVision(params: {
   imageUrl: string;
   questionText: string;
+  /** The typed answer that accompanies the image, if the student wrote one. */
+  studentText?: string | null;
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
 }): Promise<GradeResult | null> {
-  const { imageUrl, questionText, markscheme, totalMarks, credential } = params;
+  const { imageUrl, questionText, studentText, markscheme, totalMarks, credential } = params;
   if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
+
+  // Grading against an empty question is grading against nothing: the model
+  // reports it cannot tell what was asked and returns zero, which the caller
+  // then persists as a real mark. Callers gate on this too
+  // (`decideGradingMode`); refuse here as well so no future caller can route
+  // an untranscribed question in by accident.
+  if (!questionText.trim()) {
+    console.warn("gradeWithVision: refusing to grade with no question text", imageUrl);
+    return null;
+  }
 
   const resolved = await resolveImage(imageUrl);
   if (!resolved) {
@@ -394,12 +406,20 @@ export async function gradeWithVision(params: {
     return null;
   }
 
-  const userText = `Grade the student's answer shown in this image against the markscheme.
+  const typed = studentText?.trim();
+  const userText = `Grade the student's answer against the markscheme.
 
 Question:
 ${questionText}
 
-${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks: ${totalMarks}\n\n` : ''}The student's answer is the image attached to this message.`;
+${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks: ${totalMarks}\n\n` : ''}${
+    typed
+      ? `The student answered in two parts, and both are their answer: the typed text below, and the attached image showing their diagram or working. Mark them together as one response -- credit a point made in either.
+
+Student's typed answer:
+${typed}`
+      : "The student's answer is the image attached to this message."
+  }`;
 
   const retryOpts: RetryOpts = {
     maxRetries: credential.source === "user" ? 2 : 5,
