@@ -80,6 +80,14 @@ export default function QuestionScratchpadPanel({
         {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="Saving…" />}
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
+      {/* There is no Save button here -- working is autosaved on a debounce --
+          so say so in words. Without it a student has no way to know their
+          working is being kept. */}
+      {open && (
+        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+          {isDirty ? 'Saving…' : 'Working saved automatically'}
+        </span>
+      )}
       {open && (
         <div className="mt-2">
           <DrawingCanvas

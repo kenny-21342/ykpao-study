@@ -7,10 +7,17 @@ const NUL = String.fromCharCode(0);
 
 /**
  * Render a single LaTeX string to HTML via KaTeX.
+ *
+ * KaTeX's default output is two subtrees: the styled spans a sighted reader
+ * sees (marked `aria-hidden`) and a MathML twin that assistive tech reads.
+ * Asking for `output: 'html'` emitted only the first, so every formula on the
+ * platform was silent to a screen reader -- the visible half is hidden from
+ * them by design, and there was nothing behind it. Take the default; the
+ * sanitiser's allow-list already covers the MathML tags.
  */
 export function renderTeX(latex: string, displayMode = false): string {
   try {
-    return katex.renderToString(latex, { displayMode, throwOnError: false, output: 'html' });
+    return katex.renderToString(latex, { displayMode, throwOnError: false });
   } catch {
     return `<span style="color:#dc2626">[invalid LaTeX: ${escapeHtml(latex)}]</span>`;
   }

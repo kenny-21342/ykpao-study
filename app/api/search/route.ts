@@ -28,6 +28,30 @@ type SearchResult = {
   topic?: string | null;
 };
 
+/**
+ * Mark-scheme chunks are indexed as the raw `{"marking_points": [...]}` blob
+ * the extractor produced, so a snippet taken straight off one reads as JSON
+ * rather than as the marking guidance a student is looking for. Flatten it
+ * back to prose for display; anything that isn't that shape is returned
+ * untouched.
+ */
+function readableChunk(content: string): string {
+  const trimmed = content.trimStart();
+  if (!trimmed.startsWith('{') || !trimmed.includes('marking_points')) return content;
+  try {
+    const parsed = JSON.parse(trimmed) as { marking_points?: unknown };
+    if (!Array.isArray(parsed.marking_points)) return content;
+    return parsed.marking_points
+      .filter((point): point is string => typeof point === 'string')
+      .join(' ')
+      .trim() || content;
+  } catch {
+    // A chunk boundary can cut the JSON mid-object, in which case the raw
+    // text is still the most faithful thing to show.
+    return content;
+  }
+}
+
 /** Maps a `rag_documents.sourceType` value onto this route's own result type. */
 function ragResultType(sourceType: string): SearchResult['type'] {
   if (sourceType === 'question' || sourceType === 'bank-question') return 'question';
@@ -206,17 +230,27 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  // RAG-backed results: announcements, discussion threads, and the past-paper
-  // catalogue have no direct `contains`-filter query above, so this is the
-  // only path that surfaces them. Restricted to those source types here
-  // (rather than also re-surfacing notes/resources/questions the direct
-  // queries above already cover) to avoid showing the same document twice
-  // under two different ids.
+  // RAG-backed results: announcements, discussion threads, the syllabus
+  // catalogue, and the legacy `past_paper_questions` corpus have no direct
+  // `contains`-filter query above, so this is the only path that surfaces
+  // them.
+  //
+  // The past-paper half is the bulk of it: 12,398 rows carrying real text,
+  // against a `bank_questions.bodyMd` that is empty corpus-wide because the
+  // bank was ingested crop-first. Excluding `question`/`markscheme` here
+  // therefore did not "avoid a duplicate" -- it made the largest searchable
+  // body of text on the platform unreachable from global search entirely.
+  //
+  // The duplicate the exclusion was reaching for is real but narrower: the
+  // indexer writes `bank-question:`/`bank-markscheme:` documents from the same
+  // rows the direct query reads, so those (and only those) are filtered out by
+  // document key rather than by source type.
   const enrolledSubjectCodes = courseScope.effectiveScope === 'enrolled'
     ? (courseScope.subjectCodes ?? []).map((code) => code.toLowerCase())
     : [];
   const ragExtraFilters: Prisma.Sql[] = [
-    Prisma.sql`d."sourceType" IN ('announcement', 'discussion', 'syllabus')`,
+    Prisma.sql`d."sourceType" IN ('announcement', 'discussion', 'syllabus', 'question', 'markscheme')`,
+    Prisma.sql`d."documentKey" NOT LIKE 'bank-question:%' AND d."documentKey" NOT LIKE 'bank-markscheme:%'`,
     // A syllabus/past-paper-catalogue document carries a subjectCode; an
     // announcement or discussion thread usually doesn't (they aren't
     // subject-scoped), so only the ones that DO set it get filtered.
@@ -241,7 +275,7 @@ export async function GET(req: NextRequest) {
       id: `rag-${row.documentId}`,
       type: ragResultType(row.sourceType),
       title: row.title,
-      snippet: plainText(row.content, 240),
+      snippet: plainText(readableChunk(row.content), 240),
       url: row.route ?? '/?tab=materials',
     }));
 

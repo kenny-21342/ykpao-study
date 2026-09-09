@@ -42,7 +42,7 @@ const ALLOWED_ATTR = [
   'colspan', 'rowspan', 'start', 'type',
   // KaTeX / accessibility
   'aria-hidden', 'aria-label', 'role',
-  'mathvariant', 'displaystyle', 'scriptlevel', 'encoding', 'stretchy',
+  'mathvariant', 'displaystyle', 'scriptlevel', 'encoding', 'stretchy', 'xmlns',
   'data-latex',
 ];
 

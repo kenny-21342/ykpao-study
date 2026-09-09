@@ -538,13 +538,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             className="hidden"
           />
 
-          {/* Save */}
-          <button
-            onClick={handleSave}
-            className="ml-auto px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-md hover:shadow-sm transition-all"
-          >
-            Save Drawing
-          </button>
+          {/* Save -- only when a caller actually wants one. The scratchpad
+              autosaves on a debounce and the note drawing block owns its own
+              Save button below the canvas; rendering this unconditionally gave
+              both a prominent green button that did nothing at all. */}
+          {onSave && (
+            <button
+              onClick={handleSave}
+              className="ml-auto px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-md hover:shadow-sm transition-all"
+            >
+              Save Drawing
+            </button>
+          )}
         </div>
 
         {/* Canvas */}
