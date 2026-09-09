@@ -395,12 +395,19 @@ async function generatePlan(userId: string) {
   }
 
   await prisma.$transaction([
+    // Everything generated from today onward, not just what falls inside the
+    // window being rebuilt. `planWindow` shortens when an exam date is cleared
+    // or moves nearer -- 21 days back down to 7 -- and bounding the delete by
+    // the *new* window orphaned every generated task beyond it. They stayed
+    // pending for ever, and the two-week plan went on listing work scheduled
+    // for an exam that was no longer there. Past-dated tasks are history and
+    // are left alone; `source: 'auto-plan'` keeps manual tasks untouched.
     prisma.studyTask.deleteMany({
       where: {
         userId,
         source: 'auto-plan',
         status: 'pending',
-        dueAt: { gte: planStart, lte: endOfDay(addDays(planStart, window.days - 1)) },
+        dueAt: { gte: planStart },
       },
     }),
     prisma.studyTask.createMany({ data: tasks }),
