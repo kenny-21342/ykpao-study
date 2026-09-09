@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { PenTool, ChevronDown, ChevronUp } from 'lucide-react';
 import type { DrawingCanvasHandle, DrawingCanvasStrokeData } from './DrawingCanvas';
@@ -36,9 +36,20 @@ export default function QuestionScratchpadPanel({
   defaultOpen = false,
 }: QuestionScratchpadPanelProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const [canvasHandle, setCanvasHandle] = useState<DrawingCanvasHandle | null>(null);
   const canvasRef = useRef<DrawingCanvasHandle | null>(null);
   const importedRef = useRef(false);
+  // The ref itself can't drive the import effect -- writing a ref never
+  // re-renders. This counter does, and only when the canvas actually mounts
+  // or unmounts, because `attachCanvas` has a stable identity (an inline
+  // `ref={(h) => setState(h)}` would be re-created every render, so React
+  // would detach/re-attach -- and therefore set state -- on every render,
+  // which is an unbounded update loop).
+  const [canvasEpoch, setCanvasEpoch] = useState(0);
+
+  const attachCanvas = useCallback((handle: DrawingCanvasHandle | null) => {
+    canvasRef.current = handle;
+    setCanvasEpoch((value) => value + 1);
+  }, []);
 
   const { strokes, loaded, isDirty, onStrokesChange } = useQuestionScratchpad(
     questionRef,
@@ -50,11 +61,12 @@ export default function QuestionScratchpadPanel({
   // effect run (e.g. once `loaded` flips true, or once the dynamically
   // imported canvas mounts) would clobber in-progress work.
   useEffect(() => {
-    if (loaded && strokes && !importedRef.current && canvasHandle) {
+    const canvas = canvasRef.current;
+    if (loaded && strokes && !importedRef.current && canvas) {
       importedRef.current = true;
-      canvasHandle.importStrokes(strokes as DrawingCanvasStrokeData);
+      canvas.importStrokes(strokes as DrawingCanvasStrokeData);
     }
-  }, [loaded, strokes, canvasHandle]);
+  }, [loaded, strokes, canvasEpoch]);
 
   return (
     <div className={className}>
@@ -71,10 +83,7 @@ export default function QuestionScratchpadPanel({
       {open && (
         <div className="mt-2">
           <DrawingCanvas
-            ref={(handle) => {
-              canvasRef.current = handle;
-              setCanvasHandle(handle);
-            }}
+            ref={attachCanvas}
             width={width}
             height={height}
             onStrokesChange={onStrokesChange}

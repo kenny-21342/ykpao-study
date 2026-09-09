@@ -16,7 +16,7 @@
  * still leaves something visible after sanitizing.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
@@ -46,15 +46,28 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
   const [loadingStrokes, setLoadingStrokes] = useState(false);
   const [saving, setSaving] = useState(false);
   const [strokes, setStrokes] = useState<DrawingCanvasStrokeData | null>(null);
-  const [canvasHandle, setCanvasHandle] = useState<DrawingCanvasHandle | null>(null);
+  const canvasRef = useRef<DrawingCanvasHandle | null>(null);
   const importedRef = useRef(false);
+  // The ref itself can't drive the import effect -- writing a ref never
+  // re-renders. This counter does, and only when the canvas actually mounts
+  // or unmounts, because `attachCanvas` has a stable identity (an inline
+  // `ref={(h) => setState(h)}` would be re-created every render, so React
+  // would detach/re-attach -- and therefore set state -- on every render,
+  // which is an unbounded update loop).
+  const [canvasEpoch, setCanvasEpoch] = useState(0);
+
+  const attachCanvas = useCallback((handle: DrawingCanvasHandle | null) => {
+    canvasRef.current = handle;
+    setCanvasEpoch((value) => value + 1);
+  }, []);
 
   useEffect(() => {
-    if (editing && strokes && !importedRef.current && canvasHandle) {
+    const canvas = canvasRef.current;
+    if (editing && strokes && !importedRef.current && canvas) {
       importedRef.current = true;
-      canvasHandle.importStrokes(strokes);
+      canvas.importStrokes(strokes);
     }
-  }, [editing, strokes, canvasHandle]);
+  }, [editing, strokes, canvasEpoch]);
 
   const openEditor = async () => {
     if (!editable || !drawingId) return;
@@ -73,7 +86,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
   };
 
   const save = async () => {
-    const handle = canvasHandle;
+    const handle = canvasRef.current;
     if (!handle || !drawingId) return;
     const dataUrl = handle.exportDataURL();
     if (!dataUrl) return;
@@ -114,7 +127,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
       <NodeViewWrapper className="drawing-block-editing" contentEditable={false}>
         <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
           <DrawingCanvas
-            ref={(handle) => setCanvasHandle(handle)}
+            ref={attachCanvas}
             width={width}
             height={height}
           />
