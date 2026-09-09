@@ -56,7 +56,12 @@ export default function AdminDashboard() {
         <ChartCard title="User Signups (14 days)">
           <div className="flex items-end gap-1.5 h-40">
             {stats.charts.signupsByDay.map((s) => (
-              <div key={s.date} className="flex-1 flex flex-col items-center gap-1 group">
+              // `h-full` is load-bearing, the same way it is on /usage: the bar
+              // below sets a percentage height, and a percentage against an
+              // auto-height parent resolves to nothing. The `h-40` is on the
+              // row, not the column, so every bar fell back to its 4px minimum
+              // and a fortnight of signups drew as a row of ticks.
+              <div key={s.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1 group">
                 <div
                   className="w-full bg-indigo-500 dark:bg-indigo-400 rounded-t hover:bg-indigo-600 transition-colors"
                   style={{ height: `${(s.count / maxSignup) * 100}%`, minHeight: s.count > 0 ? '4px' : '0' }}
