@@ -73,7 +73,7 @@ const IMAGE_MIME_BY_EXT: Record<string, string> = {
   ".gif": "image/gif",
 };
 
-type RetryOpts = { maxRetries?: number; delays?: number[]; budgetMs?: number };
+type RetryOpts = { maxRetries?: number; delays?: number[]; budgetMs?: number; requestTimeoutMs?: number };
 
 const DEFAULT_DELAYS = [2, 5, 12, 20, 30];
 
@@ -90,6 +90,24 @@ const DEFAULT_DELAYS = [2, 5, 12, 20, 30];
  */
 const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
 
+/**
+ * Grading is not OCR, and must not inherit OCR's deadline.
+ *
+ * The budget above is deliberately short because a failed transcription costs
+ * the caller nothing -- it falls back to grading the typed answer. A failed
+ * *grade* costs the student their result. And it is a much longer call: the
+ * model writes a whole JSON verdict, with strengths, weaknesses, an
+ * explanation and a model answer, where OCR writes back a transcript.
+ * Measured against the production model, a single grading attempt runs past
+ * the 15s per-attempt ceiling, so every attempt aborted, the retries spent the
+ * 20s budget, and the caller got a silent null.
+ *
+ * Both submit routes that grade with vision declare `maxDuration = 60`, which
+ * is the real ceiling this has to sit under.
+ */
+const VISION_GRADE_BUDGET_MS = Number(process.env.VISION_GRADE_BUDGET_MS || 45_000);
+const VISION_GRADE_REQUEST_TIMEOUT_MS = 40_000;
+
 /** Per-request timeout; never longer than what is left of the budget. */
 const VISION_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -101,10 +119,10 @@ async function sleep(ms: number) {
  * How long this attempt may take, and whether it is worth starting at all.
  * Returns null once the budget is spent.
  */
-function attemptTimeout(deadline: number): number | null {
+function attemptTimeout(deadline: number, ceiling = VISION_REQUEST_TIMEOUT_MS): number | null {
   const remaining = deadline - Date.now();
   if (remaining < 1_000) return null;
-  return Math.min(VISION_REQUEST_TIMEOUT_MS, remaining);
+  return Math.min(ceiling, remaining);
 }
 
 /** Back off, but never past the deadline. Returns false if there is no time left. */
@@ -201,8 +219,14 @@ async function callOpenAiCompatible(
   const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const timeout = attemptTimeout(deadline);
-    if (timeout === null) return null;
+    const timeout = attemptTimeout(deadline, opts.requestTimeoutMs);
+    if (timeout === null) {
+      // Every `return null` below is indistinguishable to the caller, and a
+      // caller that treats null as "no result" has no way to tell a timeout
+      // from a rejected key. Say which one it was.
+      console.warn("vision: budget exhausted before attempt", attempt + 1, credential.model);
+      return null;
+    }
     try {
       const res = await fetch(credential.endpoint, {
         method: "POST",
@@ -215,11 +239,13 @@ async function callOpenAiCompatible(
       });
 
       if (res.status === 429 || res.status >= 500) {
+        console.warn("vision: retryable status", res.status, "attempt", attempt + 1);
         if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
         continue;
       }
 
       if (!res.ok) {
+        console.warn("vision: request rejected", res.status, credential.model);
         return null;
       }
 
@@ -227,12 +253,17 @@ async function callOpenAiCompatible(
         choices?: Array<{ message?: { content?: string } }>;
       };
       const content = data.choices?.[0]?.message?.content;
-      if (!content || !content.trim()) return null;
+      if (!content || !content.trim()) {
+        console.warn("vision: empty completion", credential.model);
+        return null;
+      }
       return content.trim();
-    } catch {
+    } catch (err) {
+      console.warn("vision: attempt", attempt + 1, "failed:", err instanceof Error ? err.message : err);
       if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
     }
   }
+  console.warn("vision: exhausted", maxRetries, "attempts", credential.model);
   return null;
 }
 
@@ -358,7 +389,10 @@ export async function gradeWithVision(params: {
   if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
 
   const resolved = await resolveImage(imageUrl);
-  if (!resolved) return null;
+  if (!resolved) {
+    console.warn("gradeWithVision: could not resolve image", imageUrl);
+    return null;
+  }
 
   const userText = `Grade the student's answer shown in this image against the markscheme.
 
@@ -369,6 +403,8 @@ ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks
 
   const retryOpts: RetryOpts = {
     maxRetries: credential.source === "user" ? 2 : 5,
+    budgetMs: VISION_GRADE_BUDGET_MS,
+    requestTimeoutMs: VISION_GRADE_REQUEST_TIMEOUT_MS,
   };
   const raw =
     credential.provider === "gemini"
@@ -381,11 +417,14 @@ ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks
   } catch {
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
-    if (start === -1 || end === -1) return null;
-    try {
-      return JSON.parse(raw.slice(start, end + 1)) as GradeResult;
-    } catch {
-      return null;
+    if (start !== -1 && end !== -1) {
+      try {
+        return JSON.parse(raw.slice(start, end + 1)) as GradeResult;
+      } catch {
+        // fall through to the warning below
+      }
     }
+    console.warn("gradeWithVision: response was not JSON:", raw.slice(0, 200));
+    return null;
   }
 }

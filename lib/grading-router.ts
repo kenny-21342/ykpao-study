@@ -25,6 +25,13 @@ export function decideGradingMode(params: {
  * path actually graded the attempt. Returns {} (ungraded) rather than
  * throwing, matching the text path's failure behavior -- an attempt is
  * still worth persisting even when grading itself fails.
+ *
+ * `gradeWithVision` signals failure by returning null, which flattening to {}
+ * made indistinguishable from "graded, no marks". The attempt was then written
+ * with score 0 and every qualitative field empty, and -- because the caller
+ * derived its grading status from whether a markscheme existed rather than
+ * from whether grading produced anything -- stamped `official`. A student saw
+ * a confident zero with no explanation and no notice. So say which happened.
  */
 export async function runVisionGrading(params: {
   imageUrl: string;
@@ -32,7 +39,7 @@ export async function runVisionGrading(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
-}): Promise<Partial<GradeResult>> {
+}): Promise<{ graded: true; grade: Partial<GradeResult> } | { graded: false }> {
   const result = await gradeWithVision(params);
-  return result ?? {};
+  return result ? { graded: true, grade: result } : { graded: false };
 }

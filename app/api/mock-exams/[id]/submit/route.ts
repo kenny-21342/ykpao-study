@@ -472,14 +472,23 @@ export async function POST(
         const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
 
         try {
-          const grade = useVisionGrading && answerImageUrl && visionAccess.ok
-            ? await runVisionGrading({
-                imageUrl: answerImageUrl,
-                questionText: questionContent,
-                markscheme,
-                totalMarks: max,
-                credential: visionAccess.credential,
-              })
+          // A vision call that comes back with nothing graded nothing. Left as
+          // an empty result it became score 0 stamped `official` below -- a
+          // confident zero with no explanation. Throwing routes it into the
+          // catch, which already persists the answer as `ungraded` and tells
+          // the student their work was saved.
+          const grade: Partial<GradeResult> = useVisionGrading && answerImageUrl && visionAccess.ok
+            ? await (async () => {
+                const outcome = await runVisionGrading({
+                  imageUrl: answerImageUrl,
+                  questionText: questionContent,
+                  markscheme,
+                  totalMarks: max,
+                  credential: visionAccess.credential,
+                });
+                if (!outcome.graded) throw new Error('Vision grading returned no result');
+                return outcome.grade;
+              })()
             : await chatJSON<GradeResult>(
             [
               { role: 'system', content: SYSTEM_PROMPTS.grader },

@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
     let grade: Partial<GradeResult> = {};
     if (useVisionGrading && answerImageUrl && visionAccess?.ok) {
       try {
-        grade = await runVisionGrading({
+        const outcome = await runVisionGrading({
           imageUrl: answerImageUrl,
           questionText: question.content,
           markscheme,
@@ -155,9 +155,18 @@ export async function POST(req: NextRequest) {
         });
         await recordUsage({
           userId: user.id,
-          feature: 'practice-grade-vision',
+          feature: outcome.graded ? 'practice-grade-vision' : 'practice-grade-vision:error',
           model: visionAccess.credential.model,
         });
+        if (outcome.graded) {
+          grade = outcome.grade;
+        } else {
+          // A vision call that comes back with nothing is a failure, not a
+          // zero. Saying so keeps the attempt out of `official` below.
+          aiNotices.push(
+            'The AI marker could not read your diagram this time, so this attempt is unscored. Your working has been saved — try submitting again.',
+          );
+        }
       } catch (err) {
         console.error('Vision grading failed:', err);
         await recordUsage({
@@ -213,7 +222,11 @@ ${gradedAnswer}`;
     }
 
     const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
-    const gradingStatus = markscheme ? 'official' : Object.keys(grade).length > 0 ? 'provisional' : 'ungraded';
+    // Order matters: a markscheme makes a grade *official*, it does not make
+    // an ungraded attempt graded. Checking it first stamped a failed grading
+    // call as an authoritative zero.
+    const graded = Object.keys(grade).length > 0;
+    const gradingStatus = !graded ? 'ungraded' : markscheme ? 'official' : 'provisional';
     const max = question.marks || grade.maxScore || 1;
     const rawScore = Number(grade.score) || 0;
     const score = gradingStatus === 'ungraded' ? null : Math.max(0, Math.min(max, rawScore));
