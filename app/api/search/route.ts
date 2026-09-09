@@ -46,9 +46,15 @@ function readableChunk(content: string): string {
       .join(' ')
       .trim() || content;
   } catch {
-    // A chunk boundary can cut the JSON mid-object, in which case the raw
-    // text is still the most faithful thing to show.
-    return content;
+    // A chunk boundary routinely cuts the JSON mid-object, so parsing fails
+    // for exactly the chunks a search is most likely to return. Strip the
+    // scaffolding textually instead of showing a student a JSON blob.
+    return trimmed
+      .replace(/^\{\s*"marking_points"\s*:\s*\[/, '')
+      .replace(/"\s*,\s*"/g, ' ')
+      .replace(/^"|"\s*\]?\s*\}?\s*$/g, '')
+      .replace(/\\"/g, '"')
+      .trim() || content;
   }
 }
 
@@ -263,13 +269,32 @@ export async function GET(req: NextRequest) {
     extraFilters: ragExtraFilters,
     limit: 30,
   });
+  // Key on title as well as document id. The past-paper corpus stores a
+  // question's plain text and its LaTeX rendering as separate rows, which
+  // index as separate documents under the same human-readable title -- so
+  // de-duplicating by id alone showed a student the same mark scheme twice,
+  // once with `$pV$` and once with `pV`.
   const ragByDocument = new Map<string, (typeof ragRows)[number]>();
   for (const row of ragRows) {
-    const existing = ragByDocument.get(row.documentId);
-    if (!existing || row.rank > existing.rank) ragByDocument.set(row.documentId, row);
+    const key = `${row.sourceType}:${row.title}`;
+    const existing = ragByDocument.get(key);
+    if (!existing || row.rank > existing.rank) ragByDocument.set(key, row);
   }
+  // Mark schemes are longer and denser than the questions they mark, so they
+  // out-rank them almost every time; taking the top 6 outright filled the
+  // whole RAG block with mark schemes and pushed the questions themselves,
+  // and any announcement or discussion, off the end. Cap each type so the
+  // block stays a cross-section of what matched.
+  const RAG_PER_TYPE_CAP = 3;
+  const ragTypeCounts = new Map<string, number>();
   const ragResults = [...ragByDocument.values()]
     .sort((a, b) => b.rank - a.rank)
+    .filter((row) => {
+      const seen = ragTypeCounts.get(row.sourceType) ?? 0;
+      if (seen >= RAG_PER_TYPE_CAP) return false;
+      ragTypeCounts.set(row.sourceType, seen + 1);
+      return true;
+    })
     .slice(0, 6)
     .map((row) => ({
       id: `rag-${row.documentId}`,
