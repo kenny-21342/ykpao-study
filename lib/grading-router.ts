@@ -1,4 +1,4 @@
-import { gradeWithVision } from './vision';
+import { gradeWithVision } from './vision.ts';
 import type { VisionCredential } from './ai-credentials';
 import type { GradeResult } from '@/types/ai';
 
