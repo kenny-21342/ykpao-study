@@ -120,7 +120,25 @@ const IMAGE_MIME_BY_EXT: Record<string, string> = {
   ".gif": "image/gif",
 };
 
-type RetryOpts = { maxRetries?: number; delays?: number[]; budgetMs?: number; requestTimeoutMs?: number };
+type RetryOpts = {
+  maxRetries?: number;
+  delays?: number[];
+  budgetMs?: number;
+  requestTimeoutMs?: number;
+  /**
+   * Output ceiling for the call.
+   *
+   * OCR writes back a transcript and 2048 is ample. A grading verdict is a
+   * whole JSON object -- score, strengths, weaknesses, an explanation and a
+   * model answer -- and once the call was given enough time to actually
+   * finish, the model started writing past 2048 and the response came back
+   * cut off mid-object. It parsed as "not JSON", which read like a bad model
+   * rather than a ceiling we set ourselves.
+   */
+  maxTokens?: number;
+};
+
+const DEFAULT_MAX_TOKENS = 2048;
 
 const DEFAULT_DELAYS = [2, 5, 12, 20, 30];
 
@@ -164,6 +182,16 @@ const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
  * it was wrong for was practice -- at 40s per attempt every vision grade of a
  * diagram timed out and the student's attempt saved as unscored.
  */
+/**
+ * A verdict is longer than a transcript, and gets a ceiling to match.
+ *
+ * Measured on a real submission once the call had time to finish: the model
+ * wrote a full JSON object with several weaknesses and a worked model answer
+ * and ran past 2048 tokens, so the response arrived cut off mid-object and
+ * failed to parse. The grade was paid for and thrown away.
+ */
+const VISION_GRADE_MAX_TOKENS = 4096;
+
 const VISION_GRADE_BUDGET_MS = Number(process.env.VISION_GRADE_BUDGET_MS || 45_000);
 const VISION_GRADE_REQUEST_TIMEOUT_MS = 40_000;
 
@@ -374,7 +402,7 @@ async function callOpenAiCompatible(
       },
     ],
     temperature: 0.1,
-    max_tokens: 2048,
+    max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
   };
 
   const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
@@ -411,13 +439,24 @@ async function callOpenAiCompatible(
       }
 
       const data = (await res.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
-      const content = data.choices?.[0]?.message?.content;
+      const choice = data.choices?.[0];
+      const content = choice?.message?.content;
       if (!content || !content.trim()) {
         console.warn("vision: empty completion", credential.model);
         return null;
+      }
+      // Say so when we cut the model off ourselves. A verdict truncated at the
+      // token ceiling arrives as unparseable JSON, and blaming the model for
+      // that sends the next reader looking in the wrong place.
+      if (choice?.finish_reason === "length") {
+        console.warn(
+          "vision: completion hit the output ceiling and was truncated",
+          credential.model,
+          payload.max_tokens,
+        );
       }
       return { content: content.trim(), usage: readOpenAiUsage(data.usage) };
     } catch (err) {
@@ -467,7 +506,7 @@ async function callGemini(
     systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 2048,
+      maxOutputTokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
     },
   };
 
@@ -608,6 +647,7 @@ ${typed}`
     maxRetries: credential.source === "user" ? 2 : 5,
     budgetMs: params.budgetMs ?? VISION_GRADE_BUDGET_MS,
     requestTimeoutMs: params.requestTimeoutMs ?? VISION_GRADE_REQUEST_TIMEOUT_MS,
+    maxTokens: VISION_GRADE_MAX_TOKENS,
   };
   const result =
     credential.provider === "gemini"
