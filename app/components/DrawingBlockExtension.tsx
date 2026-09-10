@@ -48,6 +48,14 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
   const [strokes, setStrokes] = useState<DrawingCanvasStrokeData | null>(null);
   const canvasRef = useRef<DrawingCanvasHandle | null>(null);
   const importedRef = useRef(false);
+  // A note drawing is 760px wide by default, which does not fit a phone. The
+  // canvas is mounted at whatever the frame can actually show and the strokes
+  // are rescaled into it on import (DrawingCanvas records the size it was
+  // drawn at). `width`/`height` stay the node's canonical size throughout --
+  // an edit made on a phone must not shrink the drawing for everyone else --
+  // so the save below rasterises back up to it.
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const [canvasWidth, setCanvasWidth] = useState<number | null>(null);
   // The ref itself can't drive the import effect -- writing a ref never
   // re-renders. This counter does, and only when the canvas actually mounts
   // or unmounts, because `attachCanvas` has a stable identity (an inline
@@ -60,6 +68,18 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
     canvasRef.current = handle;
     setCanvasEpoch((value) => value + 1);
   }, []);
+
+  useEffect(() => {
+    if (!editing) return;
+    const frame = frameRef.current;
+    if (!frame) return;
+    const measure = () => setCanvasWidth(Math.max(240, Math.min(width, frame.clientWidth)));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [editing, width]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,8 +107,11 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
 
   const save = async () => {
     const handle = canvasRef.current;
-    if (!handle || !drawingId) return;
-    const dataUrl = handle.exportDataURL();
+    if (!handle || !drawingId || canvasWidth === null) return;
+    // Rasterise at the node's canonical width, not the width being edited at,
+    // so saving from a phone does not silently drop the thumbnail's
+    // resolution for every later reader.
+    const dataUrl = handle.exportDataURL(width / canvasWidth);
     if (!dataUrl) return;
     setSaving(true);
     try {
@@ -104,6 +127,10 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // The stroke data records the width it was drawn at, and
+          // `importStrokes` rescales on the way back in, so a phone-sized
+          // edit round-trips into the canonical canvas correctly. The node's
+          // own width/height are sent unchanged.
           strokesJson: handle.exportStrokes(),
           thumbnailUrl: uploadData.fileUrl,
           width,
@@ -125,12 +152,17 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
   if (editing) {
     return (
       <NodeViewWrapper className="drawing-block-editing" contentEditable={false}>
-        <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
-          <DrawingCanvas
-            ref={attachCanvas}
-            width={width}
-            height={height}
-          />
+        <div
+          ref={frameRef}
+          className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900"
+        >
+          {canvasWidth !== null && (
+            <DrawingCanvas
+              ref={attachCanvas}
+              width={canvasWidth}
+              height={Math.round((height * canvasWidth) / width)}
+            />
+          )}
           <div className="mt-2 flex gap-2">
             <button
               type="button"

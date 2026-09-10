@@ -47,7 +47,14 @@ export type DrawingCanvasStrokeData = {
 };
 
 export type DrawingCanvasHandle = {
-  exportDataURL: () => string | null;
+  /**
+   * Flatten to a PNG. `scale` multiplies the output resolution without
+   * touching the canvas being drawn on, so a caller editing at a phone's
+   * width can still rasterise at the size the drawing is stored at --
+   * otherwise a single edit on a small screen permanently halves the
+   * thumbnail everyone else sees.
+   */
+  exportDataURL: (scale?: number) => string | null;
   importDataURL: (data: string) => void;
   exportStrokes: () => DrawingCanvasStrokeData;
   importStrokes: (data: DrawingCanvasStrokeData) => void;
@@ -357,18 +364,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // Import / Export
     // -----------------------------------------------------------------------
 
-    const exportDataURL = useCallback((): string | null => {
+    const exportDataURL = useCallback((scale = 1): string | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
 
-      // Composite strokes + text boxes onto a temp canvas at full resolution
+      // Composite strokes + text boxes onto a temp canvas at full resolution.
+      // `scale` enlarges the output only: everything below still draws in this
+      // canvas's coordinates, and the transform maps them up.
+      const factor = Number.isFinite(scale) && scale > 0 ? scale : 1;
       const dpr = window.devicePixelRatio || 1;
       const tmp = document.createElement('canvas');
-      tmp.width = width * dpr;
-      tmp.height = height * dpr;
+      tmp.width = Math.round(width * factor * dpr);
+      tmp.height = Math.round(height * factor * dpr);
       const tctx = tmp.getContext('2d');
       if (!tctx) return null;
-      tctx.scale(dpr, dpr);
+      tctx.scale(dpr * factor, dpr * factor);
 
       // White background
       tctx.fillStyle = '#ffffff';
