@@ -149,8 +149,9 @@ const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
  * the 15s per-attempt ceiling, so every attempt aborted, the retries spent the
  * 20s budget, and the caller got a silent null.
  *
- * Both submit routes that grade with vision declare `maxDuration = 60`, which
- * is the real ceiling this has to sit under.
+ * The ceiling this has to sit under is the caller's `maxDuration`: 60 in
+ * /api/practice, and 180 in the mock-exam submit route, which also has to fit
+ * a transcription call ahead of the grade.
  */
 const VISION_GRADE_BUDGET_MS = Number(process.env.VISION_GRADE_BUDGET_MS || 45_000);
 const VISION_GRADE_REQUEST_TIMEOUT_MS = 40_000;
@@ -464,7 +465,7 @@ async function callGemini(
   const deadline = Date.now() + (opts.budgetMs ?? DEFAULT_VISION_BUDGET_MS);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const timeout = attemptTimeout(deadline);
+    const timeout = attemptTimeout(deadline, opts.requestTimeoutMs);
     if (timeout === null) return null;
     try {
       const res = await fetch(url, {

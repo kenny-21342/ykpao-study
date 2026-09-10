@@ -32,13 +32,20 @@ import type { VisionCredential } from '@/lib/ai-credentials';
 /**
  * What one question's transcription is allowed to spend.
  *
- * A mock exam submits many items inside a single 60s invocation, so this is
- * not the place to inherit a generous default: a question whose transcription
- * stalls must give up and leave the item on the existing ungraded path, not
- * take the whole submission down with it. Two calls (question, mark scheme)
- * share the budget.
+ * Sized like a grading call, not like OCR. `lib/vision.ts` already records why
+ * the distinction matters: its default 15s per-attempt ceiling is deliberately
+ * short because a failed transcription of a student's handwriting costs the
+ * caller nothing, and a call that writes a long response runs past it. Reading
+ * a printed exam question is the long kind -- part labels, mark allocations,
+ * a described figure -- and at the OCR ceiling every attempt aborted mid-flight
+ * and every question fell to the ungraded branch, which looked exactly like
+ * the feature not being deployed.
+ *
+ * The caller bounds how many of these one submission may pay for; this bounds
+ * how long each may take. Two calls (question, mark scheme) share the budget.
  */
-const TRANSCRIBE_BUDGET_MS = Number(process.env.BANK_TRANSCRIBE_BUDGET_MS || 25_000);
+const TRANSCRIBE_BUDGET_MS = Number(process.env.BANK_TRANSCRIBE_BUDGET_MS || 45_000);
+const TRANSCRIBE_REQUEST_TIMEOUT_MS = 40_000;
 
 export type BankTranscription = {
   /** The question text, always non-empty when this is returned. */
@@ -81,6 +88,7 @@ export async function ensureBankQuestionText(params: {
 
   const question = await transcribeBankQuestion(params.strips, credential, {
     budgetMs: TRANSCRIBE_BUDGET_MS,
+    requestTimeoutMs: TRANSCRIBE_REQUEST_TIMEOUT_MS,
   });
   if (!question || !question.text.trim()) return null;
   const bodyMd = question.text.trim();
@@ -102,6 +110,7 @@ export async function ensureBankQuestionText(params: {
   if (!answerMd && markschemeStrips.length > 0 && Date.now() < deadline - 2_000) {
     const markScheme = await transcribeBankMarkScheme(markschemeStrips, credential, {
       budgetMs: Math.max(2_000, deadline - Date.now()),
+      requestTimeoutMs: TRANSCRIBE_REQUEST_TIMEOUT_MS,
     });
     if (markScheme?.text.trim()) {
       answerMd = markScheme.text.trim();

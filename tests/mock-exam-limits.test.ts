@@ -109,15 +109,31 @@ test('the bank generator hands the ceiling to the selector', async () => {
   );
 });
 
-test('generation and submission declare the same function budget', async () => {
-  const budgets = await Promise.all(
-    [...GENERATORS.filter((f) => f.startsWith('app/')), SUBMITTER].map(async (file) => {
-      const src = await source(file);
-      const match = src.match(/export const maxDuration\s*=\s*(\d+)/);
-      assert.ok(match, `${file} must declare maxDuration`);
-      return Number(match![1]);
-    }),
-  );
-  // An exam may never be created under a longer budget than it is graded under.
-  assert.equal(new Set(budgets).size, 1, `maxDuration diverged: ${budgets.join(', ')}`);
+/**
+ * The invariant is one-directional, and used to be checked as equality because
+ * the two budgets happened to be equal.
+ *
+ * They are not any more, on purpose. Generation makes no model call at all --
+ * the paper is packed from the bank and finished before the route answers --
+ * while submission grades every item and, on a crop-only question's first
+ * touch, transcribes it before it can grade it. What must never happen is the
+ * reverse: an exam created under a budget longer than it can be graded under,
+ * which produces papers that are submittable only by timing out.
+ */
+test('an exam is never created under a longer budget than it is graded under', async () => {
+  const declared = async (file: string) => {
+    const src = await source(file);
+    const match = src.match(/export const maxDuration\s*=\s*(\d+)/);
+    assert.ok(match, `${file} must declare maxDuration`);
+    return Number(match![1]);
+  };
+
+  const submitBudget = await declared(SUBMITTER);
+  for (const file of GENERATORS.filter((f) => f.startsWith('app/'))) {
+    const generateBudget = await declared(file);
+    assert.ok(
+      generateBudget <= submitBudget,
+      `${file} declares maxDuration ${generateBudget}, longer than the submitter's ${submitBudget}`,
+    );
+  }
 });

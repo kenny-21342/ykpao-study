@@ -19,10 +19,15 @@ export const dynamic = 'force-dynamic';
 /**
  * This is the longest-running request the app makes: without an explicit
  * ceiling the platform kills the invocation mid-grading and the student loses
- * the attempt. 60 is Vercel Hobby's maximum; raise it together with
- * `MAX_EXAM_ITEMS` if you move to a plan that allows more.
+ * the attempt. This was 60 because that was Vercel Hobby's maximum, and the
+ * arithmetic below still derives everything from it -- but the project is on
+ * Pro, where the ceiling is 300, and 60 stopped being enough once a crop-only
+ * question could need transcribing before it could be graded. A first touch
+ * costs one long vision call *before* the grading call it enables, and at 60
+ * the two together did not fit: the transcription aborted mid-flight and the
+ * item fell to the ungraded branch every time.
  */
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 /**
  * Per-item wall-clock budget for one grading call.
@@ -35,6 +40,9 @@ export const maxDuration = 60;
  */
 const GRADING_WAVES = Math.ceil(MAX_EXAM_ITEMS / GRADING_CONCURRENCY);
 const GRADING_BUDGET_MS = Math.floor(((maxDuration - 12) * 1000) / GRADING_WAVES);
+
+/** See `claimTranscribeSlot` in the handler for why this is bounded. */
+const MAX_TRANSCRIBE_PER_SUBMISSION = 3;
 
 /**
  * Map over `items`, keeping at most `limit` calls in flight, preserving order.
@@ -322,6 +330,22 @@ export async function POST(
       });
     };
 
+    // How many first-touch transcriptions this one submission may pay for.
+    //
+    // Transcription is a long call that runs *before* the grading call it
+    // enables, so an item that needs one costs roughly double. A paper of
+    // untranscribed structured questions would otherwise try it for every
+    // item at once and run the invocation out for all of them. Past the cap
+    // the remaining items take the existing ungraded branch, exactly as they
+    // did before any of this existed, and the next submission picks up where
+    // this one stopped -- the transcriptions already paid for are persisted.
+    let transcribeBudget = MAX_TRANSCRIBE_PER_SUBMISSION;
+    const claimTranscribeSlot = () => {
+      if (transcribeBudget <= 0) return false;
+      transcribeBudget -= 1;
+      return true;
+    };
+
     // Grading is the expensive part: one LLM call per item, plus an OCR call
     // for any photographed working. It used to run strictly sequentially to
     // stay clear of DeepSeek's rate limits — but at 3-8s an item, a 60-item
@@ -364,7 +388,8 @@ export async function POST(
           Boolean(item.bankQuestion) &&
           !normalized.content.trim() &&
           !normalized.answerLetter &&
-          Boolean(rawAnswer || imageUrl);
+          Boolean(rawAnswer || imageUrl) &&
+          claimTranscribeSlot();
         const transcription =
           worthTranscribing && item.bankQuestion
             ? await ensureBankQuestionText({
