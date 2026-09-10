@@ -47,6 +47,30 @@ import type { VisionCredential } from '@/lib/ai-credentials';
 const TRANSCRIBE_BUDGET_MS = Number(process.env.BANK_TRANSCRIBE_BUDGET_MS || 45_000);
 const TRANSCRIBE_REQUEST_TIMEOUT_MS = 40_000;
 
+/**
+ * Off by default, because the call does not fit where it is currently made.
+ *
+ * Measured against the production model (Qwen3-VL-32B on SiliconFlow) with a
+ * real 4-strip question: 200 OK, a correct transcript with part labels, mark
+ * allocations and a bracketed figure description -- in **84 seconds**. A
+ * single strip took 31. The corpus averages 1.85 strips and reaches 5 at the
+ * 95th percentile, so a large share of first touches cannot finish inside any
+ * per-attempt ceiling a student will sit through, and every one that misses is
+ * paid for and thrown away.
+ *
+ * Nothing about the transcription itself is wrong -- the prompt, the
+ * multi-image payload and the persistence all work. What is wrong is doing it
+ * synchronously inside the request the student is waiting on, where it also
+ * competes for the invocation with the grading it exists to enable. The fix is
+ * to move it after the response (`after()`), grade this attempt on the
+ * existing ungraded path, and let the *next* attempt on that question be the
+ * one that benefits -- which is what "paid once per question" always meant.
+ *
+ * Until that lands, this flag keeps production on exactly the behaviour it had
+ * before: an honest "not transcribed yet" notice, and no spend.
+ */
+const TRANSCRIBE_ENABLED = process.env.BANK_TRANSCRIBE === 'on';
+
 export type BankTranscription = {
   /** The question text, always non-empty when this is returned. */
   bodyMd: string;
@@ -80,6 +104,7 @@ export async function ensureBankQuestionText(params: {
   const existingAnswer = params.answerMd?.trim() ?? '';
   if (existingBody) return { bodyMd: existingBody, answerMd: existingAnswer || null };
 
+  if (!TRANSCRIBE_ENABLED) return null;
   if (!params.credential) return null;
   if (params.strips.length === 0) return null;
 
