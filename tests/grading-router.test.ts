@@ -51,3 +51,25 @@ test('an untranscribed question never routes to vision, whatever else is true', 
     }
   }
 });
+
+/**
+ * The gate is a gate, not a permanent refusal. On-demand transcription
+ * (`lib/bank-transcription.ts`) fills `bodyMd` the first time a student
+ * answers a crop-only question, and from that submission on the same question
+ * arrives here with text -- so the routing it was refused before is exactly
+ * the routing it must now get.
+ */
+test('a question that has since been transcribed routes to vision again', () => {
+  assert.equal(
+    decideGradingMode({
+      requiresDiagram: true,
+      answerImageUrl: '/uploads/images/answer.png',
+      hasQuestionText: true,
+    }),
+    'vision',
+  );
+  assert.equal(
+    decideGradingMode({ requiresDiagram: false, answerImageUrl: null, hasQuestionText: true }),
+    'text',
+  );
+});

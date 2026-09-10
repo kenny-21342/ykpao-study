@@ -1,0 +1,161 @@
+/**
+ * On-demand transcription of crop-first bank questions.
+ *
+ * The bank stores a question as cropped images and leaves `bodyMd` empty:
+ * 66,756 published questions, none with any text. `lib/bank-questions.ts`
+ * states what that costs -- everything that reasons over a question rather
+ * than displaying it (hints, AI grading, search) needs the transcript and is
+ * gated off without it -- and the sweep that added `decideGradingMode`'s
+ * `hasQuestionText` gate proved why the gate has to stay: marking against an
+ * empty question produced confident zeros.
+ *
+ * This is the way back in. The first student who submits an answer to a
+ * question pays for one transcription pass over its strips; the result is
+ * written to `bodyMd` (and `answerMd` where the mark scheme is image-only) and
+ * indexed, so every student after them pays nothing, and the same question
+ * becomes searchable and hint-able at the same moment. That is the trade
+ * against shipping strips to the model on every grade: paid once per question
+ * rather than once per attempt, and it unlocks more than vision grading.
+ *
+ * A bulk pass over a whole subject is a better deal per question and belongs
+ * in the Python extraction pipeline, not here. The two compose -- they fill
+ * the same column -- so this stays the fallback for whatever the bulk pass
+ * has not reached.
+ */
+
+import { prisma } from '@/lib/prisma';
+import { recordUsage } from '@/lib/rate-limit';
+import { indexBankQuestion, refreshRagIndex } from '@/lib/rag-index';
+import { transcribeBankMarkScheme, transcribeBankQuestion } from '@/lib/vision';
+import type { VisionCredential } from '@/lib/ai-credentials';
+
+/**
+ * What one question's transcription is allowed to spend.
+ *
+ * A mock exam submits many items inside a single 60s invocation, so this is
+ * not the place to inherit a generous default: a question whose transcription
+ * stalls must give up and leave the item on the existing ungraded path, not
+ * take the whole submission down with it. Two calls (question, mark scheme)
+ * share the budget.
+ */
+const TRANSCRIBE_BUDGET_MS = Number(process.env.BANK_TRANSCRIBE_BUDGET_MS || 25_000);
+
+export type BankTranscription = {
+  /** The question text, always non-empty when this is returned. */
+  bodyMd: string;
+  /** The mark scheme text, when one was already stored or has just been read. */
+  answerMd: string | null;
+};
+
+/**
+ * Return a bank question's text, transcribing its strips once if it has none.
+ *
+ * Returns null when there is no text and none can be produced -- no vision
+ * credential, no resolvable strips, a failed provider call. Callers must treat
+ * that exactly as they treat an untranscribed question today: route to the
+ * ungraded branch and record the attempt honestly. Never as an empty
+ * transcript, which is the failure the `hasQuestionText` gate exists to stop.
+ */
+export async function ensureBankQuestionText(params: {
+  questionId: number;
+  /** Strip URLs in reading order, server-derived (`normalizeExamItem`). */
+  strips: string[];
+  /** The mark scheme's strips, if it has any and no text of its own. */
+  markschemeStrips?: string[];
+  /** Text already stored for the question, if any. */
+  bodyMd?: string | null;
+  /** Text already stored for the mark scheme, if any. */
+  answerMd?: string | null;
+  credential: VisionCredential | null;
+  userId: string;
+}): Promise<BankTranscription | null> {
+  const existingBody = params.bodyMd?.trim() ?? '';
+  const existingAnswer = params.answerMd?.trim() ?? '';
+  if (existingBody) return { bodyMd: existingBody, answerMd: existingAnswer || null };
+
+  if (!params.credential) return null;
+  if (params.strips.length === 0) return null;
+
+  const deadline = Date.now() + TRANSCRIBE_BUDGET_MS;
+  const credential = params.credential;
+
+  const question = await transcribeBankQuestion(params.strips, credential, {
+    budgetMs: TRANSCRIBE_BUDGET_MS,
+  });
+  if (!question || !question.text.trim()) return null;
+  const bodyMd = question.text.trim();
+
+  await recordUsage({
+    userId: params.userId,
+    feature: 'bank-transcribe',
+    tokensIn: question.usage?.tokensIn,
+    tokensOut: question.usage?.tokensOut,
+    model: credential.model,
+  });
+
+  // The mark scheme is a second call and a second cost, so only make it when
+  // there is no text at all and there are strips to read. Failing it is not
+  // fatal: a transcribed question with an image-only mark scheme still grades
+  // better than no question at all.
+  let answerMd: string | null = existingAnswer || null;
+  const markschemeStrips = params.markschemeStrips ?? [];
+  if (!answerMd && markschemeStrips.length > 0 && Date.now() < deadline - 2_000) {
+    const markScheme = await transcribeBankMarkScheme(markschemeStrips, credential, {
+      budgetMs: Math.max(2_000, deadline - Date.now()),
+    });
+    if (markScheme?.text.trim()) {
+      answerMd = markScheme.text.trim();
+      await recordUsage({
+        userId: params.userId,
+        feature: 'bank-transcribe:markscheme',
+        tokensIn: markScheme.usage?.tokensIn,
+        tokensOut: markScheme.usage?.tokensOut,
+        model: credential.model,
+      });
+    }
+  }
+
+  await persist(params.questionId, bodyMd, answerMd, Boolean(existingAnswer));
+
+  return { bodyMd, answerMd };
+}
+
+/**
+ * Write the transcription back, then re-index.
+ *
+ * The update is conditional on `bodyMd` still being empty, so two students
+ * submitting the same question at the same moment cannot overwrite each
+ * other: the loser's transcription is simply discarded. Both then return
+ * their own text, which is the same question read twice -- close enough, and
+ * cheaper than locking.
+ *
+ * Persisting is the entire point of doing this on demand rather than per
+ * attempt, and re-indexing is what turns a paid transcription into a
+ * searchable question rather than only a gradeable one. Neither may fail the
+ * submission that triggered it.
+ */
+async function persist(
+  questionId: number,
+  bodyMd: string,
+  answerMd: string | null,
+  answerAlreadyStored: boolean,
+): Promise<void> {
+  try {
+    await prisma.bankQuestion.updateMany({
+      where: { id: questionId, bodyMd: '' },
+      data: { bodyMd },
+    });
+
+    if (answerMd && !answerAlreadyStored) {
+      await prisma.bankMarkScheme.updateMany({
+        where: { questionId, answerMd: '' },
+        data: { answerMd },
+      });
+    }
+  } catch (err) {
+    console.warn('bank-transcription: failed to persist', questionId, err);
+    return;
+  }
+
+  await refreshRagIndex(`bank-question:${questionId}`, () => indexBankQuestion(questionId));
+}

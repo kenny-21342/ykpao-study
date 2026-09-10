@@ -82,3 +82,48 @@ test('rejects relative and remote-looking inputs', () => {
   assert.equal(isAcceptedUploadPath('uploads/ok.png'), false);
   assert.equal(isAcceptedUploadPath('../../.env'), false);
 });
+
+/**
+ * `resolveTrustedImage` widens the allow-list to `bank_assets` so question
+ * strips can be transcribed, and nothing else about the rule changes. The
+ * separation is the safety property: the untrusted resolver, whose input
+ * still arrives from request bodies, must keep refusing that prefix, or
+ * widening one call site would have widened every one of them.
+ */
+function isAcceptedTrustedPath(input: string, cwd = '/srv/app'): boolean {
+  if (!input.startsWith('/')) return false;
+  if (input.includes('\0')) return false;
+
+  const resolved = path.resolve(cwd, 'public', input.replace(/^\/+/, ''));
+  const insideAny = ['uploads', 'bank_assets'].some((prefix) => {
+    const root = path.resolve(cwd, 'public', prefix);
+    const relative = path.relative(root, resolved);
+    return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+  });
+  if (!insideAny) return false;
+
+  return IMAGE_EXTENSIONS.has(path.extname(resolved).toLowerCase());
+}
+
+test('the trusted resolver reads bank assets, the untrusted one never does', () => {
+  const strip = '/bank_assets/ab/cd/abcdef0123456789.png';
+  assert.equal(isAcceptedTrustedPath(strip), true);
+  assert.equal(isAcceptedUploadPath(strip), false, 'request-supplied paths must not reach bank assets');
+});
+
+test('the trusted resolver still refuses traversal and non-images', () => {
+  for (const payload of [
+    '/bank_assets/../../.env',
+    '/bank_assets/../package.json',
+    '/bank_assets/strip.ts',
+    '/bank_assets/notes.pdf',
+    '/papers/0625_w21_qp_63.png',
+    '/extracted_images/x.png',
+  ]) {
+    assert.equal(isAcceptedTrustedPath(payload), false, `should reject ${payload}`);
+  }
+});
+
+test('the trusted resolver keeps reading ordinary uploads', () => {
+  assert.equal(isAcceptedTrustedPath('/uploads/images/ok.png'), true);
+});

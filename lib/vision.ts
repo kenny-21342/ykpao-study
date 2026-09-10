@@ -67,6 +67,50 @@ Return JSON only, no prose outside JSON, no markdown code fences. Schema:
   "modelAnswer": string       // a concise model answer in markdown + LaTeX
 }`;
 
+/**
+ * Transcribe a *printed exam question* from its cropped strips.
+ *
+ * Deliberately not the handwriting prompt. That one is told to transcribe a
+ * student's working and nothing else; this one is reading a typeset question
+ * whose structure carries marks -- part labels, mark allocations, tables,
+ * figures. Dropping "[3]" or collapsing "(b)(ii)" into prose makes the
+ * transcript unusable for grading, which is the whole point of producing it.
+ */
+const TRANSCRIBE_QUESTION_SYSTEM = `You transcribe a printed exam question, shown to you as one or more cropped images read top to bottom, into clean markdown.
+
+Rules:
+1. Output ONLY the transcription. No preamble, no commentary, no code fences.
+2. NEVER answer the question, and never add working, hints or explanation. Transcribe what is printed and stop.
+3. Preserve the question's structure exactly: part labels such as (a), (b)(i), (c)(ii) stay on their own lines, in order.
+4. Preserve every mark allocation exactly as printed, including the brackets: [3], [1], (2).
+5. Preserve every mathematical or chemical expression as LaTeX: inline $...$, display $$...$$, arrows $\\rightarrow$ / $\\rightleftharpoons$.
+6. Tables become LaTeX arrays inside $$...$$.
+7. A figure, graph, circuit or diagram cannot be transcribed as text, so describe it in square brackets on its own line, specifically enough to answer from: [Figure: a velocity-time graph, velocity in m/s on the y-axis from 0 to 20, time in s on the x-axis from 0 to 8; the line rises linearly from the origin to (4, 20) then stays flat to (8, 20).] Include every printed axis label, unit, scale and annotation.
+8. If part of an image is illegible, write [illegible] and continue. Never invent text.
+9. The images are consecutive crops of one question: transcribe them as a single continuous question, not as separate ones.`;
+
+const TRANSCRIBE_QUESTION_USER = `Transcribe this exam question. Keep the part labels, the mark allocations and the figures. Do not answer it.`;
+
+/**
+ * Transcribe a *mark scheme* from its cropped strips.
+ *
+ * Separate from the question prompt because a mark scheme is a marking grid,
+ * not prose: the award conditions and their marks are the content, and a
+ * summary of them grades nothing.
+ */
+const TRANSCRIBE_MARKSCHEME_SYSTEM = `You transcribe a printed exam mark scheme, shown to you as one or more cropped images read top to bottom, into clean markdown.
+
+Rules:
+1. Output ONLY the transcription. No preamble, no commentary, no code fences.
+2. Preserve the structure: part labels ((a), (b)(i)), each accepted answer, and the marks awarded for each.
+3. Preserve marking notation verbatim -- M1, A1, B1, C1, ecf, owtte, cao, "allow", "accept", "reject", "ignore", "or equivalent".
+4. Preserve every mathematical or chemical expression as LaTeX: inline $...$, display $$...$$.
+5. Tables and marking grids become LaTeX arrays inside $$...$$, or markdown tables where that reads more clearly.
+6. Never add marking points that are not printed, and never rewrite a condition into your own words.
+7. If part of an image is illegible, write [illegible] and continue.`;
+
+const TRANSCRIBE_MARKSCHEME_USER = `Transcribe this mark scheme. Keep every marking point, its notation and its marks. Do not add any of your own.`;
+
 /** Image extensions this module is willing to read off disk, and their mime types. */
 const IMAGE_MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
@@ -200,28 +244,65 @@ async function resolveImage(input: string): Promise<ResolvedImage | null> {
   // percent-decodes and then rejects traversal, and the prefix check below
   // keeps this to uploads only — never papers or V3 assets.
   if (input.startsWith("/")) {
-    try {
-      const { getStorage, KEY_PREFIX, keyFromPublicPath } = await import(
-        "./storage/index.ts"
-      );
-
-      const key = keyFromPublicPath(input);
-      if (!key || !key.startsWith(`${KEY_PREFIX.uploads}/`)) return null;
-
-      const path = await import("path");
-      const ext = path.extname(key).toLowerCase();
-      const mime = IMAGE_MIME_BY_EXT[ext];
-      // Only ever read real image extensions — never .env, .ts, .pdf, …
-      if (!mime) return null;
-
-      const object = await getStorage().get(key);
-      if (!object) return null;
-      return { kind: "data", mime, b64: object.bytes.toString("base64") };
-    } catch {
-      return null;
-    }
+    const { KEY_PREFIX } = await import("./storage/index.ts");
+    return readFromStorage(input, [KEY_PREFIX.uploads]);
   }
   return null;
+}
+
+/**
+ * `resolveImage`, but for paths the *server* derived rather than the client.
+ *
+ * Question strips live under the `bank_assets` prefix, which `resolveImage`
+ * refuses on purpose: its input arrives straight from request bodies, and a
+ * path that escapes the uploads prefix is bytes shipped to a third-party API.
+ * That containment does not loosen. This sibling exists so the transcription
+ * path can read strips, and it may only be given a path the server built
+ * itself — in practice `toStrips()` in lib/bank-questions.ts, whose URLs come
+ * from `bankAssetKey(sha256)` and are rejected unless the digest is 64 hex
+ * characters. Never pass it anything a request supplied.
+ */
+export async function resolveTrustedImage(publicPath: string): Promise<ResolvedImage | null> {
+  const m = publicPath.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (m) return { kind: "data", mime: m[1], b64: m[2] };
+  if (/^https?:\/\//i.test(publicPath)) return { kind: "url", url: publicPath };
+  if (!publicPath.startsWith("/")) return null;
+
+  const { KEY_PREFIX } = await import("./storage/index.ts");
+  return readFromStorage(publicPath, [KEY_PREFIX.uploads, KEY_PREFIX.bankAssets]);
+}
+
+/**
+ * Read a server-relative public path out of the object store, but only if its
+ * key sits under one of `allowedPrefixes` and names a real image extension.
+ *
+ * `keyFromPublicPath` percent-decodes and rejects traversal; the prefix check
+ * keeps a resolved key inside the caller's allow-list, and the extension check
+ * means a key that somehow slipped through still cannot pull back a .env or a
+ * .ts file.
+ */
+async function readFromStorage(
+  publicPath: string,
+  allowedPrefixes: string[]
+): Promise<ResolvedImage | null> {
+  try {
+    const { getStorage, keyFromPublicPath } = await import("./storage/index.ts");
+
+    const key = keyFromPublicPath(publicPath);
+    if (!key || !allowedPrefixes.some((prefix) => key.startsWith(`${prefix}/`))) return null;
+
+    const path = await import("path");
+    const ext = path.extname(key).toLowerCase();
+    const mime = IMAGE_MIME_BY_EXT[ext];
+    // Only ever read real image extensions — never .env, .ts, .pdf, …
+    if (!mime) return null;
+
+    const object = await getStorage().get(key);
+    if (!object) return null;
+    return { kind: "data", mime, b64: object.bytes.toString("base64") };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -536,4 +617,72 @@ function parseGradeJson(raw: string): GradeResult | null {
     console.warn("gradeWithVision: response was not JSON:", raw.slice(0, 200));
     return null;
   }
+}
+
+/**
+ * Transcribe a bank question from its cropped strips.
+ *
+ * The crop-first bank stores a question as images and leaves `bodyMd` empty,
+ * and `lib/bank-questions.ts` states what that costs: everything that reasons
+ * over a question rather than displaying it -- hints, AI grading, search --
+ * needs the text and is gated off without it. This is the paid pass that
+ * fills it in.
+ *
+ * `stripUrls` must be server-derived (`toStrips()`), in reading order; they
+ * are read through `resolveTrustedImage`, which is the only resolver that
+ * will touch the bank-asset prefix. Returns null if no strip resolves or the
+ * provider call fails -- callers must treat that as "still untranscribed" and
+ * fall back to their existing ungraded path, never as an empty transcript.
+ */
+export async function transcribeBankQuestion(
+  stripUrls: string[],
+  credential: VisionCredential,
+  opts: RetryOpts = {}
+): Promise<{ text: string; usage: ProviderUsage | null } | null> {
+  return transcribeStrips(stripUrls, credential, TRANSCRIBE_QUESTION_SYSTEM, TRANSCRIBE_QUESTION_USER, opts);
+}
+
+/** The same pass for a mark scheme's strips. See `transcribeBankQuestion`. */
+export async function transcribeBankMarkScheme(
+  stripUrls: string[],
+  credential: VisionCredential,
+  opts: RetryOpts = {}
+): Promise<{ text: string; usage: ProviderUsage | null } | null> {
+  return transcribeStrips(stripUrls, credential, TRANSCRIBE_MARKSCHEME_SYSTEM, TRANSCRIBE_MARKSCHEME_USER, opts);
+}
+
+async function transcribeStrips(
+  stripUrls: string[],
+  credential: VisionCredential,
+  systemPrompt: string,
+  userText: string,
+  opts: RetryOpts
+): Promise<{ text: string; usage: ProviderUsage | null } | null> {
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
+  if (stripUrls.length === 0) return null;
+
+  // Resolve in order and keep the order: the strips are consecutive crops of
+  // one question, and shuffling them would hand the model a scrambled
+  // question. A strip that fails to resolve is dropped rather than aborting
+  // the whole call -- a question missing its last crop still transcribes
+  // better than nothing -- but if none resolve there is nothing to send.
+  const resolved: ResolvedImage[] = [];
+  for (const url of stripUrls.slice(0, MAX_VISION_IMAGES)) {
+    const image = await resolveTrustedImage(url);
+    if (image) resolved.push(image);
+  }
+  if (resolved.length === 0) {
+    console.warn("transcribeStrips: no strip resolved", stripUrls.length, "candidates");
+    return null;
+  }
+
+  const result =
+    credential.provider === "gemini"
+      ? await callGemini(credential, resolved, systemPrompt, userText, opts)
+      : await callOpenAiCompatible(credential, resolved, systemPrompt, userText, {
+          maxRetries: credential.source === "user" ? 2 : 5,
+          ...opts,
+        });
+  if (!result) return null;
+  return { text: result.content, usage: result.usage };
 }

@@ -6,6 +6,7 @@ import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE, type ProviderUsage } from '@/lib/vision';
 import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
+import { ensureBankQuestionText } from '@/lib/bank-transcription';
 import type { GradeResult } from '@/types/ai';
 import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
 import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
@@ -333,7 +334,7 @@ export async function POST(
       itemsWithMs,
       GRADING_CONCURRENCY,
       async (entry) => {
-        const { item, normalized, markscheme, markschemeId } = entry;
+        const { item, normalized, markscheme: storedMarkscheme, markschemeId } = entry;
         // Unreachable while the CHECK constraint holds; skip rather than throw.
         if (!normalized) return 0;
         const rawAnswer = (answers[item.id] ?? '').trim();
@@ -349,12 +350,42 @@ export async function POST(
         // Set eagerly (not only when OCR succeeds below): a server-relative
         // URL is worth persisting for vision grading even without OCR.
         const answerImageUrl: string | null = imageUrl && imageUrl.startsWith('/') ? imageUrl : null;
+        // A crop-only bank question carries no text, and nothing that reasons
+        // over a question can work without it -- which is why the grading
+        // router refuses to route one to vision. Transcribe it once, here, so
+        // this attempt and every later one on the same question are markable.
+        //
+        // Three guards keep that from being an expensive habit. A multiple
+        // choice question is settled by its stored key a few lines below and
+        // needs no transcript at all, so it never pays. Neither does an
+        // unattempted question. And a question that already has text short
+        // circuits inside `ensureBankQuestionText` without a call.
+        const worthTranscribing =
+          Boolean(item.bankQuestion) &&
+          !normalized.content.trim() &&
+          !normalized.answerLetter &&
+          Boolean(rawAnswer || imageUrl);
+        const transcription =
+          worthTranscribing && item.bankQuestion
+            ? await ensureBankQuestionText({
+                questionId: item.bankQuestion.id,
+                strips: normalized.strips.map((strip) => strip.url),
+                markschemeStrips: normalized.markschemeStrips.map((strip) => strip.url),
+                bodyMd: normalized.content,
+                answerMd: storedMarkscheme,
+                credential: visionAccess.ok ? visionAccess.credential : null,
+                userId: user.id,
+              })
+            : null;
+        const questionContent = transcription?.bodyMd ?? normalized.content;
+        const markscheme = storedMarkscheme ?? transcription?.answerMd ?? null;
+
         const requiresDiagram = Boolean(item.question?.hasDiagram || item.bankQuestion?.requiresDiagram);
         const useVisionGrading =
           decideGradingMode({
             requiresDiagram,
             answerImageUrl,
-            hasQuestionText: Boolean(normalized.content.trim()),
+            hasQuestionText: Boolean(questionContent.trim()),
           }) === 'vision' &&
           Boolean(answerImageUrl) &&
           visionAccess.ok;
@@ -443,7 +474,7 @@ export async function POST(
         // for the text grader to read, and inventing one from the image is a
         // different (and paid) job. Vision grading is the exception -- it
         // reads the answer image directly and doesn't need a transcript.
-        if (!normalized.content.trim() && !useVisionGrading) {
+        if (!questionContent.trim() && !useVisionGrading) {
           await prisma.mockExamItem.update({
             where: { id: item.id },
             data: {
@@ -470,8 +501,6 @@ export async function POST(
           });
           return 0;
         }
-
-        const questionContent = normalized.content;
 
         const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
         // Filled in by the vision branch below, and read by the usage record
