@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
-import { transcribeHandwriting } from '@/lib/vision';
+import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE } from '@/lib/vision';
 import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
@@ -158,13 +158,15 @@ export async function POST(req: NextRequest) {
         await recordUsage({
           userId: user.id,
           feature: outcome.graded ? 'practice-grade-vision' : 'practice-grade-vision:error',
-          // The same flat estimate the mock-exam route books for a vision
-          // grade. Neither is a real count -- `gradeWithVision` returns the
-          // parsed grade, not the provider's usage block -- but recording
-          // nothing here meant every vision grade taken from the practice tab
-          // showed up on /usage as "0 tokens, $0.0000" while an identical
-          // grade taken from a mock exam showed its cost.
-          tokensOut: outcome.graded ? 800 : undefined,
+          // The provider's own counts where it reports them. Not every
+          // OpenAI-compatible endpoint does, so a vision grade with no usage
+          // block falls back to the flat estimate both submit routes used to
+          // book unconditionally -- an estimate is wrong, but recording
+          // nothing showed a real, paid call on /usage as "0 tokens, $0.0000".
+          tokensIn: outcome.graded ? outcome.usage?.tokensIn : undefined,
+          tokensOut: outcome.graded
+            ? outcome.usage?.tokensOut ?? (outcome.usage ? undefined : VISION_GRADE_TOKENS_ESTIMATE)
+            : undefined,
           model: visionAccess.credential.model,
         });
         if (outcome.graded) {

@@ -1,4 +1,4 @@
-import { gradeWithVision } from './vision.ts';
+import { gradeWithVision, type ProviderUsage } from './vision.ts';
 import type { VisionCredential } from './ai-credentials';
 import type { GradeResult } from '@/types/ai';
 
@@ -46,6 +46,10 @@ export function decideGradingMode(params: {
  * derived its grading status from whether a markscheme existed rather than
  * from whether grading produced anything -- stamped `official`. A student saw
  * a confident zero with no explanation and no notice. So say which happened.
+ *
+ * A successful grade also carries the provider's own token counts, so callers
+ * book what the call actually cost instead of a flat estimate. `usage` is null
+ * when the provider reported none.
  */
 export async function runVisionGrading(params: {
   imageUrl: string;
@@ -60,7 +64,10 @@ export async function runVisionGrading(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
-}): Promise<{ graded: true; grade: Partial<GradeResult> } | { graded: false }> {
+}): Promise<
+  | { graded: true; grade: Partial<GradeResult>; usage: ProviderUsage | null }
+  | { graded: false }
+> {
   const result = await gradeWithVision(params);
-  return result ? { graded: true, grade: result } : { graded: false };
+  return result ? { graded: true, grade: result.grade, usage: result.usage } : { graded: false };
 }

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
-import { transcribeHandwriting } from '@/lib/vision';
+import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE, type ProviderUsage } from '@/lib/vision';
 import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
 import type { GradeResult } from '@/types/ai';
 import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
@@ -474,6 +474,12 @@ export async function POST(
         const questionContent = normalized.content;
 
         const actualGradingMode: 'text' | 'vision' = useVisionGrading ? 'vision' : 'text';
+        // Filled in by the vision branch below, and read by the usage record
+        // after it, so a vision grade is booked at what the provider says it
+        // cost rather than at the flat estimate. A holder rather than a plain
+        // `let`, because the branch assigning it is an async callback and
+        // control-flow analysis would otherwise narrow the read to `null`.
+        const visionUsage: { current: ProviderUsage | null } = { current: null };
 
         try {
           // A vision call that comes back with nothing graded nothing. Left as
@@ -492,6 +498,7 @@ export async function POST(
                   credential: visionAccess.credential,
                 });
                 if (!outcome.graded) throw new Error('Vision grading returned no result');
+                visionUsage.current = outcome.usage;
                 return outcome.grade;
               })()
             : await chatJSON<GradeResult>(
@@ -564,11 +571,19 @@ export async function POST(
 
           if (!isCorrect) await recordMistake(entry, grade.modelAnswer);
 
+          const gradedWithVision = actualGradingMode === 'vision' && visionAccess.ok;
           await recordUsage({
             userId: user.id,
-            feature: actualGradingMode === 'vision' && visionAccess.ok ? 'mock-exam-grade-vision' : 'mock-exam-grade',
-            tokensOut: 800,
-            model: actualGradingMode === 'vision' && visionAccess.ok ? visionAccess.credential.model : access.credential.model,
+            feature: gradedWithVision ? 'mock-exam-grade-vision' : 'mock-exam-grade',
+            // A vision grade reports its real counts where the provider gives
+            // them; the text path still has no usage to read, so it keeps the
+            // flat estimate.
+            tokensIn: gradedWithVision ? visionUsage.current?.tokensIn : undefined,
+            tokensOut: gradedWithVision
+              ? visionUsage.current?.tokensOut ??
+                (visionUsage.current ? undefined : VISION_GRADE_TOKENS_ESTIMATE)
+              : VISION_GRADE_TOKENS_ESTIMATE,
+            model: gradedWithVision ? visionAccess.credential.model : access.credential.model,
           });
 
           return score;

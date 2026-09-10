@@ -6,7 +6,8 @@
  * and passes it in. Two request shapes are supported:
  *
  *   - `openai-compatible` — every user-supplied endpoint, plus the owner's
- *     SiliconFlow key. One `/chat/completions` call with an `image_url` part.
+ *     SiliconFlow key. One `/chat/completions` call with one `image_url` part
+ *     per image.
  *   - `gemini` — only ever reached through the owner's shared server key,
  *     which predates BYOK and uses the native generateContent API.
  *
@@ -16,8 +17,10 @@
  * enhancement still get `null` on a failed call and grade the typed answer.
  *
  * Unlike the Python pipeline (which extracts structured JSON from PDF pages),
- * this module is purpose-built for one task: OCR a single image of a student's
- * handwritten answer and return plain text/LaTeX suitable for the text grader.
+ * this module is purpose-built for marking: OCR a student's handwritten answer
+ * into text the text grader can read, or mark an image answer directly. Both
+ * provider calls take a *list* of images, because a bank question is stored as
+ * several cropped strips that only mean anything read together.
  */
 
 import type { VisionCredential } from "@/lib/ai-credentials";
@@ -134,6 +137,44 @@ async function backoff(deadline: number, seconds: number): Promise<boolean> {
 }
 
 /**
+ * An image that has been turned into something a provider will accept: either
+ * inline base64 bytes, or a remote URL the provider fetches itself.
+ */
+export type ResolvedImage =
+  | { kind: "data"; mime: string; b64: string }
+  | { kind: "url"; url: string };
+
+/**
+ * What a provider says the call actually cost. Both APIs report this and both
+ * calls used to drop it, so every vision grade was booked at a flat estimate.
+ * Optional throughout: a provider that omits the block leaves the caller on
+ * its estimate rather than recording a zero.
+ */
+export type ProviderUsage = { tokensIn?: number; tokensOut?: number };
+
+type ProviderResult = { content: string; usage: ProviderUsage | null };
+
+/**
+ * Ceiling on how many images go into one call.
+ *
+ * Bank questions are stored as cropped strips: the corpus averages 1.85 per
+ * question and the 95th percentile is 5, so this clears the real distribution
+ * with room to spare. The tail runs to 25 strips, and those are not worth the
+ * image tokens -- a question that long is a whole page of sub-parts, and
+ * truncating it costs less than paying for every one on every call.
+ */
+export const MAX_VISION_IMAGES = 8;
+
+/**
+ * Fallback token count for a vision grade whose provider reported no usage.
+ *
+ * Both submit routes used to book this flat number unconditionally. It stays
+ * only as the fallback -- an estimate is wrong, but recording nothing showed a
+ * real, paid call on /usage as costing nothing at all.
+ */
+export const VISION_GRADE_TOKENS_ESTIMATE = 800;
+
+/**
  * Convert a data URL (e.g. "data:image/png;base64,...") or a server-relative
  * file URL (e.g. "/uploads/images/foo.png") into a base64 payload plus mime
  * type. Returns null if the URL cannot be resolved.
@@ -142,9 +183,7 @@ async function backoff(deadline: number, seconds: number): Promise<boolean> {
  * Absolute https URLs are passed through to the vision API verbatim
  * (SiliconFlow accepts remote URLs).
  */
-async function resolveImage(
-  input: string
-): Promise<{ kind: "data"; mime: string; b64: string } | { kind: "url"; url: string } | null> {
+async function resolveImage(input: string): Promise<ResolvedImage | null> {
   // Already a data URL
   const m = input.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (m) return { kind: "data", mime: m[1], b64: m[2] };
@@ -185,20 +224,52 @@ async function resolveImage(
   return null;
 }
 
+/**
+ * Read a provider's usage block, keeping only counts that are real numbers.
+ * An absent or malformed block yields null, which the caller reads as "no
+ * count reported" and falls back to its estimate -- recording zero instead
+ * would show a real, paid call as free on /usage.
+ */
+function readOpenAiUsage(
+  usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
+): ProviderUsage | null {
+  return normalizeUsage(usage?.prompt_tokens, usage?.completion_tokens);
+}
+
+function readGeminiUsage(
+  usage: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
+): ProviderUsage | null {
+  return normalizeUsage(usage?.promptTokenCount, usage?.candidatesTokenCount);
+}
+
+function normalizeUsage(tokensIn: unknown, tokensOut: unknown): ProviderUsage | null {
+  const inCount = Number.isFinite(tokensIn) ? Number(tokensIn) : undefined;
+  const outCount = Number.isFinite(tokensOut) ? Number(tokensOut) : undefined;
+  if (inCount === undefined && outCount === undefined) return null;
+  return { tokensIn: inCount, tokensOut: outCount };
+}
+
 async function callOpenAiCompatible(
   credential: VisionCredential,
-  resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
+  images: ResolvedImage[],
   systemPrompt: string,
   userText: string,
   opts: RetryOpts = {}
-): Promise<string | null> {
+): Promise<ProviderResult | null> {
   const maxRetries = opts.maxRetries ?? 5;
   const delays = opts.delays ?? DEFAULT_DELAYS;
 
-  const imageUrl =
-    resolved.kind === "data"
-      ? `data:${resolved.mime};base64,${resolved.b64}`
-      : resolved.url;
+  if (images.length === 0) return null;
+
+  const parts = images.slice(0, MAX_VISION_IMAGES).map((resolved) => ({
+    type: "image_url" as const,
+    image_url: {
+      url:
+        resolved.kind === "data"
+          ? `data:${resolved.mime};base64,${resolved.b64}`
+          : resolved.url,
+    },
+  }));
 
   const payload = {
     model: credential.model,
@@ -206,10 +277,7 @@ async function callOpenAiCompatible(
       { role: "system", content: systemPrompt },
       {
         role: "user",
-        content: [
-          { type: "text", text: userText },
-          { type: "image_url", image_url: { url: imageUrl } },
-        ],
+        content: [{ type: "text", text: userText }, ...parts],
       },
     ],
     temperature: 0.1,
@@ -251,13 +319,14 @@ async function callOpenAiCompatible(
 
       const data = (await res.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       const content = data.choices?.[0]?.message?.content;
       if (!content || !content.trim()) {
         console.warn("vision: empty completion", credential.model);
         return null;
       }
-      return content.trim();
+      return { content: content.trim(), usage: readOpenAiUsage(data.usage) };
     } catch (err) {
       console.warn("vision: attempt", attempt + 1, "failed:", err instanceof Error ? err.message : err);
       if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
@@ -269,17 +338,21 @@ async function callOpenAiCompatible(
 
 async function callGemini(
   credential: VisionCredential,
-  resolved: { kind: "data"; mime: string; b64: string } | { kind: "url"; url: string },
+  images: ResolvedImage[],
   systemPrompt: string,
   userText: string,
   opts: RetryOpts = {}
-): Promise<string | null> {
+): Promise<ProviderResult | null> {
   const maxRetries = opts.maxRetries ?? 5;
   const delays = opts.delays ?? DEFAULT_DELAYS;
 
-  if (resolved.kind === "url") {
+  if (images.length === 0) return null;
+
+  const inline = images.slice(0, MAX_VISION_IMAGES);
+  if (inline.some((image) => image.kind === "url")) {
     // Gemini accepts fileData for remote URLs, but only for GCS or URLs it can
-    // fetch. We pass it through and let the API decide.
+    // fetch. One unfetchable image would poison the whole call, so bail if any
+    // of them is a URL rather than send a partial question.
     return null;
   }
 
@@ -289,7 +362,12 @@ async function callGemini(
         role: "user",
         parts: [
           { text: userText },
-          { inline_data: { mime_type: resolved.mime, data: resolved.b64 } },
+          ...inline.map((image) => ({
+            inline_data: {
+              mime_type: (image as { kind: "data"; mime: string; b64: string }).mime,
+              data: (image as { kind: "data"; mime: string; b64: string }).b64,
+            },
+          })),
         ],
       },
     ],
@@ -326,10 +404,11 @@ async function callGemini(
 
       const data = (await res.json()) as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
       };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text || !text.trim()) return null;
-      return text.trim();
+      return { content: text.trim(), usage: readGeminiUsage(data.usageMetadata) };
     } catch {
       if (!(await backoff(deadline, delays[Math.min(attempt, delays.length - 1)]))) return null;
     }
@@ -359,12 +438,16 @@ export async function transcribeHandwriting(
   const resolved = await resolveImage(imageInput);
   if (!resolved) return null;
 
-  if (credential.provider === "gemini") return callGemini(credential, resolved, TRANSCRIBE_SYSTEM, TRANSCRIBE_USER);
-  return callOpenAiCompatible(credential, resolved, TRANSCRIBE_SYSTEM, TRANSCRIBE_USER, {
-    // A user-supplied endpoint is far likelier to be a typo than the owner's
-    // pinned SiliconFlow one, so do not spend the whole budget retrying it.
-    maxRetries: credential.source === "user" ? 2 : 5,
-  });
+  const result =
+    credential.provider === "gemini"
+      ? await callGemini(credential, [resolved], TRANSCRIBE_SYSTEM, TRANSCRIBE_USER)
+      : await callOpenAiCompatible(credential, [resolved], TRANSCRIBE_SYSTEM, TRANSCRIBE_USER, {
+          // A user-supplied endpoint is far likelier to be a typo than the
+          // owner's pinned SiliconFlow one, so do not spend the whole budget
+          // retrying it.
+          maxRetries: credential.source === "user" ? 2 : 5,
+        });
+  return result?.content ?? null;
 }
 
 /**
@@ -386,7 +469,7 @@ export async function gradeWithVision(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
-}): Promise<GradeResult | null> {
+}): Promise<{ grade: GradeResult; usage: ProviderUsage | null } | null> {
   const { imageUrl, questionText, studentText, markscheme, totalMarks, credential } = params;
   if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
 
@@ -426,12 +509,18 @@ ${typed}`
     budgetMs: VISION_GRADE_BUDGET_MS,
     requestTimeoutMs: VISION_GRADE_REQUEST_TIMEOUT_MS,
   };
-  const raw =
+  const result =
     credential.provider === "gemini"
-      ? await callGemini(credential, resolved, VISION_GRADE_SYSTEM, userText, retryOpts)
-      : await callOpenAiCompatible(credential, resolved, VISION_GRADE_SYSTEM, userText, retryOpts);
-  if (!raw) return null;
+      ? await callGemini(credential, [resolved], VISION_GRADE_SYSTEM, userText, retryOpts)
+      : await callOpenAiCompatible(credential, [resolved], VISION_GRADE_SYSTEM, userText, retryOpts);
+  if (!result) return null;
 
+  const grade = parseGradeJson(result.content);
+  return grade ? { grade, usage: result.usage } : null;
+}
+
+/** The model is asked for bare JSON but sometimes wraps it in prose. */
+function parseGradeJson(raw: string): GradeResult | null {
   try {
     return JSON.parse(raw) as GradeResult;
   } catch {
