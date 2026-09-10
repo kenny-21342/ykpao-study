@@ -26,8 +26,16 @@ export const dynamic = 'force-dynamic';
  * costs one long vision call *before* the grading call it enables, and at 60
  * the two together did not fit: the transcription aborted mid-flight and the
  * item fell to the ungraded branch every time.
+ *
+ * It is now the plan maximum, because a vision grade is genuinely that slow.
+ * Measured end to end on production, marking one drawn answer takes ~90s: the
+ * model writes a whole JSON verdict with strengths, weaknesses, a long
+ * explanation and a model answer. Split across the waves below, anything less
+ * than 300 gives a wave less time than one such grade needs, and a student who
+ * draws inside a mock exam gets that item back unscored -- which is exactly
+ * what was happening.
  */
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 /**
  * Per-item wall-clock budget for one grading call.
@@ -37,6 +45,12 @@ export const maxDuration = 180;
  * submission — waves, OCR, and the database writes — has to land inside
  * `maxDuration`. Reserve a slice of the invocation for everything that is not
  * an LLM call, then split what remains across the waves.
+ *
+ * This governs the vision grader too. It always should have: the number is a
+ * property of the invocation, not of which model is doing the marking. It was
+ * only ever handed to `chatJSON`, so vision grades silently fell back to
+ * lib/vision.ts's 45s module default and timed out on every drawn answer while
+ * the route had the correct, larger figure sitting right here.
  */
 const GRADING_WAVES = Math.ceil(MAX_EXAM_ITEMS / GRADING_CONCURRENCY);
 const GRADING_BUDGET_MS = Math.floor(((maxDuration - 12) * 1000) / GRADING_WAVES);
@@ -550,6 +564,8 @@ export async function POST(
                   markscheme,
                   totalMarks: max,
                   credential: visionAccess.credential,
+                  budgetMs: GRADING_BUDGET_MS,
+                  requestTimeoutMs: Math.max(10_000, GRADING_BUDGET_MS - 10_000),
                 });
                 if (!outcome.graded) throw new Error('Vision grading returned no result');
                 visionUsage.current = outcome.usage;

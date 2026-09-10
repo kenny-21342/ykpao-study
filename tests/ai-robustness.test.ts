@@ -112,3 +112,30 @@ test('the practice route derives its vision budget from its own function budget'
     `maxDuration ${maxDuration}s is too short for a vision grade measured at ~30s and over`,
   );
 });
+
+/**
+ * The same rule for the other grader, which is where it was broken.
+ *
+ * The mock-exam route already derived a correct per-wave budget from its own
+ * maxDuration -- and handed it only to `chatJSON`. Vision grades fell through
+ * to lib/vision.ts's module default, a figure sized for a different caller
+ * entirely, and timed out on every drawn answer while the right number sat
+ * unused a few lines above.
+ */
+test('the mock-exam route hands its wave budget to the vision grader too', async () => {
+  const src = await readFile(join(root, 'app/api/mock-exams/[id]/submit/route.ts'), 'utf8');
+
+  assert.match(
+    src,
+    /const GRADING_BUDGET_MS\s*=[^;]*maxDuration/,
+    'the wave budget must be derived from maxDuration',
+  );
+
+  const call = src.match(/runVisionGrading\(\{[\s\S]*?\}\)/);
+  assert.ok(call, 'the submit route must grade image answers through runVisionGrading');
+  assert.match(
+    call![0],
+    /budgetMs:\s*GRADING_BUDGET_MS/,
+    'the vision grade must run under the same wave budget as the text grade, not a module default',
+  );
+});

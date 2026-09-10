@@ -167,9 +167,11 @@ const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
  * the 15s per-attempt ceiling, so every attempt aborted, the retries spent the
  * 20s budget, and the caller got a silent null.
  *
- * The ceiling this has to sit under is the caller's `maxDuration`: 60 in
- * /api/practice, and 180 in the mock-exam submit route, which also has to fit
- * a transcription call ahead of the grade.
+ * The ceiling this has to sit under is the caller's `maxDuration`, and both
+ * callers now derive their own budget from it rather than taking this one:
+ * /api/practice grades a single answer inside 120s, and the mock-exam submit
+ * route splits 300s across its grading waves. This stays the default for a
+ * caller with no opinion.
  */
 /**
  * The default budget, for a caller that does not know better than this.
