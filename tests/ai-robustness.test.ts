@@ -72,3 +72,43 @@ test('every AI route declares a function budget', async () => {
 
   assert.deepEqual(missing, [], `AI routes without maxDuration: ${missing.join(', ')}`);
 });
+
+/**
+ * A vision grade must be given a deadline derived from the invocation it runs
+ * inside, not a literal that drifts away from it.
+ *
+ * This is the bug that shipped: lib/vision.ts carried one 45s budget with a
+ * 40s per-attempt ceiling for every caller, and /api/practice declared a
+ * Hobby-era `maxDuration = 60` beside it. Measured against the production
+ * model a single-image grade runs past 40s, so both attempts aborted and a
+ * student who drew their working got the attempt back unscored. Two numbers
+ * that have to agree, sitting in different files, agreeing by coincidence.
+ */
+test('the practice route derives its vision budget from its own function budget', async () => {
+  const src = await readFile(join(root, 'app/api/practice/route.ts'), 'utf8');
+
+  const declared = src.match(/export const maxDuration\s*=\s*(\d+)/);
+  assert.ok(declared, 'the practice route must declare maxDuration');
+  const maxDuration = Number(declared![1]);
+
+  const budget = src.match(/const VISION_GRADE_BUDGET_MS\s*=\s*(.+);/);
+  assert.ok(budget, 'the practice route must set a vision grading budget');
+  assert.match(
+    budget![1],
+    /maxDuration/,
+    'the budget must be derived from maxDuration, not written as a literal that can drift from it',
+  );
+
+  assert.match(
+    src,
+    /budgetMs:\s*VISION_GRADE_BUDGET_MS/,
+    'the derived budget must actually be handed to runVisionGrading',
+  );
+
+  // A grade this route pays for is worthless if the invocation dies before the
+  // attempt row is written, so the budget has to leave room after the call.
+  assert.ok(
+    maxDuration >= 90,
+    `maxDuration ${maxDuration}s is too short for a vision grade measured at ~30s and over`,
+  );
+});

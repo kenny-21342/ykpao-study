@@ -64,6 +64,9 @@ export async function runVisionGrading(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
+  /** Passed straight through to `gradeWithVision`; see its defaults. */
+  budgetMs?: number;
+  requestTimeoutMs?: number;
 }): Promise<
   | { graded: true; grade: Partial<GradeResult>; usage: ProviderUsage | null }
   | { graded: false }

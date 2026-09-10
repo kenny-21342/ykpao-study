@@ -153,6 +153,17 @@ const DEFAULT_VISION_BUDGET_MS = Number(process.env.VISION_BUDGET_MS || 20_000);
  * /api/practice, and 180 in the mock-exam submit route, which also has to fit
  * a transcription call ahead of the grade.
  */
+/**
+ * The default budget, for a caller that does not know better than this.
+ *
+ * It is only a default because the right number belongs to the caller: what a
+ * grading call may spend depends on how many of them share the invocation.
+ * /api/practice grades exactly one answer and can hand the call most of its
+ * function budget; the mock-exam submit route grades a whole paper in waves
+ * and cannot. A single figure for both is wrong for one of them, and the one
+ * it was wrong for was practice -- at 40s per attempt every vision grade of a
+ * diagram timed out and the student's attempt saved as unscored.
+ */
 const VISION_GRADE_BUDGET_MS = Number(process.env.VISION_GRADE_BUDGET_MS || 45_000);
 const VISION_GRADE_REQUEST_TIMEOUT_MS = 40_000;
 
@@ -551,6 +562,13 @@ export async function gradeWithVision(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
+  /**
+   * How long the whole grade may take, and how long one attempt may. Callers
+   * that own their invocation should pass what they can actually afford --
+   * see the defaults above for why one shared figure does not fit everyone.
+   */
+  budgetMs?: number;
+  requestTimeoutMs?: number;
 }): Promise<{ grade: GradeResult; usage: ProviderUsage | null } | null> {
   const { imageUrl, questionText, studentText, markscheme, totalMarks, credential } = params;
   if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
@@ -588,8 +606,8 @@ ${typed}`
 
   const retryOpts: RetryOpts = {
     maxRetries: credential.source === "user" ? 2 : 5,
-    budgetMs: VISION_GRADE_BUDGET_MS,
-    requestTimeoutMs: VISION_GRADE_REQUEST_TIMEOUT_MS,
+    budgetMs: params.budgetMs ?? VISION_GRADE_BUDGET_MS,
+    requestTimeoutMs: params.requestTimeoutMs ?? VISION_GRADE_REQUEST_TIMEOUT_MS,
   };
   const result =
     credential.provider === "gemini"

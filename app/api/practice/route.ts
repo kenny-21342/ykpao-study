@@ -16,8 +16,27 @@ export const dynamic = 'force-dynamic';
 /**
  * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
  * regardless of what the request is doing. One grading call, plus an OCR call when the answer is a photo.
+ *
+ * 60 was a Hobby-era number. This project is on Pro, and 60 stopped being
+ * enough for the one call that actually needs the room: measured against the
+ * production model, a single-image vision call writing a full verdict runs to
+ * ~30s and past it, and the 40s per-attempt ceiling it was given meant a drawn
+ * answer timed out on both attempts and saved as unscored -- a student who
+ * showed their working got nothing back for it.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
+
+/**
+ * What one vision grade may spend here.
+ *
+ * Unlike the mock-exam submit route, this invocation grades exactly one
+ * answer: nothing else is competing for the time, so the call gets nearly all
+ * of it. The reserve covers the attempt row, the mistake review and the usage
+ * record that follow the grade -- none of which may be cut short, because
+ * losing them after paying for the grade is the worst outcome of the three.
+ */
+const VISION_GRADE_BUDGET_MS = (maxDuration - 20) * 1000;
+const VISION_GRADE_REQUEST_TIMEOUT_MS = VISION_GRADE_BUDGET_MS - 10_000;
 
 // This route used to carry its own copy of getSessionUser() that resolved the
 // session to a user row but skipped the ban and credential-fingerprint checks.
@@ -154,6 +173,8 @@ export async function POST(req: NextRequest) {
           markscheme,
           totalMarks: question.marks,
           credential: visionAccess.credential,
+          budgetMs: VISION_GRADE_BUDGET_MS,
+          requestTimeoutMs: VISION_GRADE_REQUEST_TIMEOUT_MS,
         });
         await recordUsage({
           userId: user.id,
