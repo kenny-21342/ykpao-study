@@ -384,7 +384,17 @@ export default function SignupPage() {
 
           {/* Footer */}
           <div className="mt-8 text-center text-xs text-gray-500">
-            <p>By creating an account, you agree to our Terms of Service and Privacy Policy</p>
+            <p>
+              By creating an account, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-gray-700">
+                Terms of Use
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="underline hover:text-gray-700">
+                Privacy Notice
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </div>
