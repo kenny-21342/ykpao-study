@@ -4,12 +4,15 @@ import { signIn, getProviders } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { GraduationCap, Mail, Lock, AlertCircle } from 'lucide-react';
+import { GraduationCap, Mail, Lock, AlertCircle, MailCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  // Shown instead of the error line: this is not a failure the student can fix
+  // by retyping anything, so it gets its own message and its own action.
+  const [unverified, setUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
   // Which OAuth providers the server actually has credentials for. Rendering a
   // button for an unconfigured provider sends the student to a provider error
@@ -39,6 +42,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setUnverified(false);
 
     try {
       const result = await signIn('credentials', {
@@ -51,11 +55,20 @@ export default function LoginPage() {
       });
 
       if (!result?.ok || result.error) {
-        setError(
-          result?.error === 'RateLimited'
-            ? 'Too many sign-in attempts. Please wait a minute and try again.'
-            : 'Invalid email or password'
-        );
+        // `EmailUnverified` only ever comes back to someone who typed the
+        // right password, so it is safe to be specific -- and necessary, since
+        // "invalid email or password" would send them to reset a password that
+        // is already correct.
+        if (result?.error === 'EmailUnverified') {
+          setUnverified(true);
+          setError('');
+        } else {
+          setError(
+            result?.error === 'RateLimited'
+              ? 'Too many sign-in attempts. Please wait a minute and try again.'
+              : 'Invalid email or password'
+          );
+        }
         setLoading(false);
         return;
       }
@@ -152,6 +165,26 @@ export default function LoginPage() {
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            {unverified && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-3">
+                <MailCheck className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">Confirm your email to continue</p>
+                  <p className="mt-1">
+                    We sent a link to <span className="font-medium">{email.trim().toLowerCase()}</span>.
+                    Open it to finish setting up your account &mdash; check your spam folder if it
+                    is not there.
+                  </p>
+                  <Link
+                    href={`/auth/verify?email=${encodeURIComponent(email.trim().toLowerCase())}`}
+                    className="inline-block mt-2 font-semibold text-amber-900 underline underline-offset-2"
+                  >
+                    Send another link
+                  </Link>
+                </div>
               </div>
             )}
 

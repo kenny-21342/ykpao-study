@@ -118,6 +118,26 @@ export const authOptions = {
           return null
         }
 
+        // An unconfirmed address gets no session.
+        //
+        // Deliberately AFTER the password check, not before. Answering earlier
+        // would tell anyone who typed an address whether it has an account
+        // awaiting confirmation; placed here, the distinct error only ever
+        // reaches someone who already holds the correct password -- and that
+        // person needs to be sent to their inbox, not told their password is
+        // wrong.
+        //
+        // Everyone who existed when this shipped was stamped verified by
+        // prisma/migrations/20260913120000_grandfather_email_verification, so
+        // this can only fire for an account created after it. The gate lives
+        // here rather than in `getSessionUser` because Google accounts arrive
+        // through the adapter, which does not stamp this column -- gating on
+        // read would lock every OAuth user out of an address Google itself
+        // verified. The jwt callback below stamps them instead.
+        if (!user.emailVerified) {
+          throw new Error("EmailUnverified")
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -151,6 +171,19 @@ export const authOptions = {
           token.email = dbUser.email
           token.picture = dbUser.image
           token.role = dbUser.role
+
+          // The provider has already verified this address -- that is what
+          // signing in with Google means -- but the PrismaAdapter's default
+          // profile mapping never writes the column, so an OAuth account sits
+          // at null forever. Stamp it, so `emailVerified` means the same thing
+          // for every row and a future check that reads it cannot quietly lock
+          // out every Google user.
+          if (!dbUser.emailVerified) {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { emailVerified: new Date() },
+            })
+          }
         }
       } else if (user?.id) {
         // Credentials sign-in — id comes from authorize

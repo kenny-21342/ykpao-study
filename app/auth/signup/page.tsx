@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signIn, getProviders } from 'next-auth/react';
-import { GraduationCap, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, MailCheck } from 'lucide-react';
 
 // Kept in sync with the zod schema in app/api/auth/signup/route.ts.
 const MIN_PASSWORD_LENGTH = 8;
@@ -31,6 +31,10 @@ export default function SignupPage() {
   // Set when the address is already registered, so we can offer a way onward
   // instead of leaving the student staring at a dead end.
   const [emailTaken, setEmailTaken] = useState(false);
+  // Set once the account exists. The form is replaced by a "check your inbox"
+  // panel rather than redirecting: there is nowhere useful to send them until
+  // the address is confirmed.
+  const [created, setCreated] = useState<{ email: string; emailSent: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   // Which fields the student has finished with, so inline errors appear on
   // blur rather than only after a failed submit.
@@ -104,22 +108,12 @@ export default function SignupPage() {
         return;
       }
 
-      // Auto sign in after signup. Normalised the same way the signup schema
-      // stores it, so the immediate sign-in can't miss the row it just made.
-      const result = await signIn('credentials', {
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        redirect: false,
-        callbackUrl: `${window.location.origin}/`,
-      });
-
-      if (!result?.ok || result.error) {
-        setError('Account created, but automatic sign-in failed. Please sign in.');
-        setLoading(false);
-        return;
-      }
-
-      window.location.assign('/');
+      // No auto sign-in any more: the account starts unconfirmed and the
+      // credentials provider refuses it a session until the emailed link is
+      // clicked. Attempting it here would fail every single time and read to
+      // the student as a broken signup rather than a step they still owe.
+      setCreated({ email: formData.email.trim().toLowerCase(), emailSent: data.emailSent !== false });
+      setLoading(false);
     } catch {
       setError('Failed to create account');
       setLoading(false);
@@ -131,6 +125,65 @@ export default function SignupPage() {
   };
 
   const passwordStrength = scorePassword(formData.password);
+
+  // The account exists but cannot be signed into yet. This replaces the form
+  // entirely rather than sitting above it -- resubmitting would only produce
+  // the 409 "already registered" error, which reads as a failure.
+  if (created) {
+    return (
+      <div className="min-h-screen w-full flex relative bg-black">
+        <Image
+          src="/auth-hero.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="fixed inset-0 object-cover"
+        />
+        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
+          <div className="w-full">
+            <div className="mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg shadow-green-500/30 mb-4">
+                <MailCheck className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent mb-2">
+                Check your inbox
+              </h1>
+              <p className="text-gray-600">One last step before you can sign in.</p>
+            </div>
+
+            {created.emailSent ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 mb-6">
+                We sent a confirmation link to{' '}
+                <span className="font-semibold">{created.email}</span>. Open it to activate your
+                account. The link lasts 24 hours &mdash; check your spam folder if it has not
+                arrived in a few minutes.
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 mb-6">
+                Your account was created, but we could not send the confirmation email just now.
+                Request a new link below, or contact us if it keeps failing.
+              </div>
+            )}
+
+            <Link
+              href={`/auth/verify?email=${encodeURIComponent(created.email)}`}
+              className="block w-full text-center py-3 px-4 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/30 hover:from-green-600 hover:to-emerald-700 transition"
+            >
+              Send another link
+            </Link>
+
+            <p className="mt-6 text-sm text-gray-600">
+              Already confirmed?{' '}
+              <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-700">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex relative bg-black">

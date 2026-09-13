@@ -1,0 +1,18 @@
+-- Grandfather every account that exists at the moment verification is enforced.
+--
+-- `lib/auth.ts` and the credentials `authorize` callback start refusing a
+-- session to any user whose `emailVerified` is null. Without this backfill that
+-- rule is retroactive: every account created before the feature existed --
+-- including the owner's and the beta users' -- would be locked out on deploy
+-- with no way back in, because nothing ever sent them a link to click.
+--
+-- Stamping them here rather than gating on a hard-coded cutoff date keeps the
+-- runtime check a plain `emailVerified IS NULL`, with no constant to drift out
+-- of step if the deploy slips. It runs exactly once; from this point on the
+-- only way to get a non-null value is to click a real link.
+--
+-- Google accounts are included deliberately -- the provider already verified
+-- the address, and NextAuth's adapter does not stamp this column itself.
+--
+-- No schema change: `users."emailVerified"` already exists (prisma/schema.prisma:13).
+UPDATE "users" SET "emailVerified" = NOW() WHERE "emailVerified" IS NULL;

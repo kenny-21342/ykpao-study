@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/prisma';
 import { strictLimiter } from '@/lib/rate-limit';
+import { sendVerificationEmail } from '@/lib/email-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,5 +66,21 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ user: { id: user.id, email: user.email } }, { status: 201 });
+  // `emailVerified` is left null by the create above, and both sign-in paths
+  // refuse a session while it is null — so this mail is the only way into the
+  // account that was just made. Awaited rather than fired and forgotten:
+  // serverless tears the invocation down at the response, and a floating
+  // promise here would be killed mid-flight often enough to look random.
+  const emailSent = await sendVerificationEmail(user.email!, user.name);
+
+  return NextResponse.json(
+    {
+      user: { id: user.id, email: user.email },
+      // The form tells the student to go and confirm. When mail is not
+      // configured at all there is nothing to wait for, so say so rather than
+      // sending them to an inbox that will stay empty.
+      emailSent,
+    },
+    { status: 201 },
+  );
 }
