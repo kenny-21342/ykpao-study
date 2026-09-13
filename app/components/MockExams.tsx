@@ -1090,6 +1090,17 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to submit exam');
+      // The paper is saved either way. When AI marking is off, multiple choice
+      // is still marked from its key and everything else comes back unmarked
+      // with the mark scheme attached -- say so, or a half-marked paper reads
+      // as a broken feature rather than a setting the student can change.
+      if (data.aiDisabled) {
+        toast(
+          data.aiNotice ??
+            'Your paper was saved. AI marking is off for your account, so written answers are unmarked — compare them against the mark scheme.',
+          { duration: 9000, icon: '📝' },
+        );
+      }
       onSubmitted(examId);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Failed to submit exam');

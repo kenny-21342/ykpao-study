@@ -139,3 +139,73 @@ test('the mock-exam route hands its wave budget to the vision grader too', async
     'the vision grade must run under the same wave budget as the text grade, not a module default',
   );
 });
+
+/**
+ * Submitting a sat paper must never be refused for want of an API key.
+ *
+ * This route was the one grading path in the app with no degraded mode: it
+ * returned 503 from the credential gate before a single answer was read, so a
+ * student without a key could sit ninety minutes of a paper, press Submit, and
+ * lose the lot. Every other grading path -- /api/practice,
+ * /api/daily-challenge -- records the attempt and explains itself.
+ *
+ * Asserted on the source rather than by invoking the handler because the
+ * handler needs a session, a database and a paper; the property that matters
+ * is structural and one grep proves it.
+ */
+test('mock-exam submit degrades instead of refusing when AI is off', async () => {
+  const src = await readFile(join(root, 'app/api/mock-exams/[id]/submit/route.ts'), 'utf8');
+
+  assert.doesNotMatch(
+    src,
+    /if \(!access\.ok\) \{\s*\n\s*return NextResponse\.json\(/,
+    'the credential gate must not return early -- a sat paper has to be persisted',
+  );
+  assert.match(src, /const aiEnabled = access\.ok/, 'availability must become a flag, not an exit');
+  assert.match(
+    src,
+    /\(!questionContent\.trim\(\) \|\| !aiEnabled\)/,
+    'with AI off, a non-keyed item must take the existing ungraded branch',
+  );
+  assert.match(
+    src,
+    /aiDisabled: !aiEnabled/,
+    'the response must say why items came back unmarked',
+  );
+});
+
+/**
+ * Multiple choice still marks itself with no provider at all, which is what
+ * makes the degraded path worth having rather than a blanket "unmarked".
+ */
+test('mock-exam submit still grades an answer key without a model', async () => {
+  const src = await readFile(join(root, 'app/api/mock-exams/[id]/submit/route.ts'), 'utf8');
+  const keyIndex = src.indexOf('const keyGrade = gradeAgainstKey(');
+  const ungradedIndex = src.indexOf('|| !aiEnabled)');
+  assert.ok(keyIndex > 0, 'the keyed branch must exist');
+  assert.ok(
+    keyIndex < ungradedIndex,
+    'the keyed branch must run before the ungraded one, or MCQ would go unmarked with AI off',
+  );
+});
+
+/**
+ * Every route derives its own budgets from its own `maxDuration`, so raising a
+ * ceiling propagates instead of needing a second edit. These two carried
+ * Hobby-era 60s values long after the project moved to Pro.
+ */
+test('the SSE streams outlive the connection lifetime they advertise', async () => {
+  const config = await readFile(join(root, 'lib/stream-config.ts'), 'utf8');
+  const lifetime = Number(/DEFAULT_STREAM_LIFETIME_MS = ([\d_]+)/.exec(config)?.[1].replace(/_/g, ''));
+  assert.ok(Number.isFinite(lifetime), 'the default stream lifetime must be readable');
+
+  for (const route of ['app/api/notifications/stream/route.ts', 'app/api/pages/[id]/stream/route.ts']) {
+    const src = await readFile(join(root, route), 'utf8');
+    const max = Number(/export const maxDuration = (\d+)/.exec(src)?.[1]);
+    assert.ok(Number.isFinite(max), `${route} must declare maxDuration`);
+    assert.ok(
+      lifetime < max * 1000,
+      `${route}: a stream that outlives maxDuration is killed mid-flight, which the browser cannot tell from a network fault`,
+    );
+  }
+});

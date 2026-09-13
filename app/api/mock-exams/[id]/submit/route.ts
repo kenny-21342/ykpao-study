@@ -96,29 +96,44 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    // Grading a whole paper is the most expensive thing the app does, so both
-    // gates run before anything is read: credentials first (is AI on for this
-    // account at all?), then the allowance.
+    // Grading a whole paper is the most expensive thing the app does, so the
+    // allowance gate still runs before anything is read.
+    //
+    // The *credential* gate used to run here too, and returned 503 before a
+    // single answer was persisted. That made this the one grading path in the
+    // app with no degraded mode: a student without an API key could generate a
+    // paper, sit ninety minutes of it, press Submit and be refused, losing the
+    // lot. Every other path -- /api/practice, /api/daily-challenge -- records
+    // the attempt and explains itself.
+    //
+    // It degrades now, and needs no new marking logic to do it. Multiple choice
+    // is graded by comparing letters (`gradeAgainstKey`), which never needed a
+    // model; everything else takes the ungraded branch that already exists for
+    // untranscribed questions, which persists the answer with the mark scheme
+    // attached and tells the student to mark against it. That is the same
+    // self-marking flow the question bank already uses.
     const access = await requireTextAi(user.id);
-    if (!access.ok) {
-      return NextResponse.json(
-        { error: access.error, reason: access.reason, aiDisabled: true },
-        { status: access.status }
-      );
-    }
+    const aiEnabled = access.ok;
+    // Narrowed once here: the grading worker is a closure, so `access.ok` no
+    // longer narrows the union by the time the credential is needed. Null
+    // exactly when `aiEnabled` is false, and every path that reads it is
+    // already behind that flag.
+    const textCredential = access.ok ? access.credential : null;
     // Vision is optional here: a text-only key still grades typed answers, and
     // any attached photo is reported as skipped rather than silently dropped.
     const visionAccess = await requireVisionAi(user.id);
 
-    const allowance = await checkAiAllowance(user.id, {
-      requests: MAX_EXAM_ITEMS,
-      source: access.source,
-    });
-    if (!allowance.allowed) {
-      return NextResponse.json(
-        { error: allowance.message },
-        { status: 429 }
-      );
+    if (aiEnabled) {
+      const allowance = await checkAiAllowance(user.id, {
+        requests: MAX_EXAM_ITEMS,
+        source: access.source,
+      });
+      if (!allowance.allowed) {
+        return NextResponse.json(
+          { error: allowance.message },
+          { status: 429 }
+        );
+      }
     }
     const { id } = await params;
 
@@ -254,9 +269,14 @@ export async function POST(
      * Record one graded answer in whichever attempt table the item belongs to.
      *
      * There are two because a foreign key can only point at one question table.
-     * A bank item also has no `ReviewItem` path yet -- that table is likewise
-     * keyed to the legacy corpus -- so a bank mistake is recorded as an attempt
-     * and does not yet raise a review card.
+     *
+     * This used to add that a bank item "has no `ReviewItem` path yet", which
+     * has not been true since `ReviewItem.bankQuestionId` landed:
+     * `recordMistake` below routes bank mistakes through
+     * `upsertBankMistakeReview`, and 71 of the 82 review cards in production
+     * come from the bank. The note is removed rather than corrected because a
+     * stale caveat is worse than none -- it had this route's own author
+     * scheduling work that was already done.
      */
     const recordAttempt = async (
       entry: (typeof itemsWithMs)[number],
@@ -509,19 +529,27 @@ export async function POST(
           return score;
         }
 
-        // Nothing left to mark against: a crop-only question has no transcript
-        // for the text grader to read, and inventing one from the image is a
-        // different (and paid) job. Vision grading is the exception -- it
-        // reads the answer image directly and doesn't need a transcript.
-        if (!questionContent.trim() && !useVisionGrading) {
+        // Nothing left to mark against, for either of two reasons.
+        //
+        // A crop-only question has no transcript for the text grader to read,
+        // and inventing one from the image is a different (and paid) job.
+        // Vision grading is the exception -- it reads the answer image directly
+        // and doesn't need a transcript.
+        //
+        // Or AI is switched off for this account entirely. That used to be
+        // refused at the door; it lands here instead, which is the same honest
+        // state a crop-only question already reaches, with the mark scheme
+        // attached so the student can mark it themselves.
+        if ((!questionContent.trim() || !aiEnabled) && !useVisionGrading) {
           await prisma.mockExamItem.update({
             where: { id: item.id },
             data: {
               answer,
               score: null,
               isCorrect: null,
-              explanation:
-                'This question has not been transcribed yet, so it could not be marked automatically. Compare your answer against the mark scheme.',
+              explanation: !aiEnabled
+                ? 'AI marking is switched off for your account, so this answer was saved but not marked. Compare it against the mark scheme below and award yourself the marks.'
+                : 'This question has not been transcribed yet, so it could not be marked automatically. Compare your answer against the mark scheme.',
               modelAnswer: markscheme,
               gradingStatus: 'ungraded',
               gradingSourceId: markschemeId,
@@ -591,7 +619,10 @@ export async function POST(
               },
             ],
             {
-              credential: access.credential,
+              // Non-null by construction: when `aiEnabled` is false every item
+              // that is not vision-graded has already taken the ungraded
+              // branch above and returned.
+              credential: textCredential!,
               temperature: 0.2,
               maxTokens: 1200,
               // Grading fans out: MAX_EXAM_ITEMS items at GRADING_CONCURRENCY
@@ -659,7 +690,7 @@ export async function POST(
               ? visionUsage.current?.tokensOut ??
                 (visionUsage.current ? undefined : VISION_GRADE_TOKENS_ESTIMATE)
               : textUsage.current?.completionTokens ?? VISION_GRADE_TOKENS_ESTIMATE,
-            model: gradedWithVision ? visionAccess.credential.model : access.credential.model,
+            model: gradedWithVision ? visionAccess.credential.model : textCredential?.model,
           });
 
           return score;
@@ -670,7 +701,7 @@ export async function POST(
           await recordUsage({
             userId: user.id,
             feature: actualGradingMode === 'vision' ? 'mock-exam-grade-vision:error' : 'mock-exam-grade:error',
-            model: access.credential.model,
+            model: textCredential?.model,
           });
           // ...but the answer itself must still survive. This used to return
           // without writing anything, so a transient upstream failure threw
@@ -719,6 +750,11 @@ export async function POST(
     });
 
     return NextResponse.json({
+      // Why some items came back unmarked. Without this the paper simply looks
+      // half-graded, which reads as a broken feature rather than a setting the
+      // student can change. `aiDisabled` is kept on the same name the client
+      // already branches on for the generate route.
+      aiDisabled: !aiEnabled,
       exam: {
         id: updated.id,
         title: updated.title,
@@ -750,10 +786,16 @@ export async function POST(
           }];
         }),
       },
-      // Only ever set when the student attached photos and their credentials
-      // name no vision model: the paper was graded, the pictures were not read.
-      aiNotice:
-        !visionAccess.ok && Object.keys(images).length > 0 ? visionAccess.error : null,
+      // One notice, two causes, most serious first.
+      //
+      // Text AI off means the whole paper came back unmarked except multiple
+      // choice, which is graded from its stored key. Vision off is narrower:
+      // the paper was graded, but any attached photo was not read.
+      aiNotice: !aiEnabled
+        ? (access.ok ? null : access.error)
+        : !visionAccess.ok && Object.keys(images).length > 0
+          ? visionAccess.error
+          : null,
     });
   } catch (error) {
     console.error('Mock exam submit failed:', error);
