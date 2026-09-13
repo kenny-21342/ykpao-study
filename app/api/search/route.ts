@@ -11,12 +11,13 @@ import { scoreRagMatches } from '@/lib/rag';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing. This one is pure Postgres — a
+ * Vercel kills an invocation at this ceiling regardless of what the request
+ * is doing. This project is on Pro, where the ceiling is 300s; 60 was a
+ * Hobby-era number and was never revisited. This one is pure Postgres — a
  * full-text scan across the corpus — but it is unbounded enough to be worth
  * a ceiling above the default.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type SearchResult = {
   id: string;

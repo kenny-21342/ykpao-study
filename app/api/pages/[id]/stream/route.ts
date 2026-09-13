@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * Must exceed SSE_MAX_LIFETIME_MS (240s by default) or the platform kills the
+ * Must exceed SSE_MAX_LIFETIME_MS (50s by default in lib/stream-config.ts) or the platform kills the
  * stream before the server closes it cleanly, and every client reconnects
  * through an error path on a fixed cycle forever. Lower SSE_MAX_LIFETIME_MS
  * rather than raising this past what your plan allows.
  */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
 

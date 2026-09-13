@@ -43,7 +43,7 @@ export const dynamic = 'force-dynamic';
  * student's question fails with an opaque gateway error. 60s is the same
  * ceiling every other AI route declares.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Wall-clock budget for the tutor's completion.

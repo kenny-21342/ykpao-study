@@ -9,10 +9,11 @@ import { reportError } from '@/lib/error-reporting';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing. A vision call over a full-page photo — slower than text completion.
+ * Vercel kills an invocation at this ceiling regardless of what the request
+ * is doing. This project is on Pro, where the ceiling is 300s; 60 was a
+ * Hobby-era number and was never revisited. A vision call over a full-page photo — slower than text completion.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // This route used to carry its own copy of getSessionUser() that resolved the
 // session to a user row but skipped the ban and credential-fingerprint checks.

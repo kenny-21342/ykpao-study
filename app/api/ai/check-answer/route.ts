@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
  * after a few seconds and the student sees a gateway error instead of a mark —
  * the same 60s ceiling every other AI route declares.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const Body = z.object({
   question: z.string().min(1).max(8000),

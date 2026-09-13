@@ -10,10 +10,11 @@ import { reportError } from '@/lib/error-reporting';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing. One LLM completion.
+ * Vercel kills an invocation at this ceiling regardless of what the request
+ * is doing. This project is on Pro, where the ceiling is 300s; 60 was a
+ * Hobby-era number and was never revisited. One LLM completion.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Exactly one of `questionId` and `bankQuestionId` identifies the question.

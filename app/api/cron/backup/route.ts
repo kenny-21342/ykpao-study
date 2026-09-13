@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * Reads every table it backs up and gzips the result, so give it the whole
  * invocation rather than the default.
  */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * GET /api/cron/backup — write a snapshot to the object store.

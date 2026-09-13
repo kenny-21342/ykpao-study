@@ -14,14 +14,19 @@
 /**
  * Default max lifetime of one SSE connection, in milliseconds.
  *
- * 50s, comfortably under the 60s `maxDuration` the stream routes declare (which
- * is itself Vercel Hobby's ceiling). The default is deliberately the *safe*
- * value rather than the generous one: too long and the platform kills every
- * stream mid-flight, which the browser cannot distinguish from a network fault.
- * Raise `SSE_MAX_LIFETIME_MS` — and `maxDuration` with it — on a plan that
- * allows longer functions.
+ * 280s, comfortably under the 300s `maxDuration` the two stream routes declare.
+ * It must stay *below* that ceiling: too long and the platform kills the stream
+ * mid-flight, which the browser cannot distinguish from a network fault, so
+ * every client takes an error path on a fixed cycle forever.
+ *
+ * This was 50s, sized against a 60s `maxDuration` that was itself a Hobby-era
+ * number. The project is on Pro, so both moved together: a notification or
+ * presence stream now reconnects roughly once every five minutes instead of
+ * once a minute, which is a ~5x cut in reconnect churn for every signed-in
+ * student. Raise or lower `SSE_MAX_LIFETIME_MS` to match a different plan's
+ * function timeout — always a little below it, never above.
  */
-const DEFAULT_STREAM_LIFETIME_MS = 50_000;
+const DEFAULT_STREAM_LIFETIME_MS = 280_000;
 
 /** Hard bounds — a stream shorter than this reconnects wastefully. */
 const MIN_LIFETIME_MS = 30_000;
