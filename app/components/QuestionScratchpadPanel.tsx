@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { PenTool, ChevronDown, ChevronUp } from 'lucide-react';
 import type { DrawingCanvasHandle, DrawingCanvasStrokeData } from './DrawingCanvas';
 import { useQuestionScratchpad, type ScratchpadRef } from './useQuestionScratchpad';
+import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
 
 const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
   ssr: false,
@@ -59,17 +60,7 @@ export default function QuestionScratchpadPanel({
   // mounted at 760 and shrank to 340 a tick later would hold strokes scaled
   // for a surface twice as wide. (A viewport resized mid-session is the same
   // problem and is not solved here -- the drawing rescales on the next load.)
-  const [canvasWidth, setCanvasWidth] = useState<number | null>(null);
-  useEffect(() => {
-    const frame = frameRef.current;
-    if (!frame) return;
-    const measure = () => setCanvasWidth(Math.max(240, Math.min(width, frame.clientWidth)));
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(frame);
-    return () => observer.disconnect();
-  }, [open, width]);
+  const canvasWidth = useMeasuredCanvasWidth(frameRef, width, open);
 
   const attachCanvas = useCallback((handle: DrawingCanvasHandle | null) => {
     canvasRef.current = handle;

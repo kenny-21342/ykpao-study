@@ -22,6 +22,7 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import { Loader2, Pencil, X } from 'lucide-react';
 import type { DrawingCanvasHandle, DrawingCanvasStrokeData } from './DrawingCanvas';
+import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
 
 const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
   ssr: false,
@@ -55,7 +56,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
   // an edit made on a phone must not shrink the drawing for everyone else --
   // so the save below rasterises back up to it.
   const frameRef = useRef<HTMLDivElement | null>(null);
-  const [canvasWidth, setCanvasWidth] = useState<number | null>(null);
+  const canvasWidth = useMeasuredCanvasWidth(frameRef, width, editing);
   // The ref itself can't drive the import effect -- writing a ref never
   // re-renders. This counter does, and only when the canvas actually mounts
   // or unmounts, because `attachCanvas` has a stable identity (an inline
@@ -69,17 +70,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
     setCanvasEpoch((value) => value + 1);
   }, []);
 
-  useEffect(() => {
-    if (!editing) return;
-    const frame = frameRef.current;
-    if (!frame) return;
-    const measure = () => setCanvasWidth(Math.max(240, Math.min(width, frame.clientWidth)));
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(frame);
-    return () => observer.disconnect();
-  }, [editing, width]);
+
 
   useEffect(() => {
     const canvas = canvasRef.current;

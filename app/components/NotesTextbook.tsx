@@ -56,6 +56,7 @@ import {
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import { usePageCollaboration } from './usePageCollaboration';
+import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
 import type { RemoteCursor } from './RemoteCursors';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
@@ -184,6 +185,15 @@ const EMPTY_PAGE: Pick<NotePage, 'icon' | 'tags' | 'favorite' | 'archived' | 'li
   revision: 1,
 };
 
+/**
+ * The size a note drawing is authored at on a screen with room for it.
+ *
+ * The canvas is clamped down to the frame on a narrow viewport (see
+ * `useMeasuredCanvasWidth`); this is the ceiling, not a fixed size.
+ */
+const DRAWING_CANVAS_WIDTH = 760;
+const DRAWING_CANVAS_HEIGHT = 420;
+
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const draftKey = (pageId: string) => `notes-draft:${pageId}`;
 const canEdit = (page: NotePage | null) => page?.accessRole !== 'viewer';
@@ -288,6 +298,15 @@ export default function NotesTextbookPage() {
   const dirtyRef = useRef(false);
   const saveInFlightRef = useRef(false);
   const drawingCanvasRef = useRef<DrawingCanvasHandle | null>(null);
+  /**
+   * The note drawing modal used a hard `width={760} className="min-w-[760px]"`
+   * inside an `overflow-auto` frame. On a phone that is a canvas you must
+   * scroll sideways to reach the right half of -- using the same pointer that
+   * is trying to draw on it. The scratchpad and the inline drawing block both
+   * solved this already; this is the same hook, now shared.
+   */
+  const drawingFrameRef = useRef<HTMLDivElement | null>(null);
+  const drawingWidth = useMeasuredCanvasWidth(drawingFrameRef, DRAWING_CANVAS_WIDTH, showDrawing);
 
   useEffect(() => { selectedPageRef.current = selectedPage; }, [selectedPage]);
   useEffect(() => { editTitleRef.current = editTitle; }, [editTitle]);
@@ -1560,12 +1579,12 @@ export default function NotesTextbookPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="relative flex-1 overflow-auto p-4">
+            <div ref={drawingFrameRef} className="relative flex-1 overflow-auto p-4">
+              {drawingWidth !== null && (
               <DrawingCanvas
                 ref={drawingCanvasRef}
-                width={760}
-                height={420}
-                className="min-w-[760px]"
+                width={drawingWidth}
+                height={DRAWING_CANVAS_HEIGHT}
                 onSave={(dataUrl) => {
                   if (drawingUploading) return;
                   if (drawingCanvasRef.current?.isEmpty()) {
@@ -1575,6 +1594,7 @@ export default function NotesTextbookPage() {
                   void insertDrawingIntoNote(dataUrl);
                 }}
               />
+              )}
               {drawingUploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm font-medium text-gray-600 backdrop-blur-sm dark:bg-gray-900/70 dark:text-gray-300">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading drawing
