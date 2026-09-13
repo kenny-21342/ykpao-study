@@ -33,7 +33,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
-      'Most of the archive is here — around 67,000 questions across 41 subjects, each with the original crop and, for three quarters of them, its mark scheme. Two gaps remain: multiple-choice questions can be marked automatically but written answers are marked by you against the mark scheme, and a small number of questions are held back because their crop was cut wrongly.',
+      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Two gaps remain: multiple-choice questions can be marked automatically but written answers are marked by you against the mark scheme, and about 5% of questions are held back because their crop was cut wrongly.',
   },
   'mock-exams': {
     state: 'preview',

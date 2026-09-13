@@ -35,9 +35,20 @@ async function loadStats() {
   try {
     const [questions, subjects, papers] = await Promise.all([
       prisma.bankQuestion.count({ where: { status: 'published' } }),
-      prisma.bankSubject.count({
-        where: { papers: { some: { questions: { some: { status: 'published' } } } } },
-      }),
+      // Distinct syllabus **codes**, not `bank_subjects` rows.
+      //
+      // A row is (board, code, level), so 0620 IGCSE and 0620 at another level
+      // are two rows and one syllabus as far as a student is concerned.
+      // Counting rows gave 82 against the 49 the readiness banner names, and
+      // the two now sit on the same page -- a visitor reading both would see
+      // the platform contradict itself about its own size.
+      prisma.bankSubject
+        .findMany({
+          where: { papers: { some: { questions: { some: { status: 'published' } } } } },
+          select: { code: true },
+          distinct: ['code'],
+        })
+        .then((rows) => rows.length),
       prisma.bankPaper.count({ where: { docType: 'qp' } }),
     ]);
     return { questions, subjects, papers };

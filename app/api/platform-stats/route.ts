@@ -30,11 +30,18 @@ export async function GET() {
   try {
     const [questions, subjects, pastPapers, resources, mockExams] = await Promise.all([
       prisma.bankQuestion.count({ where: { status: 'published' } }),
-      // Through papers, because a subject's rows hang off its papers -- a
-      // subject whose every question is still in review is not "covered".
-      prisma.bankSubject.count({
-        where: { papers: { some: { questions: { some: { status: 'published' } } } } },
-      }),
+      // Distinct syllabus codes, through papers. A `bank_subjects` row is
+      // (board, code, level), so counting rows double-counts a syllabus taught
+      // at two levels -- and disagrees with the figure `lib/feature-readiness.ts`
+      // states on the same page. Going through papers also means a subject
+      // whose every question is still in review is not counted as "covered".
+      prisma.bankSubject
+        .findMany({
+          where: { papers: { some: { questions: { some: { status: 'published' } } } } },
+          select: { code: true },
+          distinct: ['code'],
+        })
+        .then((rows) => rows.length),
       prisma.bankPaper.count({ where: { docType: 'qp' } }),
       prisma.schoolResource.count(),
       prisma.mockExam.count(),
