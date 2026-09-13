@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Download } from 'lucide-react';
+import { Skeleton, SkeletonRegion } from './Skeleton';
 
 type PDFViewerProps = {
   fileUrl: string;
@@ -22,8 +24,33 @@ type PDFViewerProps = {
 // auto-height container -- so `h-full` resolved to nothing and the paper
 // rendered as a blank 150px sliver.
 export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
+  /**
+   * Past papers are multi-megabyte scans, and until one arrives the `<object>`
+   * paints nothing at all -- so the whole panel was a blank 520px rectangle
+   * for however long the download took, with no way to tell a slow file from
+   * a broken one. The placeholder below is a page-shaped skeleton, and after
+   * a few seconds it says so in words.
+   */
+  const [loaded, setLoaded] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  // `<object>` fires load inconsistently across browsers for PDFs -- and not
+  // at all when the plugin is disabled and the fallback children render
+  // instead. So the placeholder also clears on a timer: a stuck skeleton over
+  // a paper that has actually rendered is worse than clearing early over one
+  // that has not.
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    timers.current = [
+      setTimeout(() => setSlow(true), 4000),
+      setTimeout(() => setLoaded(true), 15000),
+    ];
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, [fileUrl]);
+
   return (
-    <div className="flex h-[calc(100vh-15rem)] min-h-[520px] flex-col">
+    <div className="relative flex h-[calc(100vh-15rem)] min-h-[520px] flex-col">
       <div className="flex items-center justify-end border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
         <a
           href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
@@ -35,7 +62,37 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
           Download
         </a>
       </div>
-      <object data={fileUrl} type="application/pdf" className="h-full w-full flex-1" aria-label={fileName}>
+      {!loaded && (
+        <SkeletonRegion
+          label="Loading the paper"
+          className="pointer-events-none absolute inset-x-0 bottom-0 top-[41px] z-10 flex flex-col items-center gap-3 overflow-hidden bg-gray-100 p-6 dark:bg-gray-900"
+        >
+          {/* Page-shaped, so the wait looks like a document arriving rather
+              than an error. */}
+          <div className="w-full max-w-2xl space-y-3 rounded-lg bg-white p-8 shadow-sm dark:bg-gray-800">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+          {slow && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Still downloading this paper — scans can be a few megabytes.
+            </p>
+          )}
+        </SkeletonRegion>
+      )}
+
+      <object
+        data={fileUrl}
+        type="application/pdf"
+        className="h-full w-full flex-1"
+        aria-label={fileName}
+        onLoad={() => setLoaded(true)}
+      >
         {/* Reached only when the browser can't render `data` inline (some
             mobile browsers, or a PDF plugin that's been disabled). */}
         <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-100 p-8 text-center dark:bg-gray-900">

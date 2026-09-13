@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Skeleton, SkeletonRegion } from './Skeleton';
 import { ArrowRight, BookOpen, ClipboardList, Library, Plus, Settings2 } from 'lucide-react';
 
 /**
@@ -72,7 +73,25 @@ export default function CourseShortcuts({
     return () => controller.abort();
   }, []);
 
-  if (courses === null) return null;
+  // Returning null while loading collapsed the section to nothing and then
+  // pushed everything below it down when the fetch landed. A placeholder of
+  // roughly the right height keeps the dashboard still.
+  if (courses === null) {
+    return (
+      <SkeletonRegion
+        label="Loading your courses"
+        className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-6"
+      >
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="mt-2 h-3 w-64" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </SkeletonRegion>
+    );
+  }
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-6">
