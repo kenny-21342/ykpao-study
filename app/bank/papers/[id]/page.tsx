@@ -32,7 +32,7 @@ export default async function BankPaperPage({
   // The crops are cut from copyrighted papers and are cohort-private, exactly
   // like the images they are served alongside.
   const user = await getSessionUser();
-  if (!user) redirect('/auth/signin');
+  if (!user) redirect('/auth/login');
 
   const { id } = await params;
   const paperId = Number.parseInt(id, 10);

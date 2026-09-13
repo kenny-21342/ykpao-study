@@ -59,6 +59,28 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     (c) => levelFilter === 'All' || c.level === levelFilter
   );
 
+  /**
+   * Dismiss the wizard for good.
+   *
+   * This used to call `onComplete()` alone, which only hides the modal — the
+   * server never learned the user had skipped, so the wizard came back on the
+   * next page load and every one after it. Persist first; close regardless,
+   * because a failed skip must not trap the user behind a modal they are
+   * trying to dismiss. The worst case is that it reappears once more.
+   */
+  const handleSkip = async () => {
+    try {
+      await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skip: true }),
+      });
+    } catch {
+      // Deliberately ignored — see above.
+    }
+    onComplete();
+  };
+
   const handleFinish = async () => {
     if (totalSelected === 0) {
       setError('Please pick at least one subject.');
@@ -111,9 +133,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             </div>
           </div>
           <button
-            onClick={onComplete}
+            onClick={() => void handleSkip()}
             className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
             title="Skip for now"
+            aria-label="Skip setup for now"
           >
             <X className="w-5 h-5" />
           </button>

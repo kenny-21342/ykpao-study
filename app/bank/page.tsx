@@ -26,7 +26,7 @@ const SESSIONS: Record<string, string> = {
  */
 export default async function BankIndexPage() {
   const user = await getSessionUser();
-  if (!user) redirect('/auth/signin');
+  if (!user) redirect('/auth/login');
 
   const papers = await listBankPapers();
 

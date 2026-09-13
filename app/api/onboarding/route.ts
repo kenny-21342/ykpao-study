@@ -54,6 +54,17 @@ const Body = z.object({
     examDate: CoursePreferenceFields.examDate,
   })).optional(),
   name: z.string().trim().min(1).max(100).optional(),
+  /**
+   * Dismiss onboarding without picking anything.
+   *
+   * The wizard's close button used to call its `onComplete` callback directly,
+   * which only hides the modal client-side. `onboardedAt` stayed null, so the
+   * wizard reappeared on every single page load, forever, with no way to stop
+   * it short of completing it. Skipping has to be a decision the server
+   * records, and it cannot reuse the normal path below because that one
+   * requires at least one subject.
+   */
+  skip: z.literal(true).optional(),
 });
 
 /**
@@ -76,7 +87,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const { courseIds = [], courses = [], name } = parsed;
+  const { courseIds = [], courses = [], name, skip } = parsed;
+
+  // Skipping stamps `onboardedAt` and touches nothing else: no enrollments are
+  // created and none are removed, so a user who skips keeps whatever they
+  // already had and simply stops being asked.
+  if (skip) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { onboardedAt: new Date() },
+    });
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
   const preferences: Array<{ courseId: string; targetGrade?: string | null; examDate?: string | null }> = courses.length > 0
     ? courses
     : courseIds.map((courseId) => ({ courseId }));
