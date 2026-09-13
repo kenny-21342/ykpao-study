@@ -17,6 +17,7 @@
  * `AssistancePanel`.
  */
 import { useEffect, useRef, useState } from 'react';
+import PreviewNotice from './PreviewNotice';
 import { useSession } from 'next-auth/react';
 import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
@@ -92,11 +93,16 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
     // letter, which needs no transcript. Saying otherwise under a question that
     // just came back "Correct." reads as the app not knowing what it did.
     const keyed = Boolean(question.markScheme?.answerLetter);
+    // "Not available yet" alone read as broken-and-coming-soon, sitting
+    // directly beneath a self-marking widget that is in fact the intended
+    // flow -- so the two messages undercut each other. Name the reason (this
+    // question is stored as an image of the printed paper) and present marking
+    // it yourself as the way it works, not as a consolation.
     return (
       <p className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
         {keyed
-          ? 'Hints aren\u2019t available for this question yet. Your answer is still marked against the answer key.'
-          : 'Hints and automatic marking aren\u2019t available for this question yet. You can still answer it and check your work against the mark scheme.'}
+          ? 'This question is stored as a scan of the printed paper, so hints aren\u2019t available for it. Your answer is still marked against the answer key.'
+          : 'This question is stored as a scan of the printed paper, so it can\u2019t be marked automatically. Answer it, then mark yourself against the mark scheme below \u2014 that is how the bank is designed to be used.'}
       </p>
     );
   }
@@ -394,6 +400,14 @@ export default function BankPractice({
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl space-y-4 p-2 sm:p-4">
+      {/* The sidebar badges Practice as "Preview" and every other entrance to
+          the bank carries the matching banner -- /bank, /bank/papers/[id] and
+          the legacy QuestionsDatabase. This component had none, and it is the
+          default body of the tab, so the one surface students actually open
+          was the one that never explained itself. The banner text is also
+          where self-marking is described, which is why meeting it cold made
+          the intended flow read as a broken AI feature. */}
+      <PreviewNotice feature="question-bank" />
       <div className="inline-flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
         {(['enrolled', 'all'] as const).map((option) => (
           <button

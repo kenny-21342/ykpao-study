@@ -124,6 +124,15 @@ export default function QuestionsDatabase({
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /**
+   * Why an attempt came back unscored.
+   *
+   * /api/practice has always returned `aiNotices` -- for a missing key, a
+   * failed grade, an unreadable diagram -- and no client has ever read it. A
+   * student with AI switched off submitted an answer, got an empty grade, and
+   * was told nothing at all, under a header promising "AI grading + feedback".
+   */
+  const [aiNotices, setAiNotices] = useState<string[]>([]);
   const [recentAttempts, setRecentAttempts] = useState<Array<{ id: string; score: number | null; maxScore: number | null; isCorrect: boolean | null; attemptedAt: string }>>([]);
   const [hints, setHints] = useState<Array<{ level: number; text: string; grounded: boolean }>>([]);
   const [hintLoading, setHintLoading] = useState(false);
@@ -384,6 +393,7 @@ export default function QuestionsDatabase({
     setSubmitting(true);
     setSubmitError(null);
     setGrade(null);
+    setAiNotices([]);
     const t0 = Date.now();
 
     try {
@@ -404,6 +414,9 @@ export default function QuestionsDatabase({
         throw new Error(data.error || 'Failed to grade answer');
       }
       setGrade(data.attempt);
+      if (Array.isArray(data.aiNotices) && data.aiNotices.length > 0) {
+        setAiNotices(data.aiNotices);
+      }
       setRecentAttempts((prev) => [
         {
           id: data.attempt.id,
@@ -649,8 +662,13 @@ export default function QuestionsDatabase({
         )}
 
         {!showVault && mode === 'practice' && (
+          /* Says "if you have added a key" rather than promising AI grading
+             outright: AI is off by default for every new account, and this
+             line sat directly above an empty grade with no explanation. */
           <p className="mt-2 text-xs text-green-700 dark:text-green-300">
-            Practice mode: pick a question, write your answer, and submit for AI grading + feedback. Sign in to track progress.
+            Practice mode: pick a question, write your answer, and submit. It is
+            marked automatically if you have added an API key, and saved against
+            the mark scheme either way. Sign in to track progress.
           </p>
         )}
         {/* The vault is separate content, so the bank's readiness notice does
@@ -1044,6 +1062,20 @@ export default function QuestionsDatabase({
                       />
                     </div>
                   </div>
+
+                  {aiNotices.length > 0 && (
+                    <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                      {aiNotices.map((notice, i) => (
+                        <p key={i}>{notice}</p>
+                      ))}
+                      <p>
+                        <a href="/account" className="font-semibold underline underline-offset-2">
+                          Open Account settings
+                        </a>{' '}
+                        to add your own API key.
+                      </p>
+                    </div>
+                  )}
 
                   {ocrError && (
                     <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
