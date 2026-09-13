@@ -21,6 +21,7 @@ import DailyChallenge from './DailyChallenge';
 import CourseShortcuts from '@/app/components/CourseShortcuts';
 import AnnouncementBanner from './AnnouncementBanner';
 import AiKeyPrompt from './AiKeyPrompt';
+import WeaknessHeatmap from './WeaknessHeatmap';
 import { ScreenContextProvider, useScreenContext } from './ScreenContext';
 import { Database, Sparkles, TrendingUp, Clock, Award, Target, Star, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
 
@@ -44,7 +45,6 @@ type DashboardStats = {
   accuracy: number;
   studyStreak: number;
   hoursStudied: number;
-  bookmarkCount: number;
   noteCount: number;
   thisWeek: number;
   lastWeek: number;
@@ -142,6 +142,14 @@ const resolveRoute = (raw: string | null): RoutedTab | null => {
     case 'materials':
     case 'notes-textbook':
     case 'resources':
+    // `lib/rag-index.ts` emits `?tab=notes` for the legacy `Note` model. It is
+    // a different store from the notebook system behind Materials, but
+    // Materials is where notes live as far as a student is concerned, and
+    // landing there beats the silent fall-through to the dashboard that every
+    // unmatched value gets. Currently inert -- production holds no indexed
+    // documents on this route -- but the emitter is live, so the gap is one
+    // reindex away from mattering.
+    case 'notes':
       return { tab: 'materials' };
     case 'mock-exams':
       return { tab: 'mock-exams' };
@@ -149,6 +157,13 @@ const resolveRoute = (raw: string | null): RoutedTab | null => {
       return { tab: 'discussions' };
     case 'weaknesses':
       return { tab: 'study', studyView: 'mastery' };
+    // Competition questions are indexed with this route, but the vault they
+    // live in is behind the unlock widget, so there is nothing to deep-link a
+    // locked student to. Practice is the right neighbourhood and does not
+    // quietly hand out the unlock. Also inert today: no indexed document
+    // carries this route either.
+    case 'competition':
+      return { tab: 'practice' };
     default:
       return null;
   }
@@ -315,7 +330,6 @@ export default function SmartEduPlatform() {
           accuracy: data.accuracy ?? 0,
           studyStreak: data.studyStreak ?? 0,
           hoursStudied: data.hoursStudied ?? 0,
-          bookmarkCount: data.bookmarkCount ?? 0,
           noteCount: data.noteCount ?? 0,
           thisWeek: data.thisWeek ?? 0,
           lastWeek: data.lastWeek ?? 0,
@@ -352,11 +366,23 @@ export default function SmartEduPlatform() {
       }
     };
     const onOpenNotes = () => openRoute({ tab: 'materials' });
+    // The heatmap's "practise these" button dispatched this and nothing had
+    // ever listened, because the component was imported by no file at all.
+    const onOpenWeaknessPractice = (e: Event) => {
+      const questionId = (e as CustomEvent).detail?.questionId;
+      openRoute({
+        tab: 'practice',
+        practiceMode: 'practice',
+        questionId: typeof questionId === 'number' ? questionId : null,
+      });
+    };
     window.addEventListener('open-discussions', onOpenDiscussions as EventListener);
     window.addEventListener('open-notes', onOpenNotes as EventListener);
+    window.addEventListener('open-weakness-practice', onOpenWeaknessPractice as EventListener);
     return () => {
       window.removeEventListener('open-discussions', onOpenDiscussions as EventListener);
       window.removeEventListener('open-notes', onOpenNotes as EventListener);
+      window.removeEventListener('open-weakness-practice', onOpenWeaknessPractice as EventListener);
     };
   }, [openRoute]);
 
@@ -500,7 +526,7 @@ export default function SmartEduPlatform() {
               <Clock className="w-3 h-3 mr-1" />
               {stats
                 ? stats.hoursStudied > 0
-                  ? `${stats.noteCount} notes - ${stats.bookmarkCount} bookmarks`
+                  ? `${stats.noteCount} note${stats.noteCount === 1 ? '' : 's'} written`
                   : 'Log a session'
                 : 'Loading study sessions'}
             </>
@@ -835,6 +861,21 @@ export default function SmartEduPlatform() {
                   );
                 })}
               </div>
+
+              {/* The weakness heatmap and its ~470-line /api/weaknesses route
+                  were both complete and both unreachable: nothing in the app
+                  imported the component. This is its entrance. It renders its
+                  own empty state for an account with no history, so it costs a
+                  new student nothing. */}
+              <section aria-labelledby="weak-topics-heading">
+                <h2
+                  id="weak-topics-heading"
+                  className="mb-3 text-lg font-bold text-gray-900 dark:text-gray-100"
+                >
+                  Where you are losing marks
+                </h2>
+                <WeaknessHeatmap />
+              </section>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
                 <section className="floating-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">

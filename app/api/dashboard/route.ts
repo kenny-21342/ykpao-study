@@ -62,7 +62,6 @@ export async function GET(req: NextRequest) {
       recentBank,
       recentPP,
       studySessions,
-      bookmarkCount,
       noteCount,
     ] = await Promise.all([
       prisma.pastPaperAttempt.count({ where: { userId, gradingStatus: 'official', ...ppWhere } }),
@@ -109,7 +108,6 @@ export async function GET(req: NextRequest) {
         orderBy: { startTime: 'desc' },
         take: 60,
       }),
-      prisma.bookmark.count({ where: { userId, ...(courseScope.effectiveScope === 'enrolled' ? { question: { courseId: { in: courseScope.courseIds } } } : {}) } }),
       prisma.note.count({ where: { userId, ...(courseScope.effectiveScope === 'enrolled' ? { OR: [{ courseId: { in: courseScope.courseIds } }, { courseId: null }] } : {}) } }),
     ])
 
@@ -228,7 +226,6 @@ export async function GET(req: NextRequest) {
       accuracy,
       studyStreak,
       hoursStudied,
-      bookmarkCount,
       noteCount,
       recentActivity,
       thisWeek,

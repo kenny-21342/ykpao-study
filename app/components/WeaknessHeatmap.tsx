@@ -79,19 +79,26 @@ export default function WeaknessHeatmap() {
     };
   }, []);
 
-  const practiceWeak = async () => {
-    if (!data || data.recommended.length === 0) return;
+  /**
+   * Open the weakest recommended question in the practice browser.
+   *
+   * This used to write the whole recommended list to `sessionStorage` under
+   * `weakness-queue` and dispatch a bare event, and **nothing anywhere read
+   * either one** -- the component was imported by no file at all, so the
+   * button had never been pressed. Serving the list as an ordered queue needs
+   * next/previous UI the practice browser does not have, so rather than leave
+   * a promise nothing keeps, the event now carries the first id and opens it.
+   * The stored queue is gone: an unread key that looks like state is worse
+   * than no key.
+   */
+  const practiceWeak = () => {
+    const first = data?.recommended[0];
+    if (!first) return;
     setPracticing(true);
-    try {
-      // Stash the recommended queue in sessionStorage so the practice page
-      // can pick it up and serve these specific questions in order.
-      const ids = data.recommended.map((q) => q.id);
-      sessionStorage.setItem('weakness-queue', JSON.stringify(ids));
-      // Dispatch an event so a host SPA can switch to its practice tab.
-      window.dispatchEvent(new CustomEvent('open-weakness-practice'));
-    } finally {
-      setPracticing(false);
-    }
+    window.dispatchEvent(
+      new CustomEvent('open-weakness-practice', { detail: { questionId: first.id } }),
+    );
+    setPracticing(false);
   };
 
   if (loading) {
