@@ -188,7 +188,7 @@ export default function ContentModeration() {
                         <button
                           onClick={() => remove(item.id)}
                           disabled={actionLoading === item.id}
-                          title="Delete"
+                          title="Delete" aria-label="Delete"
                           className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30"
                         >
                           {actionLoading === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

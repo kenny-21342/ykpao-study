@@ -1239,7 +1239,7 @@ export default function NotesTextbookPage() {
         <button
           onClick={() => setPageMenuId((current) => current === page.id ? null : page.id)}
           className="shrink-0 rounded p-1 text-gray-400 hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-          title="Page actions"
+          title="Page actions" aria-label="Page actions"
         >
           <MoreVertical className="h-3.5 w-3.5" />
         </button>
@@ -1305,13 +1305,13 @@ export default function NotesTextbookPage() {
             <NotebookIcon className="h-4 w-4 text-emerald-600" />
             <h2 className="text-sm font-semibold">Notes</h2>
             <span className="ml-auto text-xs text-gray-400">{allPages.length} pages</span>
-            <button onClick={() => setSidebarCollapsed(true)} className="hidden rounded p-1.5 text-gray-500 hover:bg-gray-200 lg:block dark:hover:bg-gray-800" title="Hide navigation"><PanelLeftClose className="h-4 w-4" /></button>
-            <button onClick={() => setSidebarOpen(false)} className="rounded p-1.5 text-gray-500 hover:bg-gray-200 lg:hidden dark:hover:bg-gray-800" title="Close navigation"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarCollapsed(true)} className="hidden rounded p-1.5 text-gray-500 hover:bg-gray-200 lg:block dark:hover:bg-gray-800" title="Hide navigation" aria-label="Hide navigation"><PanelLeftClose className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(false)} className="rounded p-1.5 text-gray-500 hover:bg-gray-200 lg:hidden dark:hover:bg-gray-800" title="Close navigation" aria-label="Close navigation"><X className="h-4 w-4" /></button>
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
             <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="e.g. cell respiration, revision, or chapter 5 notes" className="h-9 w-full rounded-md border border-gray-200 bg-white pl-8 pr-9 text-sm outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-950" />
-            <button onClick={() => { setCommandOpen(true); setCommandQuery(''); }} className="absolute right-2 top-2 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-gray-700" title="Quick navigation">⌘K</button>
+            <button onClick={() => { setCommandOpen(true); setCommandQuery(''); }} className="absolute right-2 top-2 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-gray-700" title="Quick navigation" aria-label="Quick navigation">⌘K</button>
           </div>
           <div className="mt-2 grid grid-cols-4 gap-1" aria-label="Page filters">
             {([
@@ -1378,7 +1378,7 @@ export default function NotesTextbookPage() {
                                   {sectionExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                                   <BookOpen className="h-3.5 w-3.5" /><span className="truncate">{section.name}</span>
                                 </button>
-                                {!isSharedNotebook(notebook.id) && <button onClick={() => startCreatePage(section.id)} className="mr-1 rounded p-1 text-gray-400 hover:bg-white hover:text-emerald-600 dark:hover:bg-gray-700" title="Add page"><Plus className="h-3.5 w-3.5" /></button>}
+                                {!isSharedNotebook(notebook.id) && <button onClick={() => startCreatePage(section.id)} className="mr-1 rounded p-1 text-gray-400 hover:bg-white hover:text-emerald-600 dark:hover:bg-gray-700" title="Add page" aria-label="Add page"><Plus className="h-3.5 w-3.5" /></button>}
                               </div>
                               {sectionExpanded && (
                                 <div className="ml-3 space-y-0.5">
@@ -1410,7 +1410,7 @@ export default function NotesTextbookPage() {
 
       <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex min-h-14 items-center gap-2 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-gray-950 sm:px-4">
-          <button onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); else setSidebarOpen(true); }} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Open notes navigation"><Menu className="h-5 w-5" /></button>
+          <button onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); else setSidebarOpen(true); }} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Open notes navigation" aria-label="Open notes navigation"><Menu className="h-5 w-5" /></button>
           {selectedPage ? <>
             <span className="hidden text-xl sm:block">{selectedPage.icon || '📝'}</span>
             <input
@@ -1421,10 +1421,10 @@ export default function NotesTextbookPage() {
               aria-label="Page title"
             />
             <div className="hidden items-center gap-1 xl:flex">
-              <button onClick={() => void addReview()} className="toolbar-command" title="Add selected text to spaced review"><RefreshCw className="h-4 w-4" /><span>Review</span></button>
-              <button onClick={() => void addStudyTask()} className="toolbar-command" title="Add a study task"><Zap className="h-4 w-4" /><span>Task</span></button>
-              {canEdit(selectedPage) && <button onClick={() => setShowDrawing(true)} className="toolbar-command" title="Draw and insert"><PenTool className="h-4 w-4" /><span>Draw</span></button>}
-              <button onClick={() => openAI(false)} className="toolbar-command" title="Ask AI about this note"><Sparkles className="h-4 w-4" /><span>Ask AI</span></button>
+              <button onClick={() => void addReview()} className="toolbar-command" title="Add selected text to spaced review" aria-label="Add selected text to spaced review"><RefreshCw className="h-4 w-4" /><span>Review</span></button>
+              <button onClick={() => void addStudyTask()} className="toolbar-command" title="Add a study task" aria-label="Add a study task"><Zap className="h-4 w-4" /><span>Task</span></button>
+              {canEdit(selectedPage) && <button onClick={() => setShowDrawing(true)} className="toolbar-command" title="Draw and insert" aria-label="Draw and insert"><PenTool className="h-4 w-4" /><span>Draw</span></button>}
+              <button onClick={() => openAI(false)} className="toolbar-command" title="Ask AI about this note" aria-label="Ask AI about this note"><Sparkles className="h-4 w-4" /><span>Ask AI</span></button>
             </div>
             <div className="flex items-center gap-1 border-l border-gray-200 pl-2 dark:border-gray-800">
               {canEdit(selectedPage) && (
@@ -1437,12 +1437,12 @@ export default function NotesTextbookPage() {
                 </button>
               )}
               <SaveIndicator state={saveState} />
-              {canEdit(selectedPage) && <button onClick={() => void savePage({ manual: true })} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-emerald-700 dark:hover:bg-gray-800" title="Save version"><Save className="h-4 w-4" /></button>}
-              <button onClick={() => { setActivePanel(null); setSplitOpen((open) => !open); }} className={`rounded-md p-2 ${splitOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title="Split study view"><SplitSquareHorizontal className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('comments')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Comments"><MessageSquare className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('share')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Share"><Share2 className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('history')} className="hidden rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 sm:block" title="Version history"><History className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('details')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Page details"><MoreVertical className="h-4 w-4" /></button>
+              {canEdit(selectedPage) && <button onClick={() => void savePage({ manual: true })} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-emerald-700 dark:hover:bg-gray-800" title="Save version" aria-label="Save version"><Save className="h-4 w-4" /></button>}
+              <button onClick={() => { setActivePanel(null); setSplitOpen((open) => !open); }} className={`rounded-md p-2 ${splitOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title="Split study view" aria-label="Split study view"><SplitSquareHorizontal className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('comments')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Comments" aria-label="Comments"><MessageSquare className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('share')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Share" aria-label="Share"><Share2 className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('history')} className="hidden rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 sm:block" title="Version history" aria-label="Version history"><History className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('details')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Page details" aria-label="Page details"><MoreVertical className="h-4 w-4" /></button>
             </div>
           </> : <><span className="font-semibold">Notebook workspace</span><span className="text-sm text-gray-400">Select a page to begin</span></>}
         </header>
@@ -1510,7 +1510,7 @@ export default function NotesTextbookPage() {
               <aside className="flex w-full flex-col border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 lg:w-[44%] lg:min-w-[360px]">
                 <div className="flex h-12 items-center gap-2 border-b border-gray-200 px-3 dark:border-gray-800">
                   <SplitSquareHorizontal className="h-4 w-4 text-emerald-600" /><span className="text-sm font-semibold">Study question</span>
-                  <button onClick={() => setSplitOpen(false)} className="ml-auto rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Close split view"><PanelRightClose className="h-4 w-4" /></button>
+                  <button onClick={() => setSplitOpen(false)} className="ml-auto rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Close split view" aria-label="Close split view"><PanelRightClose className="h-4 w-4" /></button>
                 </div>
                 <div className="border-b border-gray-200 p-3 dark:border-gray-800">
                   <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" /><input value={questionSearch} onChange={(event) => { const value = event.target.value; setQuestionSearch(value); setQuestionResults([]); setQuestionSearchError(null); setQuestionSearchAttempted(false); setQuestionSearching(value.trim().length >= 2); }} placeholder="e.g. inheritance, 0610-S25-P21-Q2, or plant nutrition" className="h-9 w-full rounded-md border border-gray-300 bg-white pl-8 pr-9 text-sm outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900" />{questionSearching && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-gray-400" />}</div>
@@ -1554,7 +1554,7 @@ export default function NotesTextbookPage() {
                     </div>
                     <div className="border-t border-gray-200 pt-4 text-xs text-gray-500 dark:border-gray-800"><p>Revision {selectedPage.revision}</p><p className="mt-1">Updated {formatDate(selectedPage.updatedAt)}</p><p className="mt-1 capitalize">Access: {selectedPage.accessRole || 'owner'}</p></div>
                   </div>}
-                  {activePanel === 'history' && !panelLoading && <div className="space-y-2">{snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-md border border-gray-200 p-3 dark:border-gray-800"><div className="flex items-start gap-2"><FileClock className="mt-0.5 h-4 w-4 text-gray-400" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{snapshot.title}</p><p className="mt-1 text-xs text-gray-500">Revision {snapshot.revision} · {snapshot.reason} · {formatDate(snapshot.createdAt)}</p>{snapshot.createdBy && <p className="mt-1 text-xs text-gray-400">{snapshot.createdBy.name || snapshot.createdBy.email}</p>}</div>{canEdit(selectedPage) && <button onClick={() => void restoreSnapshot(snapshot.id)} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Restore version"><RefreshCw className="h-4 w-4" /></button>}</div></div>)}{snapshots.length === 0 && <p className="py-10 text-center text-sm text-gray-400">Versions appear after autosaves and manual saves.</p>}</div>}
+                  {activePanel === 'history' && !panelLoading && <div className="space-y-2">{snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-md border border-gray-200 p-3 dark:border-gray-800"><div className="flex items-start gap-2"><FileClock className="mt-0.5 h-4 w-4 text-gray-400" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{snapshot.title}</p><p className="mt-1 text-xs text-gray-500">Revision {snapshot.revision} · {snapshot.reason} · {formatDate(snapshot.createdAt)}</p>{snapshot.createdBy && <p className="mt-1 text-xs text-gray-400">{snapshot.createdBy.name || snapshot.createdBy.email}</p>}</div>{canEdit(selectedPage) && <button onClick={() => void restoreSnapshot(snapshot.id)} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Restore version" aria-label="Restore version"><RefreshCw className="h-4 w-4" /></button>}</div></div>)}{snapshots.length === 0 && <p className="py-10 text-center text-sm text-gray-400">Versions appear after autosaves and manual saves.</p>}</div>}
                   {activePanel === 'comments' && !panelLoading && <div className="space-y-4">
                     <div><textarea value={commentText} onChange={(event) => setCommentText(event.target.value)} className="field-input min-h-20 resize-y" placeholder={selectedText ? 'Add a question or correction for the selected text' : 'Add a page-level question, correction, or reminder'} />{selectedText && <p className="mt-1 line-clamp-2 text-xs text-emerald-700 dark:text-emerald-300">Attached to: “{selectedText}”</p>}<button onClick={() => void addComment()} disabled={!commentText.trim()} className="primary-command mt-2"><MessageSquare className="h-4 w-4" /> Comment</button></div>
                     <label className="flex items-center gap-2 text-xs text-gray-500"><input type="checkbox" checked={includeResolved} onChange={(event) => setIncludeResolved(event.target.checked)} /> Show resolved</label>
@@ -1591,7 +1591,7 @@ export default function NotesTextbookPage() {
                 onClick={() => setShowDrawing(false)}
                 disabled={drawingUploading}
                 className="ml-auto rounded p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800"
-                title="Close"
+                title="Close" aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>

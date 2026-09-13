@@ -402,7 +402,7 @@ export default function StudyCoach({
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Plan from deadlines, mistakes, and mastery</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => void load()} title="Refresh" className="w-9 h-9 grid place-items-center rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <button onClick={() => void load()} title="Refresh" aria-label="Refresh" className="w-9 h-9 grid place-items-center rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
               <RefreshCw className="w-4 h-4" />
             </button>
             <button onClick={() => setProfileOpen((open) => !open)} className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -428,7 +428,7 @@ export default function StudyCoach({
       {error && (
         <div className="mx-4 md:mx-6 mt-4 flex items-center gap-3 px-4 py-3 border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 rounded-lg text-sm text-red-700 dark:text-red-300">
           <AlertCircle className="w-4 h-4 flex-none" /><span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)} title="Dismiss"><X className="w-4 h-4" /></button>
+          <button onClick={() => setError(null)} title="Dismiss" aria-label="Dismiss"><X className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -497,7 +497,7 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
           <div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800 bg-white/70 dark:bg-gray-900/50">
             {tasks.length === 0 ? <EmptyState icon={CheckCircle2} title="Nothing is due" body="Generate a weekly plan or add a task from the Plan view." /> : tasks.map((task) => (
               <div key={task.id} className="flex items-center gap-3 py-3 px-2">
-                <button onClick={() => onComplete(task.id, 'completed')} disabled={busy === task.id} title="Complete task" className="w-8 h-8 grid place-items-center flex-none text-gray-400 hover:text-green-600">
+                <button onClick={() => onComplete(task.id, 'completed')} disabled={busy === task.id} title="Complete task" aria-label="Complete task" className="w-8 h-8 grid place-items-center flex-none text-gray-400 hover:text-green-600">
                   {busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Circle className="w-5 h-5" />}
                 </button>
                 <button onClick={() => openTaskTarget(task, { onOpenQuestion, onOpenBankQuestion, onOpenMockExams })} className="min-w-0 flex-1 text-left">
@@ -613,7 +613,7 @@ function PlanView({ tasks, busy, taskFormOpen, setTaskFormOpen, onGenerate, onUp
   return <main className="max-w-5xl mx-auto p-4 md:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-5"><div><h3 className="font-bold text-gray-900 dark:text-white">Two-week plan</h3><p className="text-xs text-gray-500 mt-1">Generated tasks are refreshed without changing your manual tasks</p></div><div className="flex gap-2"><button onClick={() => setTaskFormOpen(!taskFormOpen)} className="h-9 px-3 inline-flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold"><Plus className="w-4 h-4" /> Add task</button><button onClick={onGenerate} disabled={busy === 'generate'} className="h-9 px-3 inline-flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{busy === 'generate' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Rebuild week</button></div></div>
     {taskFormOpen && <TaskForm onCreated={async () => { setTaskFormOpen(false); await onCreated(); }} />}
-    <div className="space-y-6 mt-5">{Object.keys(grouped).length === 0 ? <EmptyState icon={CalendarDays} title="No planned tasks" body="Build a week from your available time and weakest topics." /> : Object.entries(grouped).map(([day, dayTasks]) => <section key={day}><div className="flex items-center gap-3 mb-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{day}</h4><span className="text-xs text-gray-400">{dayTasks.reduce((sum, task) => sum + task.durationMinutes, 0)} min</span></div><div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{dayTasks.map((task) => <div key={task.id} className={`flex items-center gap-3 px-2 py-3 ${task.status !== 'pending' ? 'opacity-55' : ''}`}><button onClick={() => onUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} className="w-8 h-8 grid place-items-center">{busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-400" />}</button><button onClick={() => openTaskTarget(task, { onOpenQuestion, onOpenBankQuestion, onOpenMockExams })} className="min-w-0 flex-1 text-left"><p className={`text-sm font-semibold text-gray-900 dark:text-white truncate ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p><p className="text-xs text-gray-500 mt-1">{task.subject} · {task.topic} · {task.durationMinutes} min</p></button><span className="hidden sm:inline text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded font-medium uppercase">{task.taskType}</span><button onClick={() => onDelete(task.id)} title="Delete task" className="w-8 h-8 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>)}</div></section>)}</div>
+    <div className="space-y-6 mt-5">{Object.keys(grouped).length === 0 ? <EmptyState icon={CalendarDays} title="No planned tasks" body="Build a week from your available time and weakest topics." /> : Object.entries(grouped).map(([day, dayTasks]) => <section key={day}><div className="flex items-center gap-3 mb-2"><h4 className="text-sm font-bold text-gray-900 dark:text-white">{day}</h4><span className="text-xs text-gray-400">{dayTasks.reduce((sum, task) => sum + task.durationMinutes, 0)} min</span></div><div className="border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">{dayTasks.map((task) => <div key={task.id} className={`flex items-center gap-3 px-2 py-3 ${task.status !== 'pending' ? 'opacity-55' : ''}`}><button onClick={() => onUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} className="w-8 h-8 grid place-items-center">{busy === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-400" />}</button><button onClick={() => openTaskTarget(task, { onOpenQuestion, onOpenBankQuestion, onOpenMockExams })} className="min-w-0 flex-1 text-left"><p className={`text-sm font-semibold text-gray-900 dark:text-white truncate ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p><p className="text-xs text-gray-500 mt-1">{task.subject} · {task.topic} · {task.durationMinutes} min</p></button><span className="hidden sm:inline text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded font-medium uppercase">{task.taskType}</span><button onClick={() => onDelete(task.id)} title="Delete task" aria-label="Delete task" className="w-8 h-8 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>)}</div></section>)}</div>
   </main>;
 }
 
@@ -951,7 +951,7 @@ function DeckBrowser({ onOpenQuestion }: { onOpenQuestion: (id: number) => void 
                       <button
                         onClick={() => card.questionId && onOpenQuestion(card.questionId)}
                         className="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition-colors"
-                        title="Open source question"
+                        title="Open source question" aria-label="Open source question"
                       >
                         <BookOpen className="w-3.5 h-3.5" />
                       </button>
@@ -959,7 +959,7 @@ function DeckBrowser({ onOpenQuestion }: { onOpenQuestion: (id: number) => void 
                     <button
                       onClick={() => handleDelete(card.id)}
                       className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
-                      title="Archive card"
+                      title="Archive card" aria-label="Archive card"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

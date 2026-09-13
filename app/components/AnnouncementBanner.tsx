@@ -90,7 +90,7 @@ export default function AnnouncementBanner() {
                 <button
                   onClick={() => dismiss(a.id)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs flex-shrink-0"
-                  title="Dismiss"
+                  title="Dismiss" aria-label="Dismiss"
                 >
                   ✕
                 </button>

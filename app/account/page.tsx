@@ -17,6 +17,17 @@ export default function AccountSettingsPage() {
   const [name, setName] = useState(session?.user?.name ?? '');
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+  /**
+   * Whether /api/account has answered yet.
+   *
+   * Without this the form rendered blank and fully editable while the profile
+   * was still in flight, and Save wrote whatever was in it -- so a student who
+   * clicked Save quickly, or whose request failed (the catch below swallowed
+   * every error), replaced their real name with an empty string. The fields
+   * are disabled until the real values are in.
+   */
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   // Avatar + background image
   const [avatarUrl, setAvatarUrl] = useState(session?.user?.image ?? '');
@@ -42,15 +53,27 @@ export default function AccountSettingsPage() {
     if (status !== 'authenticated') return;
     let cancelled = false;
     fetch('/api/account')
-      .then((res) => (res.ok ? res.json() : null))
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Could not load your profile.');
+        return res.json();
+      })
       .then((data) => {
-        if (cancelled || !data?.user) return;
+        if (cancelled) return;
+        if (!data?.user) throw new Error('Could not load your profile.');
         setName(data.user.name ?? '');
         setAvatarUrl(data.user.image ?? '');
         setBgUrl(data.user.bgImage ?? '');
         setHasPassword(Boolean(data.user.hasPassword));
+        setProfileLoading(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (cancelled) return;
+        // Stays loading on purpose: the fields keep their disabled state, so
+        // a failure cannot be saved over the real profile.
+        setProfileError(
+          'We could not load your profile. Reload the page before changing anything — saving now could overwrite what is stored.',
+        );
+      });
     return () => { cancelled = true; };
   }, [status]);
 
@@ -69,6 +92,9 @@ export default function AccountSettingsPage() {
   }
 
   const handleSaveName = async () => {
+    // Belt and braces: the button is disabled while loading, but this is the
+    // write that could destroy a real name, so it refuses outright.
+    if (profileLoading) return;
     setSavingName(true);
     setError(null);
     try {
@@ -233,7 +259,7 @@ export default function AccountSettingsPage() {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
                 className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-700 border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 shadow-md hover:scale-110 transition-transform disabled:opacity-50"
-                title="Upload avatar"
+                title="Upload avatar" aria-label="Upload avatar"
               >
                 {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </button>
@@ -299,10 +325,15 @@ export default function AccountSettingsPage() {
               <input
                 type="text"
                 value={name}
+                disabled={profileLoading}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                placeholder={profileLoading ? 'Loading…' : undefined}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
+            {profileError && (
+              <p className="mt-2 text-xs text-red-600 dark:text-red-400">{profileError}</p>
+            )}
           </div>
 
           <div>
@@ -321,7 +352,7 @@ export default function AccountSettingsPage() {
 
           <button
             onClick={handleSaveName}
-            disabled={savingName || name === (session?.user?.name ?? '')}
+            disabled={profileLoading || savingName || name === (session?.user?.name ?? '')}
             className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : nameSaved ? <Check className="w-4 h-4" /> : null}

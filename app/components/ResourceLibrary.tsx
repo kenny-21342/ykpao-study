@@ -311,7 +311,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Open original"
+              title="Open original" aria-label="Open original"
             >
               <Eye className="w-5 h-5" />
             </a>
@@ -564,7 +564,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
                   ? 'bg-green-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
-              title="List view"
+              title="List view" aria-label="List view"
             >
               <FileText className="w-4 h-4" />
               List
@@ -577,7 +577,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
                   ? 'bg-green-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
-              title="Folder browser"
+              title="Folder browser" aria-label="Folder browser"
             >
               <FolderOpen className="w-4 h-4" />
               Browser
@@ -647,7 +647,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             type="button"
             onClick={() => setSortOrder((current) => (current === 'desc' ? 'asc' : 'desc'))}
             className="inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            title="Toggle sort order"
+            title="Toggle sort order" aria-label="Toggle sort order"
           >
             <ArrowUpDown className="w-4 h-4" />
             {sortOrder === 'desc' ? 'Descending' : 'Ascending'}
@@ -656,7 +656,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
             className="w-24 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
-            title="Rows per page"
+            title="Rows per page" aria-label="Rows per page"
           >
             <option value={50}>50</option>
             <option value={100}>100</option>
@@ -912,7 +912,7 @@ function ResourceBrowserView({
                   ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
-              title="All resources"
+              title="All resources" aria-label="All resources"
             >
               <Home className="h-4 w-4" />
               <span>All resources</span>
@@ -1332,7 +1332,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                       type="button"
                       onClick={() => setFileMeta(null)}
                       className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
-                      title="Remove file"
+                      title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1420,7 +1420,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                         onClick={handleRemoveFolder}
                         disabled={folderBusy}
                         className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
-                        title="Clear selection"
+                        title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

@@ -132,13 +132,13 @@ export default function ResourceManager() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <a href={r.fileUrl} download className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download">
+                  <a href={r.fileUrl} download className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download" aria-label="Download">
                     <Download className="w-4 h-4" />
                   </a>
-                  <button onClick={() => setEditTarget(r)} title="Edit" className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setDeleteTarget(r)} title="Delete" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -456,7 +456,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                       type="button"
                       onClick={() => setFileMeta(null)}
                       className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
-                      title="Remove file"
+                      title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -537,7 +537,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                         onClick={() => { setFolderItems([]); setError(null); }}
                         disabled={folderBusy}
                         className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
-                        title="Clear selection"
+                        title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -813,7 +813,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                   onClick={() => setReplacement(null)}
                   disabled={saving}
                   className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-40"
-                  title="Undo replacement"
+                  title="Undo replacement" aria-label="Undo replacement"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

@@ -29,7 +29,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
           href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
           download={fileName}
           className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-          title="Download PDF"
+          title="Download PDF" aria-label="Download PDF"
         >
           <Download className="h-4 w-4" />
           Download

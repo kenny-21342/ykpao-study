@@ -258,7 +258,7 @@ export default function NotificationBell() {
                   onClick={markAllRead}
                   disabled={markingAll}
                   className="text-xs font-medium text-green-600 dark:text-green-400 hover:underline disabled:opacity-50"
-                  title="Mark all as read"
+                  title="Mark all as read" aria-label="Mark all as read"
                 >
                   {markingAll ? 'Marking…' : 'Mark all read'}
                 </button>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, Lightbulb, Loader2, Brain, AlertCircle } from 'lucide-react';
+import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, Lightbulb, Loader2, Brain, AlertCircle, ChevronLeft } from 'lucide-react';
 import FormattedMessage from '../components/FormattedMessage';
 import UnlockWidget from './UnlockWidget';
 import AiNotice from './AiNotice';
@@ -687,7 +687,11 @@ export default function QuestionsDatabase({
           <div className="flex-1 flex overflow-hidden">
         {/* Filters Sidebar */}
         {showFilters && (
-          <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6 overflow-y-auto">
+          // Full width on a phone: a fixed 320px column beside the question
+          // list left roughly nothing for either, and the filters are a
+          // toggle, so on a small screen they take the screen and the list
+          // steps aside until they are dismissed.
+          <div className="w-full md:w-80 md:shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-y-auto">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Filters</h3>
 
             {/* Subject Filter */}
@@ -801,10 +805,18 @@ export default function QuestionsDatabase({
           </div>
         )}
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Questions List */}
-          <div className={`${selectedQuestion ? 'w-2/5' : 'w-full'} border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}>
+        {/* Main Content. Hidden on a phone while the filter panel is open --
+            see the comment on the sidebar above. */}
+        <div className={`flex-1 overflow-hidden ${showFilters ? 'hidden md:flex' : 'flex'}`}>
+          {/* Questions List. Two panes side by side is a desktop layout: on a
+              phone, opening a question replaces the list with it, and the
+              detail panel's Back control returns. A 40/60 split at 390px gave
+              the list 156px, which fits neither a question code nor a title. */}
+          <div
+            className={`${
+              selectedQuestion ? 'hidden md:block md:w-2/5' : 'w-full'
+            } border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}
+          >
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
@@ -906,7 +918,17 @@ export default function QuestionsDatabase({
 
           {/* Question Detail Panel */}
           {selectedQuestion && (
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-6">
+            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-4 md:p-6">
+              {/* The only way back to the list on a phone, where the list is
+                  not on screen at all. Redundant on desktop, where both panes
+                  are visible, so it is hidden there. */}
+              <button
+                onClick={() => setSelectedQuestion(null)}
+                className="md:hidden mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                All questions
+              </button>
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2 flex-wrap">

@@ -135,3 +135,82 @@ test('a prompt asks for something rather than warning about it', async () => {
   assert.match(hook, /setOpenCount\(\(n\) => n \+ 1\)/);
   assert.ok(dialog.length > 0);
 });
+
+// ---------------------------------------------------------------------------
+// Icon-only controls have accessible names
+// ---------------------------------------------------------------------------
+
+/**
+ * `title` is a tooltip for a pointer and nothing at all for a screen reader,
+ * so a button whose only child is an icon and whose only text is a `title` is
+ * announced as "button" and nothing else. Forty-one of them were, across six
+ * files -- the editor toolbar alone accounted for about thirty.
+ *
+ * The check is deliberately narrow: real DOM elements only. A `title` prop on
+ * a custom component is a prop, not an attribute, and `ToolButton`-style
+ * wrappers set the accessible name themselves.
+ */
+test('DOM controls with a title also carry an accessible name', async () => {
+  const offenders: string[] = [];
+  const domTags = ['button', 'a', 'input', 'select', 'textarea', 'Link'];
+
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+
+    for (const m of src.matchAll(/title="[^"]{1,120}"/g)) {
+      const openedAt = src.lastIndexOf('<', m.index);
+      if (openedAt === -1) continue;
+
+      const tag = /<\s*([A-Za-z][A-Za-z0-9]*)/.exec(src.slice(openedAt))?.[1] ?? '';
+      if (!domTags.includes(tag)) continue;
+
+      // The element's own opening tag, so an aria-label on a sibling or a
+      // child does not count as a name for this one.
+      const closedAt = src.indexOf('>', m.index);
+      const openTag = closedAt === -1 ? '' : src.slice(openedAt, closedAt);
+      if (!/aria-label(ledby)?[=\s]/.test(openTag)) {
+        offenders.push(`${file.slice(root.length + 1)}: ${m[0]}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `icon-only controls announced as just "button" — add aria-label:\n${offenders.join('\n')}`,
+  );
+});
+
+test('the editor toolbar names every button and reports toggle state', async () => {
+  const src = await readFile(join(root, 'app/components/RichTextEditor.tsx'), 'utf8');
+
+  // One shared MenuButton, so this is the single point where ~30 controls
+  // either get a name or do not.
+  assert.match(src, /aria-label=\{title\}/);
+  assert.match(src, /aria-pressed=\{active === undefined \? undefined : active\}/);
+
+  // The toolbar had no dark: variants at all — a white strip across a dark
+  // editor.
+  assert.match(src, /bg-gray-50 dark:bg-gray-800 border-b/);
+});
+
+test('the exam timer does not animate for reduced-motion users or narrate itself', async () => {
+  const src = await readFile(join(root, 'app/components/MockExams.tsx'), 'utf8');
+
+  assert.match(src, /motion-safe:animate-pulse/);
+  // Any pulse NOT preceded by the motion-safe variant. Written as a lookbehind
+  // because `motion-safe:animate-pulse` contains `animate-pulse`, so a plain
+  // substring check passes trivially and tests nothing.
+  assert.doesNotMatch(
+    src,
+    /(?<!motion-safe:)animate-pulse/,
+    'unguarded pulse animations must not come back',
+  );
+
+  // role="timer" defaults aria-live to off, which is what a clock ticking once
+  // a second needs; a polite live region would read it aloud every second for
+  // the length of the paper.
+  assert.match(src, /role="timer"/);
+  const timerBlock = src.slice(src.indexOf('role="timer"'), src.indexOf('role="timer"') + 400);
+  assert.doesNotMatch(timerBlock, /aria-live/);
+});

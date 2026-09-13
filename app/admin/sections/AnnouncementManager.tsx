@@ -133,10 +133,10 @@ export default function AnnouncementManager() {
                     <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-indigo-500' : 'text-gray-400'}`}>
                       <Pin className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setEditing(a)} title="Edit" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => remove(a.id)} title="Delete" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <button onClick={() => remove(a.id)} title="Delete" aria-label="Delete" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

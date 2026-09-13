@@ -175,7 +175,7 @@ export default function CollaboratorPanel({ noteId }: Props) {
               <button
                 onClick={() => remove(c.user.id)}
                 className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                title="Remove"
+                title="Remove" aria-label="Remove"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

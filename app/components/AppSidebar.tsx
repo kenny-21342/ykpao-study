@@ -282,7 +282,7 @@ export default function AppSidebar({
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          title="Search (⌘K)"
+          title="Search (⌘K)" aria-label="Search (⌘K)"
           className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-xl text-gray-700 hover:bg-gray-100 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800`}
         >
           <span className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
@@ -304,7 +304,7 @@ export default function AppSidebar({
             viewer at /papers/[id] navigates away from the shell anyway. */}
         <Link
           href="/papers"
-          title="Past Papers"
+          title="Past Papers" aria-label="Past Papers"
           className={itemClass(active === 'papers')}
           onClick={onCloseMobile}
         >
@@ -413,7 +413,7 @@ export default function AppSidebar({
           <div className="space-y-2">
             <Link
               href="/auth/login"
-              title="Sign In"
+              title="Sign In" aria-label="Sign In"
               className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-200`}
             >
               <LogIn className="w-4 h-4" />
@@ -421,7 +421,7 @@ export default function AppSidebar({
             </Link>
             <Link
               href="/auth/signup"
-              title="Create Account"
+              title="Create Account" aria-label="Create Account"
               className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200`}
             >
               <User className="w-4 h-4" />

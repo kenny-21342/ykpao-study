@@ -286,6 +286,7 @@ export default function SmartEduPlatform() {
   // public platform totals it used to fetch have moved there, where they are
   // server-rendered and therefore crawlable.
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
@@ -300,6 +301,14 @@ export default function SmartEduPlatform() {
       fetch('/api/onboarding').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([data, overview, onb]) => {
       if (cancelled) return;
+      // `/api/dashboard` failing used to be indistinguishable from a brand-new
+      // account: the tiles stayed on their zero defaults and the activity list
+      // stayed empty, so a student with months of work was quietly told they
+      // had none. The other two degrade honestly on their own -- an absent
+      // overview hides its panel rather than emptying it, and an absent
+      // onboarding answer simply does not raise the wizard -- but this one has
+      // a zero state that looks like real data, so it has to say so.
+      setStatsError(data ? null : 'Your progress could not be loaded just now.');
       if (data) {
         setStats({
           questionsAnswered: data.questionsAnswered ?? 0,
@@ -669,7 +678,7 @@ export default function SmartEduPlatform() {
                   ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
-              title="AI Tutor"
+              title="AI Tutor" aria-label="AI Tutor"
             >
               <Sparkles className="w-5 h-5" />
             </button>
@@ -701,6 +710,19 @@ export default function SmartEduPlatform() {
               </div>
 
               <AnnouncementBanner />
+
+              {statsError && (
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                  <span>{statsError} The figures below are not your real totals.</span>
+                  <button
+                    type="button"
+                    onClick={() => setRefreshTick((n) => n + 1)}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
 
               <AiKeyPrompt />
 

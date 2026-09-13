@@ -53,11 +53,18 @@ function MenuButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
+      // Every button here is an icon and nothing else, so without this the
+      // whole toolbar -- around thirty controls -- is announced as "button",
+      // thirty times. `title` produces a tooltip for a mouse and nothing at
+      // all for a screen reader, so it cannot stand in for a name.
+      aria-label={title}
+      // Toggles must report whether they are on, not merely look it.
+      aria-pressed={active === undefined ? undefined : active}
       className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
         active ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
       }`}
     >
-      {Icon && <Icon className="w-4 h-4" />}
+      {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
     </button>
   );
 }
@@ -251,11 +258,17 @@ export default function RichTextEditor({
   };
 
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden">
-      {/* Toolbar */}
-      <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-1">
+    <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
+      {/* Toolbar.
+          `dark:` variants were missing entirely, so in dark mode this was a
+          white strip across the top of a dark editor. */}
+      <div
+        role="toolbar"
+        aria-label="Formatting"
+        className="bg-gray-50 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 p-2 flex flex-wrap gap-1"
+      >
         {/* Undo/Redo */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().undo().run()}
             icon={Undo}
@@ -269,7 +282,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Text Formatting */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             active={editor.isActive('bold')}
@@ -297,7 +310,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Headings */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             active={editor.isActive('heading', { level: 1 })}
@@ -319,7 +332,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Lists */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             active={editor.isActive('bulletList')}
@@ -336,7 +349,7 @@ export default function RichTextEditor({
 
         {!compactToolbar || showMoreTools ? <>
         {/* Alignment */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             active={editor.isActive({ textAlign: 'left' })}
@@ -364,13 +377,13 @@ export default function RichTextEditor({
         </div>
 
         {/* Highlight & Color */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <button
             onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
               editor.isActive('highlight') ? 'bg-yellow-200' : ''
             }`}
-            title="Highlight"
+            title="Highlight" aria-label="Highlight"
             type="button"
           >
             <Highlighter className="w-4 h-4" />
@@ -380,19 +393,20 @@ export default function RichTextEditor({
             type="color"
             onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
             className="w-8 h-8 rounded cursor-pointer"
-            title="Text Color"
+            title="Text Color" aria-label="Text Color"
           />
         </div>
 
         {/* Font Size */}
-        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <select
             value={fontSize}
             onChange={(e) => {
               setFontSize(e.target.value);
               editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
             }}
-            className="px-2 py-1 text-xs border border-gray-300 rounded"
+            aria-label="Font size"
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded"
           >
             <option value="12px">12px</option>
             <option value="14px">14px</option>

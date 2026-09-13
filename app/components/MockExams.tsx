@@ -528,7 +528,7 @@ function ExamCard({
           <button
             onClick={onDelete}
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Delete"
+            title="Delete" aria-label="Delete"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -1246,7 +1246,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               onExit();
             }}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Save & exit exam"
+            title="Save & exit exam" aria-label="Save & exit exam"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1261,12 +1261,27 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-sm font-semibold ${
-            timeLow
-              ? 'bg-red-50 text-red-700 border border-red-200 animate-pulse'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-          }`}>
-            <Clock className="w-4 h-4" />
+          {/* `motion-safe:` so the pulse is dropped for anyone who has asked
+              for reduced motion -- an unavoidable, indefinitely repeating
+              animation in their field of view for the length of an exam is
+              exactly what that setting exists to prevent. The colour change
+              carries the same warning without moving.
+
+              No `aria-live` here, deliberately: this updates once a second, so
+              a live region would read the clock aloud every second for the
+              length of the paper. `role="timer"` defaults to off for exactly
+              that reason. The label still names the element, so a student who
+              navigates to it hears the time on demand. */}
+          <div
+            role="timer"
+            aria-label={timeLow ? 'Time remaining, running low' : 'Time remaining'}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-sm font-semibold tabular-nums ${
+              timeLow
+                ? 'bg-red-50 text-red-700 border border-red-200 motion-safe:animate-pulse'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+            }`}
+          >
+            <Clock className="w-4 h-4" aria-hidden="true" />
             {secondsLeft !== null ? fmtTime(secondsLeft) : '—'}
           </div>
           <span className="text-xs text-gray-500 hidden md:inline">

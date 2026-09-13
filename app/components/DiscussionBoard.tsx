@@ -352,7 +352,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
               <button
                 onClick={() => setActiveCategory('')}
                 className="ml-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                title="Clear label filter"
+                title="Clear label filter" aria-label="Clear label filter"
               >
                 <X className="w-3 h-3" /> Clear
               </button>
@@ -551,6 +551,8 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 // ===================================================================
 function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void }) {
   const { confirm, prompt, confirmDialog } = useConfirm();
+  /** A vote is not worth a modal; it gets an inline line instead. */
+  const [voteError, setVoteError] = useState<string | null>(null);
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   // Resolved by the server in the session callback, not re-derived here: a
@@ -686,13 +688,22 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direction }),
       });
-      if (!res.ok) return;
+      // A vote that silently does nothing reads as a broken button: the count
+      // does not move, and there is no way to tell a rejected vote from a lost
+      // request. Both now say so, quietly -- a vote is not worth a modal.
+      if (!res.ok) {
+        setVoteError('Your vote did not go through. Try again in a moment.');
+        return;
+      }
+      setVoteError(null);
       const data = await res.json();
       setThread((prev) => prev ? {
         ...prev,
         posts: prev.posts.map((p) => p.id === postId ? { ...p, upvotes: data.upvotes, downvotes: data.downvotes } : p),
       } : null);
-    } catch { /* best-effort */ }
+    } catch {
+      setVoteError('Your vote did not go through. Check your connection and try again.');
+    }
   };
 
   const voteOnThread = async (direction: 1 | -1) => {
@@ -702,10 +713,16 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direction }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setVoteError('Your vote did not go through. Try again in a moment.');
+        return;
+      }
+      setVoteError(null);
       const data = await res.json();
       setThread((prev) => prev ? { ...prev, upvotes: data.upvotes, downvotes: data.downvotes } : null);
-    } catch { /* best-effort */ }
+    } catch {
+      setVoteError('Your vote did not go through. Check your connection and try again.');
+    }
   };
 
   const flagPost = async (postId: string) => {
@@ -727,8 +744,14 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
         setNotice({ title: 'Reported', message: 'Thank you. A moderator will review this post.', tone: 'success' });
       } else if (res.status === 409) {
         setNotice({ title: 'Already reported', message: 'You have already flagged this post.', tone: 'info' });
+      } else {
+        // Success pops a dialog, so failure must too -- otherwise reporting
+        // something abusive looks exactly like reporting it successfully.
+        setNotice({ title: 'Report not sent', message: 'Something went wrong. Please try again.', tone: 'error' });
       }
-    } catch { /* best-effort */ }
+    } catch {
+      setNotice({ title: 'Report not sent', message: 'Check your connection and try again.', tone: 'error' });
+    }
   };
 
   const flagThread = async () => {
@@ -750,8 +773,12 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
         setNotice({ title: 'Reported', message: 'Thank you. A moderator will review this thread.', tone: 'success' });
       } else if (res.status === 409) {
         setNotice({ title: 'Already reported', message: 'You have already flagged this thread.', tone: 'info' });
+      } else {
+        setNotice({ title: 'Report not sent', message: 'Something went wrong. Please try again.', tone: 'error' });
       }
-    } catch { /* best-effort */ }
+    } catch {
+      setNotice({ title: 'Report not sent', message: 'Check your connection and try again.', tone: 'error' });
+    }
   };
 
   if (loading) {
@@ -810,21 +837,21 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             <button
               onClick={() => voteOnThread(1)}
               className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded"
-              title="Upvote"
+              title="Upvote" aria-label="Upvote"
             >
               <ThumbsUp className="w-3.5 h-3.5" /> {(thread.upvotes ?? 0) > 0 && thread.upvotes}
             </button>
             <button
               onClick={() => voteOnThread(-1)}
               className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-red-500 transition-colors rounded"
-              title="Downvote"
+              title="Downvote" aria-label="Downvote"
             >
               <ThumbsDown className="w-3.5 h-3.5" /> {(thread.downvotes ?? 0) > 0 && thread.downvotes}
             </button>
             <button
               onClick={flagThread}
               className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
-              title="Report this thread"
+              title="Report this thread" aria-label="Report this thread"
             >
               <Flag className="w-3.5 h-3.5" />
             </button>
@@ -835,8 +862,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
               <button
                 onClick={handleDelete}
                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                title="Delete thread"
-                aria-label="Delete thread"
+                title="Delete thread" aria-label="Delete thread"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -882,7 +908,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <button
                           onClick={() => startEdit(post)}
                           className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-                          title="Edit your reply"
+                          title="Edit your reply" aria-label="Edit your reply"
                         >
                           <Pencil className="w-3.5 h-3.5" /> Edit
                         </button>
@@ -892,21 +918,21 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                           <button
                             onClick={() => voteOnPost(post.id, 1)}
                             className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                            title="Upvote"
+                            title="Upvote" aria-label="Upvote"
                           >
                             <ThumbsUp className="w-3.5 h-3.5" /> {(post.upvotes ?? 0) > 0 && post.upvotes}
                           </button>
                           <button
                             onClick={() => voteOnPost(post.id, -1)}
                             className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
-                            title="Downvote"
+                            title="Downvote" aria-label="Downvote"
                           >
                             <ThumbsDown className="w-3.5 h-3.5" /> {(post.downvotes ?? 0) > 0 && post.downvotes}
                           </button>
                           <button
                             onClick={() => flagPost(post.id)}
                             className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 transition-colors"
-                            title="Report this post"
+                            title="Report this post" aria-label="Report this post"
                           >
                             <Flag className="w-3.5 h-3.5" />
                           </button>
@@ -978,6 +1004,12 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             </button>
           </div>
         </div>
+      )}
+
+      {voteError && (
+        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          {voteError}
+        </p>
       )}
 
       {confirmDialog}

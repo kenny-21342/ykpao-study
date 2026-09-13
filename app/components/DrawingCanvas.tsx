@@ -532,7 +532,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             <button
               onClick={() => setShowColorPicker((s) => !s)}
               className="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-700 flex items-center justify-center"
-              title="Color"
+              title="Color" aria-label="Color"
               style={{ backgroundColor: tool === 'eraser' ? '#fff' : color }}
             >
               {tool === 'eraser' && <span className="text-[10px] text-gray-500">Erase</span>}
@@ -608,14 +608,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           {onSave && (
             <button
               onClick={handleSave}
-              className="ml-auto px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-md hover:shadow-sm transition-all"
+              // `sm:ml-auto`, not `ml-auto`: on a narrow toolbar the row wraps
+              // and an auto margin puts Save alone on the far right of its own
+              // line, a long way from the tools it belongs with.
+              className="sm:ml-auto px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-md hover:shadow-sm transition-all"
             >
               Save Drawing
             </button>
           )}
         </div>
 
-        {/* Canvas */}
+        {/* Canvas.
+            `inline-block` shrink-wraps the canvas's own pixel width, which is
+            correct -- the drawing surface *is* that many pixels and cannot be
+            scaled without breaking the coordinate space strokes are recorded
+            in. `max-w-full` plus the scroll container keeps that from forcing
+            the whole page sideways when a caller mounts the canvas without
+            measuring first; callers that do measure (via
+            `useMeasuredCanvasWidth`) never reach the overflow at all. */}
+        <div className="max-w-full overflow-x-auto">
         <div className="relative inline-block">
           <canvas
             ref={canvasRef}
@@ -648,6 +659,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               autoFocus
             />
           ))}
+        </div>
         </div>
       </div>
     );
