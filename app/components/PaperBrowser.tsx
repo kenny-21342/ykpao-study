@@ -490,6 +490,10 @@ export default function PaperBrowser() {
                             formatBytes(document.sizeBytes)
                               ? ` (${formatBytes(document.sizeBytes)})`
                               : ''
+                          }`} aria-label={`Download ${document.filename}${
+                            formatBytes(document.sizeBytes)
+                              ? ` (${formatBytes(document.sizeBytes)})`
+                              : ''
                           }`}
                           className="inline-flex items-center rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600 px-2 py-1.5 text-gray-500 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >

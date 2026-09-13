@@ -1320,7 +1320,7 @@ export default function NotesTextbookPage() {
               ['recent', Clock3, 'Recent'],
               ['archive', Archive, 'Archive'],
             ] as const).map(([mode, Icon, label]) => (
-              <button key={mode} onClick={() => setFilterMode(mode)} title={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-white text-emerald-700 shadow-sm dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <button key={mode} onClick={() => setFilterMode(mode)} title={label} aria-label={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-white text-emerald-700 shadow-sm dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Icon className="h-4 w-4" />
               </button>
             ))}
@@ -1333,7 +1333,7 @@ export default function NotesTextbookPage() {
             onClick={() => startCreatePage()}
             disabled={!defaultPageSectionId}
             className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 text-xs font-medium hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
-            title={defaultPageSectionId ? 'Add page' : 'Create a section before adding a page'}
+            title={defaultPageSectionId ? 'Add page' : 'Create a section before adding a page'} aria-label={defaultPageSectionId ? 'Add page' : 'Create a section before adding a page'}
           >
             <Plus className="h-3.5 w-3.5" /> Page
           </button>
@@ -1431,7 +1431,7 @@ export default function NotesTextbookPage() {
                 <button
                   onClick={() => setPreviewMode((value) => !value)}
                   className={`rounded-md p-2 ${previewMode ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                  title={previewMode ? 'Back to editing' : 'Preview rendered note'}
+                  title={previewMode ? 'Back to editing' : 'Preview rendered note'} aria-label={previewMode ? 'Back to editing' : 'Preview rendered note'}
                 >
                   {previewMode ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

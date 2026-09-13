@@ -335,7 +335,7 @@ export default function AppSidebar({
           <div className="relative">
             <button
               onClick={() => setAccountOpen(!accountOpen)}
-              title={user?.name ?? 'Account'}
+              title={user?.name ?? 'Account'} aria-label={user?.name ?? 'Account'}
               className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-xl hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
@@ -473,13 +473,13 @@ function NavItem({
 
   if (onNavigate) {
     return (
-      <button onClick={() => onNavigate(tab)} title={label} className={className}>
+      <button onClick={() => onNavigate(tab)} title={label} aria-label={label} className={className}>
         {body}
       </button>
     );
   }
   return (
-    <Link href={`/?tab=${tab}`} title={label} className={className} onClick={onCloseMobile}>
+    <Link href={`/?tab=${tab}`} title={label} aria-label={label} className={className} onClick={onCloseMobile}>
       {body}
     </Link>
   );

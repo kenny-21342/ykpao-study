@@ -170,7 +170,7 @@ export default function ContentModeration() {
                             <button
                               onClick={() => patchThread(item.id, item.pinned ? 'unpin' : 'pin')}
                               disabled={actionLoading === item.id + (item.pinned ? 'unpin' : 'pin')}
-                              title={item.pinned ? 'Unpin' : 'Pin'}
+                              title={item.pinned ? 'Unpin' : 'Pin'} aria-label={item.pinned ? 'Unpin' : 'Pin'}
                               className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                               {item.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
@@ -178,7 +178,7 @@ export default function ContentModeration() {
                             <button
                               onClick={() => patchThread(item.id, item.locked ? 'unlock' : 'lock')}
                               disabled={actionLoading === item.id + (item.locked ? 'unlock' : 'lock')}
-                              title={item.locked ? 'Unlock' : 'Lock'}
+                              title={item.locked ? 'Unlock' : 'Lock'} aria-label={item.locked ? 'Unlock' : 'Lock'}
                               className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                               {item.locked ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}

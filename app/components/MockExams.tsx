@@ -1314,7 +1314,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
                   }`}
-                  title={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`}
+                  title={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`} aria-label={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`}
                 >
                   <span className="w-6 text-center font-mono text-xs flex-shrink-0">
                     {idx + 1}
@@ -1360,7 +1360,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                       ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
                       : 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20'
                   }`}
-                  title={flagged[item.id] ? 'Remove review flag' : 'Mark for review'}
+                  title={flagged[item.id] ? 'Remove review flag' : 'Mark for review'} aria-label={flagged[item.id] ? 'Remove review flag' : 'Mark for review'}
                 >
                   <Flag className="w-3.5 h-3.5" fill={flagged[item.id] ? 'currentColor' : 'none'} />
                   {flagged[item.id] ? 'Flagged' : 'Mark for review'}

@@ -127,10 +127,10 @@ export default function AnnouncementManager() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => togglePublished(a)} title={a.published ? 'Unpublish' : 'Publish'} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <button onClick={() => togglePublished(a)} title={a.published ? 'Unpublish' : 'Publish'} aria-label={a.published ? 'Unpublish' : 'Publish'} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
                       {a.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-indigo-500' : 'text-gray-400'}`}>
+                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} aria-label={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-indigo-500' : 'text-gray-400'}`}>
                       <Pin className="w-4 h-4" />
                     </button>
                     <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">

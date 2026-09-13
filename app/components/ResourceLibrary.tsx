@@ -930,7 +930,7 @@ function ResourceBrowserView({
                         ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                         : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
-                    title={crumb.name}
+                    title={crumb.name} aria-label={crumb.name}
                   >
                     {crumb.name}
                   </button>
@@ -972,7 +972,7 @@ function ResourceBrowserView({
                     type="button"
                     onClick={() => onChangeFolder(folder.id)}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800"
-                    title={folder.name}
+                    title={folder.name} aria-label={folder.name}
                   >
                     <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
                     <span className="min-w-0 flex-1">
@@ -1008,7 +1008,7 @@ function ResourceBrowserView({
                   type="button"
                   onClick={() => onChangeFolder(folder.id)}
                   className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
-                  title={folder.name}
+                  title={folder.name} aria-label={folder.name}
                 >
                   <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
                   <span className="min-w-0 flex-1">

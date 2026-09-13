@@ -157,7 +157,11 @@ test('DOM controls with a title also carry an accessible name', async () => {
   for (const file of await appSources()) {
     const src = await readFile(file, 'utf8');
 
-    for (const m of src.matchAll(/title="[^"]{1,120}"/g)) {
+    // Both a literal `title="Delete"` and a dynamic `title={label}`. The
+    // dynamic form is the one that hid from the first sweep: a regex looking
+    // for quoted strings walks straight past it, and those controls are just
+    // as unnamed.
+    for (const m of src.matchAll(/title=(?:"[^"]{1,120}"|\{)/g)) {
       const openedAt = src.lastIndexOf('<', m.index);
       if (openedAt === -1) continue;
 

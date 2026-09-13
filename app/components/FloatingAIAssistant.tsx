@@ -472,7 +472,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           </div>
           <button onClick={() => { setView('history'); void loadConversations(); }} className="rounded-md p-1.5 hover:bg-white/15" title="Chat history" aria-label="Chat history"><History className="h-4 w-4" /></button>
           <button onClick={startNewConversation} className="rounded-md p-1.5 hover:bg-white/15" title="New conversation" aria-label="New conversation"><MessageSquarePlus className="h-4 w-4" /></button>
-          <button onClick={() => setIsMinimized((value) => !value)} className="rounded-md p-1.5 hover:bg-white/15" title={isMinimized ? 'Maximize' : 'Minimize'}>{isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}</button>
+          <button onClick={() => setIsMinimized((value) => !value)} className="rounded-md p-1.5 hover:bg-white/15" title={isMinimized ? 'Maximize' : 'Minimize'} aria-label={isMinimized ? 'Maximize' : 'Minimize'}>{isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}</button>
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-white/15" title="Close" aria-label="Close"><X className="h-4 w-4" /></button>
         </header>
 

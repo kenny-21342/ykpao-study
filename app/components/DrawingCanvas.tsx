@@ -683,7 +683,7 @@ function ToolButton({
   return (
     <button
       onClick={onClick}
-      title={title}
+      title={title} aria-label={title}
       className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
         active
           ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'

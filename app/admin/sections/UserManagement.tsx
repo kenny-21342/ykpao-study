@@ -244,7 +244,7 @@ export default function UserManagement() {
                           <button
                             onClick={() => toggleBan(u)}
                             disabled={u.effectiveAdmin || actionLoading === u.id}
-                            title={u.banned ? 'Unban' : 'Ban'}
+                            title={u.banned ? 'Unban' : 'Ban'} aria-label={u.banned ? 'Unban' : 'Ban'}
                             className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.banned
                                 ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'

@@ -944,7 +944,7 @@ export default function QuestionsDatabase({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleBookmark(selectedQuestion)}
-                      title={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'}
+                      title={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'} aria-label={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'}
                       className={`p-1.5 rounded-lg transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     >
                       <Star className={`w-5 h-5 ${selectedQuestion.bookmarked ? 'fill-amber-500' : ''}`} />
