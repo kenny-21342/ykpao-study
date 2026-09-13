@@ -12,14 +12,15 @@ import { toBankSubjectCodes } from '@/lib/bank-questions';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing.
+ * Vercel kills an invocation at this ceiling regardless of what the request
+ * is doing. This project is on Pro, where the ceiling is 300s; 60 was a
+ * Hobby-era number and was never revisited.
  *
  * A plain mock exam no longer goes anywhere near that: selection is one indexed
  * query. The budget still matters for `mode: 'predicted'`, which is the one
  * path here that still calls a model.
  */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   try {
@@ -104,7 +105,12 @@ export async function POST(req: Request) {
       await recordUsage({
         userId: user.id,
         feature: 'mock-exam-generate',
-        tokensOut: 1500,
+        // The provider's own counts where it reports them. The flat 1500 that
+        // used to sit here booked no input tokens at all, so a predicted paper
+        // over a large candidate catalogue -- by far the biggest prompt the app
+        // sends -- was recorded as costing nothing.
+        tokensIn: predicted.usage?.promptTokens,
+        tokensOut: predicted.usage?.completionTokens ?? 1500,
         model: access.credential.model,
       });
       return NextResponse.json({ exam: predicted.exam, prediction: predicted.prediction, resolvedCourse: learnerContext.activeCourse });

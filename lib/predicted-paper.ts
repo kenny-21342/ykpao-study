@@ -50,6 +50,15 @@ export type PredictedPaperResult = {
     paperNumber: number | null;
     questionTypeMix: Record<QuestionType, number>;
   };
+  /**
+   * The provider's own token counts for the planning call, when it reported
+   * them. Null when it did not, in which case the caller keeps its estimate.
+   *
+   * This exists because the route booked a flat `tokensOut: 1500` and no input
+   * tokens at all, so every predicted paper cost exactly $0.0000 on /usage no
+   * matter how large the candidate catalogue was.
+   */
+  usage: { promptTokens: number; completionTokens: number } | null;
 };
 
 export type PredictedPaperOptions = {
@@ -505,6 +514,10 @@ async function createBankPredictedPaper(
       paperNumber: blueprint.paperNumber,
       questionTypeMix: blueprint.questionTypeMix,
     },
+    // No provider was called on this path -- the paper is packed from observed
+    // structure, not planned by a model -- so there is genuinely nothing to
+    // report, and the caller must not book an estimate for it either.
+    usage: null,
   };
 }
 
@@ -573,6 +586,7 @@ export async function createPredictedPaper(input: PredictedPaperOptions): Promis
     markschemePreview: plainText(markschemes[index]?.content ?? '', 220),
   }));
 
+  const planUsage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
   const plan = await chatJSON<PredictedPaperAIPlan>(
     [
       { role: 'system', content: PREDICTED_PAPER_PROMPT },
@@ -595,7 +609,12 @@ Candidate questions:
 ${JSON.stringify(catalogue)}`,
       },
     ],
-    { credential: input.credential, temperature: 0.35, maxTokens: 3000 }
+    {
+      credential: input.credential,
+      temperature: 0.35,
+      maxTokens: 3000,
+      onUsage: (u) => { planUsage.current = u; },
+    }
   );
 
   const candidateIds = new Set(candidates.map((question) => question.id));
@@ -674,5 +693,6 @@ ${JSON.stringify(catalogue)}`,
       paperNumber: blueprint.paperNumber,
       questionTypeMix: blueprint.questionTypeMix,
     },
+    usage: planUsage.current,
   };
 }

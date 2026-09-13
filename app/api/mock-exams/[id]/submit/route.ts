@@ -548,6 +548,9 @@ export async function POST(
         // `let`, because the branch assigning it is an async callback and
         // control-flow analysis would otherwise narrow the read to `null`.
         const visionUsage: { current: ProviderUsage | null } = { current: null };
+        // The text grader has a usage block too; it was simply never read, so
+        // every text-graded item booked the same flat estimate as a vision one.
+        const textUsage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
 
         try {
           // A vision call that comes back with nothing graded nothing. Left as
@@ -599,6 +602,7 @@ export async function POST(
               // it and take the whole submission down with it.
               budgetMs: GRADING_BUDGET_MS,
               maxAttempts: 1,
+              onUsage: (u) => { textUsage.current = u; },
             }
           );
 
@@ -648,11 +652,13 @@ export async function POST(
             // A vision grade reports its real counts where the provider gives
             // them; the text path still has no usage to read, so it keeps the
             // flat estimate.
-            tokensIn: gradedWithVision ? visionUsage.current?.tokensIn : undefined,
+            tokensIn: gradedWithVision
+              ? visionUsage.current?.tokensIn
+              : textUsage.current?.promptTokens,
             tokensOut: gradedWithVision
               ? visionUsage.current?.tokensOut ??
                 (visionUsage.current ? undefined : VISION_GRADE_TOKENS_ESTIMATE)
-              : VISION_GRADE_TOKENS_ESTIMATE,
+              : textUsage.current?.completionTokens ?? VISION_GRADE_TOKENS_ESTIMATE,
             model: gradedWithVision ? visionAccess.credential.model : access.credential.model,
           });
 

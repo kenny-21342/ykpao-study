@@ -14,6 +14,19 @@ const PRICES: Array<{ match: RegExp; price: ModelPrice }> = [
   // api.deepseek.com list pricing, per 1M tokens.
   { match: /^deepseek-reasoner/, price: { inPerMTok: 0.55, outPerMTok: 2.19 } },
   { match: /^deepseek-chat/, price: { inPerMTok: 0.27, outPerMTok: 1.1 } },
+
+  // SiliconFlow list pricing, per 1M tokens. These are the two models the
+  // shared key actually serves in production, and neither was priced here
+  // before: a provider prefixes its model names (`deepseek-ai/…`, `Qwen/…`),
+  // so the two anchored patterns above could never match them and every call
+  // fell through to DEFAULT. Every DeepSeek row in `usage_records` is
+  // consequently mispriced.
+  //
+  // The figures match the extraction pipeline's own constants in
+  // `pdf_extraction/bank/run.py:55-59`, so a transcription run costed offline
+  // and the same run read off /usage agree rather than quietly differing.
+  { match: /qwen3-vl/, price: { inPerMTok: 0.28, outPerMTok: 1.13 } },
+  { match: /^deepseek-ai\//, price: { inPerMTok: 0.27, outPerMTok: 1.1 } },
 ];
 
 const DEFAULT: ModelPrice = { inPerMTok: 0.3, outPerMTok: 1.2 };

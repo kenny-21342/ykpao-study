@@ -12,10 +12,11 @@ import { bankSubjectName, type BankStrip } from '@/lib/bank-questions';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel kills an invocation at the platform default (60s Hobby / 300s Pro)
- * regardless of what the request is doing. One LLM completion.
+ * Vercel kills an invocation at this ceiling regardless of what the request
+ * is doing. This project is on Pro, where the ceiling is 300s; 60 was a
+ * Hobby-era number and was never revisited. One LLM completion.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Deterministic question-of-the-day picker.
@@ -271,6 +272,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: allowance.message }, { status: 429 });
     }
     try {
+      const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
       const result = await chatJSON<{ score: number; feedback: string }>(
         [
           {
@@ -287,12 +289,25 @@ export async function POST(req: NextRequest) {
               `Student answer:\n${parsed.answer}\n\nReturn JSON only.`,
           },
         ],
-        { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 600 }
+        {
+          credential: forInteractive(access.credential),
+          temperature: 0.2,
+          maxTokens: 600,
+          onUsage: (u) => { usage.current = u; },
+        }
       );
       score = Math.max(0, Math.min(question.marks, Math.round(result.score)));
       isCorrect = score >= Math.ceil(question.marks * 0.5);
       feedback = result.feedback ?? '';
-      await recordUsage({ userId: user.id, feature: 'daily-challenge', tokensOut: 400, model: access.credential.model });
+      await recordUsage({
+        userId: user.id,
+        feature: 'daily-challenge',
+        // Real counts where the provider gives them; the flat 400 stays only as
+        // the fallback for endpoints that omit a usage block.
+        tokensIn: usage.current?.promptTokens,
+        tokensOut: usage.current?.completionTokens ?? 400,
+        model: access.credential.model,
+      });
     } catch (err) {
       // Grading failed — record the attempt ungraded so the user isn't blocked.
       console.error('Daily challenge grading failed:', err);
