@@ -57,6 +57,7 @@ import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import { usePageCollaboration } from './usePageCollaboration';
 import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
+import { useConfirm } from './useConfirm';
 import type { RemoteCursor } from './RemoteCursors';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
@@ -233,6 +234,7 @@ function escapeHtml(value: string) {
 }
 
 export default function NotesTextbookPage() {
+  const { confirm, confirmDialog } = useConfirm();
   const { data: session, status } = useSession();
   const screenContext = useScreenContext();
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
@@ -717,7 +719,13 @@ export default function NotesTextbookPage() {
   };
 
   const deletePage = async (pageId: string) => {
-    if (!window.confirm('Delete this page permanently?')) return;
+    const ok = await confirm({
+      title: 'Delete this page?',
+      message:
+        'The page and its whole version history go with it. Anyone you shared it with loses access. This cannot be undone.',
+      confirmLabel: 'Delete page',
+    });
+    if (!ok) return;
     try {
       const response = await fetch(`/api/pages?pageId=${encodeURIComponent(pageId)}`, { method: 'DELETE' });
       const data = await response.json();
@@ -880,7 +888,15 @@ export default function NotesTextbookPage() {
 
   const restoreSnapshot = async (snapshotId: string) => {
     const page = selectedPageRef.current;
-    if (!page || !window.confirm('Restore this version? The current content will remain in history.')) return;
+    if (!page) return;
+    const ok = await confirm({
+      title: 'Restore this version?',
+      message:
+        'The page goes back to how it was at this point. Nothing is lost — what is there now is kept in the history, so you can restore it again.',
+      confirmLabel: 'Restore version',
+      destructive: false,
+    });
+    if (!ok) return;
     try {
       const response = await fetch(`/api/pages/${page.id}/history`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ snapshotId, baseRevision: page.revision }),
@@ -1280,6 +1296,7 @@ export default function NotesTextbookPage() {
 
   return (
     <div className="relative flex h-full min-h-[600px] overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+      {confirmDialog}
       {sidebarOpen && <button aria-label="Close notes navigation" className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-[min(88vw,340px)] flex-col border-r border-gray-200 bg-gray-50 transition-transform dark:border-gray-800 dark:bg-gray-900 lg:relative lg:inset-auto lg:z-20 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>

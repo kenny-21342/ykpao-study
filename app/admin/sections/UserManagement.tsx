@@ -5,6 +5,7 @@ import { Search, Ban, CheckCircle, Trash2, Shield, Loader2, ChevronLeft, Chevron
 import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
+import { useConfirm } from '../../components/useConfirm';
 
 type AdminUser = {
   id: string;
@@ -26,6 +27,7 @@ type AdminUser = {
 type UsersResponse = { users: AdminUser[]; total: number; page: number; pageSize: number; totalPages: number };
 
 export default function UserManagement() {
+  const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<UsersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,13 +89,22 @@ export default function UserManagement() {
   };
 
   const resetPassword = async (user: AdminUser) => {
-    if (
-      !confirm(
-        `Reset the password for ${user.email}?\n\nTheir current password stops working immediately, and you'll be shown a temporary one to pass on to them.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Reset this password?',
+      message: (
+        <>
+          <p>
+            <span className="font-semibold">{user.email}</span> will be signed out of every
+            device immediately, and their current password stops working.
+          </p>
+          <p className="mt-2">
+            You will be shown a temporary password once, to pass on to them.
+          </p>
+        </>
+      ),
+      confirmLabel: 'Reset password',
+    });
+    if (!ok) return;
     setActionLoading(user.id);
     try {
       const res = await adminFetch<{ temporaryPassword: string; email: string }>(
@@ -110,7 +121,21 @@ export default function UserManagement() {
   };
 
   const deleteUser = async (user: AdminUser) => {
-    if (!confirm(`Permanently delete ${user.email} and ALL their content? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: 'Permanently delete this account?',
+      message: (
+        <>
+          <p>
+            <span className="font-semibold">{user.email}</span> and everything they have
+            made will be removed for good: notes, attempts, marks, drawings, uploads and
+            posts.
+          </p>
+          <p className="mt-2">This cannot be undone. Consider suspending the account instead.</p>
+        </>
+      ),
+      confirmLabel: 'Delete permanently',
+    });
+    if (!ok) return;
     setActionLoading(user.id);
     try {
       await adminFetch(`/api/admin/users?userId=${user.id}`, { method: 'DELETE' });
@@ -124,6 +149,7 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {confirmDialog}
       <header>
         <h1 className="text-2xl font-bold">User Management</h1>
         <p className="text-sm text-gray-500 mt-1">Manage accounts, roles, and access.</p>

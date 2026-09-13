@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import NoticeDialog from './NoticeDialog';
+import { useConfirm } from './useConfirm';
 import {
   MessageSquare, ArrowLeft, Loader2, AlertCircle,
   Search, Plus, Eye, Reply, Pin, Lock, Trash2, ChevronRight,
@@ -549,6 +550,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 // Thread view (detail + posts + reply)
 // ===================================================================
 function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void }) {
+  const { confirm, prompt, confirmDialog } = useConfirm();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   // Resolved by the server in the session callback, not re-derived here: a
@@ -654,7 +656,12 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
     !!thread && (canModerate || (!!currentUserId && currentUserId === thread.author.id));
 
   const handleDelete = async () => {
-    if (!confirm('Delete this thread? All replies will be removed.')) return;
+    const ok = await confirm({
+      title: 'Delete this thread?',
+      message: 'Every reply on it goes too, including other people\u2019s. This cannot be undone.',
+      confirmLabel: 'Delete thread',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/discussions/threads/${threadId}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -702,7 +709,13 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
   };
 
   const flagPost = async (postId: string) => {
-    const reason = prompt('Why are you flagging this post? (spam, inappropriate, etc.)');
+    const reason = await prompt({
+      title: 'Report this post',
+      message: 'A moderator reads every report. Tell them what is wrong with it.',
+      inputLabel: 'Reason',
+      inputPlaceholder: 'Spam, abuse, off-topic…',
+      confirmLabel: 'Send report',
+    });
     if (!reason) return;
     try {
       const res = await fetch('/api/discussions/flags', {
@@ -719,7 +732,13 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
   };
 
   const flagThread = async () => {
-    const reason = prompt('Why are you flagging this thread?');
+    const reason = await prompt({
+      title: 'Report this thread',
+      message: 'A moderator reads every report. Tell them what is wrong with it.',
+      inputLabel: 'Reason',
+      inputPlaceholder: 'Spam, abuse, off-topic…',
+      confirmLabel: 'Send report',
+    });
     if (!reason) return;
     try {
       const res = await fetch('/api/discussions/flags', {
@@ -960,6 +979,8 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
           </div>
         </div>
       )}
+
+      {confirmDialog}
 
       <NoticeDialog
         open={notice !== null}

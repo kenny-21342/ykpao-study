@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, Pencil, Pin, X, Loader2, Megaphone, Eye, EyeOff } from 'lucide-react';
+import { useConfirm } from '../../components/useConfirm';
 import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 
@@ -30,6 +31,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 export default function AnnouncementManager() {
+  const { confirm, confirmDialog } = useConfirm();
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,13 @@ export default function AnnouncementManager() {
   useEffect(() => { load(); }, [load]);
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this announcement?')) return;
+    const ok = await confirm({
+      title: 'Delete this announcement?',
+      message:
+        'It disappears from the banner, the notification feed and the announcements page for everyone. This cannot be undone.',
+      confirmLabel: 'Delete announcement',
+    });
+    if (!ok) return;
     try {
       await adminFetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
       await load();
@@ -82,6 +90,7 @@ export default function AnnouncementManager() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {confirmDialog}
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Announcements</h1>

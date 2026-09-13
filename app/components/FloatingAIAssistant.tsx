@@ -28,6 +28,7 @@ import {
   Workflow,
   X,
 } from 'lucide-react';
+import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import type { AIActionProposalPayload, AIActionProposalView, CorpusCoverage, IntakeQuestion } from '@/lib/copilot-types';
@@ -192,6 +193,7 @@ function normalizeMessage(raw: {
 }
 
 export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssistantProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState('New conversation');
@@ -310,7 +312,12 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
   };
 
   const deleteConversation = async (id: string) => {
-    if (!window.confirm('Delete this AI conversation permanently?')) return;
+    const ok = await confirm({
+      title: 'Delete this conversation?',
+      message: 'The whole exchange is removed permanently. This cannot be undone.',
+      confirmLabel: 'Delete conversation',
+    });
+    if (!ok) return;
     const response = await fetch(`/api/ai/conversations?conversationId=${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!response.ok) return;
     if (conversationId === id) startNewConversation();
@@ -449,6 +456,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
     <div className={`fixed z-50 transition-all duration-200 ${
       isMinimized ? 'bottom-4 right-4' : 'inset-x-3 bottom-3 top-16 sm:inset-x-auto sm:bottom-5 sm:right-5 sm:top-20'
     }`}>
+      {confirmDialog}
       <div className={`flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 ${
         isMinimized ? 'h-14 w-72' : 'h-full w-full sm:w-[430px]'
       }`}>

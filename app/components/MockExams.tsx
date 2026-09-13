@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import NoticeDialog from './NoticeDialog';
+import { useConfirm } from './useConfirm';
 import PreviewNotice from './PreviewNotice';
 import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 import toast from 'react-hot-toast';
@@ -216,6 +217,7 @@ function fmtTime(totalSeconds: number) {
 // Component
 // ===================================================================
 export default function MockExams() {
+  const { confirm, confirmDialog } = useConfirm();
   const [view, setView] = useState<View>({ name: 'list' });
   const [exams, setExams] = useState<ExamListItem[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -356,7 +358,12 @@ export default function MockExams() {
                 key={exam.id}
                 exam={exam}
                 onDelete={async () => {
-                  if (!confirm('Delete this mock exam? This cannot be undone.')) return;
+                  const ok = await confirm({
+                    title: 'Delete this mock exam?',
+                    message: `"${exam.title}" and every answer and mark on it will be removed. This cannot be undone.`,
+                    confirmLabel: 'Delete exam',
+                  });
+                  if (!ok) return;
                   try {
                     const res = await fetch(`/api/mock-exams/${exam.id}`, { method: 'DELETE' });
                   if (!res.ok) throw new Error('Failed to delete');
@@ -386,6 +393,7 @@ export default function MockExams() {
           tone={notice?.tone ?? 'info'}
           onClose={() => setNotice(null)}
         />
+        {confirmDialog}
       </div>
     </div>
   );
@@ -914,6 +922,7 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active?
 // Take Exam view (timer + per-question answer inputs)
 // ===================================================================
 function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit: () => void; onSubmitted: (id: string) => void }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [exam, setExam] = useState<ExamDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1215,12 +1224,24 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
   return (
     <div className="h-full flex flex-col">
+      {confirmDialog}
       {/* Exam top bar: title, timer, progress */}
       <div className="px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={async () => {
-              if (!confirm('Leave the exam? Your answers are saved and you can resume later — the timer keeps running.')) return;
+              // This is the one that most needed replacing: a native confirm
+              // blocks the event loop, so firing one here froze the timer, the
+              // autosave and the SSE connection until the student noticed the
+              // OS dialog and dismissed it -- mid-exam.
+              const ok = await confirm({
+                title: 'Leave the exam?',
+                message:
+                  'Your answers are saved and you can resume later, but the timer keeps running while you are away.',
+                confirmLabel: 'Save and leave',
+                destructive: false,
+              });
+              if (!ok) return;
               await saveProgress();
               onExit();
             }}

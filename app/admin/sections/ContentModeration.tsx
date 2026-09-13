@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Trash2, Pin, PinOff, Lock, LockOpen, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useConfirm } from '../../components/useConfirm';
 import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
@@ -34,6 +35,7 @@ const TABS: { key: ContentType; label: string }[] = [
 ];
 
 export default function ContentModeration() {
+  const { confirm, confirmDialog } = useConfirm();
   const [type, setType] = useState<ContentType>('threads');
   const [data, setData] = useState<Response | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,13 @@ export default function ContentModeration() {
   useEffect(() => { load(); }, [load]);
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this content permanently?')) return;
+    const ok = await confirm({
+      title: 'Delete this permanently?',
+      message:
+        'This removes another person\u2019s content for good \u2014 they are not told, and it cannot be undone.',
+      confirmLabel: 'Delete permanently',
+    });
+    if (!ok) return;
     setActionLoading(id);
     try {
       await adminFetch(`/api/admin/content?type=${type}&id=${id}`, { method: 'DELETE' });
@@ -89,6 +97,7 @@ export default function ContentModeration() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {confirmDialog}
       <header>
         <h1 className="text-2xl font-bold">Content Moderation</h1>
         <p className="text-sm text-gray-500 mt-1">Review and moderate all user-generated content.</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useConfirm } from './useConfirm';
 import { getStroke } from 'perfect-freehand';
 import {
   Pencil, Eraser, Type, Trash2, Undo2, Redo2, Upload,
@@ -135,6 +136,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   ({ width = 800, height = 500, className = '', onSave, onStrokesChange }, ref) => {
+    const { confirm, confirmDialog } = useConfirm();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -345,13 +347,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         strokesRef.current.length > 0 ||
         textBoxes.length > 0 ||
         bgImage !== null;
-      // This wipes working a student may be part-way through writing, and the
-      // canvas is not persisted anywhere, so an accidental click was
-      // unrecoverable. Ask first, then leave the strokes on the redo stack so
-      // Redo can walk them back.
-      if (hasWork && !confirm('Clear everything on this canvas? Your working will be lost.')) {
-        return;
-      }
       redoStackRef.current = [...strokesRef.current].reverse();
       strokesRef.current = [];
       setTextBoxes([]);
@@ -442,6 +437,32 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // on every render and React reassigns `ref.current` every time -- which,
     // for a caller passing a callback ref, means a detach/attach pair per
     // render. A caller that records the handle in state then never converges.
+    /**
+     * The toolbar's Clear, which asks first.
+     *
+     * `clearAll` itself stays synchronous and silent because it is also the
+     * imperative `clear()` on the handle: a programmatic caller resetting the
+     * canvas must not be interrupted by a dialog aimed at the student. The
+     * prompt belongs to the button, not to the operation -- and it is worth
+     * having, because this wipes working a student may be part-way through and
+     * the canvas is not persisted anywhere. The strokes are left on the redo
+     * stack either way, so Redo can walk them back.
+     */
+    const handleClearClick = useCallback(async () => {
+      const hasWork =
+        strokesRef.current.length > 0 || textBoxes.length > 0 || bgImage !== null;
+      if (hasWork) {
+        const ok = await confirm({
+          title: 'Clear the canvas?',
+          message:
+            'Everything drawn here is removed. You can bring it back with Redo, but only until you leave the page.',
+          confirmLabel: 'Clear canvas',
+        });
+        if (!ok) return;
+      }
+      clearAll();
+    }, [bgImage, clearAll, confirm, textBoxes]);
+
     useImperativeHandle(ref, () => ({
       exportDataURL,
       importDataURL: (data: string) => {
@@ -488,6 +509,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
     return (
       <div className={`drawing-canvas-wrapper ${className}`}>
+        {confirmDialog}
         {/* Toolbar */}
         <div className="flex items-center gap-1 mb-2 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-wrap">
           {/* Tool selection */}
@@ -561,7 +583,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           <ToolButton onClick={redo} title="Redo">
             <Redo2 className="w-4 h-4" />
           </ToolButton>
-          <ToolButton onClick={clearAll} title="Clear all">
+          <ToolButton onClick={handleClearClick} title="Clear all">
             <Trash2 className="w-4 h-4 text-red-500" />
           </ToolButton>
 

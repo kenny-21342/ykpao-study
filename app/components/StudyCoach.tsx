@@ -34,6 +34,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import { plainTextPreview } from '@/lib/latex';
 
@@ -225,6 +226,7 @@ export default function StudyCoach({
   onOpenMockExams: () => void;
   initialView?: CoachView;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const { status } = useSession();
   const [view, setView] = useState<CoachView>(initialView);
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -297,6 +299,15 @@ export default function StudyCoach({
   };
 
   const deleteTask = async (id: string) => {
+    // The one destructive control on this screen that had no confirmation at
+    // all: a single click on a small bin icon, next to the tick that completes
+    // a task, removed it with no undo and no warning.
+    const ok = await confirm({
+      title: 'Delete this task?',
+      message: 'It is removed from your plan. Rebuilding the week will not bring it back.',
+      confirmLabel: 'Delete task',
+    });
+    if (!ok) return;
     setBusy(id);
     try {
       const res = await fetch(`/api/learning/tasks?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -420,6 +431,8 @@ export default function StudyCoach({
           <button onClick={() => setError(null)} title="Dismiss"><X className="w-4 h-4" /></button>
         </div>
       )}
+
+      {confirmDialog}
 
       <div className="flex-1 overflow-y-auto">
         {profileOpen && <ProfileEditor profile={overview?.profile ?? null} onSaved={async () => { setProfileOpen(false); await load(); }} />}
