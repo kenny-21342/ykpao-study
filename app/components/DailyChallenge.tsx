@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { CalendarCheck, CheckCircle2, Loader2, Lock, Sparkles, Trophy, Users } from 'lucide-react';
+import AiNotice from './AiNotice';
 import FormattedMessage from './FormattedMessage';
 
 type Strip = { url: string; width: number | null; height: number | null };
@@ -222,11 +223,7 @@ export default function DailyChallenge() {
               The answer is {data.attempt.correctAnswer}.
             </p>
           )}
-          {notice && (
-            <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-              {notice}
-            </div>
-          )}
+          <AiNotice notices={[notice]} />
           {feedback && (
             <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-950/40 dark:text-gray-400">
               <span className="font-semibold text-gray-700 dark:text-gray-300">Feedback: </span>

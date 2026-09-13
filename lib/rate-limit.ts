@@ -137,9 +137,43 @@ export const aiLimiter = rateLimit({ intervalMs: 60_000, max: 20 });
 // needs to check the same key twenty times a minute.
 export const keyTestLimiter = rateLimit({ intervalMs: 60_000, max: 5 });
 
-// Password verification and account creation. Deliberately tight — five
-// attempts per minute per IP (and, for login, per account).
+// Password verification and account creation, keyed to **one account**.
+//
+// This is the control that matters: it is what stops an attacker converging on
+// a single student's password, and it is unaffected by how many other people
+// are online. Keep it tight.
 export const strictLimiter = rateLimit({ intervalMs: 60_000, max: 5 });
+
+/**
+ * The same endpoints, keyed to the client **IP**, and deliberately far looser.
+ *
+ * A school year group reaches the internet through one NAT, so every student
+ * on the school network shares an `x-forwarded-for` address. At five per
+ * minute per IP, a class of thirty signing in at the start of a lesson locks
+ * itself out after the fifth of them — and the message tells each student to
+ * wait a minute, which does not help, because their classmates keep spending
+ * the budget as fast as it refills. The same arithmetic breaks a whole form
+ * registering in one period.
+ *
+ * So the per-IP limiter is sized for a cohort behind one address, and the
+ * per-account limiter above is left to do the security work. The trade-off is
+ * real and worth stating plainly: one host can now try more distinct accounts
+ * per hour than it could before. It still cannot make progress against any
+ * *particular* account, which is what password spraying is for, and the
+ * alternative — a limit that a normal lesson trips — is not a defence, because
+ * it fails the people it is supposed to protect first and hardest.
+ *
+ * Windows are longer than a minute on purpose: a burst at the start of a
+ * lesson is the expected shape of the traffic, not an anomaly, and a short
+ * window turns that burst into a lockout even when the hourly rate is fine.
+ */
+export const loginIpLimiter = rateLimit({ intervalMs: 5 * 60_000, max: 60 });
+
+/**
+ * Signup per IP. Lower than login, because a student registers once and signs
+ * in daily, but still comfortably above a class registering together.
+ */
+export const signupIpLimiter = rateLimit({ intervalMs: 15 * 60_000, max: 40 });
 
 type AiAllowance =
   | { allowed: true }

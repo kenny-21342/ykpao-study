@@ -6,7 +6,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { credentialFingerprint } from "@/lib/password-reset"
 import { isAdminUser, isModerator } from "@/lib/roles"
-import { strictLimiter } from "@/lib/rate-limit"
+import { loginIpLimiter, strictLimiter } from "@/lib/rate-limit"
 import bcrypt from "bcrypt"
 
 // NextAuth v4 otherwise falls back to NEXTAUTH_URL (or localhost:3000).
@@ -81,7 +81,7 @@ export const authOptions = {
           .trim()
         const normalisedEmail = credentials.email.trim().toLowerCase()
         const [ipAllowed, accountAllowed] = await Promise.all([
-          strictLimiter.check(`login-ip:${ip}`),
+          loginIpLimiter.check(`login-ip:${ip}`),
           strictLimiter.check(`login-email:${normalisedEmail}`),
         ])
         if (!ipAllowed || !accountAllowed) {

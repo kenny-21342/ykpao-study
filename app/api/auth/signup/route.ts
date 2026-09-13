@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/prisma';
-import { strictLimiter } from '@/lib/rate-limit';
+import { signupIpLimiter } from '@/lib/rate-limit';
 import { sendVerificationEmail } from '@/lib/email-verification';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,7 @@ const Body = z.object({
  */
 export async function POST(req: Request) {
   const ip = (req.headers.get('x-forwarded-for') ?? 'unknown').split(',')[0].trim();
-  if (!(await strictLimiter.check(`signup:${ip}`))) {
+  if (!(await signupIpLimiter.check(`signup:${ip}`))) {
     return NextResponse.json(
       { error: 'Too many attempts. Please wait a minute and try again.' },
       { status: 429 }

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Search, Filter, BookOpen, FileText, Eye, Image as ImageIcon, Pencil, CheckCircle2, XCircle, Clock, Trophy, Star, Lock, Lightbulb, Loader2, Brain, AlertCircle } from 'lucide-react';
 import FormattedMessage from '../components/FormattedMessage';
 import UnlockWidget from './UnlockWidget';
+import AiNotice from './AiNotice';
 import PreviewNotice from './PreviewNotice';
 import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
@@ -1063,19 +1064,7 @@ export default function QuestionsDatabase({
                     </div>
                   </div>
 
-                  {aiNotices.length > 0 && (
-                    <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
-                      {aiNotices.map((notice, i) => (
-                        <p key={i}>{notice}</p>
-                      ))}
-                      <p>
-                        <a href="/account" className="font-semibold underline underline-offset-2">
-                          Open Account settings
-                        </a>{' '}
-                        to add your own API key.
-                      </p>
-                    </div>
-                  )}
+                  <AiNotice notices={aiNotices} className="mb-3" />
 
                   {ocrError && (
                     <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">

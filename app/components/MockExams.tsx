@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import NoticeDialog from './NoticeDialog';
 import PreviewNotice from './PreviewNotice';
 import QuestionScratchpadPanel from './QuestionScratchpadPanel';
@@ -1095,10 +1096,20 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
       // with the mark scheme attached -- say so, or a half-marked paper reads
       // as a broken feature rather than a setting the student can change.
       if (data.aiDisabled) {
+        // JSX rather than a string so the account page is one tap away. A
+        // message that names the setting in prose and gives no way to reach it
+        // asks the student to go hunting right after they lost their marking.
         toast(
-          data.aiNotice ??
-            'Your paper was saved. AI marking is off for your account, so written answers are unmarked — compare them against the mark scheme.',
-          { duration: 9000, icon: '📝' },
+          (
+            <span>
+              {data.aiNotice ??
+                'Your paper was saved. AI marking is off for your account, so written answers are unmarked — compare them against the mark scheme.'}{' '}
+              <Link href="/account" className="font-semibold underline underline-offset-2">
+                Add an API key
+              </Link>
+            </span>
+          ),
+          { duration: 12000, icon: '📝' },
         );
       }
       onSubmitted(examId);

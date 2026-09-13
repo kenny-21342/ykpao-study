@@ -128,5 +128,44 @@ test('every paid AI route checks the shared per-user allowance', async () => {
 
 test('signup keeps its per-IP throttle on the durable limiter', async () => {
   const signup = await readFile(join(root, 'app/api/auth/signup/route.ts'), 'utf8');
-  assert.match(signup, /strictLimiter\.check\(`signup:\$\{ip\}`\)/);
+  assert.match(signup, /signupIpLimiter\.check\(`signup:\$\{ip\}`\)/);
+});
+
+test('login throttles the account tightly and the IP loosely, not the reverse', async () => {
+  const auth = await readFile(join(root, 'app/api/auth/[...nextauth]/route.ts'), 'utf8');
+  const limits = await readFile(join(root, 'lib/rate-limit.ts'), 'utf8');
+
+  // Both keys are still checked -- neither replaces the other.
+  assert.match(auth, /loginIpLimiter\.check\(`login-ip:\$\{ip\}`\)/);
+  assert.match(auth, /strictLimiter\.check\(`login-email:\$\{normalisedEmail\}`\)/);
+
+  const read = (name: string) => {
+    const m = limits.match(
+      new RegExp(`export const ${name} = rateLimit\\(\\{ intervalMs: ([^,]+), max: (\\d+) \\}\\)`),
+    );
+    assert.ok(m, `${name} must be declared with a literal interval and max`);
+    // The interval is written as a product of numeric literals (`5 * 60_000`),
+    // so multiplying the parsed factors reads it without evaluating source.
+    const intervalMs = m![1]
+      .split('*')
+      .reduce((acc, part) => acc * Number(part.replace(/_/g, '').trim()), 1);
+    return { intervalMs, max: Number(m![2]) };
+  };
+
+  const perAccount = read('strictLimiter');
+  const perIp = read('loginIpLimiter');
+  const perIpSignup = read('signupIpLimiter');
+
+  // A year group shares one NAT address, so a per-IP cap sized for one person
+  // locks out the cohort it is meant to protect. These floors encode that: a
+  // class of thirty must be able to sign in, and to register, together.
+  assert.ok(perIp.max >= 30, 'a class behind one school IP must be able to sign in together');
+  assert.ok(perIpSignup.max >= 30, 'a class behind one school IP must be able to register together');
+
+  // The per-account limit is the security control and must stay the tight one.
+  assert.ok(
+    perAccount.max < perIp.max,
+    'the per-account cap must be tighter than the per-IP cap, or the IP limit is doing the security work',
+  );
+  assert.ok(perAccount.max <= 10, 'per-account attempts must stay tightly capped');
 });

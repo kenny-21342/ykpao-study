@@ -20,6 +20,7 @@ import MaterialsHub from './MaterialsHub';
 import DailyChallenge from './DailyChallenge';
 import CourseShortcuts from '@/app/components/CourseShortcuts';
 import AnnouncementBanner from './AnnouncementBanner';
+import AiKeyPrompt from './AiKeyPrompt';
 import { ScreenContextProvider, useScreenContext } from './ScreenContext';
 import { Database, Sparkles, TrendingUp, Clock, Award, Target, Star, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
 
@@ -700,6 +701,8 @@ export default function SmartEduPlatform() {
               </div>
 
               <AnnouncementBanner />
+
+              <AiKeyPrompt />
 
               {stats?.nudges && stats.nudges.length > 0 && (
                 <section className="flex flex-wrap gap-2" aria-label="Study updates">
