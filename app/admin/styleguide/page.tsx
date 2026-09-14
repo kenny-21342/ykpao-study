@@ -1,6 +1,26 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
+import { Download, Filter, Plus, Trash2 } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardRow,
+  CardTitle,
+  Checkbox,
+  Field,
+  Input,
+  PageHeader,
+  SegmentedControl,
+  Select,
+  StatRow,
+  StatTile,
+  Textarea,
+} from '@/app/components/ui';
 
 /**
  * The QA surface for the restyle.
@@ -88,6 +108,7 @@ function subscribeToTheme(onChange: () => void) {
 }
 
 export default function StyleGuide() {
+  const [segment, setSegment] = useState<'browse' | 'practice' | 'starred'>('browse');
   const isDark = useSyncExternalStore(
     subscribeToTheme,
     () => document.documentElement.classList.contains('dark'),
@@ -223,6 +244,144 @@ export default function StyleGuide() {
               ))}
             </tbody>
           </table>
+        </Section>
+
+        <Section title="Button" note="Five variants, two sizes. No gradient, no shadow — a filled accent says primary on its own.">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary">Primary</Button>
+              <Button variant="secondary">Secondary</Button>
+              <Button variant="ghost">Ghost</Button>
+              <Button variant="danger">Danger</Button>
+              <Button variant="link">Link</Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" icon={Plus}>With icon</Button>
+              <Button variant="secondary" icon={Download} iconPosition="end">Icon at end</Button>
+              <Button variant="secondary" loading>Loading</Button>
+              <Button variant="secondary" disabled>Disabled</Button>
+              <Button variant="ghost" size="sm" icon={Trash2} aria-label="Delete this item" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="primary">Small</Button>
+              <Button size="sm" variant="secondary">Small</Button>
+            </div>
+            <p className="text-xs text-muted">Tab to any button to check the focus ring.</p>
+          </div>
+        </Section>
+
+        <Section title="Badge">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge>Neutral</Badge>
+            <Badge tone="accent">Verified</Badge>
+            <Badge tone="warning">Preview</Badge>
+            <Badge tone="danger">Overdue</Badge>
+          </div>
+        </Section>
+
+        <Section
+          title="Card"
+          note="Padded card, and a card of hairline-divided rows. The second replaces lists where every item carried its own border, background and radius."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Rates of reaction</CardTitle>
+                  <CardDescription>Chemistry · 0620 · 4 marks</CardDescription>
+                </div>
+                <Badge tone="warning">Needs review</Badge>
+              </CardHeader>
+              <CardFooter>
+                <Button variant="primary" size="sm">Practise</Button>
+                <Button variant="ghost" size="sm">Mark scheme</Button>
+              </CardFooter>
+            </Card>
+
+            <Card padding="none">
+              <CardRow interactive>
+                <span className="text-sm text-primary flex-1">Acids, bases and salts</span>
+                <span className="text-sm text-muted tabular-nums">1 / 4</span>
+              </CardRow>
+              <CardRow interactive>
+                <span className="text-sm text-primary flex-1">Energy changes</span>
+                <span className="text-sm text-muted tabular-nums">108 / 120</span>
+              </CardRow>
+              <CardRow interactive>
+                <span className="text-sm text-primary flex-1">Electrolysis</span>
+                <span className="text-sm text-muted tabular-nums">12 / 30</span>
+              </CardRow>
+            </Card>
+          </div>
+        </Section>
+
+        <Section title="Stat row" note="Borderless. Four equivalent numbers do not need four cards or four accent colours.">
+          <Card>
+            <StatRow>
+              <StatTile label="Questions answered" value="93" delta={{ value: '+244% this week', direction: 'up' }} />
+              <StatTile label="Accuracy" value="18%" hint="Keep practising" />
+              <StatTile label="Study streak" value="0 days" delta={{ value: 'broken', direction: 'down' }} />
+              <StatTile label="Hours studied" value="0h" />
+            </StatRow>
+          </Card>
+        </Section>
+
+        <Section title="Segmented control" note="Arrow keys move between options; only the selected one is in the tab order.">
+          <SegmentedControl
+            ariaLabel="Question view"
+            value={segment}
+            onChange={setSegment}
+            items={[
+              { value: 'browse', label: 'Browse' },
+              { value: 'practice', label: 'Practice' },
+              { value: 'starred', label: 'Starred', icon: Filter },
+            ]}
+          />
+          <p className="mt-2 text-xs text-muted">Selected: <code className="font-mono">{segment}</code></p>
+        </Section>
+
+        <Section title="Fields" note="Field owns the label, the ids, aria-describedby and aria-invalid — the parts that were forgotten more often than not.">
+          <Card className="grid gap-4 sm:grid-cols-2">
+            <Field label="Display name" hint="Shown on your discussion posts.">
+              {({ id, describedBy }) => (
+                <Input id={id} aria-describedby={describedBy} placeholder="Kenny Lin" defaultValue="" />
+              )}
+            </Field>
+            <Field label="Subject" required>
+              {({ id, describedBy }) => (
+                <Select id={id} aria-describedby={describedBy} defaultValue="">
+                  <option value="">Choose a subject</option>
+                  <option value="0620">Chemistry (0620)</option>
+                  <option value="9702">Physics (9702)</option>
+                </Select>
+              )}
+            </Field>
+            <Field label="Exam date" error="That date is in the past.">
+              {({ id, describedBy, invalid }) => (
+                <Input id={id} aria-describedby={describedBy} invalid={invalid} defaultValue="2020-05-01" />
+              )}
+            </Field>
+            <Field label="Notes" hint="Optional.">
+              {({ id, describedBy }) => (
+                <Textarea id={id} aria-describedby={describedBy} placeholder="Anything to remember" />
+              )}
+            </Field>
+            <div className="sm:col-span-2">
+              <Checkbox label="Email me when a mark scheme is added" defaultChecked />
+            </div>
+          </Card>
+        </Section>
+
+        <Section title="Page header" note="Not a card. A page title should be the largest thing on the screen.">
+          <Card>
+            <PageHeader
+              eyebrow="Chemistry · 0620"
+              title="Paper 4, May/June 2023"
+              description="Forty marks, cut into eleven questions. Mark scheme attached."
+              actions={<><Button variant="secondary" size="sm" icon={Download}>Download</Button><Button variant="primary" size="sm">Practise</Button></>}
+              back={{ href: '/admin/styleguide', label: 'All papers' }}
+            />
+          </Card>
         </Section>
 
         <Section title="Elevation" note="The single surviving shadow. Overlays only — dialogs, menus, toasts.">
