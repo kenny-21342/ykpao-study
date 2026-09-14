@@ -592,3 +592,57 @@ test('validateBaseUrl still rejects non-https', () => {
   assert.equal(validateBaseUrl('http://api.deepseek.com/v1'), null);
   assert.equal(validateBaseUrl('file:///etc/passwd'), null);
 });
+
+/**
+ * Every client of /api/account/ai-credentials must unwrap the envelope.
+ *
+ * The GET handler answers `{ credentials: publicView(status) }`, not the bare
+ * view. `AiKeyPrompt` read `data.textEnabled` off the envelope, which is
+ * `undefined` — and since its check was the deliberately conservative
+ * `=== false` ("a failed lookup is not evidence the key is missing"), the card
+ * never appeared for anybody and never logged anything either. It failed
+ * closed and silently, which is the worst combination: a feature that is
+ * merely absent looks identical to a feature that was never reached.
+ *
+ * Caught only when a real account was created through signup and the card that
+ * was supposed to greet it did not.
+ */
+test('clients of the ai-credentials route read through .credentials', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+  const files: string[] = [];
+  async function walk(dir: string) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.next') continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (/\.tsx?$/.test(entry.name)) files.push(full);
+    }
+  }
+  await walk(join(root, 'app'));
+
+  // The handler itself, and the route file, are not clients of it.
+  const ROUTE = 'app/api/account/ai-credentials/route.ts';
+
+  const offenders: string[] = [];
+  for (const file of files) {
+    const relative = file.slice(root.length + 1);
+    if (relative === ROUTE) continue;
+
+    const src = await readFile(file, 'utf8');
+    if (!src.includes("'/api/account/ai-credentials'")) continue;
+    // A GET client must name the envelope. A file that only PUTs or DELETEs
+    // reads no body shape and is exempt.
+    const readsBody = /\.json\(\)/.test(src);
+    if (readsBody && !/\.credentials\b/.test(src)) offenders.push(relative);
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `these read /api/account/ai-credentials without unwrapping .credentials:\n${offenders.join('\n')}`,
+  );
+});

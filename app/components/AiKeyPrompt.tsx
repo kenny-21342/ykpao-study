@@ -38,9 +38,16 @@ export default function AiKeyPrompt() {
     fetch('/api/account/ai-credentials')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
+        // `{ credentials: { ... } }`, not the bare view. Reading
+        // `data.textEnabled` here gave `undefined`, which is not `=== false`,
+        // so this card never appeared for anybody -- and because the check is
+        // deliberately conservative (see the catch below), it failed closed
+        // and silently. `AiProviderPanel` unwraps the same envelope correctly;
+        // this was the only consumer that did not.
+        const credentials = data?.credentials;
         // Only when AI is genuinely unavailable. A student on an
         // administrator's shared key needs no prompt -- theirs already works.
-        if (!cancelled && data && data.textEnabled === false) setShow(true);
+        if (!cancelled && credentials && credentials.textEnabled === false) setShow(true);
       })
       .catch(() => {
         // A failed check is not evidence the key is missing; say nothing.
