@@ -611,7 +611,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               // `sm:ml-auto`, not `ml-auto`: on a narrow toolbar the row wraps
               // and an auto margin puts Save alone on the far right of its own
               // line, a long way from the tools it belongs with.
-              className="sm:ml-auto px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-md hover:shadow-sm transition-all"
+              className="sm:ml-auto px-3 py-1.5 text-xs font-semibold bg-accent text-white rounded-md hover:shadow-sm transition-all"
             >
               Save Drawing
             </button>

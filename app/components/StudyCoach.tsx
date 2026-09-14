@@ -856,7 +856,7 @@ function DeckBrowser({ onOpenQuestion }: { onOpenQuestion: (id: number) => void 
         </div>
         <button
           onClick={() => setShowCreate((s) => !s)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
         >
           <Plus className="w-4 h-4" /> New card
         </button>

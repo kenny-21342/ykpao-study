@@ -462,7 +462,7 @@ function Avatar({ name, image, size = 'sm' }: { name: string | null; image: stri
   const text = size === 'lg' ? 'text-lg' : 'text-xs';
   if (image) return <img src={image} alt="" className={`${dims} rounded-full object-cover`} />;
   return (
-    <div className={`${dims} rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white ${text} font-bold flex-shrink-0`}>
+    <div className={`${dims} rounded-full bg-accent flex items-center justify-center text-white ${text} font-bold flex-shrink-0`}>
       {name?.[0]?.toUpperCase() ?? '?'}
     </div>
   );

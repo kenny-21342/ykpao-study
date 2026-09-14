@@ -92,7 +92,7 @@ export default function ResourceManager() {
         </div>
         <button
           onClick={() => setUploadOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
         >
           <Plus className="w-4 h-4" /> Upload resources
         </button>
@@ -628,7 +628,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             <button
               onClick={() => void handleSubmit()}
               disabled={submitting || !title.trim() || !fileMeta}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Publishing…' : 'Publish Resource'}
@@ -636,7 +636,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           ) : folderDoneCount > 0 && !folderBusy ? (
             <button
               onClick={onDone}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
             >
               <CheckCircle2 className="w-4 h-4" /> Done
             </button>
@@ -644,7 +644,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             <button
               onClick={() => void handleFolderSubmit()}
               disabled={folderBusy || folderItems.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {folderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderUp className="w-4 h-4" />}
               {folderBusy ? `Uploading ${folderDoneCount}/${folderItems.length}…` : `Upload ${folderItems.length || ''} Resource${folderItems.length === 1 ? '' : 's'}`}
@@ -852,7 +852,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
           <button
             onClick={() => void handleSave()}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save changes'}

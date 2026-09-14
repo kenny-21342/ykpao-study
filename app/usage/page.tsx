@@ -106,7 +106,7 @@ export default function UsagePage() {
   const dayEntries = Object.entries(data.byDay).sort();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-8">
+    <div className="min-h-screen bg-canvas p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ export default function UsagePage() {
                   <div key={day} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                     <div className="text-xs text-gray-500 font-mono">{val.tokens > 999 ? `${(val.tokens / 1000).toFixed(1)}k` : val.tokens}</div>
                     <div
-                      className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t-lg min-h-[4px]"
+                      className="w-full bg-accent rounded-t-lg min-h-[4px]"
                       style={{ height: `${Math.max(heightPct, 3)}%` }}
                     />
                     <div className="text-xs text-gray-400">

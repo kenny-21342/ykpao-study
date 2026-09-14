@@ -642,7 +642,7 @@ export default function SmartEduPlatform() {
           <div className="fixed inset-0 -z-10 bg-white/30 dark:bg-gray-950/50" />
         </>
       ) : (
-        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+        <div className="fixed inset-0 -z-10 bg-canvas" />
       )}
 
       <SidebarScrim open={isMobileNavOpen} onClose={() => closeMobile()} />
@@ -701,7 +701,7 @@ export default function SmartEduPlatform() {
               onClick={() => setIsAIAssistantOpen(!isAIAssistantOpen)}
               className={`p-2.5 rounded-xl transition-all duration-200 ${
                 isAIAssistantOpen
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                  ? 'bg-accent text-white shadow-lg'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title="AI Tutor" aria-label="AI Tutor"

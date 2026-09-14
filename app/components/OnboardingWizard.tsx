@@ -122,7 +122,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-7 py-5 bg-gradient-to-r from-green-500 to-emerald-500 text-white flex items-center justify-between">
+        <div className="px-7 py-5 bg-accent text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center">
               <GraduationCap className="w-6 h-6" />
@@ -265,7 +265,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             {step < 1 ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
               >
                 Next
               </button>
@@ -273,7 +273,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               <button
                 onClick={handleFinish}
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {submitting ? 'Saving…' : 'Get Started'}

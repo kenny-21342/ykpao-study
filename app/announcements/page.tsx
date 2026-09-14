@@ -32,7 +32,7 @@ export default function AnnouncementsPage() {
 
   return (
     <SessionProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-canvas">
         {/* Top bar */}
         <header className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 px-6 py-4 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-green-600 transition-colors">
@@ -45,7 +45,7 @@ export default function AnnouncementsPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shadow-lg">
               <Megaphone className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -84,7 +84,7 @@ export default function AnnouncementsPage() {
               key={a.id}
               className={`min-w-0 rounded-2xl p-6 border shadow-sm ${
                 a.pinned
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
+                  ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
               }`}
             >

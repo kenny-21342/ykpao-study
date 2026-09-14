@@ -159,7 +159,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
               type="button"
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save

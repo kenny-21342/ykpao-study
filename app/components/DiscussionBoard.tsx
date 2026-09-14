@@ -108,7 +108,7 @@ function avatar(name: string | null, image: string | null, size = 'md') {
     );
   }
   return (
-    <div className={`${dims} rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold flex-shrink-0`}>
+    <div className={`${dims} rounded-full bg-accent flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {name?.[0]?.toUpperCase() ?? 'A'}
     </div>
   );
@@ -283,7 +283,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
         >
           <Plus className="w-4 h-4" /> New Thread
         </button>
@@ -535,7 +535,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
           <button
             onClick={handleCreate}
             disabled={submitting || !title.trim()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             {submitting ? 'Creating…' : 'Create Thread'}
@@ -960,7 +960,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <button
                           onClick={() => handleEditSave(post.id)}
                           disabled={savingEdit || !editDraft.trim()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {savingEdit && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                           {savingEdit ? 'Saving…' : 'Save'}
@@ -997,7 +997,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             <button
               onClick={handleReply}
               disabled={posting || !reply.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Reply className="w-4 h-4" />}
               {posting ? 'Posting…' : 'Post Reply'}

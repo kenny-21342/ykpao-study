@@ -52,10 +52,10 @@ export default function SystemMonitor() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Metric icon={DollarSign} label="Total AI Cost" value={`$${data.ai.totalCost.toFixed(4)}`} sub={`$${data.ai.cost7d.toFixed(4)} (7d)`} color="amber" />
-        <Metric icon={Activity} label="AI Requests (24h)" value={data.ai.requests24h.toLocaleString()} sub={`${data.ai.byModel.length} models`} color="indigo" />
-        <Metric icon={HardDrive} label="Storage Used" value={`${data.storage.totalMB} MB`} sub={`${data.tables.reduce((s, t) => s + t.count, 0).toLocaleString()} records`} color="green" />
-        <Metric icon={AlertTriangle} label="Errors (24h)" value={data.ai.errors24h.toString()} sub="AI failures" color="red" />
+        <Metric icon={DollarSign} label="Total AI Cost" value={`$${data.ai.totalCost.toFixed(4)}`} sub={`$${data.ai.cost7d.toFixed(4)} (7d)`} />
+        <Metric icon={Activity} label="AI Requests (24h)" value={data.ai.requests24h.toLocaleString()} sub={`${data.ai.byModel.length} models`} />
+        <Metric icon={HardDrive} label="Storage Used" value={`${data.storage.totalMB} MB`} sub={`${data.tables.reduce((s, t) => s + t.count, 0).toLocaleString()} records`} />
+        <Metric icon={AlertTriangle} label="Errors (24h)" value={data.ai.errors24h.toString()} sub="AI failures" />
       </div>
 
       {/* AI by model */}
@@ -134,17 +134,11 @@ export default function SystemMonitor() {
   );
 }
 
-function Metric({ icon: Icon, label, value, sub, color }: { icon: typeof DollarSign; label: string; value: string; sub: string; color: 'indigo' | 'green' | 'amber' | 'red' }) {
-  const colorMap = {
-    indigo: 'from-indigo-500 to-indigo-600',
-    green: 'from-green-500 to-emerald-600',
-    amber: 'from-amber-500 to-orange-600',
-    red: 'from-red-500 to-rose-600',
-  };
+function Metric({ icon: Icon, label, value, sub }: { icon: typeof DollarSign; label: string; value: string; sub: string }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-      <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${colorMap[color]} flex items-center justify-center mb-3`}>
-        <Icon className="w-4 h-4 text-white" />
+      <div className={`w-9 h-9 rounded-md bg-surface-raised flex items-center justify-center mb-3`}>
+        <Icon className="w-4 h-4 text-secondary" />
       </div>
       <p className="text-xl font-bold">{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>

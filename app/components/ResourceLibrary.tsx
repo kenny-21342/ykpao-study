@@ -243,7 +243,7 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
       className="text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-5 flex flex-col"
     >
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {note.author[0]?.toUpperCase() ?? 'K'}
         </div>
         <span className="text-xs text-gray-500 truncate">{note.author}</span>
@@ -585,7 +585,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           </div>
           <button
             onClick={() => setShowUpload(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
           >
             <Upload className="w-4 h-4" /> Upload Resource
           </button>
@@ -813,7 +813,7 @@ function ResourceRow({
     <tr className="align-top transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-900/40">
       <td className="px-4 py-3">
         <button type="button" onClick={onOpen} className="flex items-start gap-3 text-left">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 text-[10px] font-bold text-white">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-accent text-[10px] font-bold text-white">
             {ext}
           </span>
           <span className="min-w-0">
@@ -858,7 +858,7 @@ function ResourceRow({
             href={resource.fileUrl}
             download
             onClick={onDownload}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md"
           >
             <Download className="w-3.5 h-3.5" />
             Download
@@ -1513,7 +1513,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleSubmit}
               disabled={submitting || !title.trim() || !fileMeta}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Publishing…' : 'Publish Resource'}
@@ -1521,7 +1521,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
           ) : folderDoneCount > 0 && !folderBusy ? (
             <button
               onClick={handleFolderDone}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
             >
               <CheckCircle2 className="w-4 h-4" /> Done
             </button>
@@ -1529,7 +1529,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleFolderSubmit}
               disabled={folderBusy || folderItems.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {folderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderUp className="w-4 h-4" />}
               {folderBusy ? `Uploading ${folderDoneCount}/${folderItems.length}…` : `Upload ${folderItems.length || ''} Resource${folderItems.length === 1 ? '' : 's'}`}

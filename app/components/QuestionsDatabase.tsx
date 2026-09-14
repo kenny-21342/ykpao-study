@@ -1126,7 +1126,7 @@ export default function QuestionsDatabase({
                     <button
                       onClick={submitAnswer}
                       disabled={submitting || answer.trim().length === 0}
-                      className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                      className="px-5 py-2 bg-accent text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                     >
                       {submitting ? 'Grading…' : 'Submit & Grade'}
                     </button>

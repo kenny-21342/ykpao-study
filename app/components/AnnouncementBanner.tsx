@@ -72,7 +72,7 @@ export default function AnnouncementBanner() {
           key={a.id}
           className={`floating-panel rounded-2xl p-4 border shadow-sm ${
             a.pinned
-              ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
+              ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
               : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
           }`}
         >

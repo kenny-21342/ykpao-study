@@ -44,10 +44,10 @@ export default function AdminDashboard() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard icon={Users} label="Total Users" value={stats.users.total.toLocaleString()} sub={`+${stats.users.new7d} this week`} color="indigo" />
-        <KpiCard icon={MessageSquare} label="Content Items" value={(stats.content.threads + stats.content.posts + stats.content.schoolResources).toLocaleString()} sub={`${stats.content.threads} threads`} color="green" />
-        <KpiCard icon={Activity} label="AI Requests" value={stats.ai.totalRequests.toLocaleString()} sub={`$${stats.ai.totalCost.toFixed(4)} total`} color="amber" />
-        <KpiCard icon={Megaphone} label="Active Announcements" value={stats.announcements.active.toLocaleString()} sub={`${stats.announcements.total} total`} color="purple" />
+        <KpiCard icon={Users} label="Total Users" value={stats.users.total.toLocaleString()} sub={`+${stats.users.new7d} this week`} />
+        <KpiCard icon={MessageSquare} label="Content Items" value={(stats.content.threads + stats.content.posts + stats.content.schoolResources).toLocaleString()} sub={`${stats.content.threads} threads`} />
+        <KpiCard icon={Activity} label="AI Requests" value={stats.ai.totalRequests.toLocaleString()} sub={`$${stats.ai.totalCost.toFixed(4)} total`} />
+        <KpiCard icon={Megaphone} label="Active Announcements" value={stats.announcements.active.toLocaleString()} sub={`${stats.announcements.total} total`} />
       </div>
 
       {/* Charts row */}
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                   <span className="text-xs w-32 truncate text-gray-600 dark:text-gray-400">{u.feature}</span>
                   <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-end pr-2"
+                      className="h-full bg-warning rounded-full flex items-center justify-end pr-2"
                       style={{ width: `${Math.max(2, (u.cost / maxUsage) * 100)}%` }}
                     >
                       <span className="text-[10px] text-white font-medium">${u.cost.toFixed(3)}</span>
@@ -135,17 +135,11 @@ export default function AdminDashboard() {
 
 /* ---------------- shared bits ---------------- */
 
-function KpiCard({ icon: Icon, label, value, sub, color }: { icon: typeof Users; label: string; value: string; sub: string; color: 'indigo' | 'green' | 'amber' | 'purple' }) {
-  const colorMap = {
-    indigo: 'from-indigo-500 to-indigo-600',
-    green: 'from-green-500 to-emerald-600',
-    amber: 'from-amber-500 to-orange-600',
-    purple: 'from-purple-500 to-pink-600',
-  };
+function KpiCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub: string }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colorMap[color]} flex items-center justify-center mb-3`}>
-        <Icon className="w-5 h-5 text-white" />
+      <div className={`w-10 h-10 rounded-md bg-surface-raised flex items-center justify-center mb-3`}>
+        <Icon className="w-5 h-5 text-secondary" />
       </div>
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>

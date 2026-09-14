@@ -134,7 +134,7 @@ export default function WeaknessHeatmap() {
   return (
     <div className="space-y-6">
       {/* Header / CTA */}
-      <div className="floating-panel bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-2xl p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
+      <div className="floating-panel bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-2xl p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function WeaknessHeatmap() {
           <button
             onClick={practiceWeak}
             disabled={data.recommended.length === 0 || practicing}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-danger text-white rounded-xl font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
           >
             <Target className="w-4 h-4" />
             Practice Weakest ({data.recommended.length})

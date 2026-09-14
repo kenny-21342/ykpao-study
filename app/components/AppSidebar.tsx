@@ -211,7 +211,7 @@ export default function AppSidebar({
   const itemClass = (isActive: boolean) =>
     `w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
       isActive
-        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-indigo-500/30'
+        ? 'bg-accent text-white shadow-lg'
         : 'text-gray-700 hover:bg-gray-100'
     }`;
   const labelClass = collapsed ? 'sr-only' : '';
@@ -338,7 +338,7 @@ export default function AppSidebar({
               title={user?.name ?? 'Account'} aria-label={user?.name ?? 'Account'}
               className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-xl hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt={user.name ?? 'User'} className="w-full h-full object-cover" />
@@ -414,7 +414,7 @@ export default function AppSidebar({
             <Link
               href="/auth/login"
               title="Sign In" aria-label="Sign In"
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-200`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg transition-all duration-200`}
             >
               <LogIn className="w-4 h-4" />
               <span className={collapsed ? 'sr-only' : ''}>Sign In</span>
@@ -488,11 +488,11 @@ function NavItem({
 function BrandMark({ collapsed }: { collapsed: boolean }) {
   return (
     <>
-      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20 group-hover:shadow-green-500/40 transition-all duration-300 group-hover:scale-105">
+      <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105">
         <GraduationCap className="w-6 h-6 text-white" />
       </div>
       <span
-        className={`${collapsed ? 'sr-only' : 'text-xl'} font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent`}
+        className={`${collapsed ? 'sr-only' : 'text-xl'} font-bold text-primary`}
       >
         YKPao Study
       </span>

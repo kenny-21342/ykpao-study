@@ -406,7 +406,7 @@ function PaysWith({ user }: { user: AiAccessUser }) {
 function Avatar({ name, image }: { name: string | null; image: string | null }) {
   if (image) return <img src={image} alt="" className="w-8 h-8 rounded-full object-cover" />;
   return (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
       {name?.[0]?.toUpperCase() ?? '?'}
     </div>
   );

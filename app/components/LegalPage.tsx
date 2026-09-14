@@ -38,7 +38,7 @@ export function LegalPage({
       <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
+            <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent">
               <GraduationCap className="w-5 h-5 text-white" />
             </span>
             <span className="font-bold tracking-tight">YKPao Study</span>

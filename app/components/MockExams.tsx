@@ -299,7 +299,7 @@ export default function MockExams() {
           </div>
           <button
             onClick={() => setView({ name: 'configure' })}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl font-semibold shadow-lg transition-all"
           >
             <Plus className="w-5 h-5" />
             New Mock Exam
@@ -423,7 +423,7 @@ function StatCard({
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-      <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/30 mb-4">
+      <div className="w-16 h-16 mx-auto rounded-2xl bg-accent flex items-center justify-center shadow-lg mb-4">
         <Sparkles className="w-8 h-8 text-white" />
       </div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No mock exams yet</h3>
@@ -433,7 +433,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </p>
       <button
         onClick={onCreate}
-        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all"
+        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl font-semibold shadow-lg transition-all"
       >
         <Plus className="w-5 h-5" /> Generate a Mock Exam
       </button>
@@ -544,7 +544,7 @@ function ExamCard({
           ) : exam.status !== 'completed' ? (
             <button
               onClick={onOpen}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
             >
               <Play className="w-4 h-4" />
               {exam.status === 'in_progress' ? 'Resume' : 'Start'}
@@ -552,7 +552,7 @@ function ExamCard({
           ) : (
             <button
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
             >
               View Results <ArrowRight className="w-4 h-4" />
             </button>
@@ -711,7 +711,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     onClick={() => setMode('mock')}
                     className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all ${
                       mode === 'mock'
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow'
+                        ? 'bg-accent text-white border-transparent shadow'
                         : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
                     }`}
                   >
@@ -722,7 +722,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     onClick={() => setMode('predicted')}
                     className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all ${
                       mode === 'predicted'
-                        ? 'bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white border-transparent shadow'
+                        ? 'bg-accent text-white border-transparent shadow'
                         : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-fuchsia-400'
                     }`}
                   >
@@ -785,7 +785,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                       onClick={() => setDifficulty(d)}
                       className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all capitalize ${
                         difficulty === d
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow'
+                          ? 'bg-accent text-white border-transparent shadow'
                           : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
                       }`}
                     >
@@ -860,7 +860,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {generating ? (
               <>
@@ -907,7 +907,7 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active?
         done
           ? 'bg-green-500 text-white'
           : active
-            ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow'
+            ? 'bg-accent text-white shadow'
             : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
       }`}>
         {done ? <CheckCircle2 className="w-4 h-4" /> : n}
@@ -1309,7 +1309,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   onClick={() => setActiveIdx(idx)}
                   className={`flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                     idx === activeIdx
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold'
+                      ? 'bg-accent text-white font-semibold'
                       : answered
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
@@ -1490,7 +1490,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               {activeIdx < totalItems - 1 ? (
                 <button
                   onClick={() => setActiveIdx((i) => Math.min(totalItems - 1, i + 1))}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow hover:shadow-md transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
                 >
                   Next <ArrowRight className="w-4 h-4" />
                 </button>
@@ -1498,7 +1498,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <button
                   onClick={() => setConfirmSubmit(true)}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {submitting ? 'Grading…' : 'Submit Exam'}
@@ -1530,7 +1530,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                     </button>
                     <button
                       onClick={() => { setConfirmSubmit(false); handleSubmit(); }}
-                      className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                      className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg hover:shadow-xl transition-all"
                     >
                       Submit for grading
                     </button>
@@ -1640,7 +1640,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
   return (
     <div className="h-full overflow-y-auto">
       {/* Score banner */}
-      <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+      <div className="bg-accent text-white">
         <div className="max-w-5xl mx-auto px-6 md:px-8 py-8">
           <div className="flex items-start justify-between gap-4">
             <button

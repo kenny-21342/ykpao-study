@@ -32,10 +32,10 @@ function AuthPanel({ title, subtitle, children }: {
       <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
         <div className="w-full">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg shadow-green-500/30 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl shadow-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl font-bold text-primary mb-2">
               {title}
             </h1>
             <p className="text-gray-600">{subtitle}</p>
@@ -147,7 +147,7 @@ function VerifyView() {
         </div>
         <Link
           href="/auth/login"
-          className="block w-full text-center py-3 px-4 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/30 hover:from-green-600 hover:to-emerald-700 transition"
+          className="block w-full text-center py-3 px-4 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
         >
           Go to sign in
         </Link>
@@ -202,7 +202,7 @@ function VerifyView() {
           <button
             type="submit"
             disabled={sending}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/30 hover:from-green-600 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
           >
             {sending ? 'Sending…' : 'Send a new link'}
           </button>

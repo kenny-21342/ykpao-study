@@ -117,7 +117,7 @@ export default function PWAInstall() {
           <X className="w-4 h-4" />
         </button>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -127,7 +127,7 @@ export default function PWAInstall() {
             </p>
             <button
               onClick={install}
-              className="mt-2 w-full py-2 text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg"
+              className="mt-2 w-full py-2 text-sm font-semibold bg-accent text-white rounded-lg"
             >
               Install
             </button>
@@ -149,7 +149,7 @@ export default function PWAInstall() {
           <X className="w-4 h-4" />
         </button>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
