@@ -318,3 +318,41 @@ test('the signup form stops trying to sign the new account straight in', async (
   assert.doesNotMatch(src, /signIn\('credentials'/);
   assert.match(src, /setCreated\(/);
 });
+
+// ---------------------------------------------------------------------------
+// 7. The manual recovery route
+// ---------------------------------------------------------------------------
+//
+// Mail is the single point of failure in self-registration and it is not fully
+// under our control — verification mail currently lands in Gmail's Junk. The
+// admin override is what stops "the mail never arrived" from requiring an
+// UPDATE against production by hand.
+
+test('an admin can set and clear verification through the users API', async () => {
+  const src = stripComments(await readSource('app/api/admin/users/route.ts'));
+
+  // Both directions, so a mis-click is recoverable in the same UI.
+  assert.match(src, /emailVerified: z\.boolean\(\)\.optional\(\)/);
+
+  // The column is a timestamp. Assigning the boolean straight through would
+  // be a type error today, but the mapping is the part worth pinning: `false`
+  // must clear the column, not stamp a date.
+  assert.match(src, /emailVerified\s*\?\s*new Date\(\)\s*:\s*null/);
+
+  // Without this the list cannot show who is stuck, which is the only way an
+  // admin finds out there is anyone to rescue.
+  assert.match(src, /emailVerified: true,/);
+});
+
+test('granting verification is confirmed, not one click', async () => {
+  const src = stripComments(await readSource('app/admin/sections/UserManagement.tsx'));
+  const fn = src.slice(src.indexOf('const toggleVerified'), src.indexOf('const resetPassword'));
+
+  assert.match(fn, /await confirm\(/);
+  assert.match(fn, /if \(!ok\) return/);
+  // The PATCH must not be reachable before the dialog resolves.
+  assert.ok(
+    fn.indexOf('if (!ok) return') < fn.indexOf('adminFetch'),
+    'the confirmation must gate the request, not follow it',
+  );
+});

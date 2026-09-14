@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true, name: true, email: true, image: true, role: true,
         banned: true, bannedReason: true, createdAt: true, onboardedAt: true,
+        emailVerified: true,
         _count: {
           select: {
             notes: true, threads: true, posts: true,
@@ -75,6 +76,20 @@ const updateSchema = z.object({
   // unbans. A plain z.string() rejected that, so the ban itself could never
   // be revoked and every unban attempt surfaced as "Invalid request".
   bannedReason: z.string().max(500).nullable().optional(),
+  /**
+   * Manual override for the signup verification gate.
+   *
+   * WHY THIS EXISTS — mail is the single point of failure in self-registration
+   * and it is not fully under our control: verification mail currently lands in
+   * Gmail's Junk, and a student who never finds it is locked out of an account
+   * that otherwise works. Without this the only recovery is an admin running
+   * UPDATE against production by hand, which is a far worse thing to need at
+   * nine in the morning on a school day.
+   *
+   * `false` is accepted as well as `true` so a mis-click is recoverable in the
+   * same UI rather than needing the SQL this exists to avoid.
+   */
+  emailVerified: z.boolean().optional(),
 });
 
 /**
@@ -103,8 +118,14 @@ export async function PATCH(req: NextRequest) {
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
   if (parsed.data.banned !== undefined) data.banned = parsed.data.banned;
   if (parsed.data.bannedReason !== undefined) data.bannedReason = parsed.data.bannedReason;
+  // The column is a timestamp, not a flag — the gate in the credentials
+  // `authorize` callback only checks truthiness, so the value is the record of
+  // when it was granted rather than something the sign-in path reads.
+  if (parsed.data.emailVerified !== undefined) {
+    data.emailVerified = parsed.data.emailVerified ? new Date() : null;
+  }
 
-  const updated = await prisma.user.update({ where: { id: body.userId }, data, select: { id: true, role: true, banned: true, bannedReason: true } });
+  const updated = await prisma.user.update({ where: { id: body.userId }, data, select: { id: true, role: true, banned: true, bannedReason: true, emailVerified: true } });
   return NextResponse.json({ user: updated });
 }
 

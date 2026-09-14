@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Search, Ban, CheckCircle, Trash2, Shield, Loader2, ChevronLeft, ChevronRight, X, KeyRound, Copy } from 'lucide-react';
+import { Search, Ban, CheckCircle, Trash2, Shield, Loader2, ChevronLeft, ChevronRight, X, KeyRound, Copy, MailCheck, MailX } from 'lucide-react';
 import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
@@ -17,6 +17,8 @@ type AdminUser = {
   bannedReason: string | null;
   createdAt: string;
   onboardedAt: string | null;
+  /** Timestamp, not a flag — null means the signup gate still blocks sign-in. */
+  emailVerified: string | null;
   effectiveAdmin: boolean;
   _count: {
     notes: number; threads: number; posts: number;
@@ -79,6 +81,57 @@ export default function UserManagement() {
       await adminFetch('/api/admin/users', {
         method: 'PATCH',
         body: JSON.stringify({ userId: user.id, banned: !user.banned, bannedReason: user.banned ? null : 'Banned by admin' }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Action failed');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  /**
+   * The manual way past the signup verification gate.
+   *
+   * Confirmed rather than immediate in both directions: granting it asserts
+   * the address belongs to the person asking, which is the whole thing
+   * verification was there to establish, and revoking it locks someone out of
+   * a working account.
+   */
+  const toggleVerified = async (user: AdminUser) => {
+    const verified = Boolean(user.emailVerified);
+    const ok = await confirm({
+      title: verified ? 'Remove this verification?' : 'Mark this address verified?',
+      message: verified ? (
+        <>
+          <p>
+            <span className="font-semibold">{user.email}</span> will be blocked at sign-in
+            until they confirm the address again. Any session they already have stays live
+            until it expires.
+          </p>
+        </>
+      ) : (
+        <>
+          <p>
+            <span className="font-semibold">{user.email}</span> will be able to sign in
+            without clicking a confirmation link.
+          </p>
+          <p className="mt-2">
+            Only do this once you know the address reaches the person asking — confirming it
+            for them is exactly the check you are skipping.
+          </p>
+        </>
+      ),
+      confirmLabel: verified ? 'Remove verification' : 'Mark verified',
+      destructive: verified,
+    });
+    if (!ok) return;
+
+    setActionLoading(user.id);
+    try {
+      await adminFetch('/api/admin/users', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId: user.id, emailVerified: !verified }),
       });
       await load();
     } catch (e) {
@@ -225,6 +278,7 @@ export default function UserManagement() {
                           <option value="admin">admin</option>
                         </select>
                         {u.banned && <span className="ml-2 text-[10px] text-red-600 font-medium">BANNED</span>}
+                        {!u.emailVerified && <span className="ml-2 text-[10px] text-amber-600 font-medium">UNVERIFIED</span>}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {u._count.posts} posts · {u._count.notes} notes · {u._count.mockExams} exams
@@ -232,6 +286,19 @@ export default function UserManagement() {
                       <td className="px-4 py-3 text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => toggleVerified(u)}
+                            disabled={actionLoading === u.id}
+                            title={u.emailVerified ? 'Remove verification' : 'Mark verified'}
+                            aria-label={u.emailVerified ? `Remove email verification for ${u.email}` : `Mark ${u.email} verified`}
+                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                              u.emailVerified
+                                ? 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                            }`}
+                          >
+                            {u.emailVerified ? <MailX className="w-4 h-4" /> : <MailCheck className="w-4 h-4" />}
+                          </button>
                           <button
                             onClick={() => resetPassword(u)}
                             disabled={actionLoading === u.id}
@@ -314,6 +381,7 @@ export default function UserManagement() {
               <DetailRow label="Role" value={detailUser.role} />
               <DetailRow label="Effective Admin" value={detailUser.effectiveAdmin ? 'Yes (env allowlist or role)' : 'No'} />
               <DetailRow label="Banned" value={detailUser.banned ? `Yes — ${detailUser.bannedReason ?? 'no reason'}` : 'No'} />
+              <DetailRow label="Email verified" value={detailUser.emailVerified ? new Date(detailUser.emailVerified).toLocaleString() : 'Not verified — sign-in is blocked'} />
               <DetailRow label="Joined" value={new Date(detailUser.createdAt).toLocaleString()} />
               <DetailRow label="Onboarded" value={detailUser.onboardedAt ? new Date(detailUser.onboardedAt).toLocaleString() : 'Not yet'} />
               <hr className="border-gray-100 dark:border-gray-800 my-2" />
