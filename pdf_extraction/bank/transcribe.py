@@ -371,6 +371,17 @@ def _post_process_transcription(
     if isinstance(transcription, QuestionTranscription):
         body = _normalize_whitespace(transcription.body_md)
 
+        # Some models cite a figure as a bare `asset:fig1` rather than the
+        # `![](asset:fig1)` rule 4 asks for -- Qwen3-VL never did, Sonnet does
+        # it every time. Everything downstream matches the markdown form: the
+        # unknown-id strip below, `_ASSET_CITATION` in qa.py, and the renderer.
+        # So a bare citation is not a cosmetic difference -- it renders to the
+        # student as the literal text `asset:fig1`, and it makes the figure QA
+        # check blind, which is the check that catches a confidently wrong
+        # citation. Normalising is deterministic and cannot lose work; the
+        # lookbehind leaves an already-correct citation alone.
+        body = re.sub(r"(?<!\]\()\basset:([A-Za-z0-9_-]+)", r"![](asset:\1)", body)
+
         # A placeholder the inventory does not contain would render as a broken
         # image, so strip it and keep only ids that resolve.
         cited = set(re.findall(r"!\[[^\]]*\]\(asset:([A-Za-z0-9_-]+)\)", body))
