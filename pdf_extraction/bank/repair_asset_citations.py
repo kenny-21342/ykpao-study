@@ -22,12 +22,13 @@ import re
 import sqlite3
 from pathlib import Path
 
+from .transcribe import normalize_asset_citations
+
 DB = Path(__file__).resolve().parent / "extract.db"
-BARE = re.compile(r"(?<!\]\()\basset:([A-Za-z0-9_-]+)")
 
-
-def normalize(body: str) -> str:
-    return BARE.sub(r"![](asset:\1)", body)
+# One implementation, shared with the write path, so a row repaired here and a
+# row written later cannot disagree about what a citation looks like.
+normalize = normalize_asset_citations
 
 
 def main() -> int:
@@ -47,11 +48,8 @@ def main() -> int:
 
     print(f"{len(changed)} question(s) carry a bare citation")
     for qid, body in changed[:3]:
-        citation = BARE.search(dict(connection.execute(
-            "SELECT id, body_md FROM bank_questions WHERE id=?", (qid,)
-        ).fetchone()).get("body_md", ""))
-        print(f"  id={qid}: {citation.group(0) if citation else '?'} -> ![]({citation.group(0)})"
-              if citation else f"  id={qid}")
+        line = next((l for l in body.splitlines() if "![](asset:" in l), "")
+        print(f"  id={qid}: {line.strip()[:70]}")
 
     if not args.apply:
         print("\ndry run; pass --apply to write")

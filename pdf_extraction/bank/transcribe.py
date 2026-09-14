@@ -152,6 +152,29 @@ class MarkSchemeTranscription:
         }
 
 
+_BARE_CITATION = re.compile(r"(?<!\]\()asset:([A-Za-z0-9_-]+)")
+
+
+def normalize_asset_citations(body: str) -> str:
+    """Rewrite a bare ``asset:figN`` as the ``![](asset:figN)`` rule 4 asks for.
+
+    Idempotent: the lookbehind skips a citation that is already an image.
+
+    Sonnet also runs the citation straight into the preceding text with no
+    separator -- ``DECLARE Queue : ARRAYasset:fig1`` -- so a word boundary
+    cannot be required here, and the replacement puts the citation on its own
+    line the way the prompt asks. Eleven such rows were published at 0.91
+    confidence, showing the student the literal text where a diagram belongs.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        start = match.start()
+        glued = start > 0 and not match.string[start - 1].isspace()
+        return ("\n\n" if glued else "") + f"![](asset:{match.group(1)})"
+
+    return _BARE_CITATION.sub(replace, body)
+
+
 class TooManyStrips(RuntimeError):
     """More strips than the provider will accept in one call.
 
@@ -386,7 +409,7 @@ def _post_process_transcription(
         # check blind, which is the check that catches a confidently wrong
         # citation. Normalising is deterministic and cannot lose work; the
         # lookbehind leaves an already-correct citation alone.
-        body = re.sub(r"(?<!\]\()\basset:([A-Za-z0-9_-]+)", r"![](asset:\1)", body)
+        body = normalize_asset_citations(body)
 
         # A placeholder the inventory does not contain would render as a broken
         # image, so strip it and keep only ids that resolve.
