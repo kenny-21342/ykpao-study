@@ -92,7 +92,7 @@ export default function ResourceManager() {
         </div>
         <button
           onClick={() => setUploadOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
         >
           <Plus className="w-4 h-4" /> Upload resources
         </button>
@@ -102,7 +102,7 @@ export default function ResourceManager() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
       </div>
 
       {/* Only show the spinner before the first result set arrives. Swapping
@@ -114,8 +114,8 @@ export default function ResourceManager() {
             <p className="text-sm text-gray-400 italic py-8 text-center">No resources found.</p>
           ) : (
             data.items.map((r) => (
-              <div key={r.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex items-start gap-3">
-                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div key={r.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 flex items-start gap-3">
+                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center flex-shrink-0">
                   <FileText className="w-5 h-5 text-gray-400" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -132,13 +132,13 @@ export default function ResourceManager() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <a href={r.fileUrl} download className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download" aria-label="Download">
+                  <a href={r.fileUrl} download className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download" aria-label="Download">
                     <Download className="w-4 h-4" />
                   </a>
-                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -151,7 +151,7 @@ export default function ResourceManager() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 disabled:opacity-40"
               >
                 Previous
               </button>
@@ -159,7 +159,7 @@ export default function ResourceManager() {
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 disabled:opacity-40"
               >
                 Next
               </button>
@@ -385,7 +385,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       onClick={folderBusy ? undefined : onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -397,17 +397,17 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
               {mode === 'single' ? 'Publish a file to the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
             </p>
           </div>
-          <button onClick={onClose} disabled={submitting || folderBusy} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-40">
+          <button onClick={onClose} disabled={submitting || folderBusy} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="px-6 pt-4">
-          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl text-sm">
+          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm">
             <button
               type="button"
               onClick={() => { setMode('single'); setError(null); }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'single'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -418,7 +418,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             <button
               type="button"
               onClick={() => { setMode('folder'); setError(null); }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'folder'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -439,7 +439,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -448,14 +448,14 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{fileMeta.name}</span>
                     <span className="text-xs text-gray-400">{(fileMeta.size / 1024).toFixed(0)} KB</span>
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                      className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -472,7 +472,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
               </div>
 
@@ -484,7 +484,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
                 <div>
@@ -494,7 +494,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
               </div>
@@ -506,7 +506,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
                 />
               </div>
             </>
@@ -518,7 +518,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors"
                   >
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
@@ -527,7 +527,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     </p>
                   </button>
                 ) : (
-                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {folderItems.length} file{folderItems.length === 1 ? '' : 's'} ready
@@ -536,7 +536,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                         type="button"
                         onClick={() => { setFolderItems([]); setError(null); }}
                         disabled={folderBusy}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
+                        className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -544,7 +544,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     </div>
                     <ul className="max-h-48 overflow-y-auto space-y-1 pr-1">
                       {folderItems.map((it, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                           <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                           <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
@@ -583,7 +583,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
@@ -594,7 +594,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -620,7 +620,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           <button
             onClick={onClose}
             disabled={submitting || folderBusy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -628,7 +628,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             <button
               onClick={() => void handleSubmit()}
               disabled={submitting || !title.trim() || !fileMeta}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Publishing…' : 'Publish Resource'}
@@ -636,7 +636,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           ) : folderDoneCount > 0 && !folderBusy ? (
             <button
               onClick={onDone}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
             >
               <CheckCircle2 className="w-4 h-4" /> Done
             </button>
@@ -644,7 +644,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             <button
               onClick={() => void handleFolderSubmit()}
               disabled={folderBusy || folderItems.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {folderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderUp className="w-4 h-4" />}
               {folderBusy ? `Uploading ${folderDoneCount}/${folderItems.length}…` : `Upload ${folderItems.length || ''} Resource${folderItems.length === 1 ? '' : 's'}`}
@@ -735,14 +735,14 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Pencil className="w-5 h-5 text-indigo-500" /> Edit Resource
           </h2>
-          <button onClick={onClose} disabled={saving} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-40">
+          <button onClick={onClose} disabled={saving} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -754,7 +754,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
 
@@ -766,7 +766,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Physics"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
             <div>
@@ -776,7 +776,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
           </div>
@@ -787,7 +787,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
 
@@ -797,14 +797,14 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Replace file</label>
             {replacement ? (
-              <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
                 <Paperclip className="w-4 h-4 text-indigo-400 flex-shrink-0" />
                 <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{replacement.name}</span>
                 <span className="text-xs text-gray-400">{(replacement.size / 1024).toFixed(0)} KB</span>
@@ -812,7 +812,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                   type="button"
                   onClick={() => setReplacement(null)}
                   disabled={saving}
-                  className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-40"
+                  className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-40"
                   title="Undo replacement" aria-label="Undo replacement"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -823,7 +823,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full px-4 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
               >
                 {uploading ? (
                   <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -845,14 +845,14 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={() => void handleSave()}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save changes'}
@@ -872,7 +872,7 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -892,14 +892,14 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
           <button
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             Keep it
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow transition-colors disabled:opacity-60"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {busy ? 'Deleting…' : 'Delete permanently'}

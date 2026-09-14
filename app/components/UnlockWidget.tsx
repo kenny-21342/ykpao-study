@@ -79,7 +79,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
       />
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-72 floating-panel bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="fixed bottom-6 right-6 z-50 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound className="w-4 h-4 text-gray-400" />
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Restricted area</span>
@@ -100,7 +100,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
                 onChange={(e) => setPassphrase(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && passphrase.trim()) submit(passphrase.trim()); }}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200"
                 autoFocus
               />
               {status === 'fail' && (
@@ -109,7 +109,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
               <button
                 onClick={() => passphrase.trim() && submit(passphrase.trim())}
                 disabled={busy || !passphrase.trim()}
-                className="mt-3 w-full inline-flex items-center justify-center gap-1 py-2 text-sm font-semibold bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg disabled:opacity-50"
+                className="mt-3 w-full inline-flex items-center justify-center gap-1 py-2 text-sm font-semibold bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-md disabled:opacity-50"
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                 Unlock

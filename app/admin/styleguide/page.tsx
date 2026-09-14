@@ -80,9 +80,9 @@ const TYPE = [
 const RADII = [
   ['rounded-sm', '4px — badges, chips'],
   ['rounded-md', '6px — buttons, inputs, rows'],
-  ['rounded-lg', '10px — cards, panels, modals'],
-  ['rounded-xl', 'aliased to 10px'],
-  ['rounded-2xl', 'aliased to 10px'],
+  ['rounded-md', '10px — cards, panels, modals'],
+  ['rounded-lg', 'aliased to 10px'],
+  ['rounded-lg', 'aliased to 10px'],
 ] as const;
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
@@ -146,7 +146,7 @@ export default function StyleGuide() {
           title="Surfaces"
           note="Separation comes from these background steps and from borders. There are no shadows outside overlays."
         >
-          <div className="rounded-lg border border-line overflow-hidden">
+          <div className="rounded-md border border-line overflow-hidden">
             {SURFACES.map(([name, cls, use]) => (
               <div key={name} className={`${cls} flex items-center gap-4 px-4 py-3 border-b border-subtle last:border-0`}>
                 <code className="font-mono text-xs text-primary w-40 shrink-0">{cls}</code>
@@ -159,7 +159,7 @@ export default function StyleGuide() {
         <Section title="Borders">
           <div className="flex flex-wrap gap-3">
             {BORDERS.map(([name, cls, use]) => (
-              <div key={name} className={`rounded-lg border-2 ${cls} bg-surface px-4 py-3 min-w-[13rem]`}>
+              <div key={name} className={`rounded-md border-2 ${cls} bg-surface px-4 py-3 min-w-[13rem]`}>
                 <code className="font-mono text-xs text-primary block">{cls}</code>
                 <span className="text-xs text-muted">{use}</span>
               </div>
@@ -168,7 +168,7 @@ export default function StyleGuide() {
         </Section>
 
         <Section title="Text" note="Three tones. Muted is for metadata only — it is deliberately below body contrast.">
-          <div className="rounded-lg border border-line bg-surface p-4 space-y-2">
+          <div className="rounded-md border border-line bg-surface p-4 space-y-2">
             {TEXT.map(([name, cls, use]) => (
               <p key={name} className={`${cls} text-base`}>
                 <code className="font-mono text-xs">{cls}</code>
@@ -182,7 +182,7 @@ export default function StyleGuide() {
         <Section title="Accent" note="One hue. It marks the primary action and nothing else.">
           <div className="flex flex-wrap gap-3">
             {ACCENT.map(([name, bg, fg]) => (
-              <div key={name} className={`${bg} ${fg} rounded-lg px-5 py-4 min-w-[13rem] border border-line`}>
+              <div key={name} className={`${bg} ${fg} rounded-md px-5 py-4 min-w-[13rem] border border-line`}>
                 <code className="font-mono text-xs block">{bg}</code>
                 <span className="text-sm">Primary action</span>
               </div>
@@ -193,7 +193,7 @@ export default function StyleGuide() {
         <Section title="Semantic" note="Warning and danger carry meaning. They are never used for decoration.">
           <div className="flex flex-wrap gap-3">
             {SEMANTIC.map(([name, bg, fg]) => (
-              <div key={name} className={`${bg} ${fg} rounded-lg px-5 py-4 min-w-[12rem] border border-line`}>
+              <div key={name} className={`${bg} ${fg} rounded-md px-5 py-4 min-w-[12rem] border border-line`}>
                 <code className="font-mono text-xs block">{bg}</code>
                 <span className="text-sm">Sample</span>
               </div>
@@ -205,7 +205,7 @@ export default function StyleGuide() {
           title="Type scale"
           note="13 / 14 / 16 / 20 / 28. Previously 89% of all text sat at 12–14px and hierarchy was carried by weight alone."
         >
-          <div className="rounded-lg border border-line bg-surface p-5 space-y-3">
+          <div className="rounded-md border border-line bg-surface p-5 space-y-3">
             {TYPE.map(([name, cls, use]) => (
               <div key={name} className="flex items-baseline gap-4">
                 <code className="font-mono text-xs text-muted w-24 shrink-0">{cls}</code>
@@ -228,7 +228,7 @@ export default function StyleGuide() {
         </Section>
 
         <Section title="Figures" note="Tabular by default inside tables, so columns of marks line up.">
-          <table className="rounded-lg border border-line bg-surface text-sm w-full max-w-md">
+          <table className="rounded-md border border-line bg-surface text-sm w-full max-w-md">
             <thead>
               <tr className="border-b border-subtle bg-surface-raised">
                 <th className="px-4 py-2 text-left font-medium text-secondary">Topic</th>
@@ -385,7 +385,7 @@ export default function StyleGuide() {
         </Section>
 
         <Section title="Elevation" note="The single surviving shadow. Overlays only — dialogs, menus, toasts.">
-          <div className="rounded-lg bg-surface border border-line p-5 shadow-overlay max-w-sm">
+          <div className="rounded-md bg-surface border border-line p-5 shadow-overlay max-w-sm">
             <p className="text-sm font-medium text-primary">shadow-overlay</p>
             <p className="text-xs text-muted mt-1">Everything that does not float uses a border instead.</p>
           </div>

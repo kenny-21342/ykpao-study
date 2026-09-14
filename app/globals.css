@@ -161,17 +161,15 @@
   /*
    * Radius. Four scales were in use at near-parity (xl 238, lg 229, md 116,
    * 2xl 81) with no rule about which went where — that is not a scale, it is
-   * noise. Three values, and xl/2xl are aliased onto lg so the 319 existing
-   * call sites become correct immediately, before any file is edited. The
-   * source gets tidied later; the aliases mean a stray rounded-2xl is never
-   * wrong in the meantime.
+   * noise. Three values with a rule: `lg` is a surface you put things on,
+   * `md` is a control you operate, `sm` is a chip. The xl/2xl/3xl aliases
+   * that held the old call sites steady are gone now that none remain, so a
+   * stray `rounded-xl` falls back to Tailwind's default and looks wrong —
+   * which is the point.
    */
   --radius-sm:  4px;
   --radius-md:  6px;
   --radius-lg:  10px;
-  --radius-xl:  10px;
-  --radius-2xl: 10px;
-  --radius-3xl: 10px;
 
   /*
    * Type. 89% of all text was 12-14px and `text-base` appeared six times in
@@ -212,51 +210,6 @@ body {
    tabular figures but does not use them by default. */
 :where(table, .tabular, [data-figure]) {
   font-variant-numeric: tabular-nums;
-}
-
-/* ---------------------------------------------------------------------------
- * TEMPORARY — removed in the radius sweep.
- *
- * These selectors reverse-engineer a card component out of duplicated utility
- * strings, because no Card component existed. They key on the literal class
- * name `rounded-2xl`, so they must be deleted in the same commit that rewrites
- * those class names — otherwise every card in the app loses its shadow at once
- * while nothing has yet replaced it.
- * ------------------------------------------------------------------------ */
-:root {
-  --floating-panel-shadow: 0 18px 45px rgba(15, 23, 42, 0.12), 0 4px 14px rgba(15, 23, 42, 0.08);
-  --floating-panel-hover-shadow: 0 24px 60px rgba(15, 23, 42, 0.16), 0 8px 22px rgba(15, 23, 42, 0.10);
-}
-
-.dark {
-  --floating-panel-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), 0 4px 14px rgba(0, 0, 0, 0.22);
-  --floating-panel-hover-shadow: 0 24px 64px rgba(0, 0, 0, 0.42), 0 8px 24px rgba(0, 0, 0, 0.26);
-}
-
-.floating-panel,
-:where(
-  [class~="rounded-2xl"][class~="bg-white"],
-  [class~="rounded-2xl"][class~="bg-white/70"],
-  [class~="rounded-2xl"][class~="dark:bg-gray-800"],
-  [class~="rounded-2xl"][class~="dark:bg-gray-800/60"],
-  [class~="rounded-2xl"][class~="dark:bg-gray-900"],
-  [class~="rounded-xl"][class~="bg-white"][class~="border"][class~="p-4"],
-  [class~="rounded-xl"][class~="bg-white"][class~="border"][class~="p-5"],
-  [class~="rounded-xl"][class~="bg-white"][class~="border"][class~="overflow-hidden"],
-  [class~="rounded-xl"][class~="dark:bg-gray-900"][class~="border"][class~="p-4"],
-  [class~="rounded-xl"][class~="dark:bg-gray-900"][class~="border"][class~="p-5"],
-  [class~="rounded-xl"][class~="dark:bg-gray-900"][class~="border"][class~="overflow-hidden"]
-) {
-  box-shadow: var(--floating-panel-shadow);
-}
-
-.floating-panel {
-  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
-}
-
-.floating-panel:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--floating-panel-hover-shadow);
 }
 
 /* Question tables (Markdown pipe tables rendered by renderMarkdownWithMath) */

@@ -120,11 +120,11 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-7 py-5 bg-accent text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-lg bg-white/20 flex items-center justify-center">
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
@@ -134,7 +134,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           </div>
           <button
             onClick={() => void handleSkip()}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
             title="Skip for now"
             aria-label="Skip setup for now"
           >
@@ -166,7 +166,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Alex Chen (optional)"
-                className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                 autoFocus
               />
             </div>
@@ -186,14 +186,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   value={targetGrade}
                   onChange={(event) => setTargetGrade(event.target.value)}
                   placeholder="Target grade (optional)"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                 />
                 <input
                   type="date"
                   value={examDate}
                   onChange={(event) => setExamDate(event.target.value)}
                   aria-label="Exam date (optional)"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                 />
               </div>
 
@@ -235,7 +235,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               {visibleCourses.length === 0 && <p className="text-sm text-gray-500">No courses are available for this level yet.</p>}
 
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
                   {error}
                 </div>
               )}
@@ -257,7 +257,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               <button
                 onClick={() => setStep((s) => s - 1)}
                 disabled={submitting}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors"
+                className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
                 Back
               </button>
@@ -265,7 +265,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             {step < 1 ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
               >
                 Next
               </button>
@@ -273,7 +273,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               <button
                 onClick={handleFinish}
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {submitting ? 'Saving…' : 'Get Started'}
@@ -300,7 +300,7 @@ function SubjectChip({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+      className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
         selected
           ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
           : 'border-gray-200 dark:border-gray-700 hover:border-green-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'

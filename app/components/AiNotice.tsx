@@ -29,7 +29,7 @@ export default function AiNotice({
 
   return (
     <div
-      className={`p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300 space-y-1.5 ${className}`}
+      className={`p-2.5 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300 space-y-1.5 ${className}`}
     >
       {shown.map((notice, i) => (
         <p key={i}>{notice}</p>

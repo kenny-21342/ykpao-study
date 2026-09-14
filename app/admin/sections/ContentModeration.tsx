@@ -130,7 +130,7 @@ export default function ContentModeration() {
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="e.g. spam report, calculus thread, or @maria"
-          className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
         />
       </div>
 
@@ -147,12 +147,12 @@ export default function ContentModeration() {
                 const author = item.author ?? item.user ?? item.uploader;
                 const preview = item.title ?? item.content ?? item.description ?? '(no text)';
                 return (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <div key={item.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded">PINNED</span>}
-                          {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded">LOCKED</span>}
+                          {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-sm">PINNED</span>}
+                          {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-sm">LOCKED</span>}
                           <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleString()}</span>
                         </div>
                         <p className="text-sm font-medium line-clamp-2">{preview}</p>
@@ -171,7 +171,7 @@ export default function ContentModeration() {
                               onClick={() => patchThread(item.id, item.pinned ? 'unpin' : 'pin')}
                               disabled={actionLoading === item.id + (item.pinned ? 'unpin' : 'pin')}
                               title={item.pinned ? 'Unpin' : 'Pin'} aria-label={item.pinned ? 'Unpin' : 'Pin'}
-                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                               {item.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                             </button>
@@ -179,7 +179,7 @@ export default function ContentModeration() {
                               onClick={() => patchThread(item.id, item.locked ? 'unlock' : 'lock')}
                               disabled={actionLoading === item.id + (item.locked ? 'unlock' : 'lock')}
                               title={item.locked ? 'Unlock' : 'Lock'} aria-label={item.locked ? 'Unlock' : 'Lock'}
-                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                               {item.locked ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                             </button>
@@ -189,7 +189,7 @@ export default function ContentModeration() {
                           onClick={() => remove(item.id)}
                           disabled={actionLoading === item.id}
                           title="Delete" aria-label="Delete"
-                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30"
+                          className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30"
                         >
                           {actionLoading === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>
@@ -205,10 +205,10 @@ export default function ContentModeration() {
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-500">Page {data.page} of {data.totalPages} · {data.total} items</p>
               <div className="flex gap-1">
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page >= data.totalPages} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
+                <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page >= data.totalPages} className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

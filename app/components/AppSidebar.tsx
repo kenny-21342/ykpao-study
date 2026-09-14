@@ -209,7 +209,7 @@ export default function AppSidebar({
     .toUpperCase();
 
   const itemClass = (isActive: boolean) =>
-    `w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+    `w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
       isActive
         ? 'bg-accent text-white shadow-lg'
         : 'text-gray-700 hover:bg-gray-100'
@@ -248,7 +248,7 @@ export default function AppSidebar({
           overlay to escape from, so it is hidden from `lg` up. */}
       <button
         onClick={onCloseMobile}
-        className="absolute right-3 top-3 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+        className="absolute right-3 top-3 rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
         aria-label="Close navigation"
       >
         <X className="h-5 w-5" />
@@ -263,7 +263,7 @@ export default function AppSidebar({
             type="button"
             onClick={() => onNavigate('dashboard')}
             aria-label="YKPao Study — go to dashboard"
-            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
+            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
           >
             <BrandMark collapsed={collapsed} />
           </button>
@@ -271,7 +271,7 @@ export default function AppSidebar({
           <Link
             href="/"
             aria-label="YKPao Study — go to dashboard"
-            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
+            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
           >
             <BrandMark collapsed={collapsed} />
           </Link>
@@ -283,7 +283,7 @@ export default function AppSidebar({
           type="button"
           onClick={() => setSearchOpen(true)}
           title="Search (⌘K)" aria-label="Search (⌘K)"
-          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-xl text-gray-700 hover:bg-gray-100 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800`}
+          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800`}
         >
           <span className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
             <Search className="w-5 h-5" />
@@ -323,11 +323,11 @@ export default function AppSidebar({
           // A placeholder, not the signed-out buttons: offering "Sign In" to
           // someone who is already signed in is the whole bug.
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3 px-3'} py-3`}>
-            <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
             {!collapsed && (
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                <div className="h-2.5 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+                <div className="h-3 w-24 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
+                <div className="h-2.5 w-32 animate-pulse rounded-sm bg-gray-100 dark:bg-gray-800" />
               </div>
             )}
           </div>
@@ -336,9 +336,9 @@ export default function AppSidebar({
             <button
               onClick={() => setAccountOpen(!accountOpen)}
               title={user?.name ?? 'Account'} aria-label={user?.name ?? 'Account'}
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-xl hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
             >
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
+              <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt={user.name ?? 'User'} className="w-full h-full object-cover" />
@@ -360,7 +360,7 @@ export default function AppSidebar({
             {accountOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
-                <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-2xl shadow-2xl py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
+                <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-2xl py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student Account'}</p>
                     <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
@@ -414,7 +414,7 @@ export default function AppSidebar({
             <Link
               href="/auth/login"
               title="Sign In" aria-label="Sign In"
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg transition-all duration-200`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg transition-all duration-200`}
             >
               <LogIn className="w-4 h-4" />
               <span className={collapsed ? 'sr-only' : ''}>Sign In</span>
@@ -422,7 +422,7 @@ export default function AppSidebar({
             <Link
               href="/auth/signup"
               title="Create Account" aria-label="Create Account"
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-200`}
             >
               <User className="w-4 h-4" />
               <span className={collapsed ? 'sr-only' : ''}>Create Account</span>
@@ -488,7 +488,7 @@ function NavItem({
 function BrandMark({ collapsed }: { collapsed: boolean }) {
   return (
     <>
-      <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105">
+      <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105">
         <GraduationCap className="w-6 h-6 text-white" />
       </div>
       <span

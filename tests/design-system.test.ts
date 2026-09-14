@@ -15,6 +15,24 @@ const read = (rel: string) => readFile(path.join(ROOT, rel), 'utf8');
  */
 const stripCssComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
+/** Every .tsx/.ts under app/, matching the walker in dialogs.test.ts. */
+async function appSources(): Promise<string[]> {
+  const out: string[] = [];
+  async function walk(dir: string) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.next') continue;
+        await walk(full);
+      } else if (/\.tsx?$/.test(entry.name)) {
+        out.push(full);
+      }
+    }
+  }
+  await walk(path.join(ROOT, 'app'));
+  return out;
+}
+
 async function uiSources(): Promise<Array<{ name: string; src: string }>> {
   const names = (await readdir(UI_DIR)).filter((f) => /\.tsx?$/.test(f));
   return Promise.all(
@@ -98,4 +116,39 @@ test('Field wires the label, hint and error to the control', async () => {
   assert.match(src, /htmlFor=\{id\}/);
   assert.match(src, /describedBy/);
   assert.match(src, /aria-invalid/);
+});
+
+// ---------------------------------------------------------------------------
+// 7. The radius scale stays collapsed
+// ---------------------------------------------------------------------------
+
+test('only three radii are in use, and the aliases that held the old ones are gone', async () => {
+  const css = stripCssComments(await read('app/globals.css'));
+
+  // `--radius-xl`/`-2xl`/`-3xl` aliased onto the card radius during the sweep
+  // so that 319 un-edited call sites rendered correctly in the meantime. They
+  // have no call sites left, and leaving them would let the noise back in
+  // silently — a stray `rounded-xl` would keep looking right.
+  for (const dead of ['--radius-xl', '--radius-2xl', '--radius-3xl']) {
+    assert.doesNotMatch(css, new RegExp(`${dead}\\s*:`), `${dead} is an alias with no call sites`);
+  }
+
+  // The rule the three survivors encode: lg is a surface, md is a control,
+  // sm is a chip. Anything outside that set is a fourth scale re-emerging.
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(/\brounded-(?:[trblse]{1,2}-)?([a-z0-9]+)\b/g)) {
+      if (!['sm', 'md', 'lg', 'full'].includes(m[1])) {
+        offenders.push(`${path.relative(ROOT, file)}: rounded-${m[1]}`);
+      }
+    }
+    // Bare `rounded` is Tailwind's own fixed 0.25rem, which no token governs —
+    // it happens to equal --radius-sm today and would drift the moment that
+    // token moved. 89 sites were made explicit during the sweep.
+    if (/(?<=[\s"'`])rounded(?=[\s"'`])/.test(src)) {
+      offenders.push(`${path.relative(ROOT, file)}: bare rounded`);
+    }
+  }
+  assert.deepEqual(offenders, [], `radius scale drifted:\n${offenders.join('\n')}`);
 });

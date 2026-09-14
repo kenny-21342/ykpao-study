@@ -108,7 +108,7 @@ export default function PWAInstall() {
   // Android/Chrome install prompt.
   if (deferred) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs floating-panel bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 animate-in slide-in-from-bottom">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 animate-in slide-in-from-bottom">
         <button
           onClick={dismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -117,7 +117,7 @@ export default function PWAInstall() {
           <X className="w-4 h-4" />
         </button>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -127,7 +127,7 @@ export default function PWAInstall() {
             </p>
             <button
               onClick={install}
-              className="mt-2 w-full py-2 text-sm font-semibold bg-accent text-white rounded-lg"
+              className="mt-2 w-full py-2 text-sm font-semibold bg-accent text-white rounded-md"
             >
               Install
             </button>
@@ -140,7 +140,7 @@ export default function PWAInstall() {
   // iOS hint (no programmatic install, so just instructions).
   if (showIOSHint) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs floating-panel bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
         <button
           onClick={dismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -149,7 +149,7 @@ export default function PWAInstall() {
           <X className="w-4 h-4" />
         </button>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>

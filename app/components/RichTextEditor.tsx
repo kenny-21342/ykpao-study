@@ -60,7 +60,7 @@ function MenuButton({
       aria-label={title}
       // Toggles must report whether they are on, not merely look it.
       aria-pressed={active === undefined ? undefined : active}
-      className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
         active ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
       }`}
     >
@@ -258,7 +258,7 @@ export default function RichTextEditor({
   };
 
   return (
-    <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden">
       {/* Toolbar.
           `dark:` variants were missing entirely, so in dark mode this was a
           white strip across the top of a dark editor. */}
@@ -380,7 +380,7 @@ export default function RichTextEditor({
         <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
           <button
             onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
-            className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+            className={`p-2 rounded-sm hover:bg-gray-100 transition-colors ${
               editor.isActive('highlight') ? 'bg-yellow-200' : ''
             }`}
             title="Highlight" aria-label="Highlight"
@@ -392,7 +392,7 @@ export default function RichTextEditor({
           <input
             type="color"
             onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-            className="w-8 h-8 rounded cursor-pointer"
+            className="w-8 h-8 rounded-sm cursor-pointer"
             title="Text Color" aria-label="Text Color"
           />
         </div>
@@ -406,7 +406,7 @@ export default function RichTextEditor({
               editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
             }}
             aria-label="Font size"
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded"
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-sm"
           >
             <option value="12px">12px</option>
             <option value="14px">14px</option>
@@ -491,13 +491,13 @@ export default function RichTextEditor({
             onClick={() => setShowLatexModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-lg w-full p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert LaTeX Formula</h3>
                 <button
                   type="button"
                   onClick={() => setShowLatexModal(false)}
-                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -512,7 +512,7 @@ export default function RichTextEditor({
                     value={latexInput}
                     onChange={(e) => setLatexInput(e.target.value)}
                     placeholder="e.g. x^2 + y^2 = r^2"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
                     onKeyDown={(e) => e.key === 'Enter' && insertLatex()}
                     autoFocus
                   />
@@ -522,11 +522,11 @@ export default function RichTextEditor({
                     type="checkbox"
                     checked={latexDisplay}
                     onChange={(e) => setLatexDisplay(e.target.checked)}
-                    className="rounded"
+                    className="rounded-sm"
                   />
                   Display mode (centered block)
                 </label>
-                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md border border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
                   <div ref={previewRef} className="text-center text-lg"></div>
                 </div>
@@ -543,7 +543,7 @@ export default function RichTextEditor({
                   <button
                     type="button"
                     onClick={() => setShowLatexModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
@@ -551,7 +551,7 @@ export default function RichTextEditor({
                     type="button"
                     onClick={insertLatex}
                     disabled={!latexInput.trim()}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Insert
                   </button>
@@ -570,13 +570,13 @@ export default function RichTextEditor({
             onClick={() => setShowLinkModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert Link</h3>
                 <button
                   type="button"
                   onClick={() => setShowLinkModal(false)}
-                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -591,7 +591,7 @@ export default function RichTextEditor({
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     placeholder="e.g. https://school.edu/physics-notes"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                     autoFocus
                   />
@@ -605,7 +605,7 @@ export default function RichTextEditor({
                     value={linkText}
                     onChange={(e) => setLinkText(e.target.value)}
                     placeholder="e.g. Read the worked example"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                   />
                 </div>
@@ -614,7 +614,7 @@ export default function RichTextEditor({
                     <button
                       type="button"
                       onClick={removeLink}
-                      className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-red-800"
+                      className="px-4 py-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-red-800"
                     >
                       Remove link
                     </button>
@@ -622,7 +622,7 @@ export default function RichTextEditor({
                   <button
                     type="button"
                     onClick={() => setShowLinkModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
@@ -630,7 +630,7 @@ export default function RichTextEditor({
                     type="button"
                     onClick={insertLink}
                     disabled={!linkUrl.trim()}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Insert
                   </button>

@@ -45,7 +45,7 @@ export default function AnnouncementsPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center shadow-lg">
               <Megaphone className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -66,7 +66,7 @@ export default function AnnouncementsPage() {
               happens next -- rather than a single grey sentence that reads
               like something failed. */}
           {!loading && announcements.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
               <Megaphone className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 Nothing announced yet
@@ -82,7 +82,7 @@ export default function AnnouncementsPage() {
           {announcements.map((a) => (
             <article
               key={a.id}
-              className={`min-w-0 rounded-2xl p-6 border shadow-sm ${
+              className={`min-w-0 rounded-lg p-6 border shadow-sm ${
                 a.pinned
                   ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'

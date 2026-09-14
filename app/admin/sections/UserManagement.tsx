@@ -219,13 +219,13 @@ export default function UserManagement() {
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="e.g. Alex Chen, student@example.com, or editor"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
         >
           <option value="all">All roles</option>
           <option value="student">Students</option>
@@ -239,7 +239,7 @@ export default function UserManagement() {
           search box was still being typed into. */}
       {loading && !data ? <LoadingSpinner /> : data && (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 text-xs uppercase">
@@ -291,7 +291,7 @@ export default function UserManagement() {
                             disabled={actionLoading === u.id}
                             title={u.emailVerified ? 'Remove verification' : 'Mark verified'}
                             aria-label={u.emailVerified ? `Remove email verification for ${u.email}` : `Mark ${u.email} verified`}
-                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.emailVerified
                                 ? 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                                 : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
@@ -304,7 +304,7 @@ export default function UserManagement() {
                             disabled={actionLoading === u.id}
                             title="Reset password"
                             aria-label={`Reset password for ${u.email}`}
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
@@ -312,7 +312,7 @@ export default function UserManagement() {
                             onClick={() => toggleBan(u)}
                             disabled={u.effectiveAdmin || actionLoading === u.id}
                             title={u.banned ? 'Unban' : 'Ban'} aria-label={u.banned ? 'Unban' : 'Ban'}
-                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.banned
                                 ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
                                 : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
@@ -325,7 +325,7 @@ export default function UserManagement() {
                             disabled={u.effectiveAdmin || actionLoading === u.id}
                             title="Delete user"
                             aria-label={`Delete ${u.email}`}
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -347,14 +347,14 @@ export default function UserManagement() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -366,7 +366,7 @@ export default function UserManagement() {
       {/* User detail modal */}
       {detailUser && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDetailUser(null)}>
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Avatar name={detailUser.name} image={detailUser.image} size="lg" />
@@ -406,7 +406,7 @@ export default function UserManagement() {
           aria-modal="true"
           aria-labelledby="temp-password-title"
         >
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="temp-password-title" className="font-bold flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-blue-600" />
@@ -426,7 +426,7 @@ export default function UserManagement() {
               only reset again.
             </p>
             <div className="mt-4 flex items-center gap-2">
-              <code className="flex-1 px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 font-mono text-base tracking-wider select-all break-all">
+              <code className="flex-1 px-3 py-2.5 rounded-md bg-gray-100 dark:bg-gray-800 font-mono text-base tracking-wider select-all break-all">
                 {tempPassword.password}
               </code>
               <button
@@ -435,7 +435,7 @@ export default function UserManagement() {
                 }}
                 title="Copy to clipboard"
                 aria-label="Copy temporary password to clipboard"
-                className="p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="p-2.5 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <Copy className="w-4 h-4" />
               </button>
@@ -446,7 +446,7 @@ export default function UserManagement() {
             </p>
             <button
               onClick={() => setTempPassword(null)}
-              className="mt-5 w-full py-2.5 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium"
+              className="mt-5 w-full py-2.5 rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium"
             >
               Done
             </button>

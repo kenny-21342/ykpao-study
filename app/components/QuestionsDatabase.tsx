@@ -577,7 +577,7 @@ export default function QuestionsDatabase({
           <div className="flex items-center space-x-3 flex-shrink-0">
             {/* Vault toggle — only visible once unlocked. */}
             {vaultUnlocked && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
                 <button
                   onClick={() => setShowVault(false)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -602,13 +602,13 @@ export default function QuestionsDatabase({
             )}
             {/* Past-paper mode toggle — hidden when viewing the vault. */}
             {!showVault && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1" role="group" aria-label="Content scope">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1" role="group" aria-label="Content scope">
                 <button onClick={() => changeScope('enrolled')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'enrolled' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>My courses</button>
                 <button onClick={() => changeScope('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'all' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>All subjects</button>
               </div>
             )}
             {!showVault && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
                 <button
                   onClick={() => { setMode('browse'); screenCtx.updateData({ practiceMode: 'browse' }); }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -634,7 +634,7 @@ export default function QuestionsDatabase({
             {!showVault && (
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
               >
                 <Filter className="w-4 h-4" />
                 <span>{showFilters ? 'Hide' : 'Filters'}</span>
@@ -657,7 +657,7 @@ export default function QuestionsDatabase({
                 }
               }}
               placeholder="Search by question code (e.g. 0610-S25-P21-Q2) or topic (e.g. Inheritance)…"
-              className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         )}
@@ -700,7 +700,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedSubject}
                 onChange={(e) => { setSelectedSubject(e.target.value); setSelectedTopic(''); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">All Subjects</option>
                 {filters.subjects.map((subject) => (
@@ -717,7 +717,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedYear}
                 onChange={(e) => { setSelectedYear(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">All Years</option>
                 {filters.years.map((year) => (
@@ -732,7 +732,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedSession}
                 onChange={(e) => { setSelectedSession(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">All Sessions</option>
                 {filters.sessions.map((session) => (
@@ -747,7 +747,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedPaper}
                 onChange={(e) => { setSelectedPaper(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">All Papers</option>
                 {filters.paperNumbers.map((paper) => (
@@ -763,7 +763,7 @@ export default function QuestionsDatabase({
                 <select
                   value={selectedTopic}
                   onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">All Topics</option>
                   {filters.topics.map((t) => (
@@ -780,7 +780,7 @@ export default function QuestionsDatabase({
                 type="checkbox"
                 checked={onlyBookmarked}
                 onChange={(e) => { setOnlyBookmarked(e.target.checked); setPage(1); }}
-                className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="w-4 h-4 rounded-sm border-gray-300 text-green-600 focus:ring-green-500"
               />
               <label htmlFor="only-bookmarked" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 cursor-pointer">
                 <Star className="w-3.5 h-3.5" /> Starred only
@@ -798,7 +798,7 @@ export default function QuestionsDatabase({
                 setOnlyBookmarked(false);
                 setPage(1);
               }}
-              className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium"
+              className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors text-sm font-medium"
             >
               Clear All Filters
             </button>
@@ -830,7 +830,7 @@ export default function QuestionsDatabase({
                 <p className="mt-1 text-sm max-w-sm">{loadError}</p>
                 <button
                   onClick={() => void fetchQuestions()}
-                  className="mt-4 px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  className="mt-4 px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
                 >
                   Try again
                 </button>
@@ -872,16 +872,16 @@ export default function QuestionsDatabase({
                     </div>
                     {/* Row 2: labels (topic + subject) */}
                     <div className="mt-1 flex flex-wrap items-center gap-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
                         {question.subject_name}
                       </span>
                       {question.topic && question.topic !== 'General' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
                           {question.topic}
                         </span>
                       )}
                       {question.has_diagram === 1 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 flex items-center gap-0.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 flex items-center gap-0.5">
                           <Eye className="w-2.5 h-2.5" /> diagram
                         </span>
                       )}
@@ -898,7 +898,7 @@ export default function QuestionsDatabase({
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Previous
                 </button>
@@ -908,7 +908,7 @@ export default function QuestionsDatabase({
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Next
                 </button>
@@ -936,7 +936,7 @@ export default function QuestionsDatabase({
                       {formatQuestionCode(selectedQuestion)}
                     </h3>
                     {selectedQuestion.topic && selectedQuestion.topic !== 'General' && (
-                      <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">
+                      <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-sm text-xs font-medium">
                         {selectedQuestion.topic}
                       </span>
                     )}
@@ -945,7 +945,7 @@ export default function QuestionsDatabase({
                     <button
                       onClick={() => toggleBookmark(selectedQuestion)}
                       title={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'} aria-label={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'}
-                      className={`p-1.5 rounded-lg transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                      className={`p-1.5 rounded-md transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     >
                       <Star className={`w-5 h-5 ${selectedQuestion.bookmarked ? 'fill-amber-500' : ''}`} />
                     </button>
@@ -959,7 +959,7 @@ export default function QuestionsDatabase({
                 </div>
 
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">{selectedQuestion.subject_name}</span>
+                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-sm">{selectedQuestion.subject_name}</span>
                   <span>•</span>
                   <span>{selectedQuestion.year}</span>
                   <span>•</span>
@@ -975,7 +975,7 @@ export default function QuestionsDatabase({
                 </div>
 
                 <div className="prose dark:prose-invert max-w-none">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-md">
                     <FormattedMessage content={selectedQuestion.content} />
                   </div>
                 </div>
@@ -989,7 +989,7 @@ export default function QuestionsDatabase({
                     </h4>
                     <div className="grid grid-cols-1 gap-4">
                       {paperImages.map((imgUrl, idx) => (
-                        <div key={idx} className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 p-2">
+                        <div key={idx} className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden bg-white dark:bg-gray-800 p-2">
                           <Image
                             src={imgUrl}
                             alt={`Figure ${idx + 1}`}
@@ -1009,7 +1009,7 @@ export default function QuestionsDatabase({
                 )}
 
                 {selectedQuestion.has_diagram === 1 && paperImages.length === 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                       📷 This question references a diagram, but no figure has been linked to it yet.
                     </p>
@@ -1020,7 +1020,7 @@ export default function QuestionsDatabase({
               {/* Practice mode */}
               {mode === 'practice' && (
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <div className="mb-5 border border-amber-200 dark:border-amber-900/70 bg-amber-50/70 dark:bg-amber-950/20 rounded-lg p-4">
+                  <div className="mb-5 border border-amber-200 dark:border-amber-900/70 bg-amber-50/70 dark:bg-amber-950/20 rounded-md p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Lightbulb className="w-4 h-4 text-amber-600" />
@@ -1029,7 +1029,7 @@ export default function QuestionsDatabase({
                       <button
                         onClick={requestHint}
                         disabled={hintLoading || hints.length >= 3}
-                        className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold disabled:opacity-50"
+                        className="h-8 px-3 inline-flex items-center gap-1.5 rounded-md bg-amber-500 text-white text-xs font-semibold disabled:opacity-50"
                       >
                         {hintLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
                         {hints.length >= 3 ? 'All hints shown' : `Hint ${hints.length + 1} of 3`}
@@ -1059,7 +1059,7 @@ export default function QuestionsDatabase({
                         <button
                           onClick={transcribeImage}
                           disabled={ocrLoading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
                         >
                           {ocrLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                           {ocrLoading ? 'Transcribing…' : 'Transcribe'}
@@ -1067,7 +1067,7 @@ export default function QuestionsDatabase({
                       )}
                       <button
                         onClick={() => imageInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
                       >
                         <ImageIcon className="w-4 h-4" />
                         Upload photo
@@ -1089,13 +1089,13 @@ export default function QuestionsDatabase({
                   <AiNotice notices={aiNotices} className="mb-3" />
 
                   {ocrError && (
-                    <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                    <div className="mb-3 p-2.5 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
                       {ocrError}
                     </div>
                   )}
 
                   {uploadedImageUrl && (
-                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={uploadedImageUrl} alt="Uploaded answer" className="w-16 h-16 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
                       <div className="flex-1 min-w-0 text-xs text-gray-600 dark:text-gray-400">
@@ -1126,14 +1126,14 @@ export default function QuestionsDatabase({
                     <button
                       onClick={submitAnswer}
                       disabled={submitting || answer.trim().length === 0}
-                      className="px-5 py-2 bg-accent text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                      className="px-5 py-2 bg-accent text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                     >
                       {submitting ? 'Grading…' : 'Submit & Grade'}
                     </button>
                   </div>
 
                   {submitError && (
-                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
                       {submitError}
                     </div>
                   )}
@@ -1141,12 +1141,12 @@ export default function QuestionsDatabase({
                   {(grade || markscheme) && (
                     <div className="mt-6 space-y-4">
                       {grade && (
-                        <div className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${grade.gradingStatus === 'official' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
+                        <div className={`inline-flex rounded-sm px-2 py-1 text-xs font-semibold ${grade.gradingStatus === 'official' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
                           {grade.gradingStatus === 'official' ? 'Official mark-scheme grading' : grade.gradingStatus === 'ungraded' ? 'Ungraded attempt' : 'Provisional AI feedback'}
                         </div>
                       )}
                       {grade && markscheme && (
-                        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-0.5 text-xs font-semibold">
+                        <div className="inline-flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-0.5 text-xs font-semibold">
                           {(['ai', 'markscheme', 'split'] as const).map((v) => (
                             <button
                               key={v}
@@ -1162,31 +1162,31 @@ export default function QuestionsDatabase({
                         <div className="grid gap-4 lg:grid-cols-2">
                           <div>
                             <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">AI explanation</h5>
-                            <div className={`p-4 rounded-lg border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                            <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
                               <span className="font-semibold text-gray-900 dark:text-white">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                             </div>
                             {grade.explanation && (
-                              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm">
+                              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm">
                                 <FormattedMessage content={grade.explanation} />
                               </div>
                             )}
                           </div>
                           <div>
                             <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Official mark scheme</h5>
-                            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 prose dark:prose-invert max-w-none">
+                            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800 prose dark:prose-invert max-w-none">
                               {parseMarkschemeContent(markscheme.content)}
                             </div>
                           </div>
                         </div>
                       ) : feedbackView === 'markscheme' && markscheme && !grade ? (
                         <div className="prose dark:prose-invert max-w-none">
-                          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
                             {parseMarkschemeContent(markscheme.content)}
                           </div>
                         </div>
                       ) : grade ? (
                         <div>
-                          <div className={`p-4 rounded-lg border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                          <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
                             <span className="font-semibold text-gray-900 dark:text-white">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                           </div>
                           {grade.strengths && grade.strengths.length > 0 && (
@@ -1208,7 +1208,7 @@ export default function QuestionsDatabase({
                           {grade.explanation && (
                             <div className="mt-3">
                               <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Explanation</h5>
-                              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm">
+                              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm">
                                 <FormattedMessage content={grade.explanation} />
                               </div>
                             </div>
@@ -1216,7 +1216,7 @@ export default function QuestionsDatabase({
                           {grade.modelAnswer && (
                             <div className="mt-3">
                               <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Model answer</h5>
-                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
+                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
                                 <FormattedMessage content={grade.modelAnswer} />
                               </div>
                             </div>
@@ -1234,7 +1234,7 @@ export default function QuestionsDatabase({
                       </h5>
                       <div className="space-y-1">
                         {recentAttempts.map((a) => (
-                          <div key={a.id} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 p-2 bg-gray-50 dark:bg-gray-900 rounded">
+                          <div key={a.id} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 p-2 bg-gray-50 dark:bg-gray-900 rounded-sm">
                             <span className="flex items-center space-x-2">
                               {a.isCorrect ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-amber-500" />}
                               <span>{a.score}{a.maxScore ? ` / ${a.maxScore}` : ''}</span>

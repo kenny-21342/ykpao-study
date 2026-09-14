@@ -50,11 +50,11 @@ export default async function BankIndexPage() {
         <PreviewNotice feature="question-bank" />
 
         {papers.length === 0 ? (
-          <p className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <p className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             No papers have been published to the bank yet.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
             {papers.map((paper) => (
               <li key={paper.id}>
                 <Link

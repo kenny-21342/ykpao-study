@@ -109,7 +109,7 @@ export default async function LandingPage() {
       <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-accent shadow-lg">
+            <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent shadow-lg">
               <GraduationCap className="w-6 h-6 text-white" />
             </span>
             <span className="font-bold text-lg tracking-tight">YKPao Study</span>
@@ -117,13 +117,13 @@ export default async function LandingPage() {
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/auth/login"
-              className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+              className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
             >
               Sign in
             </Link>
             <Link
               href="/auth/signup"
-              className="px-4 py-2 text-sm font-semibold rounded-lg text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+              className="px-4 py-2 text-sm font-semibold rounded-md text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
             >
               Create an account
             </Link>
@@ -148,14 +148,14 @@ export default async function LandingPage() {
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Link
             href="/auth/signup"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
           >
             Start studying
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/auth/login"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
           >
             I already have an account
           </Link>
@@ -173,7 +173,7 @@ export default async function LandingPage() {
             ].map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-6 py-5"
+                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-6 py-5"
               >
                 <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
                 <dd className="mt-3 text-3xl font-bold tabular-nums">{value}</dd>
@@ -194,9 +194,9 @@ export default async function LandingPage() {
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6"
+                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6"
               >
-                <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/30">
+                <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30">
                   <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
                 </span>
                 <h3 className="mt-4 font-semibold">{title}</h3>
@@ -228,7 +228,7 @@ export default async function LandingPage() {
           {Object.values(FEATURE_READINESS).map((feature) => (
             <div
               key={feature.title}
-              className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-900/10 p-6"
+              className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-900/10 p-6"
             >
               <h3 className="font-semibold text-amber-900 dark:text-amber-200">
                 {feature.title}
@@ -253,7 +253,7 @@ export default async function LandingPage() {
           </p>
           <Link
             href="/auth/signup"
-            className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+            className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
           >
             Create an account
             <ArrowRight className="w-4 h-4" />

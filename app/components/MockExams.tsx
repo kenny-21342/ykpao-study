@@ -299,7 +299,7 @@ export default function MockExams() {
           </div>
           <button
             onClick={() => setView({ name: 'configure' })}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl font-semibold shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold shadow-lg transition-all"
           >
             <Plus className="w-5 h-5" />
             New Mock Exam
@@ -410,8 +410,8 @@ function StatCard({
     purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${tints[tint]}`}>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
         {icon}
       </div>
       <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
@@ -422,8 +422,8 @@ function StatCard({
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-      <div className="w-16 h-16 mx-auto rounded-2xl bg-accent flex items-center justify-center shadow-lg mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+      <div className="w-16 h-16 mx-auto rounded-lg bg-accent flex items-center justify-center shadow-lg mb-4">
         <Sparkles className="w-8 h-8 text-white" />
       </div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No mock exams yet</h3>
@@ -433,7 +433,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </p>
       <button
         onClick={onCreate}
-        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl font-semibold shadow-lg transition-all"
+        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold shadow-lg transition-all"
       >
         <Plus className="w-5 h-5" /> Generate a Mock Exam
       </button>
@@ -456,7 +456,7 @@ function ExamCard({
       : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -520,14 +520,14 @@ function ExamCard({
           {exam.status === 'completed' && (
             <button
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
             >
               <Eye className="w-4 h-4" /> Review
             </button>
           )}
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
             title="Delete" aria-label="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -544,7 +544,7 @@ function ExamCard({
           ) : exam.status !== 'completed' ? (
             <button
               onClick={onOpen}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all"
             >
               <Play className="w-4 h-4" />
               {exam.status === 'in_progress' ? 'Resume' : 'Start'}
@@ -552,7 +552,7 @@ function ExamCard({
           ) : (
             <button
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all"
             >
               View Results <ArrowRight className="w-4 h-4" />
             </button>
@@ -565,7 +565,7 @@ function ExamCard({
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-5 flex items-start gap-3">
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-5 flex items-start gap-3">
       <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-red-800 dark:text-red-300">{message}</p>
@@ -669,7 +669,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -697,7 +697,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         </div>
 
         {/* Form card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
           {loadingFilters ? (
             <div className="flex items-center justify-center py-10 text-gray-500">
               <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading subjects…
@@ -709,7 +709,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   <button
                     type="button"
                     onClick={() => setMode('mock')}
-                    className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all ${
+                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'mock'
                         ? 'bg-accent text-white border-transparent shadow'
                         : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
@@ -720,7 +720,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   <button
                     type="button"
                     onClick={() => setMode('predicted')}
-                    className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all ${
+                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'predicted'
                         ? 'bg-accent text-white border-transparent shadow'
                         : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-fuchsia-400'
@@ -740,7 +740,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Paper 2 mechanics refresher"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 />
               </Field>
 
@@ -758,7 +758,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   <select
                     value={subjectCode}
                     onChange={(e) => setSubjectCode(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                   >
                     {subjects.map((s) => (
                       <option key={s.code} value={s.code}>
@@ -783,7 +783,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                       key={d}
                       type="button"
                       onClick={() => setDifficulty(d)}
-                      className={`px-3 py-2 text-sm font-medium rounded-xl border transition-all capitalize ${
+                      className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all capitalize ${
                         difficulty === d
                           ? 'bg-accent text-white border-transparent shadow'
                           : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
@@ -835,7 +835,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     value={topicsRaw}
                     onChange={(e) => setTopicsRaw(e.target.value)}
                     placeholder="e.g. kinematics, forces, momentum"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Leave blank to sample across the whole subject.
@@ -853,14 +853,14 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           <button
             onClick={onCancel}
             disabled={generating}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {generating ? (
               <>
@@ -875,7 +875,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         </div>
 
         {generating && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
             <span>
               {mode === 'predicted' && curatedPrediction
@@ -1155,7 +1155,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
         </p>
         <button
           onClick={onExit}
-          className="mt-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="mt-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           Back to exams
         </button>
@@ -1245,7 +1245,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               await saveProgress();
               onExit();
             }}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             title="Save & exit exam" aria-label="Save & exit exam"
           >
             <X className="w-5 h-5" />
@@ -1275,7 +1275,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
           <div
             role="timer"
             aria-label={timeLow ? 'Time remaining, running low' : 'Time remaining'}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-sm font-semibold tabular-nums ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-semibold tabular-nums ${
               timeLow
                 ? 'bg-red-50 text-red-700 border border-red-200 motion-safe:animate-pulse'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
@@ -1307,7 +1307,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <button
                   key={it.id}
                   onClick={() => setActiveIdx(idx)}
-                  className={`flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+                  className={`flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${
                     idx === activeIdx
                       ? 'bg-accent text-white font-semibold'
                       : answered
@@ -1369,7 +1369,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             </div>
 
             {/* Question content */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
               <div className="prose prose-sm max-w-none text-gray-900 dark:text-gray-100">
                 <ExamContent
                   content={item.content}
@@ -1406,7 +1406,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         type="button"
                         aria-pressed={selected}
                         onClick={() => setAnswers((a) => ({ ...a, [item.id]: letter }))}
-                        className={`h-12 w-12 rounded-xl border text-base font-semibold transition-all ${
+                        className={`h-12 w-12 rounded-lg border text-base font-semibold transition-all ${
                           selected
                             ? 'border-green-500 bg-green-500 text-white shadow'
                             : 'border-gray-300 text-gray-700 hover:border-green-500 hover:bg-green-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30'
@@ -1434,7 +1434,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                       <button
                         onClick={() => transcribeAnswer(item.id)}
                         disabled={ocrLoading === item.id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
                       >
                         {ocrLoading === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
                         {ocrLoading === item.id ? 'Transcribing…' : 'Transcribe'}
@@ -1451,15 +1451,15 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         };
                         input.click();
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
                     >
                       <ImageIcon className="w-3.5 h-3.5" /> Upload photo
                     </button>
                   </div>
                 </div>
                 {images[item.id] && (
-                  <div className="mb-2 flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700" />
+                  <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded-sm border border-gray-200 dark:border-gray-700" />
                     <span className="text-xs text-gray-500 flex-1">Photo attached — transcribe or submit as-is.</span>
                     <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
                   </div>
@@ -1483,14 +1483,14 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               <button
                 onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
                 disabled={activeIdx === 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ArrowLeft className="w-4 h-4" /> Previous
               </button>
               {activeIdx < totalItems - 1 ? (
                 <button
                   onClick={() => setActiveIdx((i) => Math.min(totalItems - 1, i + 1))}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
                 >
                   Next <ArrowRight className="w-4 h-4" />
                 </button>
@@ -1498,7 +1498,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <button
                   onClick={() => setConfirmSubmit(true)}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {submitting ? 'Grading…' : 'Submit Exam'}
@@ -1508,7 +1508,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
             {confirmSubmit && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-                <div className="mx-4 w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-2xl">
+                <div className="mx-4 w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-2xl">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Submit Exam?</h3>
                   <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
                     <p>You&apos;ve answered {answeredCount} of {totalItems} questions.</p>
@@ -1524,13 +1524,13 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   <div className="mt-6 flex items-center justify-end gap-3">
                     <button
                       onClick={() => setConfirmSubmit(false)}
-                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors"
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                     >
                       Go back
                     </button>
                     <button
                       onClick={() => { setConfirmSubmit(false); handleSubmit(); }}
-                      className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow-lg hover:shadow-xl transition-all"
+                      className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg hover:shadow-xl transition-all"
                     >
                       Submit for grading
                     </button>
@@ -1542,7 +1542,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             {submitError && <ErrorBanner message={submitError} />}
 
             {submitting && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
                 <span>AI is grading your answers against the markschemes. This can take a minute or two.</span>
               </div>
@@ -1645,13 +1645,13 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
           <div className="flex items-start justify-between gap-4">
             <button
               onClick={onExit}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white/15 hover:bg-white/25 rounded-xl backdrop-blur transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white/15 hover:bg-white/25 rounded-lg backdrop-blur transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Back to exams
             </button>
             <button
               onClick={onRetake}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white/15 hover:bg-white/25 rounded-xl backdrop-blur transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white/15 hover:bg-white/25 rounded-lg backdrop-blur transition-colors"
             >
               <RefreshCw className="w-4 h-4" /> New exam
             </button>
@@ -1719,13 +1719,13 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                 const wrong = item.isCorrect === false && (item.score ?? 0) === 0;
                 const unanswered = item.attemptedAt === null;
                 return (
-                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <button
                       onClick={() => toggleItem(item.id)}
                       className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        <span className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
                           full ? 'bg-green-100 text-green-600'
                             : partial ? 'bg-amber-100 text-amber-600'
                             : wrong ? 'bg-red-100 text-red-600'
@@ -1764,7 +1764,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                         <div>
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Your answer</p>
                           {item.answer ? (
-                            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                               {item.answer}
                             </div>
                           ) : (
@@ -1798,7 +1798,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                         {(item.strengths?.length > 0 || item.weaknesses?.length > 0) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {item.strengths?.length > 0 && (
-                              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                                 <p className="text-xs font-semibold text-green-700 dark:text-green-300 uppercase mb-2">Strengths</p>
                                 <ul className="space-y-1">
                                   {item.strengths.map((s, i) => (
@@ -1810,7 +1810,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                               </div>
                             )}
                             {item.weaknesses?.length > 0 && (
-                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
                                 <p className="text-xs font-semibold text-red-700 dark:text-red-300 uppercase mb-2">To improve</p>
                                 <ul className="space-y-1">
                                   {item.weaknesses.map((w, i) => (
@@ -1845,8 +1845,8 @@ function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; labe
     indigo: 'bg-indigo-50 text-indigo-600',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tints[tint]}`}>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${tints[tint]}`}>
         {icon}
       </div>
       <div>
@@ -1864,7 +1864,7 @@ function FeedbackBlock({ label, icon, tone, children }: { label: string; icon: R
     blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
   };
   return (
-    <div className={`rounded-xl border p-3 ${tones[tone]}`}>
+    <div className={`rounded-lg border p-3 ${tones[tone]}`}>
       <p className="text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-1.5 opacity-80">
         {icon} {label}
       </p>

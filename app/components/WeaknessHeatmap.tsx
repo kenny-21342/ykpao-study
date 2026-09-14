@@ -111,7 +111,7 @@ export default function WeaknessHeatmap() {
 
   if (!data || data.topics.length === 0) {
     return (
-      <div className="floating-panel bg-white rounded-2xl p-12 border border-gray-200 shadow-sm text-center">
+      <div className="bg-white rounded-lg p-12 border border-gray-200 shadow-sm text-center">
         <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
           <Target className="w-8 h-8 text-gray-400" />
         </div>
@@ -134,7 +134,7 @@ export default function WeaknessHeatmap() {
   return (
     <div className="space-y-6">
       {/* Header / CTA */}
-      <div className="floating-panel bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-2xl p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
+      <div className="bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-lg p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function WeaknessHeatmap() {
           <button
             onClick={practiceWeak}
             disabled={data.recommended.length === 0 || practicing}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-danger text-white rounded-xl font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-danger text-white rounded-lg font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
           >
             <Target className="w-4 h-4" />
             Practice Weakest ({data.recommended.length})
@@ -158,7 +158,7 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Subject overview */}
-      <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-green-500" />
           By Subject
@@ -171,7 +171,7 @@ export default function WeaknessHeatmap() {
                 <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                   {s.subject}
                 </div>
-                <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden relative">
                   <div
                     className={`h-full ${band.bg} ${band.text} flex items-center justify-end pr-2 text-xs font-semibold transition-all duration-500`}
                     style={{ width: `${Math.max(8, s.accuracy)}%` }}
@@ -189,18 +189,18 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Topic heatmap */}
-      <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
             Topic Mastery Heatmap
           </h4>
           <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
-            <span className="px-1.5 py-0.5 rounded bg-red-500 text-white">Critical</span>
-            <span className="px-1.5 py-0.5 rounded bg-orange-400 text-white">Weak</span>
-            <span className="px-1.5 py-0.5 rounded bg-yellow-400 text-yellow-900">OK</span>
-            <span className="px-1.5 py-0.5 rounded bg-green-400 text-white">Strong</span>
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white">Mastered</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-red-500 text-white">Critical</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-orange-400 text-white">Weak</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-yellow-400 text-yellow-900">OK</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-green-400 text-white">Strong</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-emerald-500 text-white">Mastered</span>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export default function WeaknessHeatmap() {
             return (
               <div
                 key={t.key}
-                className={`rounded-xl p-3 ${band.bg} ${band.text} transition-transform hover:scale-[1.03] cursor-default`}
+                className={`rounded-lg p-3 ${band.bg} ${band.text} transition-transform hover:scale-[1.03] cursor-default`}
                 title={`${t.subject} · ${t.topic} — ${t.accuracy}% (${t.correct}/${t.total})`}
               >
                 <p className="text-[11px] font-medium opacity-90 truncate">{t.topic}</p>
@@ -224,7 +224,7 @@ export default function WeaknessHeatmap() {
 
       {/* Recommended questions */}
       {data.recommended.length > 0 && (
-        <div className="floating-panel bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-red-500" />
             Recommended for Practice
@@ -233,7 +233,7 @@ export default function WeaknessHeatmap() {
             {data.recommended.map((q) => (
               <li
                 key={q.id}
-                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors"
+                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-md transition-colors"
                 onClick={practiceWeak}
               >
                 <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />

@@ -69,7 +69,7 @@ export default async function BankPaperPage({
         <PreviewNotice feature="question-bank" />
 
         {paper.questions.length === 0 ? (
-          <p className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <p className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             No questions from this paper have been published yet.
           </p>
         ) : (

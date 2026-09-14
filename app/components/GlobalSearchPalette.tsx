@@ -102,7 +102,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 px-4 pt-24" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+        className="w-full max-w-xl rounded-lg bg-white shadow-2xl dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
@@ -120,7 +120,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
             type="button"
             onClick={onClose}
             aria-label="Close search"
-            className="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="flex-shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <X className="h-4 w-4" />
           </button>
@@ -139,7 +139,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
               key={result.id}
               href={result.url}
               onClick={onClose}
-              className="block rounded-xl px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="block rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">

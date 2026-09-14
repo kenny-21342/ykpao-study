@@ -92,7 +92,7 @@ export default function UsagePage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-xl p-5 flex items-start gap-3">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-5 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600" />
           <p className="text-sm text-red-700">{error}</p>
         </div>
@@ -112,7 +112,7 @@ export default function UsagePage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -128,7 +128,7 @@ export default function UsagePage() {
         </div>
 
         {/* Breakdown by feature */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">By Feature</h2>
           {Object.keys(data.byFeature).length === 0 ? (
             <p className="text-sm text-gray-400">No usage recorded yet. Try the AI Chat, Mock Exams, or Practice features!</p>
@@ -137,8 +137,8 @@ export default function UsagePage() {
               {Object.entries(data.byFeature).map(([key, val]) => {
                 const meta = FEATURE_ICONS[key] ?? { icon: <Zap className="w-4 h-4" />, label: featureLabel(key) };
                 return (
-                  <div key={key} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center flex-shrink-0">
+                  <div key={key} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <div className="w-10 h-10 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center flex-shrink-0">
                       {meta.icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -157,7 +157,7 @@ export default function UsagePage() {
         </div>
 
         {/* Last 7 days */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Last 7 Days</h2>
           {dayEntries.length === 0 ? (
             <p className="text-sm text-gray-400">No activity this week.</p>
@@ -174,7 +174,7 @@ export default function UsagePage() {
                   <div key={day} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                     <div className="text-xs text-gray-500 font-mono">{val.tokens > 999 ? `${(val.tokens / 1000).toFixed(1)}k` : val.tokens}</div>
                     <div
-                      className="w-full bg-accent rounded-t-lg min-h-[4px]"
+                      className="w-full bg-accent rounded-t-md min-h-[4px]"
                       style={{ height: `${Math.max(heightPct, 3)}%` }}
                     />
                     <div className="text-xs text-gray-400">
@@ -188,7 +188,7 @@ export default function UsagePage() {
         </div>
 
         {/* Recent log */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Requests</h2>
           {data.recent.length === 0 ? (
             <p className="text-sm text-gray-400">No recent activity.</p>
@@ -230,8 +230,8 @@ function SummaryCard({ icon, label, value, tint }: { icon: React.ReactNode; labe
     purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${tints[tint]}`}>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
         {icon}
       </div>
       <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>

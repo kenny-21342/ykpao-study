@@ -225,7 +225,7 @@ export default function NotificationBell() {
       <button
         ref={buttonRef}
         onClick={onOpen}
-        className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+        className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
         title="Notifications"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
@@ -240,7 +240,7 @@ export default function NotificationBell() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-h-[28rem] overflow-hidden"
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-h-[28rem] overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
@@ -265,7 +265,7 @@ export default function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="md:hidden p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
+                className="md:hidden p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-sm"
               >
                 <X className="w-4 h-4" />
               </button>

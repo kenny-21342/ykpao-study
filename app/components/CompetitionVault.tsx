@@ -84,13 +84,13 @@ export default function CompetitionVault() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by code (e.g. 16-S1-Q1) or label (e.g. Inequalities)…"
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
         <select
           value={paperFilter}
           onChange={(e) => { setPaperFilter(e.target.value); setPage(1); }}
-          className="px-2 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
+          className="px-2 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-700 dark:text-gray-300"
         >
           <option value="">All papers</option>
           <option value="S1">STEP I</option>
@@ -100,7 +100,7 @@ export default function CompetitionVault() {
         <select
           value={yearFilter}
           onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
-          className="px-2 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
+          className="px-2 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-700 dark:text-gray-300"
         >
           <option value="">All years</option>
           {distinctYears.map((y) => <option key={y} value={y}>{y === 'Spec' ? 'Specimen' : `'${y}`}</option>)}
@@ -143,7 +143,7 @@ export default function CompetitionVault() {
                       {q.labels.slice(0, 4).map((l, i) => (
                         <span
                           key={i}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
+                          className="text-[10px] px-1.5 py-0.5 rounded-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
                         >
                           {l}
                         </span>
@@ -160,13 +160,13 @@ export default function CompetitionVault() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40"
+                className="px-2 py-1 rounded-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40"
               >Prev</button>
               <span>Page {page} / {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40"
+                className="px-2 py-1 rounded-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40"
               >Next</button>
             </div>
           )}
@@ -181,7 +181,7 @@ export default function CompetitionVault() {
                   <h3 className="text-xl font-bold font-mono text-gray-900 dark:text-gray-100">
                     {selected.code}
                   </h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                  <span className="text-xs px-2 py-0.5 rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     {selected.paper === 'S1' ? 'STEP I' : selected.paper === 'S2' ? 'STEP II' : 'STEP III'}
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export default function CompetitionVault() {
                 <img
                   src={selected.imageUrl}
                   alt={selected.code}
-                  className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                  className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700"
                 />
               </div>
             )}

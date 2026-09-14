@@ -109,7 +109,7 @@ export default function SystemMonitor() {
       <Card title="Database Record Counts" icon={HardDrive}>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {data.tables.map((t) => (
-            <div key={t.name} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
+            <div key={t.name} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-md px-3 py-2">
               <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{t.name}</span>
               <span className="text-sm font-medium ml-2">{t.count.toLocaleString()}</span>
             </div>
@@ -136,7 +136,7 @@ export default function SystemMonitor() {
 
 function Metric({ icon: Icon, label, value, sub }: { icon: typeof DollarSign; label: string; value: string; sub: string }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
       <div className={`w-9 h-9 rounded-md bg-surface-raised flex items-center justify-center mb-3`}>
         <Icon className="w-4 h-4 text-secondary" />
       </div>
@@ -149,7 +149,7 @@ function Metric({ icon: Icon, label, value, sub }: { icon: typeof DollarSign; la
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof DollarSign; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
       <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Icon className="w-4 h-4 text-gray-400" /> {title}</h3>
       {children}
     </div>

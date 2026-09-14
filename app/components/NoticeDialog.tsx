@@ -230,11 +230,11 @@ export default function NoticeDialog({
         aria-labelledby={titleId}
         aria-describedby={messageId}
         tabIndex={-1}
-        className={`w-full max-w-md overflow-hidden rounded-2xl border bg-white shadow-2xl outline-none dark:bg-gray-800 ${meta.border}`}
+        className={`w-full max-w-md overflow-hidden rounded-lg border bg-white shadow-2xl outline-none dark:bg-gray-800 ${meta.border}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 px-5 py-4">
-          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${meta.iconBg}`}>
+          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${meta.iconBg}`}>
             <Icon className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -249,7 +249,7 @@ export default function NoticeDialog({
             type="button"
             onClick={dismiss}
             disabled={busy}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="Close message"
           >
             <X className="h-4 w-4" />
@@ -279,7 +279,7 @@ export default function NoticeDialog({
                   submit();
                 }
               }}
-              className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+              className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
             />
           </div>
         )}
@@ -292,8 +292,8 @@ export default function NoticeDialog({
             disabled={busy}
             className={
               isConfirm
-                ? 'inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
-                : 'inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'
+                ? 'inline-flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+                : 'inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'
             }
           >
             {isConfirm ? cancelLabel : 'OK'}
@@ -305,7 +305,7 @@ export default function NoticeDialog({
               type="button"
               onClick={submit}
               disabled={busy || (inputRequired && !inputValue.trim())}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
+              className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
                 destructive
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'

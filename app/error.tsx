@@ -31,7 +31,7 @@ export default function AppError({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
           <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
         </div>
@@ -47,14 +47,14 @@ export default function AppError({
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button
             onClick={() => unstable_retry()}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
           >
             <RotateCw className="h-4 w-4" />
             Try again
           </button>
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 px-5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             Back to dashboard
           </Link>

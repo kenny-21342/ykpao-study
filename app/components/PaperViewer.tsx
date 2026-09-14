@@ -61,7 +61,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
   if (error) {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
           {error}
         </div>
         <Link href="/papers" className="mt-4 inline-flex items-center gap-1.5 text-sm text-green-600">
@@ -104,7 +104,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
 
         <a
           href={`/api/papers/${active.id}/file?download=1`}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+          className="inline-flex items-center gap-1.5 rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
         >
           <Download className="h-4 w-4" />
           Download
@@ -119,7 +119,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
           <button
             key={document.id}
             onClick={() => setActiveId(document.id)}
-            className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               document.id === active.id
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
@@ -130,7 +130,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
         {active.docType === 'au' ? (
           <div className="space-y-3 p-6">
             <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">

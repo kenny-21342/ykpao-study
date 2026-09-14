@@ -55,9 +55,9 @@ export default function ResourceLibrary() {
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Study notes shared on review.ykpao.com, and your school&apos;s own resources.
           </p>
-          <div className="mt-3 inline-flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800" role="group" aria-label="Resource scope">
-            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>My courses</button>
-            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>All subjects</button>
+          <div className="mt-3 inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800" role="group" aria-label="Resource scope">
+            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>My courses</button>
+            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>All subjects</button>
           </div>
         </div>
 
@@ -95,7 +95,7 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-5 flex items-start gap-3">
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-5 flex items-start gap-3">
       <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-red-800 dark:text-red-300">{message}</p>
@@ -205,7 +205,7 @@ function ExternalNotesView() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g. exam tips, revision, or Biology"
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
         />
       </div>
 
@@ -215,7 +215,7 @@ function ExternalNotesView() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
           <BookOpen className="w-12 h-12 mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No posts found</h3>
           <p className="text-sm text-gray-500 mt-1">Try a different search.</p>
@@ -240,7 +240,7 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
   return (
     <button
       onClick={onOpen}
-      className="text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-5 flex flex-col"
+      className="text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-5 flex flex-col"
     >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -294,7 +294,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
@@ -310,12 +310,12 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
               href={note.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
               title="Open original" aria-label="Open original"
             >
               <Eye className="w-5 h-5" />
             </a>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -356,7 +356,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
           )}
           {note.content ? (
             <div
-              className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-blue-600 [&_a]:underline hover:[&_a]:text-blue-800 [&_img]:rounded-lg [&_img]:max-w-full"
+              className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-blue-600 [&_a]:underline hover:[&_a]:text-blue-800 [&_img]:rounded-md [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
             />
           ) : loadingContent ? (
@@ -369,7 +369,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
 
           {/* Comment notice */}
           {note.commentCount == null && (
-            <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
               <MessageCircle className="w-4 h-4 flex-shrink-0" />
               <span>
                 Comments are loaded on the original site (require its own login).
@@ -555,11 +555,11 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
             <button
               type="button"
               onClick={() => switchViewMode('list')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 !isBrowserView
                   ? 'bg-green-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -572,7 +572,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             <button
               type="button"
               onClick={() => switchViewMode('browser')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 isBrowserView
                   ? 'bg-green-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -585,7 +585,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           </div>
           <button
             onClick={() => setShowUpload(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
           >
             <Upload className="w-4 h-4" /> Upload Resource
           </button>
@@ -601,7 +601,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="e.g. worksheet, 2024, Biology, or Ms Lee"
-            className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
           />
           {query && (
             <button
@@ -617,7 +617,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={subjectFilter}
           onChange={(e) => { setSubjectFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="">All subjects</option>
           {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
@@ -625,7 +625,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={categoryFilter}
           onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="">All categories</option>
           {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -633,7 +633,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={sortBy}
           onChange={(e) => { setSortBy(e.target.value as ResourceSort); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="createdAt">Newest first</option>
           <option value="updatedAt">Recently updated</option>
@@ -646,7 +646,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <button
             type="button"
             onClick={() => setSortOrder((current) => (current === 'desc' ? 'asc' : 'desc'))}
-            className="inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Toggle sort order" aria-label="Toggle sort order"
           >
             <ArrowUpDown className="w-4 h-4" />
@@ -655,7 +655,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="w-24 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+            className="w-24 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
             title="Rows per page" aria-label="Rows per page"
           >
             <option value={50}>50</option>
@@ -673,7 +673,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
       ) : resources.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
           <Library className="w-12 h-12 mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No resources yet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -682,7 +682,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           {(query || subjectFilter || categoryFilter) && (
             <button
               onClick={clearFilters}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <X className="w-4 h-4" /> Clear filters
             </button>
@@ -701,7 +701,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           loadLimit={BROWSER_RESOURCE_LIMIT}
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <div className="flex items-center gap-3 text-xs text-gray-500">
               <span>{pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of {total.toLocaleString()}</span>
@@ -709,7 +709,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             </div>
             <button
               onClick={clearFilters}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <X className="w-3.5 h-3.5" /> Clear filters
             </button>
@@ -764,7 +764,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               <button
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 disabled={page <= 1}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 <ChevronLeft className="w-4 h-4" /> Prev
               </button>
@@ -774,7 +774,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               <button
                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                 disabled={page >= totalPages}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>
@@ -813,7 +813,7 @@ function ResourceRow({
     <tr className="align-top transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-900/40">
       <td className="px-4 py-3">
         <button type="button" onClick={onOpen} className="flex items-start gap-3 text-left">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-accent text-[10px] font-bold text-white">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-[10px] font-bold text-white">
             {ext}
           </span>
           <span className="min-w-0">
@@ -849,7 +849,7 @@ function ResourceRow({
             type="button"
             onClick={onOpen}
             disabled={opening}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             {opening ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
             Open
@@ -858,7 +858,7 @@ function ResourceRow({
             href={resource.fileUrl}
             download
             onClick={onDownload}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md"
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md"
           >
             <Download className="w-3.5 h-3.5" />
             Download
@@ -900,14 +900,14 @@ function ResourceBrowserView({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
             <button
               type="button"
               onClick={() => onChangeFolder(null)}
-              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 font-medium ${
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium ${
                 currentFolderId === null
                   ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -925,7 +925,7 @@ function ResourceBrowserView({
                   <button
                     type="button"
                     onClick={() => onChangeFolder(crumb.id)}
-                    className={`max-w-[14rem] truncate rounded-lg px-2 py-1 font-medium ${
+                    className={`max-w-[14rem] truncate rounded-md px-2 py-1 font-medium ${
                       active
                         ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
                         : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -947,7 +947,7 @@ function ResourceBrowserView({
           type="button"
           onClick={goUp}
           disabled={breadcrumb.length === 0}
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           <ChevronLeft className="h-4 w-4" />
           Up
@@ -971,7 +971,7 @@ function ResourceBrowserView({
                     key={folder.id}
                     type="button"
                     onClick={() => onChangeFolder(folder.id)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800"
                     title={folder.name} aria-label={folder.name}
                   >
                     <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
@@ -1007,7 +1007,7 @@ function ResourceBrowserView({
                   key={folder.id}
                   type="button"
                   onClick={() => onChangeFolder(folder.id)}
-                  className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
+                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
                   title={folder.name} aria-label={folder.name}
                 >
                   <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
@@ -1257,7 +1257,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1270,18 +1270,18 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               {mode === 'single' ? 'Share a file with the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Mode toggle */}
         <div className="px-6 pt-4">
-          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl text-sm">
+          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm">
             <button
               type="button"
               onClick={() => { setMode('single'); setError(null); }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'single'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -1292,7 +1292,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               type="button"
               onClick={() => { setMode('folder'); setError(null); }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'folder'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -1315,7 +1315,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -1324,14 +1324,14 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{fileMeta.name}</span>
                     <span className="text-xs text-gray-400">{(fileMeta.size / 1024).toFixed(0)} KB</span>
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                      className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1354,7 +1354,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                 />
               </div>
 
@@ -1366,7 +1366,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
                 <div>
@@ -1376,7 +1376,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
               </div>
@@ -1388,7 +1388,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none resize-y"
                 />
               </div>
             </>
@@ -1401,7 +1401,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors"
                   >
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
@@ -1410,7 +1410,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     </p>
                   </button>
                 ) : (
-                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {folderItems.length} file{folderItems.length === 1 ? '' : 's'} ready
@@ -1419,7 +1419,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                         type="button"
                         onClick={handleRemoveFolder}
                         disabled={folderBusy}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
+                        className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1427,7 +1427,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     </div>
                     <ul className="max-h-48 overflow-y-auto space-y-1 pr-1">
                       {folderItems.map((it, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                           <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                           <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
@@ -1467,7 +1467,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
@@ -1478,7 +1478,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -1505,7 +1505,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
           <button
             onClick={onClose}
             disabled={submitting || folderBusy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -1513,7 +1513,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleSubmit}
               disabled={submitting || !title.trim() || !fileMeta}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Publishing…' : 'Publish Resource'}
@@ -1521,7 +1521,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
           ) : folderDoneCount > 0 && !folderBusy ? (
             <button
               onClick={handleFolderDone}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
             >
               <CheckCircle2 className="w-4 h-4" /> Done
             </button>
@@ -1529,7 +1529,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleFolderSubmit}
               disabled={folderBusy || folderItems.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {folderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderUp className="w-4 h-4" />}
               {folderBusy ? `Uploading ${folderDoneCount}/${folderItems.length}…` : `Upload ${folderItems.length || ''} Resource${folderItems.length === 1 ? '' : 's'}`}

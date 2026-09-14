@@ -119,7 +119,7 @@ export default function AiAccessManager() {
       {error && <ErrorBox message={error} />}
 
       {/* The consequence, stated once and plainly, above everything else. */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
         <Wallet className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
           <p className="font-semibold">A grant spends your money, not theirs.</p>
@@ -135,7 +135,7 @@ export default function AiAccessManager() {
       </div>
 
       {data && !data.sharedKeyConfigured && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">
             No shared server key is configured (<code>DEEPSEEK_API_KEY</code>), so a grant
@@ -148,7 +148,7 @@ export default function AiAccessManager() {
       {/* Standing liability: everyone holding a grant right now, regardless of
           the search filter below. */}
       {data && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
           <div className="flex items-center gap-2 mb-2">
             <KeyRound className="w-4 h-4 text-indigo-500" />
             <h2 className="font-semibold text-sm">
@@ -190,13 +190,13 @@ export default function AiAccessManager() {
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="Search by name or email"
             aria-label="Search users by name or email"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
         <select
           value={grantedOnly ? 'granted' : 'all'}
           onChange={(e) => { setGrantedOnly(e.target.value === 'granted'); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
         >
           <option value="all">All users</option>
           <option value="granted">On the shared key</option>
@@ -207,7 +207,7 @@ export default function AiAccessManager() {
           keystroke otherwise makes the table flash. */}
       {loading && !data ? <LoadingSpinner /> : data && (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 text-xs uppercase">
@@ -258,7 +258,7 @@ export default function AiAccessManager() {
                             <button
                               onClick={() => setGrant(u, false)}
                               disabled={actionLoading === u.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-red-600 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {actionLoading === u.id
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -269,7 +269,7 @@ export default function AiAccessManager() {
                             <button
                               onClick={() => setConfirming(u)}
                               disabled={actionLoading === u.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Wallet className="w-3.5 h-3.5" />
                               Grant at your expense
@@ -301,7 +301,7 @@ export default function AiAccessManager() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Previous page"
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -309,7 +309,7 @@ export default function AiAccessManager() {
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
                 aria-label="Next page"
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -327,7 +327,7 @@ export default function AiAccessManager() {
           aria-modal="true"
           aria-labelledby="grant-confirm-title"
         >
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="grant-confirm-title" className="font-bold flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-amber-600" />
@@ -356,14 +356,14 @@ export default function AiAccessManager() {
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => setConfirming(null)}
-                className="flex-1 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex-1 py-2.5 rounded-md border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={() => setGrant(confirming, true)}
                 disabled={actionLoading === confirming.id}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50"
               >
                 {actionLoading === confirming.id
                   ? <Loader2 className="w-4 h-4 animate-spin" />

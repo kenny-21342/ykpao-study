@@ -29,7 +29,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       aria-label="Toggle color theme"
       title="Toggle color theme"
     >

@@ -89,7 +89,7 @@ function fmtDate(iso: string | null) {
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-5 flex items-start gap-3">
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-5 flex items-start gap-3">
       <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-red-800 dark:text-red-300">{message}</p>
@@ -185,7 +185,7 @@ export default function DiscussionBoard({
         )}
 
         {status === 'unauthenticated' && (
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-12 text-center">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-12 text-center">
             <MessagesSquare className="w-10 h-10 mx-auto text-gray-400" />
             <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
               Sign in to join the discussion
@@ -195,7 +195,7 @@ export default function DiscussionBoard({
             </p>
             <a
               href="/auth/login"
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-green-700"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-green-700"
             >
               Sign in
             </a>
@@ -283,7 +283,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
         >
           <Plus className="w-4 h-4" /> New Thread
         </button>
@@ -298,7 +298,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g. inheritance, 0610-S25-P21-Q2, or momentum"
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
           />
         </div>
         {(labels.length > 0 || legacyCategories.length > 0) && (
@@ -369,7 +369,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
       ) : threads.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
           <MessageSquare className="w-12 h-12 mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No threads yet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -384,7 +384,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
             <button
               key={t.id}
               onClick={() => onOpen(t.id)}
-              className="w-full text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-4 flex items-center gap-4"
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-4 flex items-center gap-4"
             >
               <div className="flex-shrink-0">
                 {avatar(t.author.name, t.author.image, 'sm')}
@@ -465,13 +465,13 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Thread</h2>
             <p className="text-xs text-gray-500 mt-0.5">General Discussion</p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -483,7 +483,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Help with 0610-S25-P21-Q2"
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
           </div>
           <div>
@@ -529,13 +529,13 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
           {error && <ErrorBanner message={error} />}
         </div>
         <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-          <button onClick={onClose} disabled={submitting} className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50">
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50">
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={submitting || !title.trim()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             {submitting ? 'Creating…' : 'Create Thread'}
@@ -791,7 +791,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
   if (error || !thread) {
     return (
       <div className="space-y-4">
-        <button onClick={onBack} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to threads
         </button>
         <ErrorBanner message={error ?? 'Thread not found'} />
@@ -805,7 +805,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> All threads
         </button>
@@ -821,7 +821,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       </div>
 
       {/* Original post */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -836,21 +836,21 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => voteOnThread(1)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-sm"
               title="Upvote" aria-label="Upvote"
             >
               <ThumbsUp className="w-3.5 h-3.5" /> {(thread.upvotes ?? 0) > 0 && thread.upvotes}
             </button>
             <button
               onClick={() => voteOnThread(-1)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-red-500 transition-colors rounded"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-red-500 transition-colors rounded-sm"
               title="Downvote" aria-label="Downvote"
             >
               <ThumbsDown className="w-3.5 h-3.5" /> {(thread.downvotes ?? 0) > 0 && thread.downvotes}
             </button>
             <button
               onClick={flagThread}
-              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-sm transition-colors"
               title="Report this thread" aria-label="Report this thread"
             >
               <Flag className="w-3.5 h-3.5" />
@@ -861,7 +861,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             {canDeleteThread && (
               <button
                 onClick={handleDelete}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm transition-colors"
                 title="Delete thread" aria-label="Delete thread"
               >
                 <Trash2 className="w-4 h-4" />
@@ -894,7 +894,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             const isEditing = editingId === post.id;
             const edited = new Date(post.updatedAt).getTime() > new Date(post.createdAt).getTime();
             return (
-              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex gap-4">
+              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex gap-4">
                 <div className="flex-shrink-0">{avatar(post.author.name, post.author.image, 'sm')}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -953,14 +953,14 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <button
                           onClick={cancelEdit}
                           disabled={savingEdit}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleEditSave(post.id)}
                           disabled={savingEdit || !editDraft.trim()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {savingEdit && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                           {savingEdit ? 'Saving…' : 'Save'}
@@ -981,11 +981,11 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
 
       {/* Reply box */}
       {thread.locked ? (
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-sm text-gray-500 flex items-center gap-2">
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-500 flex items-center gap-2">
           <Lock className="w-4 h-4" /> This thread is locked. New replies are disabled.
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Post a reply</label>
           <RichTextEditor
             content={reply}
@@ -997,7 +997,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             <button
               onClick={handleReply}
               disabled={posting || !reply.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Reply className="w-4 h-4" />}
               {posting ? 'Posting…' : 'Post Reply'}
@@ -1007,7 +1007,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       )}
 
       {voteError && (
-        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+        <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           {voteError}
         </p>
       )}

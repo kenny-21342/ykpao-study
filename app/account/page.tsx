@@ -223,7 +223,7 @@ export default function AccountSettingsPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -231,14 +231,14 @@ export default function AccountSettingsPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+          <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </div>
         )}
 
         {/* Profile section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-2xl p-6 space-y-4">
+        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-green-600" />
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Profile</h2>
@@ -247,7 +247,7 @@ export default function AccountSettingsPage() {
           {/* Avatar picker */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-accent flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden">
+              <div className="w-20 h-20 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -289,7 +289,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={() => bgInputRef.current?.click()}
                 disabled={uploadingBg}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
                 {uploadingBg ? 'Uploading…' : bgUrl ? 'Change background' : 'Upload background'}
@@ -304,7 +304,7 @@ export default function AccountSettingsPage() {
               {bgUrl && (
                 <>
                   <div
-                    className="h-10 w-16 overflow-hidden rounded-lg border border-gray-200 bg-cover bg-center dark:border-gray-600"
+                    className="h-10 w-16 overflow-hidden rounded-md border border-gray-200 bg-cover bg-center dark:border-gray-600"
                     style={{ backgroundImage: `url(${JSON.stringify(bgUrl)})` }}
                     aria-label="Current app background preview"
                     role="img"
@@ -328,7 +328,7 @@ export default function AccountSettingsPage() {
                 disabled={profileLoading}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={profileLoading ? 'Loading…' : undefined}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             {profileError && (
@@ -344,7 +344,7 @@ export default function AccountSettingsPage() {
                 type="email"
                 value={session?.user?.email ?? ''}
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-500"
               />
             </div>
             <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
@@ -353,7 +353,7 @@ export default function AccountSettingsPage() {
           <button
             onClick={handleSaveName}
             disabled={profileLoading || savingName || name === (session?.user?.name ?? '')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : nameSaved ? <Check className="w-4 h-4" /> : null}
             {savingName ? 'Saving…' : nameSaved ? 'Saved!' : 'Save Name'}
@@ -365,7 +365,7 @@ export default function AccountSettingsPage() {
         <AiProviderPanel />
 
         {/* Password section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-2xl p-6 space-y-4">
+        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-green-600" />
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Change Password</h2>
@@ -383,7 +383,7 @@ export default function AccountSettingsPage() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   placeholder="••••••••"
                 />
               </div>
@@ -394,7 +394,7 @@ export default function AccountSettingsPage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                     placeholder="••••••••"
                   />
                 </div>
@@ -404,7 +404,7 @@ export default function AccountSettingsPage() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                     placeholder="••••••••"
                   />
                 </div>
@@ -412,7 +412,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={handleChangePassword}
                 disabled={savingPwd || !newPassword || !currentPassword}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingPwd ? <Loader2 className="w-4 h-4 animate-spin" /> : pwdSaved ? <Check className="w-4 h-4" /> : null}
                 {savingPwd ? 'Updating…' : pwdSaved ? 'Password changed — signing you out…' : 'Change Password'}
@@ -425,7 +425,7 @@ export default function AccountSettingsPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/usage"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Usage & API Credits →
           </Link>

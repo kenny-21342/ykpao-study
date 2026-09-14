@@ -26,7 +26,7 @@ function AuthPanel({ title, subtitle, children }: {
       <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
         <div className="w-full">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -97,7 +97,7 @@ function ResetPasswordForm() {
         subtitle="This link is missing its reset code"
       >
         <div className="space-y-5">
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-700">
               Open the link from your email exactly as it was sent — some mail apps
@@ -106,7 +106,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/forgot-password"
-            className="block w-full py-3.5 bg-accent text-white rounded-xl font-semibold hover:shadow-lg transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all text-center"
           >
             Request a New Link
           </Link>
@@ -119,7 +119,7 @@ function ResetPasswordForm() {
     return (
       <AuthPanel title="Password Changed" subtitle="You can now sign in">
         <div className="space-y-5">
-          <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start space-x-3">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
             <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-green-800">
               Your password has been changed. For your security, any other device
@@ -128,7 +128,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/login"
-            className="block w-full py-3.5 bg-accent text-white rounded-xl font-semibold hover:shadow-lg transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all text-center"
           >
             Go to Sign In
           </Link>
@@ -150,7 +150,7 @@ function ResetPasswordForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               autoFocus
@@ -170,7 +170,7 @@ function ResetPasswordForm() {
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               minLength={8}
@@ -179,7 +179,7 @@ function ResetPasswordForm() {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-red-700">
               <p>{error}</p>
@@ -196,7 +196,7 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-accent text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : 'Set New Password'}
         </button>

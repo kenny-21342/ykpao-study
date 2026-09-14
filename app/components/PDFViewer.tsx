@@ -55,7 +55,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
         <a
           href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
           download={fileName}
-          className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
           title="Download PDF" aria-label="Download PDF"
         >
           <Download className="h-4 w-4" />
@@ -69,7 +69,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
         >
           {/* Page-shaped, so the wait looks like a document arriving rather
               than an error. */}
-          <div className="w-full max-w-2xl space-y-3 rounded-lg bg-white p-8 shadow-sm dark:bg-gray-800">
+          <div className="w-full max-w-2xl space-y-3 rounded-md bg-white p-8 shadow-sm dark:bg-gray-800">
             <Skeleton className="h-5 w-1/3" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-full" />
@@ -102,7 +102,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
           <a
             href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
             download={fileName}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm text-white transition-colors hover:bg-emerald-700"
           >
             <Download className="h-4 w-4" />
             Download instead

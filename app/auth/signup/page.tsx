@@ -143,7 +143,7 @@ export default function SignupPage() {
         <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
           <div className="w-full">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl shadow-lg mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
                 <MailCheck className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-primary mb-2">
@@ -153,14 +153,14 @@ export default function SignupPage() {
             </div>
 
             {created.emailSent ? (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 mb-6">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 mb-6">
                 We sent a confirmation link to{' '}
                 <span className="font-semibold">{created.email}</span>. Open it to activate your
                 account. The link lasts 24 hours &mdash; check your spam folder if it has not
                 arrived in a few minutes.
               </div>
             ) : (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 mb-6">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 mb-6">
                 Your account was created, but we could not send the confirmation email just now.
                 Request a new link below, or contact us if it keeps failing.
               </div>
@@ -168,7 +168,7 @@ export default function SignupPage() {
 
             <Link
               href={`/auth/verify?email=${encodeURIComponent(created.email)}`}
-              className="block w-full text-center py-3 px-4 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
             >
               Send another link
             </Link>
@@ -206,7 +206,7 @@ export default function SignupPage() {
 
           {/* Logo Section */}
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -227,7 +227,7 @@ export default function SignupPage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="e.g. Alex Chen"
                   required
                 />
@@ -244,7 +244,7 @@ export default function SignupPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="student@example.com"
                   required
                 />
@@ -264,7 +264,7 @@ export default function SignupPage() {
                   onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                   aria-describedby="password-rules"
                   aria-invalid={touched.password && Boolean(passwordProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                     touched.password && passwordProblem ? 'border-red-400' : 'border-gray-300'
                   }`}
                   placeholder="••••••••"
@@ -303,7 +303,7 @@ export default function SignupPage() {
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
                   aria-invalid={touched.confirmPassword && Boolean(confirmProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                     touched.confirmPassword && confirmProblem ? 'border-red-400' : 'border-gray-300'
                   }`}
                   placeholder="••••••••"
@@ -319,7 +319,7 @@ export default function SignupPage() {
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-red-700">
                   <p>{error}</p>
@@ -338,7 +338,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-accent text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
@@ -359,7 +359,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="w-full py-3 border-2 border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-3 group"
+                className="w-full py-3 border-2 border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-3 group"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

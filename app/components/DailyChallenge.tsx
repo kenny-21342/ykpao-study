@@ -137,7 +137,7 @@ export default function DailyChallenge() {
 
   if (loading) {
     return (
-      <div className="floating-panel rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Loading daily challenge…</span>
@@ -151,10 +151,10 @@ export default function DailyChallenge() {
   const completed = Boolean(data.attempt);
 
   return (
-    <div className="floating-panel rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
             <CalendarCheck className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -173,7 +173,7 @@ export default function DailyChallenge() {
         )}
       </div>
 
-      <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+      <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-gray-500 dark:text-gray-400">
             Q{data.question.number}
@@ -225,7 +225,7 @@ export default function DailyChallenge() {
           )}
           <AiNotice notices={[notice]} />
           {feedback && (
-            <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-950/40 dark:text-gray-400">
+            <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-950/40 dark:text-gray-400">
               <span className="font-semibold text-gray-700 dark:text-gray-300">Feedback: </span>
               {feedback}
             </div>
@@ -233,7 +233,7 @@ export default function DailyChallenge() {
           {/* The point of the exercise. A verdict with nothing to learn from is
               not feedback, and withholding this was the original defect. */}
           {(data.attempt?.markSchemeMd || (data.attempt?.markSchemeStrips?.length ?? 0) > 0) && (
-            <details className="rounded-lg border border-gray-200 dark:border-gray-800">
+            <details className="rounded-md border border-gray-200 dark:border-gray-800">
               <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300">
                 Mark scheme
               </summary>
@@ -264,7 +264,7 @@ export default function DailyChallenge() {
                   type="button"
                   disabled={submitting}
                   onClick={() => void submit(letter)}
-                  className="h-10 w-10 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                  className="h-10 w-10 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
                 >
                   {letter}
                 </button>
@@ -276,7 +276,7 @@ export default function DailyChallenge() {
               onChange={(e) => setAnswer(e.target.value)}
               placeholder="Your answer"
               rows={2}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
             />
           )}
           {error && <p className="text-[11px] text-red-500">{error}</p>}
@@ -284,7 +284,7 @@ export default function DailyChallenge() {
             <button
               onClick={() => void submit()}
               disabled={!answer.trim() || submitting}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {submitting ? 'Marking…' : 'Submit'}

@@ -345,7 +345,7 @@ export default function BankPractice({
           </p>
           <a
             href="/auth/login"
-            className="inline-flex mt-5 px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700"
+            className="inline-flex mt-5 px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700"
           >
             Sign in
           </a>
@@ -389,7 +389,7 @@ export default function BankPractice({
           </button>
         </div>
         <BankQuestionCard question={selected} />
-          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <AssistancePanel question={selected} />
           </div>
         </div>
@@ -408,7 +408,7 @@ export default function BankPractice({
           where self-marking is described, which is why meeting it cold made
           the intended flow read as a broken AI feature. */}
       <PreviewNotice feature="question-bank" />
-      <div className="inline-flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+      <div className="inline-flex rounded-md bg-gray-100 p-0.5 dark:bg-gray-800">
         {(['enrolled', 'all'] as const).map((option) => (
           <button
             key={option}
@@ -560,7 +560,7 @@ export default function BankPractice({
             // button -- a button inside a button is invalid and the inner one
             // stops responding. The row is a container; the open action and
             // the star are siblings inside it.
-            className="flex items-center rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-gray-700/40"
+            className="flex items-center rounded-lg border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-gray-700/40"
           >
             <button
               type="button"
@@ -573,7 +573,7 @@ export default function BankPractice({
                 <img
                   src={question.thumbnail.url}
                   alt=""
-                  className="hidden h-16 w-28 shrink-0 rounded border border-gray-200 object-cover object-top dark:border-gray-600 sm:block"
+                  className="hidden h-16 w-28 shrink-0 rounded-sm border border-gray-200 object-cover object-top dark:border-gray-600 sm:block"
                 />
               )}
               <span className="min-w-0 flex-1">

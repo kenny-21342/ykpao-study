@@ -424,7 +424,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <article className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <header className="flex items-baseline justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
           Question {question.rootNumber}

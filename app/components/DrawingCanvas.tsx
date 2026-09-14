@@ -511,7 +511,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       <div className={`drawing-canvas-wrapper ${className}`}>
         {confirmDialog}
         {/* Toolbar */}
-        <div className="flex items-center gap-1 mb-2 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-wrap">
+        <div className="flex items-center gap-1 mb-2 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 flex-wrap">
           {/* Tool selection */}
           <div className="flex items-center gap-0.5 bg-white dark:bg-gray-900 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
             <ToolButton active={tool === 'pen'} onClick={() => setTool('pen')} title="Pen">
@@ -538,7 +538,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               {tool === 'eraser' && <span className="text-[10px] text-gray-500">Erase</span>}
             </button>
             {showColorPicker && (
-              <div className="absolute top-9 left-0 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-2 grid grid-cols-4 gap-1.5">
+              <div className="absolute top-9 left-0 z-10 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 p-2 grid grid-cols-4 gap-1.5">
                 {COLORS.map((c) => (
                   <button
                     key={c}
@@ -634,7 +634,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
-            className={`border border-gray-200 dark:border-gray-700 rounded-lg bg-white touch-none ${
+            className={`border border-gray-200 dark:border-gray-700 rounded-md bg-white touch-none ${
               tool === 'pen' ? 'cursor-crosshair' : tool === 'eraser' ? 'cursor-cell' : 'cursor-text'
             }`}
             style={{ width, height }}
@@ -647,7 +647,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               onChange={(e) => updateTextBox(tb.id, e.target.value)}
               onBlur={() => commitTextBox(tb.id, tb.text)}
               placeholder="e.g. Force, angle, or x = 3"
-              className="absolute bg-transparent border border-dashed border-gray-300 rounded p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
+              className="absolute bg-transparent border border-dashed border-gray-300 rounded-sm p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
               style={{
                 left: `${tb.x}px`,
                 top: `${tb.y}px`,

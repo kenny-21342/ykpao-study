@@ -5,7 +5,7 @@ import { cn } from './cn';
  *
  * The dashboard previously gave each of four equivalent numbers its own
  * bordered card and its own accent colour — blue, green, amber, purple — in a
- * tinted rounded icon square. Four colours for four things that mean the same
+ * tinted rounded-sm icon square. Four colours for four things that mean the same
  * kind of thing is decoration, and it accounted for four of the eleven-odd
  * boxes a student met on first load. These sit in a row divided by hairlines.
  *

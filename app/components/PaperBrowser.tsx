@@ -50,9 +50,9 @@ const EMPTY_SELECTION: Selection = {
 };
 
 const CARD =
-  'rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500 dark:hover:border-green-500 hover:shadow-md transition-all text-left';
+  'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500 dark:hover:border-green-500 hover:shadow-md transition-all text-left';
 const CARD_ACTIVE =
-  'rounded-xl border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left shadow-sm';
+  'rounded-lg border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left shadow-sm';
 
 function formatBytes(bytes: number | null) {
   if (!bytes) return null;
@@ -88,7 +88,7 @@ function Skeleton({ count, height = 'h-20' }: { count: number; height?: string }
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className={`${height} rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse`}
+          className={`${height} rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse`}
         />
       ))}
     </div>
@@ -271,7 +271,7 @@ export default function PaperBrowser() {
               window.history.pushState(null, '', window.location.pathname);
               setSelection(EMPTY_SELECTION);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Start over
@@ -285,7 +285,7 @@ export default function PaperBrowser() {
           {activeCurriculum && (
             <button
               onClick={() => update({ subject: null, year: null, session: null })}
-              className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               {activeCurriculum.label}
             </button>
@@ -295,7 +295,7 @@ export default function PaperBrowser() {
               <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
               <button
                 onClick={() => update({ year: null, session: null })}
-                className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {activeSubject.name}
               </button>
@@ -306,7 +306,7 @@ export default function PaperBrowser() {
               <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
               <button
                 onClick={() => update({ session: null })}
-                className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {selection.year}
               </button>
@@ -316,7 +316,7 @@ export default function PaperBrowser() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
           {error}
         </div>
       )}
@@ -402,7 +402,7 @@ export default function PaperBrowser() {
                 <button
                   key={year.year}
                   onClick={() => update({ year: year.year, session: null })}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                     selection.year === year.year
                       ? 'bg-green-500 text-white'
                       : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
@@ -424,7 +424,7 @@ export default function PaperBrowser() {
               <button
                 key={session.session}
                 onClick={() => update({ session: session.session })}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   selection.session === session.session
                     ? 'bg-green-500 text-white'
                     : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
@@ -455,7 +455,7 @@ export default function PaperBrowser() {
               {instances.map((instance) => (
                 <div
                   key={instance.key}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3"
                 >
                   <div className="flex items-center gap-3">
                     <Layers className="h-4 w-4 text-gray-400" />
@@ -472,7 +472,7 @@ export default function PaperBrowser() {
                       <span key={document.id} className="inline-flex items-center">
                         <Link
                           href={`/papers/${document.id}`}
-                          className="inline-flex items-center gap-1.5 rounded-l-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center gap-1.5 rounded-l-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >
                           {document.docType === 'au' ? (
                             <Music className="h-3.5 w-3.5" />
@@ -495,7 +495,7 @@ export default function PaperBrowser() {
                               ? ` (${formatBytes(document.sizeBytes)})`
                               : ''
                           }`}
-                          className="inline-flex items-center rounded-r-lg border border-l-0 border-gray-300 dark:border-gray-600 px-2 py-1.5 text-gray-500 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 px-2 py-1.5 text-gray-500 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>

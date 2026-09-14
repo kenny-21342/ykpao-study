@@ -70,18 +70,18 @@ export default function AiKeyPrompt() {
   };
 
   return (
-    <div className="relative mb-6 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-5">
+    <div className="relative mb-6 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-5">
       <button
         type="button"
         onClick={dismiss}
         aria-label="Dismiss this message"
-        className="absolute top-3 right-3 p-1 rounded-lg text-amber-700/70 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-400/70 dark:hover:text-amber-200 dark:hover:bg-amber-900/40 transition"
+        className="absolute top-3 right-3 p-1 rounded-md text-amber-700/70 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-400/70 dark:hover:text-amber-200 dark:hover:bg-amber-900/40 transition"
       >
         <X className="w-4 h-4" />
       </button>
 
       <div className="flex items-start gap-3 pr-8">
-        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex-shrink-0">
+        <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex-shrink-0">
           <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
         </span>
         <div className="min-w-0">

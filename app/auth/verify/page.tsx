@@ -32,7 +32,7 @@ function AuthPanel({ title, subtitle, children }: {
       <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
         <div className="w-full">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -139,7 +139,7 @@ function VerifyView() {
   if (status === 'done') {
     return (
       <AuthPanel title="Email confirmed" subtitle="Your account is ready to use.">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start space-x-3 mb-6">
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3 mb-6">
           <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-green-800">
             Thanks &mdash; that address is confirmed. You can sign in now.
@@ -147,7 +147,7 @@ function VerifyView() {
         </div>
         <Link
           href="/auth/login"
-          className="block w-full text-center py-3 px-4 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+          className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
         >
           Go to sign in
         </Link>
@@ -167,14 +167,14 @@ function VerifyView() {
       }
     >
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 mb-6">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3 mb-6">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
       {sentMessage ? (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start space-x-3">
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
           <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-green-800">{sentMessage}</p>
         </div>
@@ -193,7 +193,7 @@ function VerifyView() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition"
                 placeholder="you@example.com"
               />
             </div>
@@ -202,7 +202,7 @@ function VerifyView() {
           <button
             type="submit"
             disabled={sending}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
           >
             {sending ? 'Sending…' : 'Send a new link'}
           </button>

@@ -38,7 +38,7 @@ export function LegalPage({
       <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent">
+            <span className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-accent">
               <GraduationCap className="w-5 h-5 text-white" />
             </span>
             <span className="font-bold tracking-tight">YKPao Study</span>
@@ -57,13 +57,13 @@ export function LegalPage({
         <p className="mt-3 text-sm text-gray-500 dark:text-gray-500">Last updated {updated}</p>
 
         {LEGAL_COPY_IS_DRAFT && (
-          <div className="mt-8 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
+          <div className="mt-8 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
               <span className="font-semibold">Draft.</span> This text describes how the
               platform currently works, but it has not been reviewed and is not yet a
               binding agreement. Points still to be settled are marked{' '}
-              <span className="font-mono text-xs px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">
+              <span className="font-mono text-xs px-1 py-0.5 rounded-sm bg-amber-100 dark:bg-amber-900/40">
                 REVIEW
               </span>
               .
@@ -98,7 +98,7 @@ export function Section({ heading, children }: { heading: string; children: Reac
 /** Marks a decision the site owner still has to make. */
 export function Review({ children }: { children: React.ReactNode }) {
   return (
-    <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-medium">
+    <span className="px-1.5 py-0.5 rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-medium">
       REVIEW: {children}
     </span>
   );

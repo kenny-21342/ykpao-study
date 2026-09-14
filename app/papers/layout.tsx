@@ -42,7 +42,7 @@ export default function PapersLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center space-x-4">
             <button
               onClick={openMobile}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:hidden"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:hidden"
               aria-label="Open navigation"
               aria-expanded={mobileOpen}
             >
@@ -51,7 +51,7 @@ export default function PapersLayout({ children }: { children: React.ReactNode }
 
             <button
               onClick={toggleCollapsed}
-              className="hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:block"
+              className="hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:block"
               aria-label={collapsedPreference ? 'Expand sidebar' : 'Collapse sidebar'}
               title={collapsedPreference ? 'Show sidebar' : 'Hide sidebar'}
             >

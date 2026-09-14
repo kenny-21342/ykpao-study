@@ -70,14 +70,14 @@ export default function AnnouncementBanner() {
       {visible.slice(0, 3).map((a) => (
         <div
           key={a.id}
-          className={`floating-panel rounded-2xl p-4 border shadow-sm ${
+          className={`rounded-lg p-4 border shadow-sm ${
             a.pinned
               ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
               : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
           }`}
         >
           <div className="flex items-start gap-3">
-            <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
+            <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
               a.pinned ? 'bg-green-500' : 'bg-gray-400'
             }`}>
               {a.pinned ? <Pin className="w-4 h-4 text-white" /> : <Megaphone className="w-4 h-4 text-white" />}

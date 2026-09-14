@@ -63,7 +63,7 @@ export default function AdminDashboard() {
               // and a fortnight of signups drew as a row of ticks.
               <div key={s.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1 group">
                 <div
-                  className="w-full bg-indigo-500 dark:bg-indigo-400 rounded-t hover:bg-indigo-600 transition-colors"
+                  className="w-full bg-indigo-500 dark:bg-indigo-400 rounded-t-sm hover:bg-indigo-600 transition-colors"
                   style={{ height: `${(s.count / maxSignup) * 100}%`, minHeight: s.count > 0 ? '4px' : '0' }}
                   title={`${s.date}: ${s.count}`}
                 />
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
 
 function KpiCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub: string }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
       <div className={`w-10 h-10 rounded-md bg-surface-raised flex items-center justify-center mb-3`}>
         <Icon className="w-5 h-5 text-secondary" />
       </div>
@@ -150,7 +150,7 @@ function KpiCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label:
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
       <h3 className="text-sm font-semibold mb-4">{title}</h3>
       {children}
     </div>
@@ -159,7 +159,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
       <h3 className="text-sm font-semibold mb-3">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
@@ -192,7 +192,7 @@ export function LoadingSpinner() {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-700 dark:text-red-300">
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
       <p className="font-medium">Error</p>
       <p className="mt-1">{message}</p>
     </div>

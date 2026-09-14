@@ -211,7 +211,7 @@ export default function AiProviderPanel() {
   const chosen = PROVIDERS.find((candidate) => candidate.id === provider) ?? null;
 
   return (
-    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-2xl p-6 space-y-4">
+    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-green-600" />
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Provider</h2>
@@ -240,14 +240,14 @@ export default function AiProviderPanel() {
       ) : (
         <>
           {error && (
-            <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-start gap-2">
+            <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {state && !state.encryptionConfigured && (
-            <div className="bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-200">
+            <div className="bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-200">
               This server is not yet configured to store API keys securely
               (<code>CREDENTIAL_ENCRYPTION_KEY</code> is missing). Saving is disabled until an
               administrator sets it.
@@ -255,14 +255,14 @@ export default function AiProviderPanel() {
           )}
 
           {state?.keyUndecryptable && (
-            <div className="bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-200">
+            <div className="bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-200">
               Your saved key can no longer be read, because the server’s encryption key changed.
               Paste your API key again below to restore AI features.
             </div>
           )}
 
           {/* Current state, in one line the student can act on. */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-1.5">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-1.5">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
               {state?.textEnabled
                 ? state.source === 'shared'
@@ -298,7 +298,7 @@ export default function AiProviderPanel() {
                   type="button"
                   onClick={() => choose(candidate.id)}
                   aria-pressed={provider === candidate.id}
-                  className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                  className={`rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                     provider === candidate.id
                       ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
                       : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
@@ -311,7 +311,7 @@ export default function AiProviderPanel() {
                 type="button"
                 onClick={() => setProvider('other')}
                 aria-pressed={provider === 'other'}
-                className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                className={`rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                   provider === 'other'
                     ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
                     : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
@@ -352,7 +352,7 @@ export default function AiProviderPanel() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={state?.hasOwnKey ? 'Leave blank to keep your saved key' : 'sk-…'}
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
             <p className="text-xs text-gray-400 mt-1">
               Stored encrypted. It can be replaced or deleted, but never displayed again.
@@ -368,7 +368,7 @@ export default function AiProviderPanel() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.deepseek.com/v1"
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
             <p className="text-xs text-gray-400 mt-1">
               The base URL of an OpenAI-compatible API. Must be https. <code>/chat/completions</code>{' '}
@@ -386,7 +386,7 @@ export default function AiProviderPanel() {
                 value={textModel}
                 onChange={(e) => setTextModel(e.target.value)}
                 placeholder="deepseek-chat"
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
               />
               <p className="text-xs text-gray-400 mt-1">
                 Tutoring, hints, grading, mock exams.
@@ -401,7 +401,7 @@ export default function AiProviderPanel() {
                 value={visionModel}
                 onChange={(e) => setVisionModel(e.target.value)}
                 placeholder="Qwen/Qwen3-VL-32B-Instruct"
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
               />
               <p className="text-xs text-gray-400 mt-1">
                 Needed only to photograph handwritten work. Leave blank and everything else still
@@ -414,7 +414,7 @@ export default function AiProviderPanel() {
             <button
               onClick={save}
               disabled={saving || !canSave || !state?.encryptionConfigured}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -431,7 +431,7 @@ export default function AiProviderPanel() {
               onClick={testKey}
               disabled={testing || saving || !state?.hasOwnKey}
               title={state?.hasOwnKey ? undefined : 'Save your own API key first'} aria-label={state?.hasOwnKey ? undefined : 'Save your own API key first'}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-white dark:hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
               {testing ? 'Testing…' : 'Test my key'}
@@ -450,7 +450,7 @@ export default function AiProviderPanel() {
           {testResult && (
             <div
               role="status"
-              className={`rounded-xl border p-3 flex items-start gap-2 ${
+              className={`rounded-lg border p-3 flex items-start gap-2 ${
                 testResult.ok
                   ? 'bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                   : 'bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800'

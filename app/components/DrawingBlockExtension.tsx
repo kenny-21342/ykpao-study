@@ -145,7 +145,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
       <NodeViewWrapper className="drawing-block-editing" contentEditable={false}>
         <div
           ref={frameRef}
-          className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900"
         >
           {canvasWidth !== null && (
             <DrawingCanvas
