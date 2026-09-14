@@ -152,6 +152,15 @@ class MarkSchemeTranscription:
         }
 
 
+class TooManyStrips(RuntimeError):
+    """More strips than the provider will accept in one call.
+
+    Terminal for this provider: retrying cannot help, and truncating the strip
+    list would silently drop part of the question. Recorded as `skipped` so the
+    paper can still be counted finished -- see RunLedger.record_failure.
+    """
+
+
 def transcribe_question(
     rendered_span,
     doc_type: str = "qp",
@@ -170,6 +179,18 @@ def transcribe_question(
         raise ValueError(f"root {rendered_span.root_number} has no rendered strips")
 
     settings = settings or vision_settings()
+
+    # Refuse here rather than let the provider refuse three times. Sending the
+    # first `max_images` strips instead would be worse than failing: a question
+    # missing its last page still parses, still validates, and still reads as a
+    # complete question -- there is nothing downstream that could tell it was
+    # truncated.
+    max_images = int(settings.get("max_images") or 0)
+    if max_images and len(image_paths) > max_images:
+        raise TooManyStrips(
+            f"root {rendered_span.root_number} has {len(image_paths)} strips; "
+            f"this provider accepts at most {max_images} images per call"
+        )
     root_number = rendered_span.root_number
     is_mark_scheme = doc_type == "ms"
 

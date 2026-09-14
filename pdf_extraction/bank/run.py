@@ -50,7 +50,7 @@ from .transcribe import PROMPT_VERSION as TRANSCRIBE_PROMPT_VERSION
 # Recorded on rows written without a model, so a later text pass can find the
 # questions that still need one.
 CROP_ONLY_VERSION = "crop-only-v1"
-from .transcribe import transcribe_question
+from .transcribe import TooManyStrips, transcribe_question
 
 # SiliconFlow Qwen3-VL and DeepSeek list prices, USD per million tokens.
 VISION_INPUT_PER_MTOK = 0.28
@@ -177,6 +177,9 @@ class WorkResult:
     text_out: int = 0
     error: str | None = None
     stage: str = "transcribe"
+    # True when this item can never be transcribed by this provider, so the
+    # ledger should close it rather than leave it to be retried for ever.
+    skipped: bool = False
 
 
 def prepare_document(
@@ -377,6 +380,10 @@ def _execute(
             transcription, call = transcribe_question(
                 item.rendered_span, item.doc_type, settings=vision_settings
             )
+        except TooManyStrips as error:
+            return WorkResult(
+                item=item, error=str(error)[:400], stage="transcribe", skipped=True,
+            )
         except Exception as error:  # noqa: BLE001 - one bad question must not stop the run
             return WorkResult(item=item, error=str(error)[:400], stage="transcribe")
 
@@ -461,6 +468,7 @@ def _persist(
             ledger.record_failure(
                 item.work_key, "transcribe", item.source_sha256,
                 item.rendered_span.root_number, result.error or "unknown",
+                status="skipped" if result.skipped else "failed",
             )
             connection.commit()
         return

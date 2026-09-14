@@ -97,6 +97,12 @@ def vision_settings() -> dict[str, Any]:
         "model": model,
         "max_attempts": _int_env("V3_OPENAI_MAX_ATTEMPTS", 3),
         "timeout_seconds": _int_env("V3_OPENAI_TIMEOUT_SECONDS", 300),
+        # How many images one call may carry. A provider property, not a
+        # corpus one: SiliconFlow accepted any number, while the Anthropic
+        # route rejects more than eight outright with
+        # "a request may contain at most 8 images". Raise it for a provider
+        # that allows more; the corpus reaches 29 strips at its worst.
+        "max_images": _int_env("V4_VISION_MAX_IMAGES", 8),
     }
 
 

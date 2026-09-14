@@ -114,8 +114,14 @@ def transcribed() -> set[str]:
     could never reach paper N+1. So a long transcription run had to be one
     process or nothing.
 
-    A paper is finished when the ledger holds a successful transcription for
-    each of its roots. A multiple-choice mark scheme has none to hold -- stage 1
+    A paper is finished when the ledger holds a terminal row -- `ok`, or
+    `skipped` for work no provider here can attempt -- for each of its roots.
+    Counting only `ok` meant one unattemptable item kept its whole paper
+    pending: it returned at the front of every later chunk, was re-rendered
+    each time, and the `while true` loop in run_transcription.sh could never
+    reach zero. 944 papers hold a question with more strips than the Anthropic
+    route accepts, so this is the difference between a run that ends and one
+    that spins. A multiple-choice mark scheme has none to hold -- stage 1
     recovers the whole answer key for free -- so it counts as finished on its
     own terms.
     """
@@ -135,7 +141,7 @@ def transcribed() -> set[str]:
                    (SELECT COUNT(*) FROM bank_run_ledger l
                       WHERE l.source_sha256 = p.source_sha256
                         AND l.stage = 'transcribe'
-                        AND l.status = 'ok')                           AS done
+                        AND l.status IN ('ok', 'skipped'))             AS done
             FROM bank_papers p
             """
         ).fetchall()

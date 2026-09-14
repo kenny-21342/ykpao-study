@@ -98,7 +98,7 @@ class LedgerEntry:
     stage: str  # transcribe | tag
     source_sha256: str
     root_number: int | None
-    status: str  # ok | failed
+    status: str  # ok | failed | skipped
     detail: str | None
     input_tokens: int
     output_tokens: int
@@ -770,14 +770,27 @@ class RunLedger:
         source_sha256: str,
         root_number: int | None,
         detail: str,
+        status: str = "failed",
     ) -> None:
-        """Record a failed attempt."""
+        """Record an attempt that produced no transcription.
+
+        ``status`` is ``failed`` for anything that might come good on a later
+        run, and ``skipped`` for work this pipeline has decided never to
+        attempt. The distinction is not cosmetic: ``corpus_run.transcribed()``
+        counts a paper finished only once every billable item has a terminal
+        ledger row, so a permanently-unattemptable item left as ``failed``
+        keeps its paper pending for ever -- it returns at the front of every
+        subsequent chunk, is re-rendered, and is retried until someone
+        notices.
+        """
+        if status not in ("failed", "skipped"):
+            raise ValueError(f"unknown ledger status: {status}")
         with self._connect() as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO bank_run_ledger
                 (work_key, stage, source_sha256, root_number, status, detail)
-                VALUES (?, ?, ?, ?, 'failed', ?)
-            """, (work_key, stage, source_sha256, root_number, detail))
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (work_key, stage, source_sha256, root_number, status, detail))
 
     def get_pending_work(
         self,
