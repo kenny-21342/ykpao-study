@@ -306,6 +306,15 @@ def _parse_assistant_json(response: dict[str, Any]) -> dict[str, Any]:
     message = choices[0].get("message") if isinstance(choices[0], dict) else None
     content = message.get("content") if isinstance(message, dict) else None
 
+    # Say so when the reply was cut off. Otherwise truncation arrives as a JSON
+    # parse error, and the diagnostic blames the model for malformed output
+    # instead of naming the ceiling that produced it.
+    if choices[0].get("finish_reason") == "length":
+        raise ProviderError(
+            "response truncated at max_tokens (finish_reason=length)",
+            raw_response={"truncated": True},
+        )
+
     # Some providers return content as a list of typed parts.
     if isinstance(content, list):
         content = "".join(

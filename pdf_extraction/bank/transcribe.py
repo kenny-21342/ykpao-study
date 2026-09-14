@@ -207,9 +207,15 @@ def transcribe_question(
         validator=lambda payload: _validate(payload, root_number, is_mark_scheme),
         max_attempts=settings.get("max_attempts", 3),
         timeout_seconds=settings.get("timeout_seconds", 300),
-        # A mark scheme has many marking points and generates far more text
-        # than a question, enough to run past the read timeout unbounded.
-        max_tokens=3000 if is_mark_scheme else 1600,
+        # Bounded so an unbounded generation cannot run past the read timeout.
+        # The question ceiling was 1600, sized against Qwen3-VL. Sonnet writes
+        # noticeably more for the same question: the longest body transcribed
+        # in the first hour came to ~1,454 tokens and 37 successes landed at
+        # 1,550 or above, so the longest questions were being cut off
+        # mid-object. A truncated reply is not recoverable JSON, so it
+        # surfaced as "assistant content was not a JSON object" -- which reads
+        # as the model misbehaving rather than as a ceiling we chose.
+        max_tokens=settings.get("max_tokens") or (3000 if is_mark_scheme else 4000),
         artifact_dir=artifact_dir,
     )
 
