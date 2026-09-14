@@ -2,38 +2,227 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * DESIGN TOKENS
+ *
+ * WHY — before this file had four tokens and the app had roughly six thousand
+ * hardcoded utility values: 96 gradients, 730 border radii across four
+ * competing scales, 199 shadows, 17 colour families. Every inconsistency in
+ * the UI traces back to there being nothing to be consistent *with*, and three
+ * separate stylesheets (darkmode.css, readability.css, and the :where() block
+ * below) exist only to paper over the result after the fact.
+ *
+ * Themed colours live as plain custom properties on :root/.dark and are
+ * surfaced through `@theme inline`. `inline` is load-bearing: it makes the
+ * generated utility emit `var(--surface)` rather than copying today's value,
+ * which is what lets one class be correct in both themes. A themed colour in a
+ * plain `@theme` block would bake a static value and silently stop switching.
+ *
+ * Scales that do not change with the theme (radius, type) go in a plain
+ * `@theme` below.
+ */
+
 :root {
   color-scheme: light;
-  --background: #f8fafc;
-  --foreground: #171717;
+
+  /* Surfaces. Warm neutral rather than slate-blue — slate reads as a template. */
+  --canvas:         #FBFBFA;
+  --surface:        #FFFFFF;
+  --surface-raised: #F6F6F5;
+  --surface-hover:  #F1F1F0;
+  --surface-active: #E9E9E7;
+
+  /* Borders. With shadows gone these do nearly all the separating. */
+  --border-subtle:  #EDEDEB;
+  --border:         #E0E0DD;
+  --border-strong:  #C6C6C1;
+
+  /* Text. Two working tones plus muted; readability.css already flattens the
+     old three grey levels to one colour, so this loses nothing. */
+  --text-primary:   #1A1A19;
+  --text-secondary: #5C5C57;
+  --text-muted:     #8A8A83;
+  --text-inverse:   #FFFFFF;
+
+  /* One accent, one hue. Deeper than the old green-500/emerald-500 pair,
+     which were two different hues doing one job. White on this is 4.6:1. */
+  --accent:         #1A7F4B;
+  --accent-hover:   #166B3F;
+  --accent-active:  #125734;
+  --accent-fg:      #FFFFFF;
+  --accent-text:    #156A3E;
+  --accent-subtle:  #EAF4EE;
+  --accent-border:  #BFDCCB;
+
+  /* Semantic only. Never decorative — that is what made the old palette noisy. */
+  --danger:         #B42318;
+  --danger-subtle:  #FEF3F2;
+  --danger-border:  #FECDC9;
+  --warning:        #B54708;
+  --warning-subtle: #FFFAEB;
+  --warning-border: #FEDF89;
+
+  --focus-ring:     #1A7F4B;
+
+  /* The only shadow that survives, and only on things that float above the
+     page. Everything else separates with a border. */
+  --shadow-overlay: 0 8px 28px -6px rgb(24 24 22 / 0.14),
+                    0 2px 8px -2px rgb(24 24 22 / 0.08);
+
+  /* Kept: three call sites still read these. */
+  --background: var(--canvas);
+  --foreground: var(--text-primary);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0f172a;
-  --foreground: #ededed;
+
+  --canvas:         #0C0C0B;
+  --surface:        #161615;
+  --surface-raised: #1E1E1C;
+  --surface-hover:  #242422;
+  --surface-active: #2C2C29;
+
+  --border-subtle:  #222220;
+  --border:         #2E2E2B;
+  --border-strong:  #42423E;
+
+  --text-primary:   #EDEDEA;
+  --text-secondary: #A8A8A2;
+  --text-muted:     #77776F;
+  --text-inverse:   #0C0C0B;
+
+  /* Same family, lifted for the dark canvas. `accent-text` is a separate,
+     much lighter value because the solid accent is unreadable as text here. */
+  --accent:         #1E8A52;
+  --accent-hover:   #249A5D;
+  --accent-active:  #187544;
+  --accent-fg:      #FFFFFF;
+  --accent-text:    #5FC98C;
+  --accent-subtle:  #12251A;
+  --accent-border:  #1E4531;
+
+  --danger:         #D64B3F;
+  --danger-subtle:  #2A1512;
+  --danger-border:  #4A211C;
+  --warning:        #D68A2E;
+  --warning-subtle: #2A1D0C;
+  --warning-border: #46331A;
+
+  --focus-ring:     #5FC98C;
+
+  --shadow-overlay: 0 8px 28px -6px rgb(0 0 0 / 0.55),
+                    0 2px 8px -2px rgb(0 0 0 / 0.40);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas:         var(--canvas);
+  --color-surface:        var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover:  var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+
+  --color-subtle:         var(--border-subtle);
+  --color-line:           var(--border);
+  --color-strong:         var(--border-strong);
+
+  --color-primary:        var(--text-primary);
+  --color-secondary:      var(--text-secondary);
+  --color-muted:          var(--text-muted);
+  --color-inverse:        var(--text-inverse);
+
+  --color-accent:         var(--accent);
+  --color-accent-hover:   var(--accent-hover);
+  --color-accent-active:  var(--accent-active);
+  --color-accent-fg:      var(--accent-fg);
+  --color-accent-text:    var(--accent-text);
+  --color-accent-subtle:  var(--accent-subtle);
+  --color-accent-border:  var(--accent-border);
+
+  --color-danger:         var(--danger);
+  --color-danger-subtle:  var(--danger-subtle);
+  --color-danger-border:  var(--danger-border);
+  --color-warning:        var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-border: var(--warning-border);
+
+  --color-ring:           var(--focus-ring);
+  --shadow-overlay:       var(--shadow-overlay);
+
+  /* Kept for the three existing bg-background/text-foreground call sites. */
+  --color-background:     var(--background);
+  --color-foreground:     var(--foreground);
+
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+}
+
+@theme {
+  /*
+   * Radius. Four scales were in use at near-parity (xl 238, lg 229, md 116,
+   * 2xl 81) with no rule about which went where — that is not a scale, it is
+   * noise. Three values, and xl/2xl are aliased onto lg so the 319 existing
+   * call sites become correct immediately, before any file is edited. The
+   * source gets tidied later; the aliases mean a stray rounded-2xl is never
+   * wrong in the meantime.
+   */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  10px;
+  --radius-xl:  10px;
+  --radius-2xl: 10px;
+  --radius-3xl: 10px;
+
+  /*
+   * Type. 89% of all text was 12-14px and `text-base` appeared six times in
+   * 24,000 lines, so hierarchy was carried entirely by font-weight. These
+   * redefinitions lift the floor and cap the ceiling across every existing
+   * call site without touching a single component.
+   */
+  --text-xs:                 0.8125rem;
+  --text-xs--line-height:    1.25rem;
+  --text-sm:                 0.875rem;
+  --text-sm--line-height:    1.3125rem;
+  --text-base:               1rem;
+  --text-base--line-height:  1.5rem;
+  --text-lg:                 1.25rem;
+  --text-lg--line-height:    1.75rem;
+  --text-lg--letter-spacing: -0.01em;
+  --text-xl:                 1.75rem;
+  --text-xl--line-height:    2.125rem;
+  --text-xl--letter-spacing: -0.02em;
+  --text-2xl:                1.75rem;
+  --text-2xl--line-height:   2.125rem;
+  --text-3xl:                1.75rem;
+  --text-3xl--line-height:   2.125rem;
 }
 
 html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--canvas);
+  color: var(--text-primary);
 }
 
-/* Use the Geist fonts loaded in app/layout.tsx. Without this the app
-   downloaded them on every page load and then rendered everything in Arial. */
 body {
-  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+  font-family: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Figures line up in columns wherever they are compared. IBM Plex has real
+   tabular figures but does not use them by default. */
+:where(table, .tabular, [data-figure]) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * TEMPORARY — removed in the radius sweep.
+ *
+ * These selectors reverse-engineer a card component out of duplicated utility
+ * strings, because no Card component existed. They key on the literal class
+ * name `rounded-2xl`, so they must be deleted in the same commit that rewrites
+ * those class names — otherwise every card in the app loses its shadow at once
+ * while nothing has yet replaced it.
+ * ------------------------------------------------------------------------ */
 :root {
   --floating-panel-shadow: 0 18px 45px rgba(15, 23, 42, 0.12), 0 4px 14px rgba(15, 23, 42, 0.08);
   --floating-panel-hover-shadow: 0 24px 60px rgba(15, 23, 42, 0.16), 0 8px 22px rgba(15, 23, 42, 0.10);
@@ -79,48 +268,33 @@ body {
 }
 .question-table th,
 .question-table td {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
   padding: 0.4rem 0.75rem;
   text-align: center;
 }
 .question-table th {
-  background: #f3f4f6;
+  background: var(--surface-raised);
   font-weight: 600;
 }
 .question-table tbody tr:nth-child(even) {
-  background: #f9fafb;
-}
-.dark .question-table th {
-  background: #374151;
-  border-color: #4b5563;
-}
-.dark .question-table td {
-  border-color: #4b5563;
-}
-.dark .question-table tbody tr:nth-child(even) {
-  background: rgba(55, 65, 81, 0.3);
+  background: var(--surface-raised);
 }
 
 .input-field {
   width: 100%;
-  height: 2.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  background: #fff;
+  height: 2.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-primary);
   padding: 0 0.75rem;
   font-size: 0.875rem;
   outline: none;
 }
 
 .input-field:focus {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
-}
-
-.dark .input-field {
-  border-color: #4b5563;
-  background: #111827;
-  color: #f3f4f6;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus-ring) 25%, transparent);
 }
 
 /*
@@ -128,13 +302,10 @@ body {
  *
  * The question and mark-scheme crops are transparent PNGs with black ink, so
  * without an opaque light ground they are invisible on the dark theme — the
- * card shows an empty box where the question should be.
- *
- * This deliberately is NOT `bg-white`: the legacy shim in
- * app/styles/darkmode.css repaints every `.bg-white` to gray-800 with
- * `!important`, which silently defeated an earlier fix here. The crops are
- * photographs of paper rather than a UI surface, so they want a ground that
- * does not follow the theme at all.
+ * card shows an empty box where the question should be. They are photographs
+ * of paper rather than a UI surface, so they want a ground that does not
+ * follow the theme at all. Deliberately not `bg-white`, which the legacy shim
+ * in app/styles/darkmode.css repaints to gray-800 with `!important`.
  */
 .paper-ground {
   background-color: #fff;

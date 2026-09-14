@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -12,14 +12,27 @@ import "./styles/readability.css";
 import SessionProvider from "./components/SessionProvider";
 import PWAInstall from "./components/PWAInstall";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/*
+ * Geist is the font `create-next-app` ships with, which is exactly why the UI
+ * read as generated. Plex is a deliberate choice: it has real tabular figures
+ * for the marks and scores this app is full of, and Plex Mono handles the
+ * pseudocode in Computer Science questions properly.
+ *
+ * Three weights, not six. Weight was doing the job that size should do —
+ * having 700 available is what invites it back.
+ */
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors" suppressHydrationWarning>

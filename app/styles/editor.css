@@ -222,7 +222,7 @@
   opacity: 0;
   transition: opacity 0.15s ease-out;
   pointer-events: none;
-  font-family: var(--font-geist-sans, system-ui, sans-serif);
+  font-family: var(--font-plex-sans, system-ui, sans-serif);
 }
 
 /* Show the label only on the top-most cursor when multiple overlap */
