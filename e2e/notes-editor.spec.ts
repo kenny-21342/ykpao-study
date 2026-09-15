@@ -70,6 +70,29 @@ test.describe('notebook editor', () => {
     }
   });
 
+  test('a page id in the URL opens that page, and the URL follows the open page', async ({ page }) => {
+    // A notebook page is a thing students want to send each other, so it needs
+    // an address. Before this existed the workspace ignored `?pageId=`
+    // entirely and opened with nothing selected.
+    await page.goto(`/?pageId=${ids.pageId}`);
+
+    await expect(page.locator('.ProseMirror').first()).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole('textbox', { name: 'Page title' }))
+      .toHaveValue(ids.pageTitle, { timeout: 30_000 });
+
+    // The shell rewrites it to the canonical spelling, so what a student
+    // copies out of the address bar is a link to the page they are looking at.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('tab'), { timeout: 15_000 })
+      .toBe('materials');
+    expect(new URL(page.url()).searchParams.get('pageId')).toBe(ids.pageId);
+
+    // And that URL is durable, which is the whole claim.
+    await page.reload();
+    await expect(page.locator('.ProseMirror').first()).toBeVisible({ timeout: 90_000 });
+    expect(new URL(page.url()).searchParams.get('pageId')).toBe(ids.pageId);
+  });
+
   test('bold, italic and the triple-asterisk case all live-render', async ({ page }, testInfo) => {
     const r = record(page);
     const editor = await openScratchPage(page, ids);

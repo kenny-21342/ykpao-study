@@ -27,6 +27,9 @@ export type RoutedTab = {
   /** An id in the crop-first bank; opens BankPractice. Never interchangeable
    * with `questionId` -- the two are separate tables. */
   bankQuestionId?: number | null;
+  /** A notebook page, opened inside Materials' workspace view. Unlike the two
+   * question ids this is a cuid, not an integer. */
+  pageId?: string | null;
 };
 
 export const STUDY_VIEWS = new Set<StudyCoachView>([
@@ -89,6 +92,15 @@ const positiveInt = (raw: string | null): number | null => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+/**
+ * Page ids are cuids. Shape-check rather than trust: this value reaches
+ * `GET /api/pages?pageId=` on mount, and the route is the thing that decides
+ * whether the viewer may read it -- but there is no reason to forward
+ * something that cannot be an id in the first place.
+ */
+const pageId = (raw: string | null): string | null =>
+  raw && /^[a-z0-9]{16,40}$/i.test(raw) ? raw : null;
+
 /** A full location.search -> the destination it names, defaults filled in. */
 export const parseRoute = (search: string): RoutedTab | null => {
   const params = new URLSearchParams(search);
@@ -96,15 +108,22 @@ export const parseRoute = (search: string): RoutedTab | null => {
   const requestedView = params.get('view') as StudyCoachView | null;
   const questionId = positiveInt(params.get('qid'));
   const bankQuestionId = positiveInt(params.get('bqid'));
+  const notePageId = pageId(params.get('pageId'));
 
   const route = base
-    ?? (questionId || bankQuestionId ? { tab: 'practice' as const } : null);
+    ?? (questionId || bankQuestionId ? { tab: 'practice' as const } : null)
+    // A bare `?pageId=` names Materials the same way a bare `?bqid=` names
+    // Practice, so a link to a page survives without carrying the tab too.
+    ?? (notePageId ? { tab: 'materials' as const } : null);
   if (!route) return null;
 
   const resolved: RoutedTab = { ...route };
   if (resolved.tab === 'study') {
     const view = requestedView && STUDY_VIEWS.has(requestedView) ? requestedView : resolved.studyView;
     resolved.studyView = view ?? 'today';
+  }
+  if (resolved.tab === 'materials') {
+    resolved.pageId = notePageId ?? resolved.pageId ?? null;
   }
   if (resolved.tab === 'practice') {
     resolved.questionId = questionId ?? resolved.questionId ?? null;
@@ -122,6 +141,9 @@ export const routeToQuery = (route: RoutedTab): string => {
   params.set('tab', CANONICAL[route.tab]);
   if (route.tab === 'study' && route.studyView && route.studyView !== 'today') {
     params.set('view', route.studyView);
+  }
+  if (route.tab === 'materials' && route.pageId) {
+    params.set('pageId', route.pageId);
   }
   if (route.tab === 'practice') {
     if (route.questionId) params.set('qid', String(route.questionId));

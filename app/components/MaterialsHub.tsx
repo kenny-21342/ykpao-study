@@ -7,8 +7,28 @@ import ResourceLibrary from './ResourceLibrary';
 
 type MaterialsView = 'workspace' | 'library';
 
-export default function MaterialsHub() {
+export default function MaterialsHub({
+  initialPageId = null,
+  onPageOpened,
+}: {
+  /** A page named by the URL, opened once on arrival. */
+  initialPageId?: string | null;
+  /** Fires whenever the open page changes, so the shell can rewrite the URL. */
+  onPageOpened?: (pageId: string | null) => void;
+} = {}) {
   const [view, setView] = useState<MaterialsView>('workspace');
+
+  // A link to a page has to land on the page, not on whichever half of
+  // Materials the student last had open. Adjusted during render rather than in
+  // an effect: an effect would paint Library first and then snap across, and
+  // `honoured` means a student who arrives on a link can still click over to
+  // Library afterwards -- deriving the view outright would pin them to the
+  // workspace for as long as the id stayed in the URL.
+  const [honoured, setHonoured] = useState<string | null>(null);
+  if (initialPageId && initialPageId !== honoured) {
+    setHonoured(initialPageId);
+    setView('workspace');
+  }
 
   return (
     <div className="h-full overflow-hidden bg-surface-raised">
@@ -42,7 +62,9 @@ export default function MaterialsHub() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-hidden">
-          {view === 'workspace' ? <NotesTextbookPage /> : <ResourceLibrary />}
+          {view === 'workspace'
+            ? <NotesTextbookPage initialPageId={initialPageId} onPageOpened={onPageOpened} />
+            : <ResourceLibrary />}
         </div>
       </div>
     </div>

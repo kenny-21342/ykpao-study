@@ -233,7 +233,15 @@ function escapeHtml(value: string) {
   }[character] || character));
 }
 
-export default function NotesTextbookPage() {
+export default function NotesTextbookPage({
+  initialPageId = null,
+  onPageOpened,
+}: {
+  /** A page named by `?pageId=` in the URL, opened once on arrival. */
+  initialPageId?: string | null;
+  /** Reports the open page so the shell can keep the URL shareable. */
+  onPageOpened?: (pageId: string | null) => void;
+} = {}) {
   const { confirm, confirmDialog } = useConfirm();
   const { data: session, status } = useSession();
   const screenContext = useScreenContext();
@@ -311,6 +319,23 @@ export default function NotesTextbookPage() {
   const drawingWidth = useMeasuredCanvasWidth(drawingFrameRef, DRAWING_CANVAS_WIDTH, showDrawing);
 
   useEffect(() => { selectedPageRef.current = selectedPage; }, [selectedPage]);
+
+  /**
+   * Keep the URL naming the open page.
+   *
+   * Held in a ref so this fires on a real change of page rather than on every
+   * render that hands down a new callback identity -- the shell rebuilds
+   * `onPageOpened` inline, and calling it during render would push a history
+   * entry per keystroke.
+   */
+  const reportedPageRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const id = selectedPage?.id ?? null;
+    if (reportedPageRef.current === id) return;
+    reportedPageRef.current = id;
+    onPageOpened?.(id);
+  }, [selectedPage, onPageOpened]);
+
   useEffect(() => { editTitleRef.current = editTitle; }, [editTitle]);
   useEffect(() => { editContentRef.current = editContent; }, [editContent]);
   useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
@@ -514,6 +539,20 @@ export default function NotesTextbookPage() {
       setOpeningPage(false);
     }
   }, [notify, pageById, recentPageIds]);
+
+  /**
+   * Open the page a link arrived with. Runs on the id, not on mount, so a
+   * second link to a different page while the workspace is already open still
+   * navigates. `openPage` fetches by id and does not need the tree loaded, so
+   * this works before the notebook list has arrived.
+   */
+  const openedFromUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialPageId || openedFromUrlRef.current === initialPageId) return;
+    if (selectedPageRef.current?.id === initialPageId) return;
+    openedFromUrlRef.current = initialPageId;
+    void openPage(initialPageId);
+  }, [initialPageId, openPage]);
 
   const savePage = useCallback(async (options?: { manual?: boolean; force?: boolean }) => {
     const page = selectedPageRef.current;
