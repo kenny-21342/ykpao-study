@@ -299,7 +299,7 @@ export default function MockExams() {
           </div>
           <button
             onClick={() => setView({ name: 'configure' })}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold transition-all"
           >
             <Plus className="w-5 h-5" />
             New Mock Exam
@@ -410,7 +410,7 @@ function StatCard({
     purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
         {icon}
       </div>
@@ -423,7 +423,7 @@ function StatCard({
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-      <div className="w-16 h-16 mx-auto rounded-lg bg-accent flex items-center justify-center shadow-lg mb-4">
+      <div className="w-16 h-16 mx-auto rounded-lg bg-accent flex items-center justify-center mb-4">
         <Sparkles className="w-8 h-8 text-white" />
       </div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No mock exams yet</h3>
@@ -433,7 +433,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </p>
       <button
         onClick={onCreate}
-        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold shadow-lg transition-all"
+        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold transition-all"
       >
         <Plus className="w-5 h-5" /> Generate a Mock Exam
       </button>
@@ -456,7 +456,7 @@ function ExamCard({
       : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -544,7 +544,7 @@ function ExamCard({
           ) : exam.status !== 'completed' ? (
             <button
               onClick={onOpen}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow transition-all"
             >
               <Play className="w-4 h-4" />
               {exam.status === 'in_progress' ? 'Resume' : 'Start'}
@@ -552,7 +552,7 @@ function ExamCard({
           ) : (
             <button
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow transition-all"
             >
               View Results <ArrowRight className="w-4 h-4" />
             </button>
@@ -697,7 +697,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         </div>
 
         {/* Form card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-5">
           {loadingFilters ? (
             <div className="flex items-center justify-center py-10 text-gray-500">
               <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading subjects…
@@ -860,7 +860,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {generating ? (
               <>
@@ -1490,7 +1490,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               {activeIdx < totalItems - 1 ? (
                 <button
                   onClick={() => setActiveIdx((i) => Math.min(totalItems - 1, i + 1))}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all"
                 >
                   Next <ArrowRight className="w-4 h-4" />
                 </button>
@@ -1498,7 +1498,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <button
                   onClick={() => setConfirmSubmit(true)}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg transition-all disabled:opacity-60"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {submitting ? 'Grading…' : 'Submit Exam'}
@@ -1508,7 +1508,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
             {confirmSubmit && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-                <div className="mx-4 w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-2xl">
+                <div className="mx-4 w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-overlay">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Submit Exam?</h3>
                   <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
                     <p>You&apos;ve answered {answeredCount} of {totalItems} questions.</p>
@@ -1530,7 +1530,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                     </button>
                     <button
                       onClick={() => { setConfirmSubmit(false); handleSubmit(); }}
-                      className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg hover:shadow-xl transition-all"
+                      className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg transition-all"
                     >
                       Submit for grading
                     </button>
@@ -1719,7 +1719,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                 const wrong = item.isCorrect === false && (item.score ?? 0) === 0;
                 const unanswered = item.attemptedAt === null;
                 return (
-                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <button
                       onClick={() => toggleItem(item.id)}
                       className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -1845,7 +1845,7 @@ function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; labe
     indigo: 'bg-indigo-50 text-indigo-600',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${tints[tint]}`}>
         {icon}
       </div>

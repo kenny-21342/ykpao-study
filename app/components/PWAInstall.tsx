@@ -108,7 +108,7 @@ export default function PWAInstall() {
   // Android/Chrome install prompt.
   if (deferred) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 animate-in slide-in-from-bottom">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 p-4 animate-in slide-in-from-bottom">
         <button
           onClick={dismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -140,7 +140,7 @@ export default function PWAInstall() {
   // iOS hint (no programmatic install, so just instructions).
   if (showIOSHint) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 p-4">
         <button
           onClick={dismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"

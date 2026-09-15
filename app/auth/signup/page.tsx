@@ -140,10 +140,10 @@ export default function SignupPage() {
           sizes="100vw"
           className="fixed inset-0 object-cover"
         />
-        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
+        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
           <div className="w-full">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
                 <MailCheck className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-primary mb-2">
@@ -168,7 +168,7 @@ export default function SignupPage() {
 
             <Link
               href={`/auth/verify?email=${encodeURIComponent(created.email)}`}
-              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
             >
               Send another link
             </Link>
@@ -201,12 +201,12 @@ export default function SignupPage() {
       />
 
       {/* Right-edge rectangular form panel. */}
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -338,7 +338,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>

@@ -240,7 +240,7 @@ export default function NotificationBell() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-h-[28rem] overflow-hidden"
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-h-[28rem] overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">

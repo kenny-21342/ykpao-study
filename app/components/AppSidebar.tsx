@@ -211,7 +211,7 @@ export default function AppSidebar({
   const itemClass = (isActive: boolean) =>
     `w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
       isActive
-        ? 'bg-accent text-white shadow-lg'
+        ? 'bg-accent text-white'
         : 'text-gray-700 hover:bg-gray-100'
     }`;
   const labelClass = collapsed ? 'sr-only' : '';
@@ -240,7 +240,7 @@ export default function AppSidebar({
     <>
     <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/30 dark:border-white/10 shadow-xl transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/30 dark:border-white/10 shadow-overlay transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'lg:w-20' : 'lg:w-64'}`}
     >
@@ -338,7 +338,7 @@ export default function AppSidebar({
               title={user?.name ?? 'Account'} aria-label={user?.name ?? 'Account'}
               className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
             >
-              <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
+              <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt={user.name ?? 'User'} className="w-full h-full object-cover" />
@@ -360,7 +360,7 @@ export default function AppSidebar({
             {accountOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
-                <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-2xl py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
+                <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-overlay py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student Account'}</p>
                     <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
@@ -414,7 +414,7 @@ export default function AppSidebar({
             <Link
               href="/auth/login"
               title="Sign In" aria-label="Sign In"
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-accent rounded-lg shadow-lg transition-all duration-200`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-semibold text-white bg-accent rounded-lg transition-all duration-200`}
             >
               <LogIn className="w-4 h-4" />
               <span className={collapsed ? 'sr-only' : ''}>Sign In</span>
@@ -488,7 +488,7 @@ function NavItem({
 function BrandMark({ collapsed }: { collapsed: boolean }) {
   return (
     <>
-      <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105">
+      <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-105">
         <GraduationCap className="w-6 h-6 text-white" />
       </div>
       <span

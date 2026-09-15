@@ -240,7 +240,7 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
   return (
     <button
       onClick={onOpen}
-      className="text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-5 flex flex-col"
+      className="text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-300 transition-all p-5 flex flex-col"
     >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -294,7 +294,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
@@ -561,7 +561,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               onClick={() => switchViewMode('list')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 !isBrowserView
-                  ? 'bg-green-600 text-white shadow-sm'
+                  ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
               title="List view" aria-label="List view"
@@ -574,7 +574,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               onClick={() => switchViewMode('browser')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 isBrowserView
-                  ? 'bg-green-600 text-white shadow-sm'
+                  ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
               title="Folder browser" aria-label="Folder browser"
@@ -585,7 +585,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           </div>
           <button
             onClick={() => setShowUpload(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all"
           >
             <Upload className="w-4 h-4" /> Upload Resource
           </button>
@@ -858,7 +858,7 @@ function ResourceRow({
             href={resource.fileUrl}
             download
             onClick={onDownload}
-            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md"
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white transition-all"
           >
             <Download className="w-3.5 h-3.5" />
             Download
@@ -971,7 +971,7 @@ function ResourceBrowserView({
                     key={folder.id}
                     type="button"
                     onClick={() => onChangeFolder(folder.id)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white dark:text-gray-300 dark:hover:bg-gray-800"
                     title={folder.name} aria-label={folder.name}
                   >
                     <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
@@ -1257,7 +1257,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1283,7 +1283,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               onClick={() => { setMode('single'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'single'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
@@ -1294,7 +1294,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               onClick={() => { setMode('folder'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'folder'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
@@ -1513,7 +1513,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleSubmit}
               disabled={submitting || !title.trim() || !fileMeta}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Publishing…' : 'Publish Resource'}
@@ -1521,7 +1521,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
           ) : folderDoneCount > 0 && !folderBusy ? (
             <button
               onClick={handleFolderDone}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all"
             >
               <CheckCircle2 className="w-4 h-4" /> Done
             </button>
@@ -1529,7 +1529,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <button
               onClick={handleFolderSubmit}
               disabled={folderBusy || folderItems.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {folderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderUp className="w-4 h-4" />}
               {folderBusy ? `Uploading ${folderDoneCount}/${folderItems.length}…` : `Upload ${folderItems.length || ''} Resource${folderItems.length === 1 ? '' : 's'}`}

@@ -102,7 +102,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 px-4 pt-24" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-lg bg-white shadow-2xl dark:bg-gray-900"
+        className="w-full max-w-xl rounded-lg bg-white shadow-overlay dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">

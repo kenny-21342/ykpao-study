@@ -425,7 +425,7 @@ export default function BankPractice({
             }}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
               scope === option
-                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
+                ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-white'
                 : 'text-gray-600 dark:text-gray-400'
             }`}
           >
@@ -443,7 +443,7 @@ export default function BankPractice({
           }}
           className={`ml-1 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
             onlyBookmarked
-              ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
+              ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-white'
               : 'text-gray-600 dark:text-gray-400'
           }`}
         >

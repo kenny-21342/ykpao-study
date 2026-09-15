@@ -538,7 +538,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               {tool === 'eraser' && <span className="text-[10px] text-gray-500">Erase</span>}
             </button>
             {showColorPicker && (
-              <div className="absolute top-9 left-0 z-10 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 p-2 grid grid-cols-4 gap-1.5">
+              <div className="absolute top-9 left-0 z-10 bg-white dark:bg-gray-800 rounded-md shadow-overlay border border-gray-200 dark:border-gray-700 p-2 grid grid-cols-4 gap-1.5">
                 {COLORS.map((c) => (
                   <button
                     key={c}
@@ -611,7 +611,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               // `sm:ml-auto`, not `ml-auto`: on a narrow toolbar the row wraps
               // and an auto margin puts Save alone on the far right of its own
               // line, a long way from the tools it belongs with.
-              className="sm:ml-auto px-3 py-1.5 text-xs font-semibold bg-accent text-white rounded-md hover:shadow-sm transition-all"
+              className="sm:ml-auto px-3 py-1.5 text-xs font-semibold bg-accent text-white rounded-md transition-all"
             >
               Save Drawing
             </button>

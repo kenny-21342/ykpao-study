@@ -102,12 +102,12 @@ export default function LoginPage() {
       {/* Right-edge rectangular form panel.
           On mobile it stacks below the image (panel takes full width); on
           lg+ it pins to the right side as a solid column. */}
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -191,7 +191,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

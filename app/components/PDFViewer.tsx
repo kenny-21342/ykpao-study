@@ -69,7 +69,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
         >
           {/* Page-shaped, so the wait looks like a document arriving rather
               than an error. */}
-          <div className="w-full max-w-2xl space-y-3 rounded-md bg-white p-8 shadow-sm dark:bg-gray-800">
+          <div className="w-full max-w-2xl space-y-3 rounded-md bg-white p-8 dark:bg-gray-800">
             <Skeleton className="h-5 w-1/3" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-full" />

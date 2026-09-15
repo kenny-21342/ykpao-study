@@ -85,7 +85,7 @@ export default function CoursesGoalsPanel() {
   if (loading) return <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading courses…</div>;
 
   return (
-    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-5">
+    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-5">
       <div className="flex items-center gap-2">
         <BookOpen className="w-5 h-5 text-green-600" />
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Courses &amp; goals</h2>

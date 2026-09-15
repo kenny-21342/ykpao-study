@@ -128,7 +128,7 @@ export default function UsagePage() {
         </div>
 
         {/* Breakdown by feature */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">By Feature</h2>
           {Object.keys(data.byFeature).length === 0 ? (
             <p className="text-sm text-gray-400">No usage recorded yet. Try the AI Chat, Mock Exams, or Practice features!</p>
@@ -157,7 +157,7 @@ export default function UsagePage() {
         </div>
 
         {/* Last 7 days */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Last 7 Days</h2>
           {dayEntries.length === 0 ? (
             <p className="text-sm text-gray-400">No activity this week.</p>
@@ -188,7 +188,7 @@ export default function UsagePage() {
         </div>
 
         {/* Recent log */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Requests</h2>
           {data.recent.length === 0 ? (
             <p className="text-sm text-gray-400">No recent activity.</p>
@@ -230,7 +230,7 @@ function SummaryCard({ icon, label, value, tint }: { icon: React.ReactNode; labe
     purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
         {icon}
       </div>

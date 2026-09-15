@@ -230,7 +230,7 @@ export default function NoticeDialog({
         aria-labelledby={titleId}
         aria-describedby={messageId}
         tabIndex={-1}
-        className={`w-full max-w-md overflow-hidden rounded-lg border bg-white shadow-2xl outline-none dark:bg-gray-800 ${meta.border}`}
+        className={`w-full max-w-md overflow-hidden rounded-lg border bg-white shadow-overlay outline-none dark:bg-gray-800 ${meta.border}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 px-5 py-4">

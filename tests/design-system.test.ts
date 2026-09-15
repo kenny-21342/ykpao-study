@@ -152,3 +152,31 @@ test('only three radii are in use, and the aliases that held the old ones are go
   }
   assert.deepEqual(offenders, [], `radius scale drifted:\n${offenders.join('\n')}`);
 });
+
+// ---------------------------------------------------------------------------
+// 8. Shadows stay off everything that is not floating
+// ---------------------------------------------------------------------------
+
+test('the only shadow in the app is the overlay token', async () => {
+  // 168 sized shadows were deleted: depth was being used to separate flat,
+  // co-planar surfaces from each other, which is what the border tokens are
+  // for. A shadow now means one thing — this element floats above the page —
+  // and 25 surfaces qualify: modals, dropdowns, popovers, docked widgets.
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(/\b((?:[a-z-]+:)*shadow-(?:sm|md|lg|xl|2xl))\b/g)) {
+      offenders.push(`${path.relative(ROOT, file)}: ${m[1]}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `sized shadows reintroduced:\n${offenders.join('\n')}`);
+
+  // And the token has to exist, or every one of those 25 silently renders flat.
+  const css = stripCssComments(await read('app/globals.css'));
+  assert.match(css, /--shadow-overlay:\s*0 /, '--shadow-overlay has no light value');
+  assert.match(
+    css.slice(css.indexOf('@theme inline')),
+    /--shadow-overlay:\s*var\(--shadow-overlay\)/,
+    'shadow-overlay must be surfaced through @theme inline to switch with the theme',
+  );
+});

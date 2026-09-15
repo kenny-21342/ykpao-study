@@ -283,7 +283,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all"
         >
           <Plus className="w-4 h-4" /> New Thread
         </button>
@@ -384,7 +384,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
             <button
               key={t.id}
               onClick={() => onOpen(t.id)}
-              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 transition-all p-4 flex items-center gap-4"
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-300 transition-all p-4 flex items-center gap-4"
             >
               <div className="flex-shrink-0">
                 {avatar(t.author.name, t.author.image, 'sm')}
@@ -465,7 +465,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Thread</h2>
@@ -535,7 +535,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
           <button
             onClick={handleCreate}
             disabled={submitting || !title.trim()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             {submitting ? 'Creating…' : 'Create Thread'}
@@ -821,7 +821,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       </div>
 
       {/* Original post */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -894,7 +894,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             const isEditing = editingId === post.id;
             const edited = new Date(post.updatedAt).getTime() > new Date(post.createdAt).getTime();
             return (
-              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex gap-4">
+              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex gap-4">
                 <div className="flex-shrink-0">{avatar(post.author.name, post.author.image, 'sm')}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -960,7 +960,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <button
                           onClick={() => handleEditSave(post.id)}
                           disabled={savingEdit || !editDraft.trim()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {savingEdit && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                           {savingEdit ? 'Saving…' : 'Save'}
@@ -985,7 +985,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
           <Lock className="w-4 h-4" /> This thread is locked. New replies are disabled.
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Post a reply</label>
           <RichTextEditor
             content={reply}
@@ -997,7 +997,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             <button
               onClick={handleReply}
               disabled={posting || !reply.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Reply className="w-4 h-4" />}
               {posting ? 'Posting…' : 'Post Reply'}

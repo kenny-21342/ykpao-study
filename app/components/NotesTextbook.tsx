@@ -1244,7 +1244,7 @@ export default function NotesTextbookPage() {
           <MoreVertical className="h-3.5 w-3.5" />
         </button>
         {pageMenuId === page.id && (
-          <div className="absolute right-1 top-9 z-30 w-48 rounded-md border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute right-1 top-9 z-30 w-48 rounded-md border border-gray-200 bg-white p-1 shadow-overlay dark:border-gray-700 dark:bg-gray-900">
             {page.accessRole !== 'viewer' && (
               <button onClick={() => { void openPage(page.id).then(() => patchMetadata({ favorite: !page.favorite })); setPageMenuId(null); }} className="menu-row">
                 <Star className="h-4 w-4" /> {page.favorite ? 'Remove favorite' : 'Add favorite'}
@@ -1320,7 +1320,7 @@ export default function NotesTextbookPage() {
               ['recent', Clock3, 'Recent'],
               ['archive', Archive, 'Archive'],
             ] as const).map(([mode, Icon, label]) => (
-              <button key={mode} onClick={() => setFilterMode(mode)} title={label} aria-label={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-white text-emerald-700 shadow-sm dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <button key={mode} onClick={() => setFilterMode(mode)} title={label} aria-label={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-white text-emerald-700 dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Icon className="h-4 w-4" />
               </button>
             ))}
@@ -1515,7 +1515,7 @@ export default function NotesTextbookPage() {
                 <div className="border-b border-gray-200 p-3 dark:border-gray-800">
                   <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" /><input value={questionSearch} onChange={(event) => { const value = event.target.value; setQuestionSearch(value); setQuestionResults([]); setQuestionSearchError(null); setQuestionSearchAttempted(false); setQuestionSearching(value.trim().length >= 2); }} placeholder="e.g. inheritance, 0610-S25-P21-Q2, or plant nutrition" className="h-9 w-full rounded-md border border-gray-300 bg-white pl-8 pr-9 text-sm outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900" />{questionSearching && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-gray-400" />}</div>
                   {questionSearchError && <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{questionSearchError}</p>}
-                  {questionResults.length > 0 && <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">{questionResults.map((result) => <button key={result.id} onClick={() => { void loadQuestion(Number(result.id.replace('question-', ''))); setQuestionResults([]); setQuestionSearch(''); }} className="block w-full rounded-sm px-2 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"><span className="block truncate text-xs font-semibold">{result.title}</span><span className="mt-0.5 block line-clamp-2 text-xs text-gray-500">{result.snippet}</span></button>)}</div>}
+                  {questionResults.length > 0 && <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900">{questionResults.map((result) => <button key={result.id} onClick={() => { void loadQuestion(Number(result.id.replace('question-', ''))); setQuestionResults([]); setQuestionSearch(''); }} className="block w-full rounded-sm px-2 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"><span className="block truncate text-xs font-semibold">{result.title}</span><span className="mt-0.5 block line-clamp-2 text-xs text-gray-500">{result.snippet}</span></button>)}</div>}
                   {questionSearch.trim().length >= 2 && questionSearchAttempted && !questionSearchError && questionResults.length === 0 && <p className="mt-2 text-xs text-gray-500">No matching questions found.</p>}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
@@ -1570,7 +1570,7 @@ export default function NotesTextbookPage() {
               </aside>
             )}
           </> : (
-            <div className="flex flex-1 items-center justify-center bg-gray-50/70 p-8 text-center dark:bg-gray-950"><div className="max-w-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"><FileText className="h-7 w-7 text-emerald-600" /></div><h2 className="text-lg font-semibold">Choose a note page</h2><p className="mt-2 text-sm text-gray-500">Search, browse a notebook, or create a page from the navigation panel.</p><button onClick={() => setSidebarOpen(true)} className="primary-command mx-auto mt-4 lg:hidden"><Menu className="h-4 w-4" /> Open notes</button></div></div>
+            <div className="flex flex-1 items-center justify-center bg-gray-50/70 p-8 text-center dark:bg-gray-950"><div className="max-w-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><FileText className="h-7 w-7 text-emerald-600" /></div><h2 className="text-lg font-semibold">Choose a note page</h2><p className="mt-2 text-sm text-gray-500">Search, browse a notebook, or create a page from the navigation panel.</p><button onClick={() => setSidebarOpen(true)} className="primary-command mx-auto mt-4 lg:hidden"><Menu className="h-4 w-4" /> Open notes</button></div></div>
           )}
         </div>
       </section>
@@ -1581,7 +1581,7 @@ export default function NotesTextbookPage() {
           onClick={() => { if (!drawingUploading) setShowDrawing(false); }}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-white shadow-2xl dark:bg-gray-900"
+            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-white shadow-overlay dark:bg-gray-900"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
@@ -1624,7 +1624,7 @@ export default function NotesTextbookPage() {
 
       {commandOpen && (
         <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[12vh]" onClick={() => setCommandOpen(false)}>
-          <div className="w-full max-w-xl overflow-hidden rounded-md border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
+          <div className="w-full max-w-xl overflow-hidden rounded-md border border-gray-200 bg-white shadow-overlay dark:border-gray-700 dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-gray-200 px-3 dark:border-gray-700"><Search className="h-5 w-5 text-gray-400" /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="e.g. Biology, Cell transport, or Mock exam notes" className="h-12 flex-1 bg-transparent text-sm outline-none" /><button onClick={() => setCommandOpen(false)} className="rounded-sm border border-gray-200 px-2 py-1 text-xs text-gray-400 dark:border-gray-700">Esc</button></div>
             <div className="max-h-[55vh] overflow-y-auto p-2">{flatResults.map((location) => <button key={location.page.id} onClick={() => { setCommandOpen(false); void openPage(location.page.id); }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"><span>{location.page.icon || '📝'}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{location.page.title}</span><span className="block truncate text-xs text-gray-500">{location.notebook.name} / {location.section.name}</span></span></button>)}{flatResults.length === 0 && <p className="py-10 text-center text-sm text-gray-400">No pages found</p>}</div>
           </div>
@@ -1633,7 +1633,7 @@ export default function NotesTextbookPage() {
 
       {creating && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4" onClick={() => setCreating(null)}>
-          <div className="w-full max-w-sm rounded-md bg-white p-5 shadow-2xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-md bg-white p-5 shadow-overlay dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center"><h3 className="font-semibold">New {creating.kind}</h3><button onClick={() => setCreating(null)} className="ml-auto rounded-sm p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-4 w-4" /></button></div>
             <input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleCreate(); }} placeholder={`${creating.kind} name`} className="field-input mt-4" />
             <div className="mt-4 flex justify-end gap-2"><button onClick={() => setCreating(null)} className="secondary-command">Cancel</button><button onClick={() => void handleCreate()} disabled={!newName.trim() || submitting} className="primary-command">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create</button></div>

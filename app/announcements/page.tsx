@@ -45,7 +45,7 @@ export default function AnnouncementsPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center">
               <Megaphone className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -82,7 +82,7 @@ export default function AnnouncementsPage() {
           {announcements.map((a) => (
             <article
               key={a.id}
-              className={`min-w-0 rounded-lg p-6 border shadow-sm ${
+              className={`min-w-0 rounded-lg p-6 border ${
                 a.pinned
                   ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'

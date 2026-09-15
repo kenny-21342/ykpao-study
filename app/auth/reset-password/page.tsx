@@ -23,10 +23,10 @@ function AuthPanel({ title, subtitle, children }: {
         className="fixed inset-0 object-cover"
       />
 
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10 shadow-2xl">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
@@ -106,7 +106,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/forgot-password"
-            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all text-center"
           >
             Request a New Link
           </Link>
@@ -128,7 +128,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/login"
-            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all text-center"
           >
             Go to Sign In
           </Link>
@@ -196,7 +196,7 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : 'Set New Password'}
         </button>

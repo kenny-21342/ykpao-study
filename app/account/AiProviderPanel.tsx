@@ -211,7 +211,7 @@ export default function AiProviderPanel() {
   const chosen = PROVIDERS.find((candidate) => candidate.id === provider) ?? null;
 
   return (
-    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
+    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-green-600" />
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Provider</h2>
@@ -414,7 +414,7 @@ export default function AiProviderPanel() {
             <button
               onClick={save}
               disabled={saving || !canSave || !state?.encryptionConfigured}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

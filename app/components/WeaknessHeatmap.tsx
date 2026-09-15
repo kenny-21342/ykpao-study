@@ -111,7 +111,7 @@ export default function WeaknessHeatmap() {
 
   if (!data || data.topics.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-12 border border-gray-200 shadow-sm text-center">
+      <div className="bg-white rounded-lg p-12 border border-gray-200 text-center">
         <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
           <Target className="w-8 h-8 text-gray-400" />
         </div>
@@ -134,7 +134,7 @@ export default function WeaknessHeatmap() {
   return (
     <div className="space-y-6">
       {/* Header / CTA */}
-      <div className="bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-lg p-6 border border-orange-200 dark:border-orange-900/50 shadow-sm">
+      <div className="bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-lg p-6 border border-orange-200 dark:border-orange-900/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function WeaknessHeatmap() {
           <button
             onClick={practiceWeak}
             disabled={data.recommended.length === 0 || practicing}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-danger text-white rounded-lg font-semibold shadow-sm hover:shadow-md disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-danger text-white rounded-lg font-semibold disabled:opacity-60 transition-all"
           >
             <Target className="w-4 h-4" />
             Practice Weakest ({data.recommended.length})
@@ -158,7 +158,7 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Subject overview */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-green-500" />
           By Subject
@@ -189,7 +189,7 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Topic heatmap */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
@@ -224,7 +224,7 @@ export default function WeaknessHeatmap() {
 
       {/* Recommended questions */}
       {data.recommended.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-red-500" />
             Recommended for Practice

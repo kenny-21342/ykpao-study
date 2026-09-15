@@ -457,7 +457,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
       isMinimized ? 'bottom-4 right-4' : 'inset-x-3 bottom-3 top-16 sm:inset-x-auto sm:bottom-5 sm:right-5 sm:top-20'
     }`}>
       {confirmDialog}
-      <div className={`flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 ${
+      <div className={`flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-overlay dark:border-gray-700 dark:bg-gray-900 ${
         isMinimized ? 'h-14 w-72' : 'h-full w-full sm:w-[430px]'
       }`}>
         <header className="flex min-h-14 items-center gap-2 border-b border-emerald-700 bg-emerald-600 px-3 text-white">
@@ -481,7 +481,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
             <div className="grid min-w-0 flex-1 grid-cols-5 gap-1">
               {TUTOR_MODES.map((item) => {
                 const Icon = item.icon;
-                return <button key={item.id} onClick={() => changeMode(item.id)} className={`flex h-8 items-center justify-center gap-1 rounded-md text-[10px] font-semibold ${mode === item.id ? 'bg-white text-emerald-700 shadow-sm dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}><Icon className="h-3.5 w-3.5" /><span className="hidden min-[390px]:inline">{item.label}</span></button>;
+                return <button key={item.id} onClick={() => changeMode(item.id)} className={`flex h-8 items-center justify-center gap-1 rounded-md text-[10px] font-semibold ${mode === item.id ? 'bg-white text-emerald-700 dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}><Icon className="h-3.5 w-3.5" /><span className="hidden min-[390px]:inline">{item.label}</span></button>;
               })}
             </div>
             <button onClick={() => setView('actions')} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-gray-900 px-2.5 text-[11px] font-bold text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900" title="Plan and system actions" aria-label="Plan and system actions"><Workflow className="h-3.5 w-3.5" /> Plan & act</button>
@@ -603,7 +603,7 @@ function ProposalCard({ proposal, onUpdate, onNavigate }: { proposal: AIActionPr
 
 function ActionResult({ data, onNavigate, onProposalUpdate }: { data: StudyActionData; onNavigate: (tab: NavigableTab, questionId?: number, view?: 'today' | 'plan' | 'mistakes' | 'review' | 'mastery' | 'search') => void; onProposalUpdate: (proposal: AIActionProposalView) => void }) {
   return (
-    <div className="mt-2 rounded-md border border-gray-200 bg-white p-2 text-left shadow-sm dark:border-gray-700 dark:bg-gray-900">
+    <div className="mt-2 rounded-md border border-gray-200 bg-white p-2 text-left dark:border-gray-700 dark:bg-gray-900">
       {data.proposal && <ProposalCard proposal={data.proposal} onUpdate={onProposalUpdate} onNavigate={onNavigate} />}
       <div className="flex flex-wrap gap-1.5">
         {data.tasksCreated ? <button onClick={() => onNavigate('study', undefined, 'plan')} className="result-link"><CalendarRange className="h-3.5 w-3.5" /> Open study plan</button> : null}

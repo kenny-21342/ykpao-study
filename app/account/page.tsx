@@ -238,7 +238,7 @@ export default function AccountSettingsPage() {
         )}
 
         {/* Profile section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
+        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-green-600" />
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Profile</h2>
@@ -247,7 +247,7 @@ export default function AccountSettingsPage() {
           {/* Avatar picker */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden">
+              <div className="w-20 h-20 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -258,7 +258,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-700 border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 shadow-md hover:scale-110 transition-transform disabled:opacity-50"
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-700 border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 hover:scale-110 transition-transform disabled:opacity-50"
                 title="Upload avatar" aria-label="Upload avatar"
               >
                 {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -353,7 +353,7 @@ export default function AccountSettingsPage() {
           <button
             onClick={handleSaveName}
             disabled={profileLoading || savingName || name === (session?.user?.name ?? '')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : nameSaved ? <Check className="w-4 h-4" /> : null}
             {savingName ? 'Saving…' : nameSaved ? 'Saved!' : 'Save Name'}
@@ -365,7 +365,7 @@ export default function AccountSettingsPage() {
         <AiProviderPanel />
 
         {/* Password section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-xl rounded-lg p-6 space-y-4">
+        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-green-600" />
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Change Password</h2>
@@ -412,7 +412,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={handleChangePassword}
                 disabled={savingPwd || !newPassword || !currentPassword}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingPwd ? <Loader2 className="w-4 h-4 animate-spin" /> : pwdSaved ? <Check className="w-4 h-4" /> : null}
                 {savingPwd ? 'Updating…' : pwdSaved ? 'Password changed — signing you out…' : 'Change Password'}

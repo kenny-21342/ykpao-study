@@ -79,7 +79,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
       />
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="fixed bottom-6 right-6 z-50 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound className="w-4 h-4 text-gray-400" />
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Restricted area</span>

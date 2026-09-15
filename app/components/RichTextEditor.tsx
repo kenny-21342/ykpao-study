@@ -491,7 +491,7 @@ export default function RichTextEditor({
             onClick={() => setShowLatexModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-lg w-full p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay max-w-lg w-full p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert LaTeX Formula</h3>
                 <button
@@ -570,7 +570,7 @@ export default function RichTextEditor({
             onClick={() => setShowLinkModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay max-w-md w-full p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert Link</h3>
                 <button

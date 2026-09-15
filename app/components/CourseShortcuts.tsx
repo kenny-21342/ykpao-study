@@ -80,7 +80,7 @@ export default function CourseShortcuts({
     return (
       <SkeletonRegion
         label="Loading your courses"
-        className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-6"
+        className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6"
       >
         <Skeleton className="h-5 w-40" />
         <Skeleton className="mt-2 h-3 w-64" />
@@ -94,7 +94,7 @@ export default function CourseShortcuts({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-6">
+    <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Your courses</h2>
@@ -155,7 +155,7 @@ export default function CourseShortcuts({
                 <div className="flex flex-wrap gap-1.5">
                   <Link
                     href={papersHref(scope)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
                   >
                     <Library className="h-3.5 w-3.5" />
                     Past papers
@@ -163,14 +163,14 @@ export default function CourseShortcuts({
                   </Link>
                   <button
                     onClick={onOpenPractice}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Practice
                   </button>
                   <button
                     onClick={onOpenMockExams}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Mock exam

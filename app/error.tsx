@@ -31,7 +31,7 @@ export default function AppError({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
           <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
         </div>

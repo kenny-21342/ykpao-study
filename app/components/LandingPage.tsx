@@ -109,7 +109,7 @@ export default async function LandingPage() {
       <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent shadow-lg">
+            <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent">
               <GraduationCap className="w-6 h-6 text-white" />
             </span>
             <span className="font-bold text-lg tracking-tight">YKPao Study</span>
@@ -123,7 +123,7 @@ export default async function LandingPage() {
             </Link>
             <Link
               href="/auth/signup"
-              className="px-4 py-2 text-sm font-semibold rounded-md text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+              className="px-4 py-2 text-sm font-semibold rounded-md text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
             >
               Create an account
             </Link>
@@ -148,7 +148,7 @@ export default async function LandingPage() {
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Link
             href="/auth/signup"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
           >
             Start studying
             <ArrowRight className="w-4 h-4" />
@@ -253,7 +253,7 @@ export default async function LandingPage() {
           </p>
           <Link
             href="/auth/signup"
-            className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent shadow-lg hover:from-green-600 hover:to-emerald-700 transition"
+            className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
           >
             Create an account
             <ArrowRight className="w-4 h-4" />

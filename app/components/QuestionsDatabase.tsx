@@ -582,7 +582,7 @@ export default function QuestionsDatabase({
                   onClick={() => setShowVault(false)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     !showVault
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -592,7 +592,7 @@ export default function QuestionsDatabase({
                   onClick={() => setShowVault(true)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${
                     showVault
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -603,8 +603,8 @@ export default function QuestionsDatabase({
             {/* Past-paper mode toggle — hidden when viewing the vault. */}
             {!showVault && (
               <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1" role="group" aria-label="Content scope">
-                <button onClick={() => changeScope('enrolled')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'enrolled' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>My courses</button>
-                <button onClick={() => changeScope('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'all' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>All subjects</button>
+                <button onClick={() => changeScope('enrolled')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'enrolled' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>My courses</button>
+                <button onClick={() => changeScope('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'all' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>All subjects</button>
               </div>
             )}
             {!showVault && (
@@ -613,7 +613,7 @@ export default function QuestionsDatabase({
                   onClick={() => { setMode('browse'); screenCtx.updateData({ practiceMode: 'browse' }); }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     mode === 'browse'
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -623,7 +623,7 @@ export default function QuestionsDatabase({
                   onClick={() => { setMode('practice'); screenCtx.updateData({ practiceMode: 'practice' }); }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     mode === 'practice'
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -1126,7 +1126,7 @@ export default function QuestionsDatabase({
                     <button
                       onClick={submitAnswer}
                       disabled={submitting || answer.trim().length === 0}
-                      className="px-5 py-2 bg-accent text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                      className="px-5 py-2 bg-accent text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {submitting ? 'Grading…' : 'Submit & Grade'}
                     </button>
@@ -1151,7 +1151,7 @@ export default function QuestionsDatabase({
                             <button
                               key={v}
                               onClick={() => setFeedbackView(v)}
-                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
                             >
                               {v === 'ai' ? 'AI feedback' : v === 'markscheme' ? 'Mark scheme' : 'Both'}
                             </button>

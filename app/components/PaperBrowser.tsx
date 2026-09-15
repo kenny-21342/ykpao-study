@@ -50,9 +50,9 @@ const EMPTY_SELECTION: Selection = {
 };
 
 const CARD =
-  'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500 dark:hover:border-green-500 hover:shadow-md transition-all text-left';
+  'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500 dark:hover:border-green-500 transition-all text-left';
 const CARD_ACTIVE =
-  'rounded-lg border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left shadow-sm';
+  'rounded-lg border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left';
 
 function formatBytes(bytes: number | null) {
   if (!bytes) return null;

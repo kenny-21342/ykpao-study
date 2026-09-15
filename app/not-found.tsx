@@ -8,7 +8,7 @@ import { Compass } from 'lucide-react';
 export default function NotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
           <Compass className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
         </div>

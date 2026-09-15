@@ -20,7 +20,7 @@ export default function MaterialsHub() {
               onClick={() => setView('workspace')}
               className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
                 view === 'workspace'
-                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-gray-100'
+                  ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100'
                   : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
@@ -31,7 +31,7 @@ export default function MaterialsHub() {
               onClick={() => setView('library')}
               className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
                 view === 'library'
-                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-gray-100'
+                  ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100'
                   : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >

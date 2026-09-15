@@ -38,7 +38,7 @@ export default function PapersLayout({ children }: { children: React.ReactNode }
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 dark:border-white/10 shadow-sm">
+        <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 dark:border-white/10">
           <div className="flex items-center space-x-4">
             <button
               onClick={openMobile}

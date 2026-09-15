@@ -659,7 +659,7 @@ export default function SmartEduPlatform() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top Bar with Notifications — glass */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 dark:border-white/10 shadow-sm">
+        <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 dark:border-white/10">
           <div className="flex items-center space-x-4">
             {/* Mobile: open the navigation drawer. */}
             <button
@@ -701,7 +701,7 @@ export default function SmartEduPlatform() {
               onClick={() => setIsAIAssistantOpen(!isAIAssistantOpen)}
               className={`p-2.5 rounded-lg transition-all duration-200 ${
                 isAIAssistantOpen
-                  ? 'bg-accent text-white shadow-lg'
+                  ? 'bg-accent text-white'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title="AI Tutor" aria-label="AI Tutor"
@@ -729,7 +729,7 @@ export default function SmartEduPlatform() {
                   </h1>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">One next step, then the next.</p>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                   <Calendar className="h-4 w-4" />
                   Today
                 </div>
@@ -764,7 +764,7 @@ export default function SmartEduPlatform() {
                 </section>
               )}
 
-              <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-6">
+              <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Next step</p>
@@ -792,7 +792,7 @@ export default function SmartEduPlatform() {
                     {isSessionLoading ? null : dashboardFocus.primaryHref ? (
                       <Link
                         href={dashboardFocus.primaryHref}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                       >
                         {dashboardFocus.primaryLabel}
                         <ArrowRight className="h-4 w-4" />
@@ -800,7 +800,7 @@ export default function SmartEduPlatform() {
                     ) : (
                       <button
                         onClick={dashboardFocus.primaryAction}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                       >
                         {dashboardFocus.primaryLabel}
                         <ArrowRight className="h-4 w-4" />
@@ -843,7 +843,7 @@ export default function SmartEduPlatform() {
                   return (
                     <div
                       key={card.label}
-                      className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                      className="rounded-lg border border-gray-200 bg-white p-5 transition-shadow dark:border-gray-800 dark:bg-gray-900"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
@@ -878,7 +878,7 @@ export default function SmartEduPlatform() {
               </section>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-                <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent activity</h2>
@@ -924,7 +924,7 @@ export default function SmartEduPlatform() {
 
                 <div className="space-y-6">
                   <DailyChallenge />
-                  <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                  <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Study shortcuts</h2>
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       {[
