@@ -11,19 +11,19 @@
 
 /* Inline code */
 .formatted-message .inline-code {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--surface-raised);
   padding: 0.1rem 0.3rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
 }
 
 /* Code blocks */
 .formatted-message .code-block {
-  background-color: #1f2937;
-  color: #f9fafb;
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
   padding: 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   overflow-x: auto;
   margin: 0.5rem 0;
   font-family: 'Courier New', monospace;
@@ -50,12 +50,12 @@
 
 /* Links (if AI includes them) */
 .formatted-message a {
-  color: #4f46e5;
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
 .formatted-message a:hover {
-  color: #6366f1;
+  color: var(--accent);
 }
 
 /* Strong/Bold */

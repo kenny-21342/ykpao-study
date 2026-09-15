@@ -9,8 +9,11 @@
  * hardcoded utility values: 96 gradients, 730 border radii across four
  * competing scales, 199 shadows, 17 colour families. Every inconsistency in
  * the UI traces back to there being nothing to be consistent *with*, and three
- * separate stylesheets (darkmode.css, readability.css, and the :where() block
- * below) exist only to paper over the result after the fact.
+ * separate layers existed only to paper over the result after the fact: a
+ * :where() block faking a Card component, darkmode.css rewriting `bg-white`
+ * under `.dark`, and readability.css lifting four washed-out grey text classes
+ * with !important. All three are gone — the tokens made them dead code, rather
+ * than becoming a fourth layer on top of them.
  *
  * Themed colours live as plain custom properties on :root/.dark and are
  * surfaced through `@theme inline`. `inline` is load-bearing: it makes the
@@ -247,6 +250,66 @@ body {
    tabular figures but does not use them by default. */
 :where(table, .tabular, [data-figure]) {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Element defaults, absorbed from darkmode.css and readability.css.
+ *
+ * Both files existed to correct, after the fact, a UI that had no tokens: one
+ * rewrote `bg-white` to a dark grey under `.dark`, the other lifted four
+ * washed-out grey text classes to a readable one with !important. The token
+ * layer makes every one of those rules dead — there is no `bg-white` or
+ * `text-gray-400` left to rewrite.
+ *
+ * What genuinely could not be done in Tailwind is kept here: DOM the app does
+ * not author (scrollbars, placeholders, Typography's variables) and the 41
+ * bare form controls that carry no className at all.
+ *
+ * Everything is wrapped in :where() so it contributes zero specificity. The
+ * old rules did the opposite — `.dark input[type="text"]` outranks any utility
+ * class, so it would now override the very tokens those inputs were given.
+ * ------------------------------------------------------------------------ */
+
+:where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+:where(input, textarea)::placeholder,
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+:where(table) { border-color: var(--border); }
+:where(th, td) { border-color: var(--border); }
+:where(th) { background-color: var(--surface-raised); }
+
+::-webkit-scrollbar-track { background: var(--canvas); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-md);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Tailwind Typography renders Markdown the app does not control the markup
+   of. Driving its variables from the tokens means a note reads correctly in
+   both themes without every call site remembering `dark:prose-invert`. */
+.prose:not(.prose-invert) {
+  --tw-prose-body:          var(--text-secondary);
+  --tw-prose-headings:      var(--text-primary);
+  --tw-prose-links:         var(--accent-text);
+  --tw-prose-bold:          var(--text-primary);
+  --tw-prose-quotes:        var(--text-secondary);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-code:          var(--text-primary);
+  --tw-prose-pre-bg:        var(--surface-raised);
+  --tw-prose-pre-code:      var(--text-primary);
+  --tw-prose-th-borders:    var(--border-strong);
+  --tw-prose-td-borders:    var(--border);
+  --tw-prose-bullets:       var(--text-muted);
+  --tw-prose-hr:            var(--border);
 }
 
 /* Question tables (Markdown pipe tables rendered by renderMarkdownWithMath) */

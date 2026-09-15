@@ -46,26 +46,26 @@
 }
 
 .ProseMirror blockquote {
-  border-left: 4px solid #e5e7eb;
+  border-left: 4px solid var(--border);
   padding-left: 1rem;
   margin: 1rem 0;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
 .ProseMirror code {
-  background-color: #f3f4f6;
+  background-color: var(--surface-raised);
   padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
 }
 
 .ProseMirror pre {
-  background-color: #1f2937;
-  color: #f9fafb;
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
   padding: 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   overflow-x: auto;
   margin: 1rem 0;
 }
@@ -77,26 +77,26 @@
 }
 
 .ProseMirror mark {
-  background-color: #fef08a;
+  background-color: var(--warning-subtle);
   padding: 0.1rem 0.2rem;
-  border-radius: 0.125rem;
+  border-radius: var(--radius-sm);
 }
 
 .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   margin: 1rem 0;
 }
 
 .ProseMirror a {
-  color: #22c55e;
+  color: var(--accent-text);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .ProseMirror a:hover {
-  color: #16a34a;
+  color: var(--accent);
 }
 
 .ProseMirror [data-text-align="left"] {
@@ -119,9 +119,9 @@
 .ProseMirror .latex-formula {
   display: inline-block;
   padding: 0.2rem 0.5rem;
-  background-color: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 0.25rem;
+  background-color: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
   margin: 0 0.2rem;
   vertical-align: middle;
 }
@@ -134,14 +134,14 @@
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #9ca3af;
+  color: var(--text-muted);
   pointer-events: none;
   height: 0;
 }
 
 /* Selection */
 .ProseMirror ::selection {
-  background-color: #c7d2fe;
+  background-color: var(--accent-subtle);
 }
 
 /* Focus */
@@ -152,7 +152,7 @@
 /* Horizontal rule */
 .ProseMirror hr {
   border: none;
-  border-top: 2px solid #e5e7eb;
+  border-top: 2px solid var(--border);
   margin: 2rem 0;
 }
 
@@ -165,13 +165,13 @@
 
 .ProseMirror th,
 .ProseMirror td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   padding: 0.5rem;
   text-align: left;
 }
 
 .ProseMirror th {
-  background-color: #f3f4f6;
+  background-color: var(--surface-raised);
   font-weight: bold;
 }
 
@@ -217,7 +217,7 @@
   line-height: 1;
   padding: 2px 5px;
   border-radius: 3px 3px 3px 0;
-  color: #fff;
+  color: var(--accent-fg);
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.15s ease-out;
@@ -244,7 +244,7 @@
   background-image: linear-gradient(
     45deg,
     transparent 65%,
-    #dc2626 80%,
+    var(--danger) 80%,
     transparent 90%
   );
   background-repeat: repeat-x;

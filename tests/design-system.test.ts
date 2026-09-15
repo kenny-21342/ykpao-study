@@ -295,3 +295,26 @@ test('no dark: variant of a themed token', async () => {
   }
   assert.deepEqual(offenders, [], `dark: variant of a themed token:\n${offenders.join('\n')}`);
 });
+
+// ---------------------------------------------------------------------------
+// 11. Nothing compensates for the tokens after the fact
+// ---------------------------------------------------------------------------
+
+test('the compensation stylesheets are gone and nothing hardcodes a colour', async () => {
+  const styles = await readdir(path.join(ROOT, 'app/styles'));
+  assert.deepEqual(styles.sort(), ['chat.css', 'editor.css'],
+    'a stylesheet reappeared beside the two that style DOM Tailwind cannot reach');
+
+  // Those two are kept because ProseMirror and KaTeX render markup the app
+  // does not author. They may not carry their own palette.
+  for (const name of styles) {
+    const css = stripCssComments(await readFile(path.join(ROOT, 'app/styles', name), 'utf8'));
+    const literal = css.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g) ?? [];
+    assert.deepEqual(literal, [], `${name} hardcodes a colour instead of using a token`);
+  }
+
+  // !important was how the old layers beat the utilities they were correcting.
+  // The Toaster keeps a few to beat react-hot-toast's own inline styles.
+  const globals = stripCssComments(await read('app/globals.css'));
+  assert.doesNotMatch(globals, /!important/, 'globals.css should not need to shout');
+});

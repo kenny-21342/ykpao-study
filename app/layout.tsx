@@ -7,8 +7,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import "./styles/editor.css";
 import "./styles/chat.css";
-import "./styles/darkmode.css";
-import "./styles/readability.css";
 import SessionProvider from "./components/SessionProvider";
 import PWAInstall from "./components/PWAInstall";
 
