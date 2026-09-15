@@ -3,6 +3,7 @@
 import { signIn, getProviders } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Field } from '@/app/components/ui';
 import Image from 'next/image';
 import { GraduationCap, Mail, Lock, AlertCircle, MailCheck } from 'lucide-react';
 
@@ -108,7 +109,7 @@ export default function LoginPage() {
           {/* Logo Section */}
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-accent-fg" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
               Welcome Back
@@ -118,44 +119,46 @@ export default function LoginPage() {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-                  placeholder="student@example.com"
-                  required
-                />
-              </div>
-            </div>
+            <Field label="Email address" required>
+              {({ id }) => (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input
+                    id={id}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                    placeholder="student@example.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              )}
+            </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
+            <Field label="Password" required>
+              {({ id }) => (
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input
+                    id={id}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              )}
+            </Field>
 
             <div className="-mt-2 text-right">
               <Link
                 href="/auth/forgot-password"
-                className="text-sm text-accent-text font-medium hover:text-accent-text transition-colors"
+                className="text-sm font-medium text-accent-text transition-colors hover:text-accent"
               >
                 Forgot password?
               </Link>
@@ -191,7 +194,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

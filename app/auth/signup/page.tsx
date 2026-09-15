@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Field } from '@/app/components/ui';
 import Image from 'next/image';
 import { signIn, getProviders } from 'next-auth/react';
 import { GraduationCap, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, MailCheck } from 'lucide-react';
@@ -144,7 +145,7 @@ export default function SignupPage() {
           <div className="w-full">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-                <MailCheck className="w-8 h-8 text-white" />
+                <MailCheck className="w-8 h-8 text-accent-fg" />
               </div>
               <h1 className="text-3xl font-bold text-primary mb-2">
                 Check your inbox
@@ -168,7 +169,7 @@ export default function SignupPage() {
 
             <Link
               href={`/auth/verify?email=${encodeURIComponent(created.email)}`}
-              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover transition"
+              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-accent-fg bg-accent hover:bg-accent-hover transition"
             >
               Send another link
             </Link>
@@ -207,7 +208,7 @@ export default function SignupPage() {
           {/* Logo Section */}
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-accent-fg" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
               Create Account
@@ -217,106 +218,114 @@ export default function SignupPage() {
 
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-                  placeholder="e.g. Alex Chen"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-                  placeholder="student@example.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-                  aria-describedby="password-rules"
-                  aria-invalid={touched.password && Boolean(passwordProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
-                    touched.password && passwordProblem ? 'border-danger' : 'border-strong'
-                  }`}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-              {/* State the rule up front instead of only rejecting after submit. */}
-              <p id="password-rules" className="mt-2 text-xs text-muted">
-                At least {MIN_PASSWORD_LENGTH} characters. Mixing letters, numbers,
-                and symbols makes it stronger.
-              </p>
-              {touched.password && passwordProblem && (
-                <p className="mt-1 text-xs text-danger">{passwordProblem}</p>
-              )}
-              {formData.password && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-1">
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'weak' ? 'bg-danger' : passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'medium' || passwordStrength === 'strong' ? passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent' : 'bg-subtle'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'strong' ? 'bg-accent' : 'bg-subtle'}`} />
-                  </div>
-                  <p className="mt-1 text-xs text-muted capitalize">{passwordStrength} password</p>
+            <Field label="Full Name" required>
+              {({ id }) => (
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input
+                    id={id}
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                    placeholder="e.g. Alex Chen"
+                    autoComplete="name"
+                    required
+                  />
                 </div>
               )}
-            </div>
+            </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                <input
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
-                  aria-invalid={touched.confirmPassword && Boolean(confirmProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
-                    touched.confirmPassword && confirmProblem ? 'border-danger' : 'border-strong'
-                  }`}
-                  placeholder="••••••••"
-                  required
-                />
-                {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-text" />
-                )}
-              </div>
-              {touched.confirmPassword && confirmProblem && (
-                <p className="mt-1 text-xs text-danger">{confirmProblem}</p>
+            <Field label="Email Address" required>
+              {({ id }) => (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input
+                    id={id}
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                    placeholder="student@example.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
               )}
-            </div>
+            </Field>
+
+            <Field label="Password" required>
+              {({ id }) => (
+                <>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                    <input
+                      id={id}
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                      aria-describedby="password-rules"
+                      aria-invalid={touched.password && Boolean(passwordProblem)}
+                      className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
+                        touched.password && passwordProblem ? 'border-danger' : 'border-strong'
+                      }`}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                  {/* State the rule up front instead of only rejecting after submit. */}
+                  <p id="password-rules" className="mt-2 text-xs text-muted">
+                    At least {MIN_PASSWORD_LENGTH} characters. Mixing letters, numbers,
+                    and symbols makes it stronger.
+                  </p>
+                  {touched.password && passwordProblem && (
+                    <p className="mt-1 text-xs text-danger">{passwordProblem}</p>
+                  )}
+                  {formData.password && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-1">
+                        <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'weak' ? 'bg-danger' : passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent'}`} />
+                        <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'medium' || passwordStrength === 'strong' ? passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent' : 'bg-subtle'}`} />
+                        <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'strong' ? 'bg-accent' : 'bg-subtle'}`} />
+                      </div>
+                      <p className="mt-1 text-xs text-muted capitalize">{passwordStrength} password</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </Field>
+
+            <Field label="Confirm Password" required>
+              {({ id }) => (
+                <>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                    <input
+                      id={id}
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
+                      aria-invalid={touched.confirmPassword && Boolean(confirmProblem)}
+                      className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
+                        touched.confirmPassword && confirmProblem ? 'border-danger' : 'border-strong'
+                      }`}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      required
+                    />
+                    {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-text" />
+                    )}
+                  </div>
+                  {touched.confirmPassword && confirmProblem && (
+                    <p className="mt-1 text-xs text-danger">{confirmProblem}</p>
+                  )}
+                </>
+              )}
+            </Field>
 
             {error && (
               <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
@@ -338,7 +347,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>

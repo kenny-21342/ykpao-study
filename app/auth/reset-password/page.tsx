@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Field } from '@/app/components/ui';
 import Image from 'next/image';
 import { GraduationCap, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -27,7 +28,7 @@ function AuthPanel({ title, subtitle, children }: {
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-accent-fg" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
               {title}
@@ -106,7 +107,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/forgot-password"
-            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all text-center"
           >
             Request a New Link
           </Link>
@@ -128,7 +129,7 @@ function ResetPasswordForm() {
           </div>
           <Link
             href="/auth/login"
-            className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all text-center"
+            className="block w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all text-center"
           >
             Go to Sign In
           </Link>
@@ -140,43 +141,47 @@ function ResetPasswordForm() {
   return (
     <AuthPanel title="Reset Password" subtitle="Choose a new password for your account">
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-2">
-            New Password
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-              placeholder="••••••••"
-              required
-              autoFocus
-              minLength={8}
-            />
-          </div>
-          <p className="mt-2 text-xs text-muted">At least 8 characters.</p>
-        </div>
+        <Field label="New Password" required>
+          {({ id }) => (
+            <>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                <input
+                  id={id}
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                  autoFocus
+                  minLength={8}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted">At least 8 characters.</p>
+            </>
+          )}
+        </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-2">
-            Confirm New Password
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-              placeholder="••••••••"
-              required
-              minLength={8}
-            />
-          </div>
-        </div>
+        <Field label="Confirm New Password" required>
+          {({ id }) => (
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+              <input
+                id={id}
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                placeholder="••••••••"
+                autoComplete="new-password"
+                required
+                minLength={8}
+              />
+            </div>
+          )}
+        </Field>
 
         {error && (
           <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
@@ -196,7 +201,7 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : 'Set New Password'}
         </button>

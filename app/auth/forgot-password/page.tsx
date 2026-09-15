@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Field } from '@/app/components/ui';
 import Image from 'next/image';
 import { GraduationCap, Mail, AlertCircle, MailCheck } from 'lucide-react';
 
@@ -55,7 +56,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-accent-fg" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
               Forgot Password
@@ -79,30 +80,31 @@ export default function ForgotPasswordPage() {
               </div>
               <Link
                 href="/auth/login"
-                className="block w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all text-center"
+                className="block w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all text-center"
               >
                 Back to Sign In
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
-                    placeholder="student@example.com"
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
+              <Field label="Email Address" required>
+                {({ id }) => (
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                    <input
+                      id={id}
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                      placeholder="student@example.com"
+                      autoComplete="email"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                )}
+              </Field>
 
               {error && (
                 <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
@@ -114,7 +116,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-accent text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-accent text-accent-fg rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Field } from '@/app/components/ui';
 import Image from 'next/image';
 import {
   GraduationCap,
@@ -33,7 +34,7 @@ function AuthPanel({ title, subtitle, children }: {
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-accent-fg" />
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2">
               {title}
@@ -147,7 +148,7 @@ function VerifyView() {
         </div>
         <Link
           href="/auth/login"
-          className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover transition"
+          className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-accent-fg bg-accent hover:bg-accent-hover transition"
         >
           Go to sign in
         </Link>
@@ -181,28 +182,29 @@ function VerifyView() {
       ) : (
         <form onSubmit={handleResend} className="space-y-5">
           <div>
-            <label htmlFor="verify-email" className="block text-sm font-medium text-secondary mb-2">
-              Email address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input
-                id="verify-email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong focus:border-accent focus:ring-2 focus:ring-ring/25 outline-none transition"
-                placeholder="you@example.com"
-              />
-            </div>
+            <Field label="Email address" required>
+              {({ id }) => (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                  <input
+                    id={id}
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong bg-surface text-primary placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-ring/25"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              )}
+            </Field>
           </div>
 
           <button
             type="submit"
             disabled={sending}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="w-full py-3 px-4 rounded-lg font-semibold text-accent-fg bg-accent hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed transition"
           >
             {sending ? 'Sending…' : 'Send a new link'}
           </button>
