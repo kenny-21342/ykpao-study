@@ -142,3 +142,7 @@ __pycache__/
 # extractor that produces them is pdf_extraction/bank/marks.py.
 prisma/manual/*.sql
 !prisma/manual/*_verify_*.sql
+
+# Supervisor runtime state, not source.
+pdf_extraction/bank/transcription-status.txt
+pdf_extraction/bank/transcription-launchd.log

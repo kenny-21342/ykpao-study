@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Keeps the corpus transcription alive across the days it takes to run.
+
+  The script supervises its own chunks -- retrying, backing off when the
+  provider is failing, killing a stalled chunk. What it cannot survive is
+  being killed itself, which is exactly how the 15 Sep run died: the whole
+  process group went away without the loop writing its exit line, and nothing
+  noticed until someone looked at the ledger. KeepAlive is the answer to that
+  one, because launchd is not in the process group being torn down.
+
+  SuccessfulExit=false: restart if it dies or exits non-zero, but let it stop
+  for good when it finishes the corpus and exits 0.
+
+  Install:
+    cp pdf_extraction/bank/bond.busypizza.transcription.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/bond.busypizza.transcription.plist
+
+  The batch still needs the machine awake: phase A is local CPU, so a sleeping
+  laptop stops it no matter who is supervising.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>bond.busypizza.transcription</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/run_transcription.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/kenny_lhs/smart-edu</string>
+
+  <!--
+    launchd hands a job a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin), where
+    python3 resolves to the system interpreter -- which has no `requests` and
+    so cannot even count the remaining papers. Name the interpreter the
+    pipeline is actually installed against. The provider credential needs no
+    entry here: pdf_extraction/bank/env.py reads the repository .env itself,
+    from a path derived from __file__.
+  -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Library/Frameworks/Python.framework/Versions/3.14/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Do not spin: if it dies immediately, wait before trying again. -->
+  <key>ThrottleInterval</key>
+  <integer>120</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/transcription-launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/transcription-launchd.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>
