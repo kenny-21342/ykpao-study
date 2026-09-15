@@ -424,3 +424,28 @@ test('the accent literal matches the token everywhere a variable cannot be used'
     assert.doesNotMatch(src, /#10b981|#059669|#22c55e/i, `${file} still carries an old accent`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// 15. Nothing wider than a phone escapes its scroll container
+// ---------------------------------------------------------------------------
+
+test('anything wider than 390px sits in a horizontal scroll container', async () => {
+  // A phone is ~390px. Content that cannot narrow -- a comparison table, a
+  // fixed-size canvas -- is allowed to be wider, but only inside its own
+  // overflow-x container, or the whole page scrolls sideways instead.
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const lines = stripCssComments(await readFile(file, 'utf8')).split('\n');
+    lines.forEach((line, i) => {
+      for (const m of line.matchAll(/(?<![\w:-])min-w-\[(\d+)px\]/g)) {
+        if (Number(m[1]) <= 390) continue;
+        const context = lines.slice(Math.max(0, i - 2), i + 1).join('\n');
+        if (!/overflow-x-auto|overflow-auto|overflow-x-scroll/.test(context)) {
+          offenders.push(`${path.relative(ROOT, file)}:${i + 1} ${m[0]}`);
+        }
+      }
+    });
+  }
+  assert.deepEqual(offenders, [],
+    `wider than a phone with nowhere to scroll:\n${offenders.join('\n')}`);
+});
