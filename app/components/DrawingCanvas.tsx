@@ -546,7 +546,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                     className="w-6 h-6 rounded-full border-2"
                     style={{
                       backgroundColor: c,
-                      borderColor: color === c ? '#10b981' : 'transparent',
+                      borderColor: color === c ? '#1A7F4B' : 'transparent',
                     }}
                   />
                 ))}

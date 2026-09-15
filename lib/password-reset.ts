@@ -188,7 +188,7 @@ export function resetEmailBody(link: string): { subject: string; text: string; h
         <h1 style="font-size:20px;margin:0 0 16px">Reset your password</h1>
         <p style="margin:0 0 16px;line-height:1.6">We received a request to reset the password for your YKPao Study account.</p>
         <p style="margin:0 0 24px">
-          <a href="${link}" style="display:inline-block;background:#10b981;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Choose a new password</a>
+          <a href="${link}" style="display:inline-block;background:#1A7F4B;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Choose a new password</a>
         </p>
         <p style="margin:0 0 16px;line-height:1.6;color:#4b5563;font-size:14px">
           This link expires in ${minutes} minutes and can only be used once.
@@ -231,7 +231,7 @@ export function oauthOnlyEmailBody(): { subject: string; text: string; html: str
           that account doesn't have a password — it signs in with Google.
         </p>
         <p style="margin:0 0 24px">
-          <a href="${signIn}" style="display:inline-block;background:#10b981;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Go to sign in</a>
+          <a href="${signIn}" style="display:inline-block;background:#1A7F4B;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Go to sign in</a>
         </p>
         <p style="margin:0;line-height:1.6;color:#4b5563;font-size:14px">
           If you didn't ask for this, you can ignore this email — nothing has changed.

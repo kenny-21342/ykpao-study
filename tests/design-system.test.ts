@@ -397,3 +397,30 @@ test('every themed token appears on the styleguide page', async () => {
   const missing = tokens.filter((t) => !SHOWN_VIA_PAIRS.has(t) && !page.includes(t));
   assert.deepEqual(missing, [], `tokens with no swatch on the styleguide: ${missing.join(', ')}`);
 });
+
+// ---------------------------------------------------------------------------
+// 14. The accent is one hue, including where CSS variables cannot reach
+// ---------------------------------------------------------------------------
+
+test('the accent literal matches the token everywhere a variable cannot be used', async () => {
+  // Four places cannot read --accent: the PWA manifest (consumed by the OS),
+  // global-error.tsx (it replaces the root layout, so no stylesheet), and the
+  // two transactional email templates (no client supports custom properties).
+  // All four were still on the old emerald-500 after the accent changed.
+  const css = stripCssComments(await read('app/globals.css'));
+  const light = css.slice(0, css.indexOf('.dark {'));
+  const accent = light.match(/--accent:\s*(#[0-9A-Fa-f]{6})/)?.[1];
+  assert.ok(accent, '--accent has no light value');
+
+  for (const file of [
+    'app/manifest.ts',
+    'app/global-error.tsx',
+    'lib/password-reset.ts',
+    'lib/email-verification.ts',
+  ]) {
+    const src = await read(file);
+    assert.match(src, new RegExp(accent!, 'i'), `${file} does not use the accent`);
+    // The specific hues the accent used to be.
+    assert.doesNotMatch(src, /#10b981|#059669|#22c55e/i, `${file} still carries an old accent`);
+  }
+});

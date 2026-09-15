@@ -151,7 +151,7 @@ export function verifyEmailBody(link: string, name?: string | null): {
         <h1 style="font-size:20px;margin:0 0 16px">Confirm your email</h1>
         <p style="margin:0 0 16px;line-height:1.6">${greeting.replace(/,$/, '')} — thanks for signing up to YKPao Study. Confirm this address to finish setting up your account.</p>
         <p style="margin:0 0 24px">
-          <a href="${link}" style="display:inline-block;background:#10b981;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Confirm my email</a>
+          <a href="${link}" style="display:inline-block;background:#1A7F4B;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:600">Confirm my email</a>
         </p>
         <p style="margin:0 0 16px;line-height:1.6;color:#4b5563;font-size:14px">
           This link expires in ${hours} hours and can only be used once.
