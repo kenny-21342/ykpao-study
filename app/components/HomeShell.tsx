@@ -6,6 +6,15 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import {
+  parseRoute,
+  resolveRoute,
+  routeToQuery,
+  type MainTab,
+  type PracticeMode,
+  type RoutedTab,
+  type StudyCoachView,
+} from './routing';
 import AppSidebar, { SidebarScrim, useSidebarChrome } from './AppSidebar';
 import FloatingAIAssistant from './FloatingAIAssistant';
 import OnboardingWizard from './OnboardingWizard';
@@ -24,21 +33,6 @@ import AiKeyPrompt from './AiKeyPrompt';
 import WeaknessHeatmap from './WeaknessHeatmap';
 import { ScreenContextProvider, useScreenContext } from './ScreenContext';
 import { Database, Sparkles, TrendingUp, Clock, Award, Target, Star, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
-
-type StudyCoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'mastery' | 'search';
-type PracticeMode = 'browse' | 'practice';
-type MainTab = 'dashboard' | 'study' | 'practice' | 'materials' | 'mock-exams' | 'discussions';
-
-type RoutedTab = {
-  tab: MainTab;
-  studyView?: StudyCoachView;
-  practiceMode?: PracticeMode;
-  /** An id in the legacy text bank; opens QuestionsDatabase. */
-  questionId?: number | null;
-  /** An id in the crop-first bank; opens BankPractice. Never interchangeable
-   * with `questionId` -- the two are separate tables. */
-  bankQuestionId?: number | null;
-};
 
 type DashboardStats = {
   questionsAnswered: number;
@@ -127,48 +121,6 @@ const formatRelativeActivityTime = (iso: string) => {
   return `${Math.floor(h / 24)}d ago`;
 };
 
-const resolveRoute = (raw: string | null): RoutedTab | null => {
-  switch (raw) {
-    case 'dashboard':
-      return { tab: 'dashboard' };
-    case 'daily':
-      return { tab: 'dashboard' };
-    case 'study':
-    case 'study-coach':
-      return { tab: 'study' };
-    case 'practice':
-    case 'questions-db':
-      return { tab: 'practice' };
-    case 'materials':
-    case 'notes-textbook':
-    case 'resources':
-    // `lib/rag-index.ts` emits `?tab=notes` for the legacy `Note` model. It is
-    // a different store from the notebook system behind Materials, but
-    // Materials is where notes live as far as a student is concerned, and
-    // landing there beats the silent fall-through to the dashboard that every
-    // unmatched value gets. Currently inert -- production holds no indexed
-    // documents on this route -- but the emitter is live, so the gap is one
-    // reindex away from mattering.
-    case 'notes':
-      return { tab: 'materials' };
-    case 'mock-exams':
-      return { tab: 'mock-exams' };
-    case 'discussions':
-      return { tab: 'discussions' };
-    case 'weaknesses':
-      return { tab: 'study', studyView: 'mastery' };
-    // Competition questions are indexed with this route, but the vault they
-    // live in is behind the unlock widget, so there is nothing to deep-link a
-    // locked student to. Practice is the right neighbourhood and does not
-    // quietly hand out the unlock. Also inert today: no indexed document
-    // carries this route either.
-    case 'competition':
-      return { tab: 'practice' };
-    default:
-      return null;
-  }
-};
-
 export default function SmartEduPlatform() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<MainTab>('dashboard');
@@ -196,7 +148,12 @@ export default function SmartEduPlatform() {
     closeMobile,
   } = useSidebarChrome();
 
-  const openRoute = useCallback((route: RoutedTab) => {
+  /**
+   * Apply a destination to state without touching history. Used on mount,
+   * where the URL is already the destination, and on popstate, where pushing
+   * again would trap Back in a loop.
+   */
+  const applyRoute = useCallback((route: RoutedTab) => {
     if (route.tab === 'study') {
       setStudyStartView(route.studyView ?? 'today');
       setPendingQuestionId(null);
@@ -215,6 +172,35 @@ export default function SmartEduPlatform() {
     // hidden behind the overlay on a phone.
     closeMobile();
   }, [closeMobile]);
+
+  /**
+   * The navigating version, used by every control a student can click. The
+   * tabs are still tab state rather than routes, but each move now leaves a
+   * history entry, so Back returns to the previous tab instead of leaving the
+   * site, and the address bar names what is actually on screen.
+   *
+   * Raw history.pushState rather than useRouter: `app/page.tsx` is a server
+   * component, so useSearchParams would force a Suspense boundary around every
+   * tab click, and router.push would re-run the server render for a change
+   * that is purely client state.
+   */
+  const openRoute = useCallback((route: RoutedTab) => {
+    applyRoute(route);
+    const query = routeToQuery(route);
+    const next = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.pushState(null, '', next);
+    }
+  }, [applyRoute]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const route = parseRoute(window.location.search);
+      applyRoute(route ?? { tab: 'dashboard' });
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [applyRoute]);
 
   // While the question bank is a preview, the dashboard stops *recommending*
   // it: every "here is something to go and do" control points at Past Papers,
@@ -434,26 +420,13 @@ export default function SmartEduPlatform() {
       );
     }
 
-    const route = resolveRoute(params.get('tab'));
-    const requestedView = params.get('view') as StudyCoachView | null;
-    const questionId = Number(params.get('qid'));
-    const bankQuestionId = Number(params.get('bqid'));
-    if (Number.isInteger(bankQuestionId) && bankQuestionId > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration init, see block comment above
-      setPendingBankQuestionId(bankQuestionId);
-    }
-    if (route) {
-      const validStudyViews = new Set<StudyCoachView>(['today', 'plan', 'mistakes', 'review', 'mastery', 'search']);
-      openRoute({
-        ...route,
-        studyView: requestedView && validStudyViews.has(requestedView) ? requestedView : route.studyView,
-        questionId: Number.isInteger(questionId) && questionId > 0 ? questionId : route.questionId,
-        practiceMode: params.get('mode') === 'practice' ? 'practice' : route.practiceMode,
-      });
-    } else if (Number.isInteger(questionId) && questionId > 0) {
-      openRoute({ tab: 'practice', questionId, practiceMode: 'practice' });
-    }
-  }, [openRoute]);
+    // applyRoute, not openRoute: the URL already *is* this destination, so
+    // pushing it again would put a duplicate entry in front of wherever the
+    // student came from.
+    const route = parseRoute(window.location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration init, see block comment above
+    if (route) applyRoute(route);
+  }, [applyRoute]);
 
   useEffect(() => {
     if (window.location.pathname === '/' && window.location.hash === '#announcements') {
