@@ -138,7 +138,7 @@ export default function ResourceManager() {
                   <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-muted hover:text-primary hover:bg-surface-hover">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-danger hover:bg-danger-subtle">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -455,7 +455,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors"
+                      className="p-1 text-muted hover:text-danger rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -536,7 +536,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                         type="button"
                         onClick={() => { setFolderItems([]); setError(null); }}
                         disabled={folderBusy}
-                        className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
+                        className="p-1 text-muted hover:text-danger rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -549,11 +549,11 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                           <span className="flex-1 truncate text-secondary" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-muted flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
                           {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
-                          {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
-                          {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
+                          {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-warning animate-spin flex-shrink-0" />}
+                          {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-accent-text flex-shrink-0" />}
                           {it.status === 'error' && (
                             <span title={it.error} className="flex-shrink-0">
-                              <XCircle className="w-3.5 h-3.5 text-red-500" />
+                              <XCircle className="w-3.5 h-3.5 text-danger" />
                             </span>
                           )}
                         </li>
@@ -607,7 +607,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                 </div>
               )}
               {!folderBusy && folderDoneCount > 0 && (
-                <div className="text-xs text-green-600 dark:text-green-400">
+                <div className="text-xs text-accent-text">
                   {folderDoneCount} uploaded successfully{folderErrorCount ? `, ${folderErrorCount} failed` : ''}.
                 </div>
               )}
@@ -812,7 +812,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                   type="button"
                   onClick={() => setReplacement(null)}
                   disabled={saving}
-                  className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-40"
+                  className="p-1 text-muted hover:text-danger rounded-sm transition-colors disabled:opacity-40"
                   title="Undo replacement" aria-label="Undo replacement"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -876,8 +876,8 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 grid place-items-center flex-shrink-0">
-            <TriangleAlert className="w-5 h-5 text-red-600" />
+          <div className="w-10 h-10 rounded-full bg-danger-subtle grid place-items-center flex-shrink-0">
+            <TriangleAlert className="w-5 h-5 text-danger" />
           </div>
           <div className="min-w-0">
             <h3 className="text-lg font-bold text-primary">Delete resource?</h3>
@@ -899,7 +899,7 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-danger hover:bg-danger rounded-lg shadow transition-colors disabled:opacity-60"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {busy ? 'Deleting…' : 'Delete permanently'}

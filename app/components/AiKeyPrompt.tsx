@@ -70,25 +70,25 @@ export default function AiKeyPrompt() {
   };
 
   return (
-    <div className="relative mb-6 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-5">
+    <div className="relative mb-6 rounded-lg border border-warning-border bg-warning-subtle p-4 sm:p-5">
       <button
         type="button"
         onClick={dismiss}
         aria-label="Dismiss this message"
-        className="absolute top-3 right-3 p-1 rounded-md text-amber-700/70 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-400/70 dark:hover:text-amber-200 dark:hover:bg-amber-900/40 transition"
+        className="absolute top-3 right-3 p-1 rounded-md text-warning hover:text-warning hover:bg-warning-subtle transition"
       >
         <X className="w-4 h-4" />
       </button>
 
       <div className="flex items-start gap-3 pr-8">
-        <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex-shrink-0">
-          <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+        <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-warning-subtle flex-shrink-0">
+          <Sparkles className="w-5 h-5 text-warning" />
         </span>
         <div className="min-w-0">
-          <h3 className="font-semibold text-amber-900 dark:text-amber-200">
+          <h3 className="font-semibold text-warning">
             Turn on AI marking
           </h3>
-          <p className="mt-1 text-sm leading-relaxed text-amber-900/80 dark:text-amber-200/70">
+          <p className="mt-1 text-sm leading-relaxed text-warning">
             Written answers are marked against the mark scheme, hints are generated as you
             work, and mock papers are graded question by question — but all of it needs an
             AI key, and your account does not have one yet. Add your own, or ask an
@@ -97,14 +97,14 @@ export default function AiKeyPrompt() {
           <p className="mt-3 flex flex-wrap items-center gap-4 text-sm">
             <Link
               href="/account"
-              className="font-semibold text-amber-900 dark:text-amber-200 underline underline-offset-2"
+              className="font-semibold text-warning underline underline-offset-2"
             >
               Add an API key
             </Link>
             <button
               type="button"
               onClick={dismiss}
-              className="text-amber-800/70 dark:text-amber-300/70 hover:text-amber-900 dark:hover:text-amber-200"
+              className="text-warning hover:text-warning"
             >
               Not now
             </button>

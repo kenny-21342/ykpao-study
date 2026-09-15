@@ -9,8 +9,8 @@ export default function NotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <div className="w-full max-w-md rounded-lg border border-line bg-surface p-8 text-center">
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
-          <Compass className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle">
+          <Compass className="h-6 w-6 text-accent-text" />
         </div>
 
         <h1 className="mb-2 text-xl font-bold text-primary">
@@ -23,7 +23,7 @@ export default function NotFound() {
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
           >
             Back to dashboard
           </Link>

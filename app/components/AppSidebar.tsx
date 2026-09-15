@@ -141,7 +141,7 @@ export function NavBadge({
   const readiness = FEATURE_READINESS[feature];
   if (readiness.state !== 'preview' || collapsed) return null;
   return (
-    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+    <span className="ml-auto rounded-full bg-warning-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
       {readiness.badge}
     </span>
   );
@@ -263,7 +263,7 @@ export default function AppSidebar({
             type="button"
             onClick={() => onNavigate('dashboard')}
             aria-label="YKPao Study — go to dashboard"
-            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
+            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/25`}
           >
             <BrandMark collapsed={collapsed} />
           </button>
@@ -271,7 +271,7 @@ export default function AppSidebar({
           <Link
             href="/"
             aria-label="YKPao Study — go to dashboard"
-            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500`}
+            className={`flex w-full items-center ${collapsed ? 'justify-center' : 'space-x-3'} cursor-pointer group rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/25`}
           >
             <BrandMark collapsed={collapsed} />
           </Link>
@@ -399,7 +399,7 @@ export default function AppSidebar({
                         });
                         window.location.assign('/');
                       }}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-danger hover:bg-danger-subtle transition-colors font-medium"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Log out</span>

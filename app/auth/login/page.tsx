@@ -128,7 +128,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
                   placeholder="student@example.com"
                   required
                 />
@@ -145,7 +145,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -155,23 +155,23 @@ export default function LoginPage() {
             <div className="-mt-2 text-right">
               <Link
                 href="/auth/forgot-password"
-                className="text-sm text-green-600 font-medium hover:text-green-700 transition-colors"
+                className="text-sm text-accent-text font-medium hover:text-accent-text transition-colors"
               >
                 Forgot password?
               </Link>
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger">{error}</p>
               </div>
             )}
 
             {unverified && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start space-x-3">
-                <MailCheck className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
+              <div className="p-4 bg-warning-subtle border border-warning-border rounded-lg flex items-start space-x-3">
+                <MailCheck className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-warning">
                   <p className="font-medium">Confirm your email to continue</p>
                   <p className="mt-1">
                     We sent a link to <span className="font-medium">{email.trim().toLowerCase()}</span>.
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   </p>
                   <Link
                     href={`/auth/verify?email=${encodeURIComponent(email.trim().toLowerCase())}`}
-                    className="inline-block mt-2 font-semibold text-amber-900 underline underline-offset-2"
+                    className="inline-block mt-2 font-semibold text-warning underline underline-offset-2"
                   >
                     Send another link
                   </Link>
@@ -229,7 +229,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-secondary">
               Don&apos;t have an account?{' '}
-              <Link href="/auth/signup" className="text-green-600 font-semibold hover:text-green-700 transition-colors">
+              <Link href="/auth/signup" className="text-accent-text font-semibold hover:text-accent-text transition-colors">
                 Sign Up
               </Link>
             </p>

@@ -764,10 +764,10 @@ export default function SmartEduPlatform() {
                       <button
                         key={shortcut.label}
                         onClick={shortcut.action}
-                        className="inline-flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left text-sm font-semibold text-secondary transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
+                        className="inline-flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left text-sm font-semibold text-secondary transition-colors hover:border-accent-border hover:bg-accent-subtle"
                       >
                         <span className="inline-flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <Icon className="h-4 w-4 text-accent-text" />
                           {shortcut.label}
                         </span>
                         <ArrowRight className="h-4 w-4 text-muted" />
@@ -816,7 +816,7 @@ export default function SmartEduPlatform() {
                     </div>
                     <button
                       onClick={openPracticeOrPapers}
-                      className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-accent-text hover:text-accent-text"
                     >
                       {practiceShortcut.label}
                       <ArrowRight className="h-4 w-4" />
@@ -834,7 +834,7 @@ export default function SmartEduPlatform() {
                         <button
                           key={idx}
                           onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
-                          className="flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
+                          className="flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left transition-colors hover:border-accent-border hover:bg-accent-subtle"
                         >
                           <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-raised text-secondary">

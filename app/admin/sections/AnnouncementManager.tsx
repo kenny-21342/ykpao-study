@@ -25,9 +25,9 @@ type Announcement = {
 
 const SEVERITY_STYLES: Record<string, string> = {
   info: 'bg-surface-raised text-secondary',
-  success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  success: 'bg-accent-subtle text-accent-text',
+  warning: 'bg-warning-subtle text-warning',
+  critical: 'bg-danger-subtle text-danger',
 };
 
 export default function AnnouncementManager() {
@@ -136,7 +136,7 @@ export default function AnnouncementManager() {
                     <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-muted hover:bg-surface-hover">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => remove(a.id)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <button onClick={() => remove(a.id)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-danger hover:bg-danger-subtle">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

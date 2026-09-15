@@ -38,7 +38,7 @@ type Course = {
 };
 
 const CARD =
-  'group flex flex-col gap-3 rounded-lg border border-line bg-surface-raised p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30';
+  'group flex flex-col gap-3 rounded-lg border border-line bg-surface-raised p-4 transition-colors hover:border-accent-border hover:bg-accent-subtle';
 
 /** The browse cascade reads `curriculum` as `board|qualification`. */
 function papersHref(scope: Scope | undefined): string {
@@ -106,7 +106,7 @@ export default function CourseShortcuts({
         </div>
         <Link
           href="/account"
-          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:hover:border-emerald-500/50"
+          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-accent-border hover:text-accent-text"
         >
           <Settings2 className="h-3.5 w-3.5" />
           {courses.length > 0 ? 'Edit courses' : 'Choose courses'}
@@ -116,7 +116,7 @@ export default function CourseShortcuts({
       {courses.length === 0 ? (
         <Link
           href="/account"
-          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-10 text-muted transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:bg-gray-950/40"
+          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-10 text-muted transition-colors hover:border-accent-border hover:text-accent-text dark:bg-gray-950/40"
         >
           <Plus className="h-8 w-8 opacity-40" />
           <p className="mt-3 text-sm font-medium">No subjects yet</p>
@@ -147,7 +147,7 @@ export default function CourseShortcuts({
                       {course.targetGrade ? ` · target ${course.targetGrade}` : ''}
                     </p>
                   </div>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent-text">
                     <BookOpen className="h-4.5 w-4.5" />
                   </div>
                 </div>
@@ -155,7 +155,7 @@ export default function CourseShortcuts({
                 <div className="flex flex-wrap gap-1.5">
                   <Link
                     href={papersHref(scope)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-accent-text"
                   >
                     <Library className="h-3.5 w-3.5" />
                     Past papers
@@ -163,14 +163,14 @@ export default function CourseShortcuts({
                   </Link>
                   <button
                     onClick={onOpenPractice}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-accent-text"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Practice
                   </button>
                   <button
                     onClick={onOpenMockExams}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-accent-text"
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Mock exam

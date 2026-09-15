@@ -562,7 +562,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                   key={s}
                   onClick={() => setPenSize(s)}
                   className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                    penSize === s ? 'bg-green-100 dark:bg-green-900/30' : 'hover:bg-surface-hover'
+                    penSize === s ? 'bg-accent-subtle' : 'hover:bg-surface-hover'
                   }`}
                 >
                   <span
@@ -584,7 +584,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             <Redo2 className="w-4 h-4" />
           </ToolButton>
           <ToolButton onClick={handleClearClick} title="Clear all">
-            <Trash2 className="w-4 h-4 text-red-500" />
+            <Trash2 className="w-4 h-4 text-danger" />
           </ToolButton>
 
           <Divider />
@@ -647,7 +647,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               onChange={(e) => updateTextBox(tb.id, e.target.value)}
               onBlur={() => commitTextBox(tb.id, tb.text)}
               placeholder="e.g. Force, angle, or x = 3"
-              className="absolute bg-transparent border border-dashed border-strong rounded-sm p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
+              className="absolute bg-transparent border border-dashed border-strong rounded-sm p-1 resize-none outline-none focus:border-accent focus:bg-white/50"
               style={{
                 left: `${tb.x}px`,
                 top: `${tb.y}px`,
@@ -686,7 +686,7 @@ function ToolButton({
       title={title} aria-label={title}
       className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
         active
-          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+          ? 'bg-accent-subtle text-accent-text'
           : 'text-muted hover:bg-surface-hover'
       }`}
     >

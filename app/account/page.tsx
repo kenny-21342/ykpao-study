@@ -231,16 +231,16 @@ export default function AccountSettingsPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <div className="bg-danger-subtle backdrop-blur-xl border border-danger-border rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-danger">{error}</p>
           </div>
         )}
 
         {/* Profile section */}
         <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <UserIcon className="w-5 h-5 text-green-600" />
+            <UserIcon className="w-5 h-5 text-accent-text" />
             <h2 className="text-lg font-bold text-primary">Profile</h2>
           </div>
 
@@ -258,7 +258,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-surface border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 hover:scale-110 transition-transform disabled:opacity-50"
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-surface border-2 border-accent rounded-full flex items-center justify-center text-accent-text hover:scale-110 transition-transform disabled:opacity-50"
                 title="Upload avatar" aria-label="Upload avatar"
               >
                 {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -275,7 +275,7 @@ export default function AccountSettingsPage() {
               <p className="text-sm font-medium text-secondary">Avatar</p>
               <p className="text-xs text-muted mt-0.5">PNG, JPG, or WEBP. Shown next to your name across the app.</p>
               {avatarUrl && (
-                <button onClick={() => removeImage('avatar')} className="mt-1.5 inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
+                <button onClick={() => removeImage('avatar')} className="mt-1.5 inline-flex items-center gap-1 text-xs text-danger hover:text-danger">
                   <Trash2 className="w-3 h-3" /> Remove avatar
                 </button>
               )}
@@ -309,7 +309,7 @@ export default function AccountSettingsPage() {
                     aria-label="Current app background preview"
                     role="img"
                   />
-                  <button onClick={() => removeImage('bg')} className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
+                  <button onClick={() => removeImage('bg')} className="inline-flex items-center gap-1 text-xs text-danger hover:text-danger">
                     <Trash2 className="w-3 h-3" /> Remove
                   </button>
                 </>
@@ -328,11 +328,11 @@ export default function AccountSettingsPage() {
                 disabled={profileLoading}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={profileLoading ? 'Loading…' : undefined}
-                className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             {profileError && (
-              <p className="mt-2 text-xs text-red-600 dark:text-red-400">{profileError}</p>
+              <p className="mt-2 text-xs text-danger">{profileError}</p>
             )}
           </div>
 
@@ -367,7 +367,7 @@ export default function AccountSettingsPage() {
         {/* Password section */}
         <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <Lock className="w-5 h-5 text-green-600" />
+            <Lock className="w-5 h-5 text-accent-text" />
             <h2 className="text-lg font-bold text-primary">Change Password</h2>
           </div>
 
@@ -383,7 +383,7 @@ export default function AccountSettingsPage() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   placeholder="••••••••"
                 />
               </div>
@@ -394,7 +394,7 @@ export default function AccountSettingsPage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                     placeholder="••••••••"
                   />
                 </div>
@@ -404,7 +404,7 @@ export default function AccountSettingsPage() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                     placeholder="••••••••"
                   />
                 </div>

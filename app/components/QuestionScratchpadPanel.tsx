@@ -93,7 +93,7 @@ export default function QuestionScratchpadPanel({
       >
         <PenTool className="h-4 w-4" />
         Scratchpad
-        {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="Saving…" />}
+        {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-warning" title="Saving…" />}
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
       {/* There is no Save button here -- working is autosaved on a debounce --

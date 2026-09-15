@@ -48,21 +48,21 @@ const TONE_META: Record<NoticeTone, { icon: typeof Info; accent: string; iconBg:
   },
   success: {
     icon: CheckCircle2,
-    accent: 'text-green-700 dark:text-green-300',
-    iconBg: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300',
-    border: 'border-green-200 dark:border-green-900/50',
+    accent: 'text-accent-text',
+    iconBg: 'bg-accent-subtle text-accent-text',
+    border: 'border-accent-border',
   },
   warning: {
     icon: TriangleAlert,
-    accent: 'text-amber-700 dark:text-amber-300',
-    iconBg: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    border: 'border-amber-200 dark:border-amber-900/50',
+    accent: 'text-warning',
+    iconBg: 'bg-warning-subtle text-warning',
+    border: 'border-warning-border',
   },
   error: {
     icon: AlertCircle,
-    accent: 'text-red-700 dark:text-red-300',
-    iconBg: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300',
-    border: 'border-red-200 dark:border-red-900/50',
+    accent: 'text-danger',
+    iconBg: 'bg-danger-subtle text-danger',
+    border: 'border-danger-border',
   },
 };
 
@@ -307,7 +307,7 @@ export default function NoticeDialog({
               disabled={busy || (inputRequired && !inputValue.trim())}
               className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
                 destructive
-                  ? 'bg-red-600 hover:bg-red-700'
+                  ? 'bg-danger hover:bg-danger'
                   : 'bg-surface-inverse hover:bg-surface-inverse-hover'
               }`}
             >

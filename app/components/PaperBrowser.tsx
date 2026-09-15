@@ -50,9 +50,9 @@ const EMPTY_SELECTION: Selection = {
 };
 
 const CARD =
-  'rounded-lg border border-line bg-surface hover:border-green-500 dark:hover:border-green-500 transition-all text-left';
+  'rounded-lg border border-line bg-surface hover:border-accent transition-all text-left';
 const CARD_ACTIVE =
-  'rounded-lg border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left';
+  'rounded-lg border-2 border-accent bg-accent-subtle text-left';
 
 function formatBytes(bytes: number | null) {
   if (!bytes) return null;
@@ -109,7 +109,7 @@ function Step({
   return (
     <section ref={innerRef} className="scroll-mt-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs font-semibold text-white">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
           {index}
         </span>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
@@ -316,7 +316,7 @@ export default function PaperBrowser() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+        <div className="rounded-lg border border-danger-border bg-danger-subtle p-4 text-sm text-danger">
           {error}
         </div>
       )}
@@ -341,7 +341,7 @@ export default function PaperBrowser() {
                 className={`${selection.curriculum === curriculum.id ? CARD_ACTIVE : CARD} p-4`}
               >
                 <div className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <GraduationCap className="h-5 w-5 text-accent-text" />
                   <span className="font-semibold text-primary">
                     {curriculum.label}
                   </span>
@@ -371,7 +371,7 @@ export default function PaperBrowser() {
                   className={`${selection.subject === subject.code ? CARD_ACTIVE : CARD} p-3`}
                 >
                   <div className="flex items-start gap-2">
-                    <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-primary">
                         {subject.name}
@@ -404,8 +404,8 @@ export default function PaperBrowser() {
                   onClick={() => update({ year: year.year, session: null })}
                   className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                     selection.year === year.year
-                      ? 'bg-green-500 text-white'
-                      : 'border border-strong text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
+                      ? 'bg-accent text-white'
+                      : 'border border-strong text-secondary hover:border-accent hover:text-accent-text'
                   }`}
                 >
                   {year.year}
@@ -426,8 +426,8 @@ export default function PaperBrowser() {
                 onClick={() => update({ session: session.session })}
                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   selection.session === session.session
-                    ? 'bg-green-500 text-white'
-                    : 'border border-strong text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
+                    ? 'bg-accent text-white'
+                    : 'border border-strong text-secondary hover:border-accent hover:text-accent-text'
                 }`}
               >
                 {session.label}
@@ -472,7 +472,7 @@ export default function PaperBrowser() {
                       <span key={document.id} className="inline-flex items-center">
                         <Link
                           href={`/papers/${document.id}`}
-                          className="inline-flex items-center gap-1.5 rounded-l-md border border-strong px-3 py-1.5 text-sm text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center gap-1.5 rounded-l-md border border-strong px-3 py-1.5 text-sm text-secondary hover:border-accent hover:text-accent-text"
                         >
                           {document.docType === 'au' ? (
                             <Music className="h-3.5 w-3.5" />
@@ -495,7 +495,7 @@ export default function PaperBrowser() {
                               ? ` (${formatBytes(document.sizeBytes)})`
                               : ''
                           }`}
-                          className="inline-flex items-center rounded-r-md border border-l-0 border-strong px-2 py-1.5 text-muted hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center rounded-r-md border border-l-0 border-strong px-2 py-1.5 text-muted hover:border-accent hover:text-accent-text"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>

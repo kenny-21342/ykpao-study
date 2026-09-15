@@ -127,7 +127,7 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto p-2">
-          {error && <p className="px-3 py-4 text-sm text-red-500">{error}</p>}
+          {error && <p className="px-3 py-4 text-sm text-danger">{error}</p>}
           {!error && !loading && query.trim().length >= 2 && results.length === 0 && (
             <p className="px-3 py-4 text-sm text-muted">No results for &ldquo;{query.trim()}&rdquo;.</p>
           )}

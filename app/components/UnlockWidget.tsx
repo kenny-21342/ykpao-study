@@ -86,7 +86,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
           </div>
 
           {status === 'ok' ? (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 py-2">
+            <div className="flex items-center gap-2 text-sm text-accent-text py-2">
               <CheckCircle2 className="w-4 h-4" /> Vault unlocked.
             </div>
           ) : (
@@ -104,7 +104,7 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
                 autoFocus
               />
               {status === 'fail' && (
-                <p className="text-xs text-red-500 mt-2">Not recognised.</p>
+                <p className="text-xs text-danger mt-2">Not recognised.</p>
               )}
               <button
                 onClick={() => passphrase.trim() && submit(passphrase.trim())}

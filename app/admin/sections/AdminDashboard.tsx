@@ -192,7 +192,7 @@ export function LoadingSpinner() {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
+    <div className="bg-danger-subtle border border-danger-border rounded-lg p-4 text-sm text-danger">
       <p className="font-medium">Error</p>
       <p className="mt-1">{message}</p>
     </div>

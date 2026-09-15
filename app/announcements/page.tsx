@@ -35,7 +35,7 @@ export default function AnnouncementsPage() {
       <div className="min-h-full bg-canvas">
         {/* Top bar */}
         <header className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-green-600 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-accent-text transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
@@ -57,7 +57,7 @@ export default function AnnouncementsPage() {
           {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-accent-text" />
             </div>
           )}
 
@@ -84,13 +84,13 @@ export default function AnnouncementsPage() {
               key={a.id}
               className={`min-w-0 rounded-lg p-6 border ${
                 a.pinned
-                  ? 'bg-accent-subtle border-green-200 dark:border-green-900/50'
+                  ? 'bg-accent-subtle border-accent-border'
                   : 'bg-surface border-line'
               }`}
             >
               <div className="flex items-center gap-2 mb-3">
                 {a.pinned && (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-subtle text-accent-text">
                     <Pin className="w-3 h-3" /> Pinned
                   </span>
                 )}
@@ -108,7 +108,7 @@ export default function AnnouncementsPage() {
               </h2>
               <div
                 className="max-w-none break-words text-sm text-secondary prose prose-sm dark:prose-invert
-                  [&_a]:break-words [&_a]:text-green-600 [&_a]:underline [&_img]:max-w-full
+                  [&_a]:break-words [&_a]:text-accent-text [&_a]:underline [&_img]:max-w-full
                   [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }}
               />

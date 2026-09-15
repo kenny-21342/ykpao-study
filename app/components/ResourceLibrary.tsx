@@ -49,15 +49,15 @@ export default function ResourceLibrary() {
         {/* Header */}
         <div>
           <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-            <Library className="w-6 h-6 text-green-600" />
+            <Library className="w-6 h-6 text-accent-text" />
             Resource Library
           </h2>
           <p className="text-secondary mt-1">
             Study notes shared on review.ykpao.com, and your school&apos;s own resources.
           </p>
           <div className="mt-3 inline-flex rounded-lg border border-line bg-surface p-1" role="group" aria-label="Resource scope">
-            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-secondary'}`}>My courses</button>
-            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-green-600 text-white' : 'text-secondary'}`}>All subjects</button>
+            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-accent text-white' : 'text-secondary'}`}>My courses</button>
+            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-accent text-white' : 'text-secondary'}`}>All subjects</button>
           </div>
         </div>
 
@@ -83,7 +83,7 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
       onClick={onClick}
       className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
         active
-          ? 'border-green-600 text-green-700 dark:text-green-400'
+          ? 'border-accent text-accent-text'
           : 'border-transparent text-muted hover:text-secondary'
       }`}
     >
@@ -95,12 +95,12 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-5 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+    <div className="bg-danger-subtle border border-danger-border rounded-lg p-5 flex items-start gap-3">
+      <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
       <div className="flex-1">
-        <p className="text-sm font-semibold text-red-800 dark:text-red-300">{message}</p>
+        <p className="text-sm font-semibold text-danger">{message}</p>
         {onRetry && (
-          <button onClick={onRetry} className="mt-2 text-sm text-red-700 underline">Try again</button>
+          <button onClick={onRetry} className="mt-2 text-sm text-danger underline">Try again</button>
         )}
       </div>
     </div>
@@ -205,13 +205,13 @@ function ExternalNotesView() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g. exam tips, revision, or Biology"
-          className="w-full pl-10 pr-4 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          className="w-full pl-10 pr-4 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-ring/25 focus:border-transparent outline-none"
         />
       </div>
 
       <div className="flex items-center gap-2 text-xs text-muted">
         <BookOpen className="w-3.5 h-3.5" />
-        <span>Sourced from <a href="https://review.ykpao.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">review.ykpao.com</a></span>
+        <span>Sourced from <a href="https://review.ykpao.com" target="_blank" rel="noopener noreferrer" className="text-accent-text hover:underline">review.ykpao.com</a></span>
       </div>
 
       {filtered.length === 0 ? (
@@ -240,7 +240,7 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
   return (
     <button
       onClick={onOpen}
-      className="text-left bg-surface rounded-lg border border-line hover:border-green-300 transition-all p-5 flex flex-col"
+      className="text-left bg-surface rounded-lg border border-line hover:border-accent-border transition-all p-5 flex flex-col"
     >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -310,7 +310,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
               href={note.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-muted hover:text-green-600 hover:bg-surface-hover rounded-md transition-colors"
+              className="p-2 text-muted hover:text-accent-text hover:bg-surface-hover rounded-md transition-colors"
               title="Open original" aria-label="Open original"
             >
               <Eye className="w-5 h-5" />
@@ -364,7 +364,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
               <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading content…
             </div>
           ) : (
-            <p className="text-sm text-muted italic">No content available. <a href={note.link} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">View original →</a></p>
+            <p className="text-sm text-muted italic">No content available. <a href={note.link} target="_blank" rel="noopener noreferrer" className="text-accent-text underline">View original →</a></p>
           )}
 
           {/* Comment notice */}
@@ -373,7 +373,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
               <MessageCircle className="w-4 h-4 flex-shrink-0" />
               <span>
                 Comments are loaded on the original site (require its own login).
-                <a href={`${note.link}#comment`} target="_blank" rel="noopener noreferrer" className="ml-1 text-green-600 underline">View comments on YKPao Review →</a>
+                <a href={`${note.link}#comment`} target="_blank" rel="noopener noreferrer" className="ml-1 text-accent-text underline">View comments on YKPao Review →</a>
               </span>
             </div>
           )}
@@ -561,7 +561,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               onClick={() => switchViewMode('list')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 !isBrowserView
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-accent text-white'
                   : 'text-secondary hover:bg-surface-hover'
               }`}
               title="List view" aria-label="List view"
@@ -574,7 +574,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               onClick={() => switchViewMode('browser')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 isBrowserView
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-accent text-white'
                   : 'text-secondary hover:bg-surface-hover'
               }`}
               title="Folder browser" aria-label="Folder browser"
@@ -601,7 +601,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="e.g. worksheet, 2024, Biology, or Ms Lee"
-            className="w-full pl-10 pr-10 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-10 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-ring/25 focus:border-transparent outline-none"
           />
           {query && (
             <button
@@ -617,7 +617,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={subjectFilter}
           onChange={(e) => { setSubjectFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-ring/25"
         >
           <option value="">All subjects</option>
           {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
@@ -625,7 +625,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={categoryFilter}
           onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-ring/25"
         >
           <option value="">All categories</option>
           {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -633,7 +633,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={sortBy}
           onChange={(e) => { setSortBy(e.target.value as ResourceSort); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-ring/25"
         >
           <option value="createdAt">Newest first</option>
           <option value="updatedAt">Recently updated</option>
@@ -655,7 +655,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="w-24 px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
+            className="w-24 px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-ring/25"
             title="Rows per page" aria-label="Rows per page"
           >
             <option value={50}>50</option>
@@ -705,7 +705,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
             <div className="flex items-center gap-3 text-xs text-muted">
               <span>{pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of {total.toLocaleString()}</span>
-              {loading && <span className="inline-flex items-center gap-1 text-green-600"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Refreshing</span>}
+              {loading && <span className="inline-flex items-center gap-1 text-accent-text"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Refreshing</span>}
             </div>
             <button
               onClick={clearFilters}
@@ -909,7 +909,7 @@ function ResourceBrowserView({
               onClick={() => onChangeFolder(null)}
               className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium ${
                 currentFolderId === null
-                  ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
+                  ? 'bg-accent-subtle text-accent-text'
                   : 'text-secondary hover:bg-surface-hover'
               }`}
               title="All resources" aria-label="All resources"
@@ -927,7 +927,7 @@ function ResourceBrowserView({
                     onClick={() => onChangeFolder(crumb.id)}
                     className={`max-w-[14rem] truncate rounded-md px-2 py-1 font-medium ${
                       active
-                        ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
+                        ? 'bg-accent-subtle text-accent-text'
                         : 'text-secondary hover:bg-surface-hover'
                     }`}
                     title={crumb.name} aria-label={crumb.name}
@@ -974,7 +974,7 @@ function ResourceBrowserView({
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface"
                     title={folder.name} aria-label={folder.name}
                   >
-                    <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
+                    <Folder className="h-5 w-5 flex-shrink-0 text-warning" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{folder.name}</span>
                       <span className="block text-xs text-muted">
@@ -992,7 +992,7 @@ function ResourceBrowserView({
         <section className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-              <FolderOpen className="h-4 w-4 text-amber-500" />
+              <FolderOpen className="h-4 w-4 text-warning" />
               <span>{currentLabel}</span>
             </div>
             <p className="text-xs text-muted">
@@ -1007,10 +1007,10 @@ function ResourceBrowserView({
                   key={folder.id}
                   type="button"
                   onClick={() => onChangeFolder(folder.id)}
-                  className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
+                  className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left transition-colors hover:border-accent-border hover:bg-accent-subtle dark:bg-gray-900/40"
                   title={folder.name} aria-label={folder.name}
                 >
-                  <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
+                  <Folder className="h-5 w-5 flex-shrink-0 text-warning" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-primary">{folder.name}</span>
                     <span className="block text-xs text-muted">
@@ -1264,7 +1264,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
         <div className="px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-primary flex items-center gap-2">
-              <Upload className="w-5 h-5 text-green-600" /> Upload School Resource
+              <Upload className="w-5 h-5 text-accent-text" /> Upload School Resource
             </h2>
             <p className="text-xs text-muted mt-0.5">
               {mode === 'single' ? 'Share a file with the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
@@ -1315,7 +1315,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-accent hover:bg-accent-subtle transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -1331,7 +1331,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors"
+                      className="p-1 text-muted hover:text-danger rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1354,7 +1354,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 />
               </div>
 
@@ -1366,7 +1366,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
                 <div>
@@ -1376,7 +1376,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
               </div>
@@ -1388,7 +1388,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
                 />
               </div>
             </>
@@ -1401,7 +1401,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-accent hover:bg-accent-subtle transition-colors"
                   >
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-muted" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
@@ -1419,7 +1419,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                         type="button"
                         onClick={handleRemoveFolder}
                         disabled={folderBusy}
-                        className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
+                        className="p-1 text-muted hover:text-danger rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1432,11 +1432,11 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                           <span className="flex-1 truncate text-secondary" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-muted flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
                           {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
-                          {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
-                          {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
+                          {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-warning animate-spin flex-shrink-0" />}
+                          {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-accent-text flex-shrink-0" />}
                           {it.status === 'error' && (
                             <span title={it.error} className="flex-shrink-0">
-                              <XCircle className="w-3.5 h-3.5 text-red-500" />
+                              <XCircle className="w-3.5 h-3.5 text-danger" />
                             </span>
                           )}
                         </li>
@@ -1467,7 +1467,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
@@ -1478,7 +1478,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -1491,7 +1491,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                 </div>
               )}
               {!folderBusy && folderDoneCount > 0 && (
-                <div className="text-xs text-green-600 dark:text-green-400">
+                <div className="text-xs text-accent-text">
                   {folderDoneCount} uploaded successfully{folderErrorCount ? `, ${folderErrorCount} failed` : ''}.
                 </div>
               )}

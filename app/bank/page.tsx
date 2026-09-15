@@ -36,7 +36,7 @@ export default async function BankIndexPage() {
         <div>
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-green-600"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent-text"
           >
             <ArrowLeft className="h-4 w-4" />
             Past papers

@@ -153,14 +153,14 @@ export default function SignupPage() {
             </div>
 
             {created.emailSent ? (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 mb-6">
+              <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg text-sm text-accent-text mb-6">
                 We sent a confirmation link to{' '}
                 <span className="font-semibold">{created.email}</span>. Open it to activate your
                 account. The link lasts 24 hours &mdash; check your spam folder if it has not
                 arrived in a few minutes.
               </div>
             ) : (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 mb-6">
+              <div className="p-4 bg-warning-subtle border border-warning-border rounded-lg text-sm text-warning mb-6">
                 Your account was created, but we could not send the confirmation email just now.
                 Request a new link below, or contact us if it keeps failing.
               </div>
@@ -175,7 +175,7 @@ export default function SignupPage() {
 
             <p className="mt-6 text-sm text-secondary">
               Already confirmed?{' '}
-              <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-700">
+              <Link href="/auth/login" className="font-medium text-accent-text hover:text-accent-text">
                 Sign in
               </Link>
             </p>
@@ -227,7 +227,7 @@ export default function SignupPage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
                   placeholder="e.g. Alex Chen"
                   required
                 />
@@ -244,7 +244,7 @@ export default function SignupPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
                   placeholder="student@example.com"
                   required
                 />
@@ -264,8 +264,8 @@ export default function SignupPage() {
                   onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                   aria-describedby="password-rules"
                   aria-invalid={touched.password && Boolean(passwordProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                    touched.password && passwordProblem ? 'border-red-400' : 'border-strong'
+                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
+                    touched.password && passwordProblem ? 'border-danger' : 'border-strong'
                   }`}
                   placeholder="••••••••"
                   required
@@ -277,7 +277,7 @@ export default function SignupPage() {
                 and symbols makes it stronger.
               </p>
               {touched.password && passwordProblem && (
-                <p className="mt-1 text-xs text-red-600">{passwordProblem}</p>
+                <p className="mt-1 text-xs text-danger">{passwordProblem}</p>
               )}
               {formData.password && (
                 <div className="mt-2">
@@ -303,30 +303,30 @@ export default function SignupPage() {
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
                   aria-invalid={touched.confirmPassword && Boolean(confirmProblem)}
-                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                    touched.confirmPassword && confirmProblem ? 'border-red-400' : 'border-strong'
+                  className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all ${
+                    touched.confirmPassword && confirmProblem ? 'border-danger' : 'border-strong'
                   }`}
                   placeholder="••••••••"
                   required
                 />
                 {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-text" />
                 )}
               </div>
               {touched.confirmPassword && confirmProblem && (
-                <p className="mt-1 text-xs text-red-600">{confirmProblem}</p>
+                <p className="mt-1 text-xs text-danger">{confirmProblem}</p>
               )}
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-red-700">
+              <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-danger">
                   <p>{error}</p>
                   {emailTaken && (
                     <Link
                       href="/auth/login"
-                      className="mt-1 inline-block font-semibold text-red-800 underline hover:text-red-900"
+                      className="mt-1 inline-block font-semibold text-danger underline hover:text-danger"
                     >
                       Sign in instead
                     </Link>
@@ -376,7 +376,7 @@ export default function SignupPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-secondary">
               Already have an account?{' '}
-              <Link href="/auth/login" className="text-green-600 font-semibold hover:text-green-700 transition-colors">
+              <Link href="/auth/login" className="text-accent-text font-semibold hover:text-accent-text transition-colors">
                 Sign In
               </Link>
             </p>

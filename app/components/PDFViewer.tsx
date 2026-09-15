@@ -102,7 +102,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
           <a
             href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
             download={fileName}
-            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm text-white transition-colors hover:bg-accent-hover"
           >
             <Download className="h-4 w-4" />
             Download instead

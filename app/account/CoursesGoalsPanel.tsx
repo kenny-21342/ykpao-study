@@ -87,12 +87,12 @@ export default function CoursesGoalsPanel() {
   return (
     <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-5">
       <div className="flex items-center gap-2">
-        <BookOpen className="w-5 h-5 text-green-600" />
+        <BookOpen className="w-5 h-5 text-accent-text" />
         <h2 className="text-lg font-bold text-primary">Courses &amp; goals</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {catalog.map((course) => (
-          <button key={course.id} type="button" onClick={() => toggle(course.id)} className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${selected.has(course.id) ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : 'border-line bg-white/50 dark:bg-gray-900/30'}`}>
+          <button key={course.id} type="button" onClick={() => toggle(course.id)} className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${selected.has(course.id) ? 'border-accent bg-accent-subtle' : 'border-line bg-white/50 dark:bg-gray-900/30'}`}>
             <span className="block text-sm font-medium text-primary">{course.name}</span>
             <span className="text-xs text-muted">{course.level} · Syllabus {course.curriculumScopes[0]?.subjectCode ?? 'mapping needed'}</span>
           </button>
@@ -113,8 +113,8 @@ export default function CoursesGoalsPanel() {
         );
       })}
       {signals.length > 0 && <div className="border-t border-line pt-4"><p className="text-xs font-semibold uppercase text-muted">Activity signals in use</p><div className="mt-2 space-y-1">{signals.slice(0, 6).map((signal) => <div key={`${signal.courseId}-${signal.topic}`} className="flex items-center justify-between text-xs text-secondary"><span>{signal.topic} · {signal.attempts} official attempt{signal.attempts === 1 ? '' : 's'}</span><span>{signal.mastery == null ? 'Not enough data' : `${signal.mastery}% mastery`} · {Math.round(signal.confidence * 100)}% confidence</span></div>)}</div></div>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Saving…' : saved ? <><Check className="w-4 h-4" /> Saved</> : 'Save courses'}</button>
+      {error && <p className="text-sm text-danger">{error}</p>}
+      <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-accent rounded-lg disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Saving…' : saved ? <><Check className="w-4 h-4" /> Saved</> : 'Save courses'}</button>
     </section>
   );
 }

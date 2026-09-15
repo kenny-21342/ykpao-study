@@ -61,10 +61,10 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
   if (error) {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+        <div className="rounded-lg border border-danger-border bg-danger-subtle p-4 text-sm text-danger">
           {error}
         </div>
-        <Link href="/papers" className="mt-4 inline-flex items-center gap-1.5 text-sm text-green-600">
+        <Link href="/papers" className="mt-4 inline-flex items-center gap-1.5 text-sm text-accent-text">
           <ArrowLeft className="h-4 w-4" />
           Back to past papers
         </Link>
@@ -89,7 +89,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         <div>
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-green-600"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent-text"
           >
             <ArrowLeft className="h-4 w-4" />
             Past papers
@@ -104,7 +104,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
 
         <a
           href={`/api/papers/${active.id}/file?download=1`}
-          className="inline-flex items-center gap-1.5 rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           <Download className="h-4 w-4" />
           Download
@@ -121,7 +121,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
             onClick={() => setActiveId(document.id)}
             className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               document.id === active.id
-                ? 'border-green-500 text-green-600 dark:text-green-400'
+                ? 'border-accent text-accent-text'
                 : 'border-transparent text-muted hover:text-secondary'
             }`}
           >
@@ -134,7 +134,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         {active.docType === 'au' ? (
           <div className="space-y-3 p-6">
             <div className="flex items-center gap-2 text-primary">
-              <Music className="h-5 w-5 text-green-600" />
+              <Music className="h-5 w-5 text-accent-text" />
               <h2 className="font-semibold">{documentLabel(active)}</h2>
             </div>
             <p className="text-sm text-muted">

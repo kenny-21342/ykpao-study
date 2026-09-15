@@ -180,7 +180,7 @@ const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
   },
   failed: {
     label: 'Failed',
-    cls: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+    cls: 'bg-danger-subtle text-danger border-danger-border',
   },
   generated: {
     label: 'Ready',
@@ -188,11 +188,11 @@ const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
   },
   in_progress: {
     label: 'In Progress',
-    cls: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    cls: 'bg-warning-subtle text-warning border-warning-border',
   },
   completed: {
     label: 'Completed',
-    cls: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
+    cls: 'bg-accent-subtle text-accent-text border-accent-border',
   },
 };
 
@@ -289,7 +289,7 @@ export default function MockExams() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-              <ClipboardList className="w-6 h-6 text-green-600" />
+              <ClipboardList className="w-6 h-6 text-accent-text" />
               Mock Exams
             </h2>
             <p className="text-secondary mt-1">
@@ -405,8 +405,8 @@ function StatCard({
 }: { icon: React.ReactNode; label: string; value: string | number; tint: 'blue' | 'green' | 'amber' | 'purple' }) {
   const tints: Record<string, string> = {
     blue: 'bg-surface-raised text-secondary',
-    green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
-    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
+    green: 'bg-accent-subtle text-accent-text',
+    amber: 'bg-warning-subtle text-warning',
     purple: 'bg-surface-raised text-secondary',
   };
   return (
@@ -494,7 +494,7 @@ function ExamCard({
         <div className="flex flex-col items-end gap-2">
           {pct !== null && (
             <div className="text-right">
-              <div className={`text-2xl font-bold ${pct >= 70 ? 'text-green-600' : pct >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+              <div className={`text-2xl font-bold ${pct >= 70 ? 'text-accent-text' : pct >= 40 ? 'text-warning' : 'text-danger'}`}>
                 {pct}%
               </div>
               <div className="text-xs text-muted">
@@ -527,7 +527,7 @@ function ExamCard({
           )}
           <button
             onClick={onDelete}
-            className="p-2 text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+            className="p-2 text-muted hover:text-danger hover:bg-danger-subtle rounded-md transition-colors"
             title="Delete" aria-label="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -536,7 +536,7 @@ function ExamCard({
               leads to an error page. Say what went wrong instead of offering a
               button that cannot work. */}
           {exam.status === 'failed' ? (
-            <span className="text-xs text-red-600 dark:text-red-400 max-w-xs text-right">
+            <span className="text-xs text-danger max-w-xs text-right">
               {exam.generationError ?? 'This paper could not be generated.'}
             </span>
           ) : exam.status === 'generating' ? (
@@ -565,12 +565,12 @@ function ExamCard({
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-5 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+    <div className="bg-danger-subtle border border-danger-border rounded-lg p-5 flex items-start gap-3">
+      <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
       <div className="flex-1">
-        <p className="text-sm font-semibold text-red-800 dark:text-red-300">{message}</p>
+        <p className="text-sm font-semibold text-danger">{message}</p>
         {onRetry && (
-          <button onClick={onRetry} className="mt-2 text-sm text-red-700 underline">
+          <button onClick={onRetry} className="mt-2 text-sm text-danger underline">
             Try again
           </button>
         )}
@@ -712,7 +712,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'mock'
                         ? 'bg-accent text-white border-transparent shadow'
-                        : 'bg-surface text-secondary border-strong hover:border-green-400'
+                        : 'bg-surface text-secondary border-strong hover:border-accent'
                     }`}
                   >
                     Mock exam
@@ -740,7 +740,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Paper 2 mechanics refresher"
-                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-ring/25 focus:border-transparent outline-none"
                 />
               </Field>
 
@@ -758,7 +758,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   <select
                     value={subjectCode}
                     onChange={(e) => setSubjectCode(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-ring/25 focus:border-transparent outline-none"
                   >
                     {subjects.map((s) => (
                       <option key={s.code} value={s.code}>
@@ -786,7 +786,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                       className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all capitalize ${
                         difficulty === d
                           ? 'bg-accent text-white border-transparent shadow'
-                          : 'bg-surface text-secondary border-strong hover:border-green-400'
+                          : 'bg-surface text-secondary border-strong hover:border-accent'
                       }`}
                     >
                       {d}
@@ -805,7 +805,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     step={10}
                     value={totalMarks}
                     onChange={(e) => setTotalMarks(Number(e.target.value))}
-                    className="w-full accent-green-600"
+                    className="w-full accent-[var(--accent)]"
                   />
                   <div className="flex justify-between text-xs text-muted mt-1">
                     <span>20</span><span>120</span>
@@ -820,7 +820,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     step={15}
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="w-full accent-green-600"
+                    className="w-full accent-[var(--accent)]"
                   />
                   <div className="flex justify-between text-xs text-muted mt-1">
                     <span>30m</span><span>3h</span>
@@ -835,7 +835,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     value={topicsRaw}
                     onChange={(e) => setTopicsRaw(e.target.value)}
                     placeholder="e.g. kinematics, forces, momentum"
-                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-ring/25 focus:border-transparent outline-none"
                   />
                   <p className="text-xs text-muted mt-1">
                     Leave blank to sample across the whole subject.
@@ -875,7 +875,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         </div>
 
         {generating && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
+          <div className="bg-accent-subtle border border-accent-border rounded-lg p-4 text-sm text-accent-text flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
             <span>
               {mode === 'predicted' && curatedPrediction
@@ -893,7 +893,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return (
     <label className="block">
       <span className="block text-sm font-medium text-secondary mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-danger">*</span>}
       </span>
       {children}
     </label>
@@ -905,7 +905,7 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active?
     <div className="flex items-center gap-2">
       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
         done
-          ? 'bg-green-500 text-white'
+          ? 'bg-accent text-white'
           : active
             ? 'bg-accent text-white shadow'
             : 'bg-surface-active text-muted'
@@ -1147,7 +1147,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   if (exam.status === 'generating') {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <Loader2 className="w-7 h-7 animate-spin text-green-600" />
+        <Loader2 className="w-7 h-7 animate-spin text-accent-text" />
         <p className="text-lg font-semibold text-primary">Building your paper…</p>
         <p className="max-w-sm text-sm text-secondary">
           Choosing questions from the bank. This usually takes under a minute, and
@@ -1277,7 +1277,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             aria-label={timeLow ? 'Time remaining, running low' : 'Time remaining'}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-semibold tabular-nums ${
               timeLow
-                ? 'bg-red-50 text-red-700 border border-red-200 motion-safe:animate-pulse'
+                ? 'bg-danger-subtle text-danger border border-danger-border motion-safe:animate-pulse'
                 : 'bg-surface-raised text-secondary'
             }`}
           >
@@ -1287,7 +1287,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
           <span className="text-xs text-muted hidden md:inline">
             {answeredCount}/{totalItems} answered
             {flaggedCount > 0 && (
-              <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+              <span className="ml-2 inline-flex items-center gap-1 text-warning">
                 <Flag className="w-3 h-3" /> {flaggedCount} flagged
               </span>
             )}
@@ -1311,7 +1311,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                     idx === activeIdx
                       ? 'bg-accent text-white font-semibold'
                       : answered
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        ? 'bg-accent-subtle text-accent-text'
                         : 'text-secondary hover:bg-surface-active'
                   }`}
                   title={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`} aria-label={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`}
@@ -1321,7 +1321,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   </span>
                   {answered && idx !== activeIdx && <CheckCircle2 className="w-3 h-3 hidden md:block" />}
                   {isFlagged && (
-                    <Flag className={`w-3 h-3 flex-shrink-0 ${idx === activeIdx ? 'text-white' : 'text-amber-500'}`} fill="currentColor" />
+                    <Flag className={`w-3 h-3 flex-shrink-0 ${idx === activeIdx ? 'text-white' : 'text-warning'}`} fill="currentColor" />
                   )}
                   <span className="hidden md:inline truncate">
                     Q{it.number}{it.part || ''}{it.subPart || ''}
@@ -1349,7 +1349,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md">
+                <span className="text-xs font-semibold px-2 py-1 bg-warning-subtle text-warning border border-warning-border rounded-md">
                   [{item.marks} marks]
                 </span>
                 <button
@@ -1357,8 +1357,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   onClick={() => setFlagged((f) => ({ ...f, [item.id]: !f[item.id] }))}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors ${
                     flagged[item.id]
-                      ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
-                      : 'bg-surface text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                      ? 'bg-warning text-white border-warning hover:bg-warning'
+                      : 'bg-surface text-warning border-warning-border hover:bg-warning-subtle'
                   }`}
                   title={flagged[item.id] ? 'Remove review flag' : 'Mark for review'} aria-label={flagged[item.id] ? 'Remove review flag' : 'Mark for review'}
                 >
@@ -1408,8 +1408,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         onClick={() => setAnswers((a) => ({ ...a, [item.id]: letter }))}
                         className={`h-12 w-12 rounded-lg border text-base font-semibold transition-all ${
                           selected
-                            ? 'border-green-500 bg-green-500 text-white shadow'
-                            : 'border-strong text-secondary hover:border-green-500 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-900/30'
+                            ? 'border-accent bg-accent text-white shadow'
+                            : 'border-strong text-secondary hover:border-accent hover:bg-accent-subtle'
                         }`}
                       >
                         {letter}
@@ -1420,7 +1420,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <p className="text-xs text-muted mt-2">
                   {answers[item.id]?.trim() ? 'Answer saved' : 'Not yet answered'} • You can change your answer until you submit.
                   {saving && <span className="ml-2 text-muted">• Saving…</span>}
-                  {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
+                  {!saving && lastSavedAt && <span className="ml-2 text-accent-text">• Saved to server</span>}
                 </p>
               </div>
             ) : (
@@ -1434,7 +1434,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                       <button
                         onClick={() => transcribeAnswer(item.id)}
                         disabled={ocrLoading === item.id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-warning text-white hover:bg-warning disabled:opacity-60 transition-all"
                       >
                         {ocrLoading === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
                         {ocrLoading === item.id ? 'Transcribing…' : 'Transcribe'}
@@ -1461,7 +1461,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-line bg-surface-raised dark:bg-gray-800/50">
                     <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded-sm border border-line" />
                     <span className="text-xs text-muted flex-1">Photo attached — transcribe or submit as-is.</span>
-                    <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
+                    <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-danger hover:text-danger">Remove</button>
                   </div>
                 )}
                 <RichTextEditor
@@ -1472,7 +1472,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                 <p className="text-xs text-muted mt-1.5">
                   {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit.
                   {saving && <span className="ml-2 text-muted">• Saving…</span>}
-                  {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
+                  {!saving && lastSavedAt && <span className="ml-2 text-accent-text">• Saved to server</span>}
                 </p>
                 <QuestionScratchpadPanel questionRef={{ mockExamItemId: item.id }} className="mt-2" />
               </div>
@@ -1513,7 +1513,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   <div className="mt-3 space-y-2 text-sm text-secondary">
                     <p>You&apos;ve answered {answeredCount} of {totalItems} questions.</p>
                     {flaggedCount > 0 && (
-                      <p className="text-amber-600 dark:text-amber-400 font-medium">
+                      <p className="text-warning font-medium">
                         {flaggedCount} question{flaggedCount === 1 ? ' is' : 's are'} still flagged for review.
                       </p>
                     )}
@@ -1542,7 +1542,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             {submitError && <ErrorBanner message={submitError} />}
 
             {submitting && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-300 flex items-center gap-3">
+              <div className="bg-accent-subtle border border-accent-border rounded-lg p-4 text-sm text-accent-text flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
                 <span>AI is grading your answers against the markschemes. This can take a minute or two.</span>
               </div>
@@ -1628,7 +1628,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
           ? 'Estimated — no grade boundaries on file'
           : 'Estimated grade boundaries';
   const gradeColor =
-    scorePct >= 70 ? 'text-green-600' : scorePct >= 50 ? 'text-amber-600' : 'text-red-600';
+    scorePct >= 70 ? 'text-accent-text' : scorePct >= 50 ? 'text-warning' : 'text-danger';
 
   const sections: Record<string, ExamItem[]> = {};
   for (const item of exam.items) {
@@ -1659,32 +1659,32 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
 
           <div className="mt-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
-              <p className="text-green-100 text-sm">Mock Exam Results</p>
+              <p className="text-accent-text text-sm">Mock Exam Results</p>
               <h1 className="text-3xl font-bold mt-1">{exam.title}</h1>
-              <p className="text-green-100 text-sm mt-2">
+              <p className="text-accent-text text-sm mt-2">
                 {exam.subjectCode ?? 'Exam'} • Submitted {fmtDate(exam.submittedAt)}
               </p>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <div className="text-5xl font-bold">{grade}</div>
-                <div className="text-xs text-green-100 mt-1 uppercase tracking-wide">
+                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">
                   {exam.grade?.scale === 'ib' ? 'IB Grade' : 'Grade'}
                 </div>
                 {gradeNote && (
-                  <div className="text-[10px] text-green-100/80 mt-1 max-w-[9rem] leading-tight">{gradeNote}</div>
+                  <div className="text-[10px] text-accent-text mt-1 max-w-[9rem] leading-tight">{gradeNote}</div>
                 )}
               </div>
               <div className="text-center">
                 <div className="text-5xl font-bold">{scorePct}%</div>
-                <div className="text-xs text-green-100 mt-1 uppercase tracking-wide">Score</div>
+                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Score</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">
                   {Math.round(exam.score ?? 0)}
-                  <span className="text-lg text-green-200">/{exam.totalMarks}</span>
+                  <span className="text-lg text-accent-text">/{exam.totalMarks}</span>
                 </div>
-                <div className="text-xs text-green-100 mt-1 uppercase tracking-wide">Marks</div>
+                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Marks</div>
               </div>
             </div>
           </div>
@@ -1726,9 +1726,9 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
-                          full ? 'bg-green-100 text-green-600'
-                            : partial ? 'bg-amber-100 text-amber-600'
-                            : wrong ? 'bg-red-100 text-red-600'
+                          full ? 'bg-accent-subtle text-accent-text'
+                            : partial ? 'bg-warning-subtle text-warning'
+                            : wrong ? 'bg-danger-subtle text-danger'
                             : 'bg-surface-raised text-muted'
                         }`}>
                           {full ? <CheckCircle2 className="w-5 h-5" />
@@ -1798,11 +1798,11 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                         {(item.strengths?.length > 0 || item.weaknesses?.length > 0) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {item.strengths?.length > 0 && (
-                              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-green-700 dark:text-green-300 uppercase mb-2">Strengths</p>
+                              <div className="bg-accent-subtle border border-accent-border rounded-lg p-3">
+                                <p className="text-xs font-semibold text-accent-text uppercase mb-2">Strengths</p>
                                 <ul className="space-y-1">
                                   {item.strengths.map((s, i) => (
-                                    <li key={i} className="text-sm text-green-800 dark:text-green-200 flex gap-2">
+                                    <li key={i} className="text-sm text-accent-text flex gap-2">
                                       <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {s}
                                     </li>
                                   ))}
@@ -1810,11 +1810,11 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                               </div>
                             )}
                             {item.weaknesses?.length > 0 && (
-                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-red-700 dark:text-red-300 uppercase mb-2">To improve</p>
+                              <div className="bg-danger-subtle border border-danger-border rounded-lg p-3">
+                                <p className="text-xs font-semibold text-danger uppercase mb-2">To improve</p>
                                 <ul className="space-y-1">
                                   {item.weaknesses.map((w, i) => (
-                                    <li key={i} className="text-sm text-red-800 dark:text-red-200 flex gap-2">
+                                    <li key={i} className="text-sm text-danger flex gap-2">
                                       <XCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {w}
                                     </li>
                                   ))}
@@ -1839,8 +1839,8 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
 function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: string; tint: 'blue' | 'green' | 'amber' | 'purple' | 'indigo' }) {
   const tints: Record<string, string> = {
     blue: 'bg-surface-raised text-secondary',
-    green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
-    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
+    green: 'bg-accent-subtle text-accent-text',
+    amber: 'bg-warning-subtle text-warning',
     purple: 'bg-surface-raised text-secondary',
     indigo: 'bg-surface-raised text-secondary',
   };
@@ -1859,8 +1859,8 @@ function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; labe
 
 function FeedbackBlock({ label, icon, tone, children }: { label: string; icon: React.ReactNode; tone: 'green' | 'amber' | 'blue'; children: React.ReactNode }) {
   const tones: Record<string, string> = {
-    green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',
-    amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
+    green: 'bg-accent-subtle border-accent-border text-accent-text',
+    amber: 'bg-warning-subtle border-warning-border text-warning',
     blue: 'bg-surface-raised border-line text-secondary',
   };
   return (

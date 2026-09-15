@@ -72,7 +72,7 @@ export default function AnnouncementBanner() {
           key={a.id}
           className={`rounded-lg p-4 border ${
             a.pinned
-              ? 'bg-accent-subtle border-green-200 dark:border-green-900/50'
+              ? 'bg-accent-subtle border-accent-border'
               : 'bg-surface border-line'
           }`}
         >
@@ -96,7 +96,7 @@ export default function AnnouncementBanner() {
                 </button>
               </div>
               <div
-                className="mt-1 break-words text-sm text-secondary prose-sm max-w-none [&_p]:my-1 [&_a]:break-words [&_a]:text-green-600 [&_a]:underline [&_img]:max-w-full"
+                className="mt-1 break-words text-sm text-secondary prose-sm max-w-none [&_p]:my-1 [&_a]:break-words [&_a]:text-accent-text [&_a]:underline [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }}
               />
               <p className="text-[10px] text-muted mt-1.5">
@@ -111,7 +111,7 @@ export default function AnnouncementBanner() {
       {visible.length > 3 && (
         <Link
           href="/announcements"
-          className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"
+          className="inline-flex items-center gap-1 text-sm text-accent-text hover:underline font-medium"
         >
           View all {visible.length} announcements
           <ChevronRight className="w-3.5 h-3.5" />

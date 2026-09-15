@@ -154,7 +154,7 @@ export default function DailyChallenge() {
     <div className="rounded-lg border border-line bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent-text">
             <CalendarCheck className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -166,7 +166,7 @@ export default function DailyChallenge() {
           </div>
         </div>
         {completed && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent-subtle px-2 py-1 text-[10px] font-semibold text-accent-text">
             <CheckCircle2 className="h-3 w-3" />
             Done
           </span>
@@ -179,7 +179,7 @@ export default function DailyChallenge() {
             Q{data.question.number}
             {data.question.part ? `${data.question.part}` : ''} · {data.question.paper.year}
           </span>
-          <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+          <span className="text-[11px] font-semibold text-accent-text">
             {data.question.marks} {data.question.marks === 1 ? 'mark' : 'marks'}
           </span>
         </div>
@@ -207,7 +207,7 @@ export default function DailyChallenge() {
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {data.attempt?.isCorrect === true && (
-              <span className="inline-flex items-center gap-1 font-medium text-green-600 dark:text-green-400">
+              <span className="inline-flex items-center gap-1 font-medium text-accent-text">
                 <CheckCircle2 className="h-4 w-4" />
                 Correct
               </span>
@@ -219,7 +219,7 @@ export default function DailyChallenge() {
             )}
           </div>
           {data.attempt?.isCorrect === false && data.attempt.correctAnswer && (
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            <p className="text-sm font-medium text-danger">
               The answer is {data.attempt.correctAnswer}.
             </p>
           )}
@@ -264,7 +264,7 @@ export default function DailyChallenge() {
                   type="button"
                   disabled={submitting}
                   onClick={() => void submit(letter)}
-                  className="h-10 w-10 rounded-md border border-strong text-sm font-semibold text-secondary hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                  className="h-10 w-10 rounded-md border border-strong text-sm font-semibold text-secondary hover:border-accent hover:bg-accent-subtle disabled:opacity-50"
                 >
                   {letter}
                 </button>
@@ -276,15 +276,15 @@ export default function DailyChallenge() {
               onChange={(e) => setAnswer(e.target.value)}
               placeholder="Your answer"
               rows={2}
-              className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-emerald-500"
+              className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-accent"
             />
           )}
-          {error && <p className="text-[11px] text-red-500">{error}</p>}
+          {error && <p className="text-[11px] text-danger">{error}</p>}
           {!data.question.options && (
             <button
               onClick={() => void submit()}
               disabled={!answer.trim() || submitting}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {submitting ? 'Marking…' : 'Submit'}

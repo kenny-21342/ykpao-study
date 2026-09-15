@@ -106,7 +106,7 @@ export default function RichTextEditor({
         });
         previewRef.current.innerHTML = html;
       } catch {
-        previewRef.current.innerHTML = '<span class="text-red-500">Invalid LaTeX</span>';
+        previewRef.current.innerHTML = '<span class="text-danger">Invalid LaTeX</span>';
       }
     } else if (previewRef.current) {
       previewRef.current.innerHTML = '<span class="text-muted">Your formula here</span>';
@@ -512,7 +512,7 @@ export default function RichTextEditor({
                     value={latexInput}
                     onChange={(e) => setLatexInput(e.target.value)}
                     placeholder="e.g. x^2 + y^2 = r^2"
-                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLatex()}
                     autoFocus
                   />
@@ -551,7 +551,7 @@ export default function RichTextEditor({
                     type="button"
                     onClick={insertLatex}
                     disabled={!latexInput.trim()}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Insert
                   </button>
@@ -591,7 +591,7 @@ export default function RichTextEditor({
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     placeholder="e.g. https://school.edu/physics-notes"
-                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                     autoFocus
                   />
@@ -605,7 +605,7 @@ export default function RichTextEditor({
                     value={linkText}
                     onChange={(e) => setLinkText(e.target.value)}
                     placeholder="e.g. Read the worked example"
-                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                   />
                 </div>
@@ -614,7 +614,7 @@ export default function RichTextEditor({
                     <button
                       type="button"
                       onClick={removeLink}
-                      className="px-4 py-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-red-800"
+                      className="px-4 py-2 border border-danger-border text-danger rounded-md hover:bg-danger-subtle"
                     >
                       Remove link
                     </button>
@@ -630,7 +630,7 @@ export default function RichTextEditor({
                     type="button"
                     onClick={insertLink}
                     disabled={!linkUrl.trim()}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Insert
                   </button>

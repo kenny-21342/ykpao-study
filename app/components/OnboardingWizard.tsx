@@ -145,8 +145,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         {/* Step indicator */}
         <div className="px-7 pt-4">
           <div className="flex gap-2">
-            <div className={`h-1.5 flex-1 rounded-full ${step >= 0 ? 'bg-green-500' : 'bg-surface-active'}`} />
-            <div className={`h-1.5 flex-1 rounded-full ${step >= 1 ? 'bg-green-500' : 'bg-surface-active'}`} />
+            <div className={`h-1.5 flex-1 rounded-full ${step >= 0 ? 'bg-accent' : 'bg-surface-active'}`} />
+            <div className={`h-1.5 flex-1 rounded-full ${step >= 1 ? 'bg-accent' : 'bg-surface-active'}`} />
           </div>
         </div>
 
@@ -166,7 +166,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Alex Chen (optional)"
-                className="w-full px-4 py-3 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-3 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 autoFocus
               />
             </div>
@@ -186,14 +186,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   value={targetGrade}
                   onChange={(event) => setTargetGrade(event.target.value)}
                   placeholder="Target grade (optional)"
-                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 />
                 <input
                   type="date"
                   value={examDate}
                   onChange={(event) => setExamDate(event.target.value)}
                   aria-label="Exam date (optional)"
-                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 />
               </div>
 
@@ -205,7 +205,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                     onClick={() => setLevelFilter(lvl)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                       levelFilter === lvl
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-accent text-white'
                         : 'bg-surface-raised text-secondary hover:bg-surface-active'
                     }`}
                   >
@@ -235,7 +235,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               {visibleCourses.length === 0 && <p className="text-sm text-muted">No courses are available for this level yet.</p>}
 
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                <div className="p-3 bg-danger-subtle border border-danger-border rounded-lg text-sm text-danger">
                   {error}
                 </div>
               )}
@@ -248,7 +248,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="text-xs text-muted">
             {step === 1 && totalSelected > 0 && (
               <span className="inline-flex items-center gap-1">
-                <Check className="w-3.5 h-3.5 text-green-600" /> {totalSelected} selected
+                <Check className="w-3.5 h-3.5 text-accent-text" /> {totalSelected} selected
               </span>
             )}
           </div>
@@ -302,13 +302,13 @@ function SubjectChip({
       onClick={onClick}
       className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
         selected
-          ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
-          : 'border-line hover:border-green-300 hover:bg-surface-hover dark:hover:bg-gray-700/50'
+          ? 'border-accent bg-accent-subtle ring-1 ring-ring/25'
+          : 'border-line hover:border-accent-border hover:bg-surface-hover dark:hover:bg-gray-700/50'
       }`}
     >
       <div
         className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
-          selected ? 'bg-green-500 text-white' : 'border border-strong'
+          selected ? 'bg-accent text-white' : 'border border-strong'
         }`}
       >
         {selected && <Check className="w-3.5 h-3.5" />}

@@ -104,7 +104,7 @@ export default function WeaknessHeatmap() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent-text" />
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function WeaknessHeatmap() {
       {/* Subject overview */}
       <div className="bg-surface rounded-lg p-6 border border-line">
         <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-green-500" />
+          <BarChart3 className="w-4 h-4 text-accent-text" />
           By Subject
         </h4>
         <div className="space-y-3">
@@ -233,7 +233,7 @@ export default function WeaknessHeatmap() {
             {data.recommended.map((q) => (
               <li
                 key={q.id}
-                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-hover dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-md transition-colors"
+                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-hover -mx-2 px-2 rounded-md transition-colors"
                 onClick={practiceWeak}
               >
                 <ChevronRight className="w-4 h-4 text-muted mt-1 flex-shrink-0" />

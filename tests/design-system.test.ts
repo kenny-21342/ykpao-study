@@ -15,6 +15,17 @@ const read = (rel: string) => readFile(path.join(ROOT, rel), 'utf8');
  */
 const stripCssComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
+/**
+ * Every Tailwind palette family the app may no longer name directly. The
+ * accent (green/emerald) and the two semantic tones (amber, red) were the last
+ * four to go, so the palette is closed: every colour comes from globals.css.
+ */
+const PALETTE_FAMILIES = [
+  'indigo', 'purple', 'violet', 'blue', 'cyan', 'fuchsia',
+  'lime', 'orange', 'yellow', 'teal', 'sky', 'pink', 'rose',
+  'green', 'emerald', 'amber', 'red',
+];
+
 /** Every .tsx/.ts under app/, matching the walker in dialogs.test.ts. */
 async function appSources(): Promise<string[]> {
   const out: string[] = [];
@@ -190,11 +201,7 @@ test('no decorative colour families survive', async () => {
   // six AI actions in six hues, notification tints, "info" panels in blue.
   // What is left is the accent (green/emerald), the two semantic tones (amber,
   // red) and the neutral ramp, all of which are being moved onto tokens.
-  const DECORATIVE = [
-    'indigo', 'purple', 'violet', 'blue', 'cyan', 'fuchsia',
-    'lime', 'orange', 'yellow', 'teal', 'sky', 'pink', 'rose',
-  ];
-  const pattern = new RegExp(`\\b[a-z-]+-(?:${DECORATIVE.join('|')})-\\d+`, 'g');
+  const pattern = new RegExp(`\\b[a-z-]+-(?:${PALETTE_FAMILIES.join('|')})-\\d+`, 'g');
 
   const offenders: string[] = [];
   for (const file of await appSources()) {
@@ -218,7 +225,12 @@ test('the accuracy scale is defined once, in tokens', async () => {
   }
 
   const src = await read('app/components/WeaknessHeatmap.tsx');
-  assert.doesNotMatch(src, /bg-(emerald|green|yellow|orange|red)-\d/, 'the scale left its tokens');
+  // Palette families only — `bg-band-5` is the token and must not match.
+  assert.doesNotMatch(
+    src,
+    new RegExp(`bg-(?:${PALETTE_FAMILIES.join('|')}|gray)-\\d`),
+    'the scale left its tokens',
+  );
 
   // Every band carries a label in --text-inverse, and --text-inverse FLIPS
   // with the theme: white on light, near-black on dark. So the light steps

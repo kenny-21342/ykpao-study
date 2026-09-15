@@ -92,9 +92,9 @@ export default function UsagePage() {
   if (error) {
     return (
       <div className="min-h-full flex items-center justify-center p-8">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-5 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-danger-subtle border border-danger-border rounded-lg p-5 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-danger" />
+          <p className="text-sm text-danger">{error}</p>
         </div>
       </div>
     );
@@ -138,7 +138,7 @@ export default function UsagePage() {
                 const meta = FEATURE_ICONS[key] ?? { icon: <Zap className="w-4 h-4" />, label: featureLabel(key) };
                 return (
                   <div key={key} className="flex items-center gap-4 p-3 bg-surface-raised rounded-lg">
-                    <div className="w-10 h-10 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-md bg-accent-subtle text-accent-text flex items-center justify-center flex-shrink-0">
                       {meta.icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -225,8 +225,8 @@ export default function UsagePage() {
 function SummaryCard({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: string; tint: 'blue' | 'green' | 'amber' | 'purple' }) {
   const tints: Record<string, string> = {
     blue: 'bg-surface-raised text-secondary',
-    green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
-    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
+    green: 'bg-accent-subtle text-accent-text',
+    amber: 'bg-warning-subtle text-warning',
     purple: 'bg-surface-raised text-secondary',
   };
   return (

@@ -175,7 +175,7 @@ export default async function LandingPage() {
                 key={label}
                 className="rounded-lg border border-line bg-surface-raised dark:bg-gray-900/50 px-6 py-5"
               >
-                <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
+                <Icon className="w-5 h-5 text-accent-text" />
                 <dd className="mt-3 text-3xl font-bold tabular-nums">{value}</dd>
                 <dt className="mt-1 text-sm text-secondary">{label}</dt>
               </div>
@@ -196,8 +196,8 @@ export default async function LandingPage() {
                 key={title}
                 className="rounded-lg border border-line bg-surface p-6"
               >
-                <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30">
-                  <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
+                <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent-subtle">
+                  <Icon className="w-5 h-5 text-accent-text" />
                 </span>
                 <h3 className="mt-4 font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-secondary">
@@ -213,7 +213,7 @@ export default async function LandingPage() {
           copy the in-app preview banners carry, from one table. */}
       <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
         <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 mt-1 text-amber-500 flex-shrink-0" />
+          <Info className="w-5 h-5 mt-1 text-warning flex-shrink-0" />
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
               What is still unfinished
@@ -228,12 +228,12 @@ export default async function LandingPage() {
           {Object.values(FEATURE_READINESS).map((feature) => (
             <div
               key={feature.title}
-              className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-900/10 p-6"
+              className="rounded-lg border border-warning-border bg-warning-subtle p-6"
             >
-              <h3 className="font-semibold text-amber-900 dark:text-amber-200">
+              <h3 className="font-semibold text-warning">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-amber-900/80 dark:text-amber-200/70">
+              <p className="mt-2 text-sm leading-relaxed text-warning">
                 {feature.body}
               </p>
             </div>

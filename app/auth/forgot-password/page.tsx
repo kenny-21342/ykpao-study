@@ -69,9 +69,9 @@ export default function ForgotPasswordPage() {
 
           {sent ? (
             <div className="space-y-5">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
-                <MailCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-green-800">
+              <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3">
+                <MailCheck className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-accent-text">
                   If that email belongs to an account, a password reset link is on its
                   way. It expires in 60 minutes and can only be used once. Remember to
                   check your spam folder.
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
                     placeholder="student@example.com"
                     required
                     autoFocus
@@ -105,9 +105,9 @@ export default function ForgotPasswordPage() {
               </div>
 
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-danger">{error}</p>
                 </div>
               )}
 
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
               Remembered it?{' '}
               <Link
                 href="/auth/login"
-                className="text-green-600 font-semibold hover:text-green-700 transition-colors"
+                className="text-accent-text font-semibold hover:text-accent-text transition-colors"
               >
                 Sign In
               </Link>

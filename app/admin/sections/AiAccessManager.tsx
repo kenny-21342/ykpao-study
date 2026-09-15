@@ -119,9 +119,9 @@ export default function AiAccessManager() {
       {error && <ErrorBox message={error} />}
 
       {/* The consequence, stated once and plainly, above everything else. */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
-        <Wallet className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+      <div className="bg-warning-subtle border border-warning-border rounded-lg p-4 flex items-start gap-3">
+        <Wallet className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-warning space-y-1">
           <p className="font-semibold">A grant spends your money, not theirs.</p>
           <p className="text-[13px] leading-5">
             Normally every student pays their own AI provider with their own API key.
@@ -135,9 +135,9 @@ export default function AiAccessManager() {
       </div>
 
       {data && !data.sharedKeyConfigured && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700 dark:text-red-300">
+        <div className="bg-danger-subtle border border-danger-border rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-danger">
             No shared server key is configured (<code>DEEPSEEK_API_KEY</code>), so a grant
             would currently do nothing. Existing grants are listed below and take effect as
             soon as a key is set.
@@ -168,7 +168,7 @@ export default function AiAccessManager() {
                   {g.grantedAt && <span>· since {new Date(g.grantedAt).toLocaleDateString()}</span>}
                   {g.grantedBy && <span>· by {g.grantedBy}</span>}
                   {g.hasOwnKey && (
-                    <span className="text-green-600 dark:text-green-400">
+                    <span className="text-accent-text">
                       · also has their own key (their key is used first, so this grant costs
                       you nothing today)
                     </span>
@@ -228,7 +228,7 @@ export default function AiAccessManager() {
                             <p className="font-medium truncate flex items-center gap-1.5">
                               {u.name ?? 'Unnamed'}
                               {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-secondary" />}
-                              {u.banned && <span className="text-[10px] text-red-600 font-medium">BANNED</span>}
+                              {u.banned && <span className="text-[10px] text-danger font-medium">BANNED</span>}
                             </p>
                             <p className="text-xs text-muted truncate">{u.email}</p>
                           </div>
@@ -240,7 +240,7 @@ export default function AiAccessManager() {
                       <td className="px-4 py-3 text-xs text-muted">
                         {u.sharedKeyAccess ? (
                           <>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-medium">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-warning-subtle text-warning font-medium">
                               <Wallet className="w-3 h-3" /> Billed to you
                             </span>
                             <span className="block mt-1 text-muted">
@@ -258,7 +258,7 @@ export default function AiAccessManager() {
                             <button
                               onClick={() => setGrant(u, false)}
                               disabled={actionLoading === u.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-red-600 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-danger border border-danger-border hover:bg-danger-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {actionLoading === u.id
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -269,7 +269,7 @@ export default function AiAccessManager() {
                             <button
                               onClick={() => setConfirming(u)}
                               disabled={actionLoading === u.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-warning border border-warning-border hover:bg-warning-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Wallet className="w-3.5 h-3.5" />
                               Grant at your expense
@@ -330,7 +330,7 @@ export default function AiAccessManager() {
           <div className="bg-surface rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="grant-confirm-title" className="font-bold flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-amber-600" />
+                <Wallet className="w-5 h-5 text-warning" />
                 Bill this student&apos;s AI to you?
               </h3>
               <button
@@ -348,7 +348,7 @@ export default function AiAccessManager() {
               the platform owner&apos;s provider account, up to the monthly per-user cap.
             </p>
             {confirming.hasOwnKey && (
-              <p className="mt-3 text-xs text-green-700 dark:text-green-400">
+              <p className="mt-3 text-xs text-accent-text">
                 They already have their own key saved. Their own key is always used first, so
                 this grant only starts costing you if they delete it.
               </p>
@@ -363,7 +363,7 @@ export default function AiAccessManager() {
               <button
                 onClick={() => setGrant(confirming, true)}
                 disabled={actionLoading === confirming.id}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-md bg-warning hover:bg-warning text-white text-sm font-semibold disabled:opacity-50"
               >
                 {actionLoading === confirming.id
                   ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -386,7 +386,7 @@ function PaysWith({ user }: { user: AiAccessUser }) {
   if (user.hasOwnKey) {
     return (
       <div className="text-xs">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 font-medium">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent-subtle text-accent-text font-medium">
           <KeyRound className="w-3 h-3" /> Their own key
         </span>
         {user.textModel && <span className="block mt-1 text-muted truncate">{user.textModel}</span>}
@@ -395,7 +395,7 @@ function PaysWith({ user }: { user: AiAccessUser }) {
   }
   if (user.sharedKeyAccess) {
     return (
-      <span className="text-xs inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-medium">
+      <span className="text-xs inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-warning-subtle text-warning font-medium">
         <Wallet className="w-3 h-3" /> Your shared key
       </span>
     );

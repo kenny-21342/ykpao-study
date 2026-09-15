@@ -434,7 +434,7 @@ export default function QuestionsDatabase({
         toast(
           (t) => (
             <div className="flex items-center gap-3">
-              <Brain className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <Brain className="w-5 h-5 text-accent-text flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold">Added to your review queue{count ? ` (${count} due)` : ''}</p>
                 <p className="text-xs text-muted">See it in Study → Review</p>
@@ -444,7 +444,7 @@ export default function QuestionsDatabase({
                   toast.dismiss(t.id);
                   window.dispatchEvent(new CustomEvent('ai-navigate', { detail: { tab: 'study', view: 'review' } }));
                 }}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex-shrink-0"
+                className="text-xs font-semibold text-accent-text hover:text-accent-text flex-shrink-0"
               >
                 Review now
               </button>
@@ -535,13 +535,13 @@ export default function QuestionsDatabase({
           <div className="space-y-2">
             {parsed.answer && (
               <div className="mb-3">
-                <strong className="text-green-700 dark:text-green-300">Answer: </strong>
+                <strong className="text-accent-text">Answer: </strong>
                 <FormattedMessage content={parsed.answer} />
               </div>
             )}
             {parsed.marking_points.length > 0 && (
               <div>
-                <strong className="text-green-700 dark:text-green-300">Marking Points:</strong>
+                <strong className="text-accent-text">Marking Points:</strong>
                 <ul className="list-disc list-inside mt-2 space-y-1">
                   {parsed.marking_points.map((point: string, idx: number) => (
                     <li key={idx}>
@@ -657,7 +657,7 @@ export default function QuestionsDatabase({
                 }
               }}
               placeholder="Search by question code (e.g. 0610-S25-P21-Q2) or topic (e.g. Inheritance)…"
-              className="w-full pl-9 pr-3 py-2 bg-surface-raised border border-line rounded-md text-sm text-primary focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full pl-9 pr-3 py-2 bg-surface-raised border border-line rounded-md text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
             />
           </div>
         )}
@@ -666,7 +666,7 @@ export default function QuestionsDatabase({
           /* Says "if you have added a key" rather than promising AI grading
              outright: AI is off by default for every new account, and this
              line sat directly above an empty grade with no explanation. */
-          <p className="mt-2 text-xs text-green-700 dark:text-green-300">
+          <p className="mt-2 text-xs text-accent-text">
             Practice mode: pick a question, write your answer, and submit. It is
             marked automatically if you have added an API key, and saved against
             the mark scheme either way. Sign in to track progress.
@@ -700,7 +700,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedSubject}
                 onChange={(e) => { setSelectedSubject(e.target.value); setSelectedTopic(''); setPage(1); }}
-                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
               >
                 <option value="">All Subjects</option>
                 {filters.subjects.map((subject) => (
@@ -717,7 +717,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedYear}
                 onChange={(e) => { setSelectedYear(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
               >
                 <option value="">All Years</option>
                 {filters.years.map((year) => (
@@ -732,7 +732,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedSession}
                 onChange={(e) => { setSelectedSession(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
               >
                 <option value="">All Sessions</option>
                 {filters.sessions.map((session) => (
@@ -747,7 +747,7 @@ export default function QuestionsDatabase({
               <select
                 value={selectedPaper}
                 onChange={(e) => { setSelectedPaper(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
               >
                 <option value="">All Papers</option>
                 {filters.paperNumbers.map((paper) => (
@@ -763,7 +763,7 @@ export default function QuestionsDatabase({
                 <select
                   value={selectedTopic}
                   onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-                  className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
+                  className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-ring/25 bg-surface text-primary"
                 >
                   <option value="">All Topics</option>
                   {filters.topics.map((t) => (
@@ -780,7 +780,7 @@ export default function QuestionsDatabase({
                 type="checkbox"
                 checked={onlyBookmarked}
                 onChange={(e) => { setOnlyBookmarked(e.target.checked); setPage(1); }}
-                className="w-4 h-4 rounded-sm border-strong text-green-600 focus:ring-green-500"
+                className="w-4 h-4 rounded-sm border-strong text-accent-text focus:ring-ring/25"
               />
               <label htmlFor="only-bookmarked" className="text-sm font-medium text-secondary flex items-center gap-1 cursor-pointer">
                 <Star className="w-3.5 h-3.5" /> Starred only
@@ -819,18 +819,18 @@ export default function QuestionsDatabase({
           >
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
               </div>
             ) : loadError ? (
               <div className="flex flex-col items-center justify-center h-64 px-6 text-center text-secondary">
-                <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
+                <AlertCircle className="w-12 h-12 mb-4 text-danger" />
                 <p className="font-semibold text-primary">
                   Couldn&apos;t load questions
                 </p>
                 <p className="mt-1 text-sm max-w-sm">{loadError}</p>
                 <button
                   onClick={() => void fetchQuestions()}
-                  className="mt-4 px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+                  className="mt-4 px-4 py-2 text-sm font-medium rounded-md bg-accent text-white hover:bg-accent-hover"
                 >
                   Try again
                 </button>
@@ -852,9 +852,9 @@ export default function QuestionsDatabase({
                     type="button"
                     onClick={() => viewQuestion(question)}
                     aria-current={selectedQuestion?.id === question.id}
-                    className={`block w-full text-left px-4 py-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-500 ${
+                    className={`block w-full text-left px-4 py-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/25 ${
                       selectedQuestion?.id === question.id
-                        ? 'bg-green-50 dark:bg-green-900/20 border-l-2 border-green-500'
+                        ? 'bg-accent-subtle border-l-2 border-accent'
                         : 'hover:bg-surface-hover dark:hover:bg-gray-800/50 border-l-2 border-transparent'
                     }`}
                   >
@@ -864,7 +864,7 @@ export default function QuestionsDatabase({
                         {formatQuestionCode(question)}
                       </span>
                       {question.bookmarked && (
-                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        <Star className="w-3 h-3 text-warning fill-warning" />
                       )}
                       {question.marks > 0 && (
                         <span className="text-[10px] text-muted">[{question.marks} marks]</span>
@@ -945,9 +945,9 @@ export default function QuestionsDatabase({
                     <button
                       onClick={() => toggleBookmark(selectedQuestion)}
                       title={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'} aria-label={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'}
-                      className={`p-1.5 rounded-md transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-muted hover:text-amber-500 hover:bg-surface-hover'}`}
+                      className={`p-1.5 rounded-md transition-colors ${selectedQuestion.bookmarked ? 'text-warning hover:bg-warning-subtle' : 'text-muted hover:text-warning hover:bg-surface-hover'}`}
                     >
-                      <Star className={`w-5 h-5 ${selectedQuestion.bookmarked ? 'fill-amber-500' : ''}`} />
+                      <Star className={`w-5 h-5 ${selectedQuestion.bookmarked ? 'fill-warning' : ''}`} />
                     </button>
                     <button
                       onClick={() => setSelectedQuestion(null)}
@@ -969,7 +969,7 @@ export default function QuestionsDatabase({
                   {selectedQuestion.marks > 0 && (
                     <>
                       <span>•</span>
-                      <span className="font-medium text-green-600 dark:text-green-400">[{selectedQuestion.marks} marks]</span>
+                      <span className="font-medium text-accent-text">[{selectedQuestion.marks} marks]</span>
                     </>
                   )}
                 </div>
@@ -1020,16 +1020,16 @@ export default function QuestionsDatabase({
               {/* Practice mode */}
               {mode === 'practice' && (
                 <div className="mt-6 pt-6 border-t border-line">
-                  <div className="mb-5 border border-amber-200 dark:border-amber-900/70 bg-amber-50/70 dark:bg-amber-950/20 rounded-md p-4">
+                  <div className="mb-5 border border-warning-border bg-warning-subtle rounded-md p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-amber-600" />
+                        <Lightbulb className="w-4 h-4 text-warning" />
                         <h4 className="text-sm font-bold text-primary">Progressive hints</h4>
                       </div>
                       <button
                         onClick={requestHint}
                         disabled={hintLoading || hints.length >= 3}
-                        className="h-8 px-3 inline-flex items-center gap-1.5 rounded-md bg-amber-500 text-white text-xs font-semibold disabled:opacity-50"
+                        className="h-8 px-3 inline-flex items-center gap-1.5 rounded-md bg-warning text-white text-xs font-semibold disabled:opacity-50"
                       >
                         {hintLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
                         {hints.length >= 3 ? 'All hints shown' : `Hint ${hints.length + 1} of 3`}
@@ -1038,20 +1038,20 @@ export default function QuestionsDatabase({
                     {hints.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {hints.map((hint) => (
-                          <div key={hint.level} className="p-3 bg-white/80 dark:bg-gray-900/70 border border-amber-100 dark:border-amber-900/50 rounded-md">
-                            <p className="text-[10px] font-bold uppercase text-amber-700 dark:text-amber-400 mb-1">Level {hint.level}</p>
+                          <div key={hint.level} className="p-3 bg-white/80 dark:bg-gray-900/70 border border-warning-border rounded-md">
+                            <p className="text-[10px] font-bold uppercase text-warning mb-1">Level {hint.level}</p>
                             <FormattedMessage content={hint.text} />
                           </div>
                         ))}
                       </div>
                     )}
-                    {hintError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{hintError}</p>}
+                    {hintError && <p className="mt-2 text-xs text-danger">{hintError}</p>}
                   </div>
 
                   {/* Drawing canvas + photo upload toggle */}
                   <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                     <h4 className="text-lg font-bold text-primary flex items-center space-x-2">
-                      <Pencil className="w-5 h-5 text-green-500" />
+                      <Pencil className="w-5 h-5 text-accent-text" />
                       <span>Your Answer</span>
                     </h4>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1059,7 +1059,7 @@ export default function QuestionsDatabase({
                         <button
                           onClick={transcribeImage}
                           disabled={ocrLoading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-warning text-white hover:bg-warning disabled:opacity-60 transition-all"
                         >
                           {ocrLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                           {ocrLoading ? 'Transcribing…' : 'Transcribe'}
@@ -1089,7 +1089,7 @@ export default function QuestionsDatabase({
                   <AiNotice notices={aiNotices} className="mb-3" />
 
                   {ocrError && (
-                    <div className="mb-3 p-2.5 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                    <div className="mb-3 p-2.5 rounded-md bg-warning-subtle border border-warning-border text-xs text-warning">
                       {ocrError}
                     </div>
                   )}
@@ -1102,7 +1102,7 @@ export default function QuestionsDatabase({
                         <p className="font-semibold text-secondary">Photo attached</p>
                         <p>Transcribe it or submit as-is.</p>
                       </div>
-                      <button onClick={() => setUploadedImageUrl(null)} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
+                      <button onClick={() => setUploadedImageUrl(null)} className="text-xs font-medium text-danger hover:text-danger">Remove</button>
                     </div>
                   )}
 
@@ -1133,7 +1133,7 @@ export default function QuestionsDatabase({
                   </div>
 
                   {submitError && (
-                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+                    <div className="mt-4 p-3 bg-danger-subtle border border-danger-border rounded-md text-sm text-danger">
                       {submitError}
                     </div>
                   )}
@@ -1141,7 +1141,7 @@ export default function QuestionsDatabase({
                   {(grade || markscheme) && (
                     <div className="mt-6 space-y-4">
                       {grade && (
-                        <div className={`inline-flex rounded-sm px-2 py-1 text-xs font-semibold ${grade.gradingStatus === 'official' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
+                        <div className={`inline-flex rounded-sm px-2 py-1 text-xs font-semibold ${grade.gradingStatus === 'official' ? 'bg-accent-subtle text-accent-text' : 'bg-warning-subtle text-warning'}`}>
                           {grade.gradingStatus === 'official' ? 'Official mark-scheme grading' : grade.gradingStatus === 'ungraded' ? 'Ungraded attempt' : 'Provisional AI feedback'}
                         </div>
                       )}
@@ -1151,7 +1151,7 @@ export default function QuestionsDatabase({
                             <button
                               key={v}
                               onClick={() => setFeedbackView(v)}
-                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-surface text-emerald-700 dark:text-emerald-300' : 'text-muted hover:text-secondary'}`}
+                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-surface text-accent-text' : 'text-muted hover:text-secondary'}`}
                             >
                               {v === 'ai' ? 'AI feedback' : v === 'markscheme' ? 'Mark scheme' : 'Both'}
                             </button>
@@ -1162,7 +1162,7 @@ export default function QuestionsDatabase({
                         <div className="grid gap-4 lg:grid-cols-2">
                           <div>
                             <h5 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">AI explanation</h5>
-                            <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                            <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-accent-subtle border-accent-border' : 'bg-warning-subtle border-warning-border'}`}>
                               <span className="font-semibold text-primary">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                             </div>
                             {grade.explanation && (
@@ -1173,25 +1173,25 @@ export default function QuestionsDatabase({
                           </div>
                           <div>
                             <h5 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Official mark scheme</h5>
-                            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800 prose dark:prose-invert max-w-none">
+                            <div className="p-4 bg-accent-subtle rounded-md border border-accent-border prose dark:prose-invert max-w-none">
                               {parseMarkschemeContent(markscheme.content)}
                             </div>
                           </div>
                         </div>
                       ) : feedbackView === 'markscheme' && markscheme && !grade ? (
                         <div className="prose dark:prose-invert max-w-none">
-                          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                          <div className="p-4 bg-accent-subtle rounded-md border border-accent-border">
                             {parseMarkschemeContent(markscheme.content)}
                           </div>
                         </div>
                       ) : grade ? (
                         <div>
-                          <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                          <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-accent-subtle border-accent-border' : 'bg-warning-subtle border-warning-border'}`}>
                             <span className="font-semibold text-primary">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                           </div>
                           {grade.strengths && grade.strengths.length > 0 && (
                             <div className="mt-3">
-                              <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">What you did well</h5>
+                              <h5 className="text-sm font-semibold text-accent-text mb-2">What you did well</h5>
                               <ul className="list-disc list-inside space-y-1 text-sm text-secondary">
                                 {grade.strengths.map((s, i) => <li key={i}><FormattedMessage content={s} /></li>)}
                               </ul>
@@ -1199,7 +1199,7 @@ export default function QuestionsDatabase({
                           )}
                           {grade.weaknesses && grade.weaknesses.length > 0 && (
                             <div className="mt-3">
-                              <h5 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">What to improve</h5>
+                              <h5 className="text-sm font-semibold text-warning mb-2">What to improve</h5>
                               <ul className="list-disc list-inside space-y-1 text-sm text-secondary">
                                 {grade.weaknesses.map((w, i) => <li key={i}><FormattedMessage content={w} /></li>)}
                               </ul>
@@ -1236,7 +1236,7 @@ export default function QuestionsDatabase({
                         {recentAttempts.map((a) => (
                           <div key={a.id} className="flex items-center justify-between text-xs text-secondary p-2 bg-surface-raised rounded-sm">
                             <span className="flex items-center space-x-2">
-                              {a.isCorrect ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-amber-500" />}
+                              {a.isCorrect ? <CheckCircle2 className="w-3 h-3 text-accent-text" /> : <XCircle className="w-3 h-3 text-warning" />}
                               <span>{a.score}{a.maxScore ? ` / ${a.maxScore}` : ''}</span>
                             </span>
                             <span className="flex items-center space-x-1">

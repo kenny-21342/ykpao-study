@@ -239,12 +239,12 @@ function AnswerPanel({
     return (
       <div className="border-t border-subtle px-4 py-3">
         {isCorrect === true && (
-          <p className="text-sm font-medium text-green-700 dark:text-green-400">Correct.</p>
+          <p className="text-sm font-medium text-accent-text">Correct.</p>
         )}
         {/* Suppressed once marks are on the screen: "Not quite" is the wrong
           * word for 5 out of 6, and the marks say it better. */}
         {isCorrect === false && awardedMarks === null && (
-          <p className="text-sm font-medium text-red-700 dark:text-red-400">
+          <p className="text-sm font-medium text-danger">
             Not quite.
             {correctLetter && (
               <>
@@ -264,7 +264,7 @@ function AnswerPanel({
                 type="button"
                 disabled={marking}
                 onClick={() => selfMark({ selfMarkedCorrect: true })}
-                className="rounded-md border border-green-600 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50 dark:text-green-400 dark:hover:bg-green-900/30"
+                className="rounded-md border border-accent px-3 py-1.5 text-sm font-medium text-accent-text hover:bg-accent-subtle disabled:opacity-50"
               >
                 I got it right
               </button>
@@ -294,7 +294,7 @@ function AnswerPanel({
                   type="button"
                   disabled={marking}
                   onClick={() => selfMark({ awardedMarks: mark })}
-                  className="h-9 min-w-9 rounded-md border border-strong px-2 text-sm font-semibold tabular-nums text-secondary hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+                  className="h-9 min-w-9 rounded-md border border-strong px-2 text-sm font-semibold tabular-nums text-secondary hover:border-accent hover:bg-accent-subtle disabled:opacity-50"
                 >
                   {mark}
                 </button>
@@ -316,7 +316,7 @@ function AnswerPanel({
             setResult(null);
             setAnswer('');
           }}
-          className="mt-2 text-xs text-green-700 underline hover:no-underline dark:text-green-400"
+          className="mt-2 text-xs text-accent-text underline hover:no-underline"
         >
           Try again
         </button>
@@ -334,7 +334,7 @@ function AnswerPanel({
               type="button"
               disabled={saving}
               onClick={() => submit(letter)}
-              className="h-10 w-10 rounded-md border border-strong text-sm font-semibold text-secondary hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+              className="h-10 w-10 rounded-md border border-strong text-sm font-semibold text-secondary hover:border-accent hover:bg-accent-subtle disabled:opacity-50"
             >
               {letter}
             </button>
@@ -354,13 +354,13 @@ function AnswerPanel({
             type="button"
             disabled={saving || !answer.trim()}
             onClick={() => submit(answer)}
-            className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save answer'}
           </button>
         </div>
       )}
-      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );
 }

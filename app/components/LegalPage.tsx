@@ -45,7 +45,7 @@ export function LegalPage({
           </Link>
           <Link
             href="/auth/login"
-            className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-500"
+            className="text-sm font-medium text-accent-text hover:text-accent-text"
           >
             Sign in
           </Link>
@@ -57,13 +57,13 @@ export function LegalPage({
         <p className="mt-3 text-sm text-muted">Last updated {updated}</p>
 
         {LEGAL_COPY_IS_DRAFT && (
-          <div className="mt-8 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
+          <div className="mt-8 rounded-lg border border-warning-border bg-warning-subtle p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-warning leading-relaxed">
               <span className="font-semibold">Draft.</span> This text describes how the
               platform currently works, but it has not been reviewed and is not yet a
               binding agreement. Points still to be settled are marked{' '}
-              <span className="font-mono text-xs px-1 py-0.5 rounded-sm bg-amber-100 dark:bg-amber-900/40">
+              <span className="font-mono text-xs px-1 py-0.5 rounded-sm bg-warning-subtle">
                 REVIEW
               </span>
               .
@@ -88,7 +88,7 @@ export function Section({ heading, children }: { heading: string; children: Reac
   return (
     <section>
       <h2 className="text-xl font-semibold tracking-tight">{heading}</h2>
-      <div className="mt-3 space-y-3 text-secondary leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_a]:text-green-600 [&_a]:underline">
+      <div className="mt-3 space-y-3 text-secondary leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_a]:text-accent-text [&_a]:underline">
         {children}
       </div>
     </section>
@@ -98,7 +98,7 @@ export function Section({ heading, children }: { heading: string; children: Reac
 /** Marks a decision the site owner still has to make. */
 export function Review({ children }: { children: React.ReactNode }) {
   return (
-    <span className="px-1.5 py-0.5 rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-medium">
+    <span className="px-1.5 py-0.5 rounded-sm bg-warning-subtle text-warning font-medium">
       REVIEW: {children}
     </span>
   );

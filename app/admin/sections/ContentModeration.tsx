@@ -152,7 +152,7 @@ export default function ContentModeration() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-surface-raised text-secondary rounded-sm">PINNED</span>}
-                          {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-sm">LOCKED</span>}
+                          {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-danger-subtle text-danger rounded-sm">LOCKED</span>}
                           <span className="text-xs text-muted">{new Date(item.createdAt).toLocaleString()}</span>
                         </div>
                         <p className="text-sm font-medium line-clamp-2">{preview}</p>
@@ -189,7 +189,7 @@ export default function ContentModeration() {
                           onClick={() => remove(item.id)}
                           disabled={actionLoading === item.id}
                           title="Delete" aria-label="Delete"
-                          className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30"
+                          className="p-1.5 rounded-md text-danger hover:bg-danger-subtle disabled:opacity-30"
                         >
                           {actionLoading === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>

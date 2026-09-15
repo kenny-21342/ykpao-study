@@ -30,7 +30,7 @@ const CLICK_EVENTS: Record<string, { event: string; param?: string }> = {
 // Icon + tint per notification type. Falls back to a generic bell.
 const TYPE_META: Record<string, { icon: typeof Bell; tint: string }> = {
   discussion_answer: { icon: MessageSquare, tint: 'bg-surface-raised text-secondary' },
-  discussion_reply: { icon: Reply, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  discussion_reply: { icon: Reply, tint: 'bg-accent-subtle text-accent-text' },
   discussion_mention: { icon: AtSign, tint: 'bg-surface-raised text-secondary' },
 };
 
@@ -231,7 +231,7 @@ export default function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-800">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-800">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -257,7 +257,7 @@ export default function NotificationBell() {
                 <button
                   onClick={markAllRead}
                   disabled={markingAll}
-                  className="text-xs font-medium text-green-600 dark:text-green-400 hover:underline disabled:opacity-50"
+                  className="text-xs font-medium text-accent-text hover:underline disabled:opacity-50"
                   title="Mark all as read" aria-label="Mark all as read"
                 >
                   {markingAll ? 'Marking…' : 'Mark all read'}
@@ -307,7 +307,7 @@ export default function NotificationBell() {
                           }
                         }}
                         className={`flex gap-3 px-4 py-3 hover:bg-surface-hover dark:hover:bg-gray-700/50 transition-colors ${
-                          !n.read ? 'bg-green-50/40 dark:bg-green-900/10' : ''
+                          !n.read ? 'bg-accent-subtle' : ''
                         }`}
                       >
                         {/* Icon / avatar */}
@@ -338,7 +338,7 @@ export default function NotificationBell() {
                         {/* Unread dot */}
                         {!n.read && (
                           <span
-                            className="mt-1 w-2 h-2 bg-green-500 rounded-full flex-shrink-0"
+                            className="mt-1 w-2 h-2 bg-accent rounded-full flex-shrink-0"
                             aria-label="Unread"
                           />
                         )}

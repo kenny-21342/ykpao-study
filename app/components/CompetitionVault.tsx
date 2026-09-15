@@ -84,7 +84,7 @@ export default function CompetitionVault() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by code (e.g. 16-S1-Q1) or label (e.g. Inequalities)…"
-            className="w-full pl-9 pr-3 py-2 bg-surface-raised border border-line rounded-md text-sm text-primary focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full pl-9 pr-3 py-2 bg-surface-raised border border-line rounded-md text-sm text-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
           />
         </div>
         <select
@@ -113,7 +113,7 @@ export default function CompetitionVault() {
         <div className={`${selected ? 'w-2/5' : 'w-full'} border-r border-line overflow-y-auto`}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-accent-text" />
             </div>
           ) : questions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted">
@@ -128,12 +128,12 @@ export default function CompetitionVault() {
                   onClick={() => setSelected(q)}
                   className={`px-4 py-3 cursor-pointer transition-colors ${
                     selected?.id === q.id
-                      ? 'bg-green-50 dark:bg-green-900/20 border-l-2 border-green-500'
+                      ? 'bg-accent-subtle border-l-2 border-accent'
                       : 'hover:bg-surface-hover dark:hover:bg-gray-800/50'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Code2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                    <Code2 className="w-3.5 h-3.5 text-accent-text flex-shrink-0" />
                     <span className="font-mono text-sm font-semibold text-primary">
                       {q.code}
                     </span>
@@ -222,12 +222,12 @@ export default function CompetitionVault() {
             {(selected.pdfUrl || selected.texUrl) && (
               <div className="mt-6 pt-4 border-t border-subtle flex items-center gap-4 text-xs text-muted">
                 {selected.pdfUrl && (
-                  <a href={selected.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-green-600">
+                  <a href={selected.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-accent-text">
                     <FileText className="w-3.5 h-3.5" /> Full paper PDF <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
                 {selected.texUrl && (
-                  <a href={selected.texUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-green-600">
+                  <a href={selected.texUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-accent-text">
                     <Code2 className="w-3.5 h-3.5" /> TeX source <ExternalLink className="w-3 h-3" />
                   </a>
                 )}

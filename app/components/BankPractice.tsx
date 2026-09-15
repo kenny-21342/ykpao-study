@@ -134,7 +134,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
           {hint.text}
         </p>
       ))}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <button
         type="button"
         onClick={requestHint}
@@ -335,7 +335,7 @@ export default function BankPractice({
     return (
       <div className="h-full grid place-items-center p-6">
         <div className="max-w-md text-center">
-          <GraduationCap className="w-10 h-10 mx-auto text-green-600 mb-4" aria-hidden="true" />
+          <GraduationCap className="w-10 h-10 mx-auto text-accent-text mb-4" aria-hidden="true" />
           <h2 className="text-xl font-bold text-primary">
             Sign in to practise
           </h2>
@@ -345,7 +345,7 @@ export default function BankPractice({
           </p>
           <a
             href="/auth/login"
-            className="inline-flex mt-5 px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700"
+            className="inline-flex mt-5 px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-md hover:bg-accent-hover"
           >
             Sign in
           </a>
@@ -381,7 +381,7 @@ export default function BankPractice({
           >
             <Star
               className={`h-3.5 w-3.5 ${
-                bookmarked.has(selected.id) ? 'fill-amber-400 text-amber-400' : ''
+                bookmarked.has(selected.id) ? 'fill-warning text-warning' : ''
               }`}
               aria-hidden="true"
             />
@@ -448,7 +448,7 @@ export default function BankPractice({
           }`}
         >
           <Star
-            className={`h-3.5 w-3.5 ${onlyBookmarked ? 'fill-amber-400 text-amber-400' : ''}`}
+            className={`h-3.5 w-3.5 ${onlyBookmarked ? 'fill-warning text-warning' : ''}`}
             aria-hidden="true"
           />
           Starred
@@ -540,7 +540,7 @@ export default function BankPractice({
       </p>
 
       {listError && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+        <p className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
           {listError}
         </p>
       )}
@@ -590,7 +590,7 @@ export default function BankPractice({
                 </span>
               </span>
               {question.hasMarkScheme && (
-                <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-[11px] text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                <span className="shrink-0 rounded-full bg-accent-subtle px-2 py-0.5 text-[11px] text-accent-text">
                   Mark scheme
                 </span>
               )}
@@ -604,11 +604,11 @@ export default function BankPractice({
                   ? `Remove star from question ${question.rootNumber}`
                   : `Star question ${question.rootNumber}`
               }
-              className="shrink-0 self-stretch px-3 text-muted hover:text-amber-500"
+              className="shrink-0 self-stretch px-3 text-muted hover:text-warning"
             >
               <Star
                 className={`h-4 w-4 ${
-                  bookmarked.has(question.id) ? 'fill-amber-400 text-amber-400' : ''
+                  bookmarked.has(question.id) ? 'fill-warning text-warning' : ''
                 }`}
                 aria-hidden="true"
               />

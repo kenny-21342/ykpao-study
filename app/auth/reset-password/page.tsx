@@ -97,9 +97,9 @@ function ResetPasswordForm() {
         subtitle="This link is missing its reset code"
       >
         <div className="space-y-5">
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">
+          <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-danger">
               Open the link from your email exactly as it was sent — some mail apps
               trim the end of long links.
             </p>
@@ -119,9 +119,9 @@ function ResetPasswordForm() {
     return (
       <AuthPanel title="Password Changed" subtitle="You can now sign in">
         <div className="space-y-5">
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">
+          <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3">
+            <CheckCircle2 className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-accent-text">
               Your password has been changed. For your security, any other device
               still signed in to this account has been signed out.
             </p>
@@ -150,7 +150,7 @@ function ResetPasswordForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               autoFocus
@@ -170,7 +170,7 @@ function ResetPasswordForm() {
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               minLength={8}
@@ -179,13 +179,13 @@ function ResetPasswordForm() {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-red-700">
+          <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-danger">
               <p>{error}</p>
               <Link
                 href="/auth/forgot-password"
-                className="underline font-medium hover:text-red-800"
+                className="underline font-medium hover:text-danger"
               >
                 Request a new link
               </Link>
@@ -206,7 +206,7 @@ function ResetPasswordForm() {
         <p className="text-sm text-secondary">
           <Link
             href="/auth/login"
-            className="text-green-600 font-semibold hover:text-green-700 transition-colors"
+            className="text-accent-text font-semibold hover:text-accent-text transition-colors"
           >
             Back to Sign In
           </Link>

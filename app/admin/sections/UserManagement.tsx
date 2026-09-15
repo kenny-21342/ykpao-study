@@ -277,8 +277,8 @@ export default function UserManagement() {
                           <option value="teacher">teacher</option>
                           <option value="admin">admin</option>
                         </select>
-                        {u.banned && <span className="ml-2 text-[10px] text-red-600 font-medium">BANNED</span>}
-                        {!u.emailVerified && <span className="ml-2 text-[10px] text-amber-600 font-medium">UNVERIFIED</span>}
+                        {u.banned && <span className="ml-2 text-[10px] text-danger font-medium">BANNED</span>}
+                        {!u.emailVerified && <span className="ml-2 text-[10px] text-warning font-medium">UNVERIFIED</span>}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted">
                         {u._count.posts} posts · {u._count.notes} notes · {u._count.mockExams} exams
@@ -294,7 +294,7 @@ export default function UserManagement() {
                             className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.emailVerified
                                 ? 'text-muted hover:bg-surface-hover'
-                                : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                : 'text-warning hover:bg-warning-subtle'
                             }`}
                           >
                             {u.emailVerified ? <MailX className="w-4 h-4" /> : <MailCheck className="w-4 h-4" />}
@@ -314,8 +314,8 @@ export default function UserManagement() {
                             title={u.banned ? 'Unban' : 'Ban'} aria-label={u.banned ? 'Unban' : 'Ban'}
                             className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.banned
-                                ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                                : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                ? 'text-accent-text hover:bg-accent-subtle'
+                                : 'text-warning hover:bg-warning-subtle'
                             }`}
                           >
                             {actionLoading === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : u.banned ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
@@ -325,7 +325,7 @@ export default function UserManagement() {
                             disabled={u.effectiveAdmin || actionLoading === u.id}
                             title="Delete user"
                             aria-label={`Delete ${u.email}`}
-                            className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-md text-danger hover:bg-danger-subtle transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -440,7 +440,7 @@ export default function UserManagement() {
                 <Copy className="w-4 h-4" />
               </button>
             </div>
-            <p className="mt-3 text-xs text-amber-700 dark:text-amber-500">
+            <p className="mt-3 text-xs text-warning">
               Ask them to sign in and change it from Account Settings. Devices already
               signed in as this user stay signed in until their session expires.
             </p>

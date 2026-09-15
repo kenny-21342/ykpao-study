@@ -21,12 +21,12 @@ export default function PreviewNotice({
   return (
     <div
       role="status"
-      className={`flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100 ${className}`}
+      className={`flex items-start gap-3 rounded-lg border border-warning-border bg-warning-subtle px-4 py-3 text-warning ${className}`}
     >
-      <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+      <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning" />
       <div className="min-w-0 space-y-1">
         <p className="text-sm font-semibold">{readiness.title}</p>
-        <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-200/90">{readiness.body}</p>
+        <p className="text-sm leading-relaxed text-warning">{readiness.body}</p>
       </div>
     </div>
   );

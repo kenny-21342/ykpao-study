@@ -129,7 +129,7 @@ function VerifyView() {
     return (
       <AuthPanel title="Confirming" subtitle="One moment while we check your link.">
         <div className="flex items-center space-x-3 text-secondary">
-          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+          <Loader2 className="w-5 h-5 animate-spin text-accent-text" />
           <span className="text-sm">Confirming your email address&hellip;</span>
         </div>
       </AuthPanel>
@@ -139,9 +139,9 @@ function VerifyView() {
   if (status === 'done') {
     return (
       <AuthPanel title="Email confirmed" subtitle="Your account is ready to use.">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3 mb-6">
-          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-green-800">
+        <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3 mb-6">
+          <CheckCircle2 className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-accent-text">
             Thanks &mdash; that address is confirmed. You can sign in now.
           </p>
         </div>
@@ -167,16 +167,16 @@ function VerifyView() {
       }
     >
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3 mb-6">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="p-4 bg-danger-subtle border border-danger-border rounded-lg flex items-start space-x-3 mb-6">
+          <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
       {sentMessage ? (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
-          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-green-800">{sentMessage}</p>
+        <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3">
+          <CheckCircle2 className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-accent-text">{sentMessage}</p>
         </div>
       ) : (
         <form onSubmit={handleResend} className="space-y-5">
@@ -193,7 +193,7 @@ function VerifyView() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong focus:border-accent focus:ring-2 focus:ring-ring/25 outline-none transition"
                 placeholder="you@example.com"
               />
             </div>
@@ -210,7 +210,7 @@ function VerifyView() {
       )}
 
       <p className="mt-6 text-sm text-secondary">
-        <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-700">
+        <Link href="/auth/login" className="font-medium text-accent-text hover:text-accent-text">
           Back to sign in
         </Link>
       </p>
