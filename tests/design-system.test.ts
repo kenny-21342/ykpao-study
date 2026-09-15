@@ -219,4 +219,37 @@ test('the accuracy scale is defined once, in tokens', async () => {
 
   const src = await read('app/components/WeaknessHeatmap.tsx');
   assert.doesNotMatch(src, /bg-(emerald|green|yellow|orange|red)-\d/, 'the scale left its tokens');
+
+  // Every band carries a label in --text-inverse, and --text-inverse FLIPS
+  // with the theme: white on light, near-black on dark. So the light steps
+  // have to be darker than the dark ones, which is the opposite of the
+  // intuition and was wrong in three of five bands when first written.
+  // Measured here rather than asserted in a comment.
+  const srgb = (hex: string) =>
+    [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+  const luminance = (hex: string) => {
+    const [r, g, b] = srgb(hex);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const valueOf = (block: string, prop: string) => {
+    const m = block.match(new RegExp(`${prop}:\\s*(#[0-9A-Fa-f]{6})`));
+    assert.ok(m, `${prop} not found`);
+    return m![1];
+  };
+
+  const light = css.slice(0, css.indexOf('.dark {'));
+  for (const [block, fg, label] of [[light, valueOf(light, '--text-inverse'), 'light'],
+                                    [dark, valueOf(dark, '--text-inverse'), 'dark']] as const) {
+    for (let i = 1; i <= 5; i += 1) {
+      const ratio = contrast(valueOf(block, `--band-${i}`), fg);
+      assert.ok(ratio >= 4.5, `${label} --band-${i} is ${ratio.toFixed(2)}:1 against its label, needs 4.5`);
+    }
+  }
 });

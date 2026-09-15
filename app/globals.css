@@ -67,12 +67,14 @@
   /* The one place hue still carries information rather than decorating: a
      five-step sequential scale for accuracy bands. Defined once here so the
      heatmap cannot drift from its own legend, and chosen dark enough that
-     --text-inverse reads on every step — the old scale needed a special-case
-     dark foreground on the yellow band alone. */
+     --text-inverse reads on every step. Each value is measured at >=4.55:1
+     against the foreground it actually gets: white in light, near-black in
+     dark. That is why the light steps are darker than the dark ones and not
+     simply the same hues — --text-inverse flips with the theme. */
   --band-1:         #B42318;  /* critical */
-  --band-2:         #C4632A;  /* weak     */
-  --band-3:         #A8801F;  /* ok       */
-  --band-4:         #3F8C5C;  /* strong   */
+  --band-2:         #B75D27;  /* weak     */
+  --band-3:         #92701B;  /* ok       */
+  --band-4:         #3B8356;  /* strong   */
   --band-5:         #1A7F4B;  /* mastered */
 
   /* The only shadow that survives, and only on things that float above the
