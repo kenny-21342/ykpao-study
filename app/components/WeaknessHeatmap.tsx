@@ -111,12 +111,12 @@ export default function WeaknessHeatmap() {
 
   if (!data || data.topics.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-12 border border-gray-200 text-center">
-        <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-          <Target className="w-8 h-8 text-gray-400" />
+      <div className="bg-surface rounded-lg p-12 border border-line text-center">
+        <div className="w-16 h-16 mx-auto rounded-full bg-surface-raised flex items-center justify-center mb-3">
+          <Target className="w-8 h-8 text-muted" />
         </div>
-        <h4 className="font-bold text-gray-900 dark:text-gray-100">No data yet</h4>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+        <h4 className="font-bold text-primary">No data yet</h4>
+        <p className="text-sm text-muted mt-1 max-w-md mx-auto">
           {data?.message ?? 'Answer a few questions to see your strengths and weaknesses.'}
         </p>
       </div>
@@ -137,11 +137,11 @@ export default function WeaknessHeatmap() {
       <div className="bg-warning-subtle rounded-lg p-6 border border-warning-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-primary flex items-center gap-2">
               <Flame className="w-5 h-5 text-warning" />
               Focus Areas
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-secondary mt-1">
               Based on {data.totalAttempts ?? 0} graded attempts.
               {sourceSummary ? ` Sources: ${sourceSummary}.` : ' Your weakest topics need the most attention.'}
             </p>
@@ -158,8 +158,8 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Subject overview */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
-        <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+      <div className="bg-surface rounded-lg p-6 border border-line">
+        <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-green-500" />
           By Subject
         </h4>
@@ -168,10 +168,10 @@ export default function WeaknessHeatmap() {
             const band = bandFor(s.accuracy);
             return (
               <div key={s.subject} className="flex items-center gap-3">
-                <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                <div className="w-32 text-sm font-medium text-secondary truncate">
                   {s.subject}
                 </div>
-                <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden relative">
+                <div className="flex-1 h-6 bg-surface-raised rounded-md overflow-hidden relative">
                   <div
                     className={`h-full ${band.bg} ${band.text} flex items-center justify-end pr-2 text-xs font-semibold transition-all duration-500`}
                     style={{ width: `${Math.max(8, s.accuracy)}%` }}
@@ -179,7 +179,7 @@ export default function WeaknessHeatmap() {
                     {s.accuracy}%
                   </div>
                 </div>
-                <div className="w-20 text-xs text-gray-500 dark:text-gray-400 text-right">
+                <div className="w-20 text-xs text-muted text-right">
                   {s.correct}/{s.total}
                 </div>
               </div>
@@ -189,13 +189,13 @@ export default function WeaknessHeatmap() {
       </div>
 
       {/* Topic heatmap */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <div className="bg-surface rounded-lg p-6 border border-line">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <h4 className="font-bold text-primary flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-warning" />
             Topic Mastery Heatmap
           </h4>
-          <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-muted">
             <span className="px-1.5 py-0.5 rounded-sm bg-band-1 text-inverse">Critical</span>
             <span className="px-1.5 py-0.5 rounded-sm bg-band-2 text-inverse">Weak</span>
             <span className="px-1.5 py-0.5 rounded-sm bg-band-3 text-inverse">OK</span>
@@ -224,25 +224,25 @@ export default function WeaknessHeatmap() {
 
       {/* Recommended questions */}
       {data.recommended.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+        <div className="bg-surface rounded-lg p-6 border border-line">
+          <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-danger" />
             Recommended for Practice
           </h4>
-          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+          <ul className="divide-y divide-subtle">
             {data.recommended.map((q) => (
               <li
                 key={q.id}
-                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-md transition-colors"
+                className="py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-hover dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-md transition-colors"
                 onClick={practiceWeak}
               >
-                <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted mt-1 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-muted">
                     {q.subject} · {q.topic}
                     {q.marks > 0 && <> · {q.marks} marks</>}
                   </p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mt-0.5">
+                  <p className="text-sm text-primary line-clamp-2 mt-0.5">
                     {q.content}
                   </p>
                 </div>

@@ -48,21 +48,21 @@ export default function ResourceLibrary() {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
             <Library className="w-6 h-6 text-green-600" />
             Resource Library
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-secondary mt-1">
             Study notes shared on review.ykpao.com, and your school&apos;s own resources.
           </p>
-          <div className="mt-3 inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800" role="group" aria-label="Resource scope">
-            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>My courses</button>
-            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-green-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>All subjects</button>
+          <div className="mt-3 inline-flex rounded-lg border border-line bg-surface p-1" role="group" aria-label="Resource scope">
+            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-green-600 text-white' : 'text-secondary'}`}>My courses</button>
+            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-green-600 text-white' : 'text-secondary'}`}>All subjects</button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 border-b border-line">
           <TabButton active={tab === 'notes'} onClick={() => setTab('notes')} icon={<Users className="w-4 h-4" />}>
             Shared Notes
           </TabButton>
@@ -84,7 +84,7 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
       className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
         active
           ? 'border-green-600 text-green-700 dark:text-green-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          : 'border-transparent text-muted hover:text-secondary'
       }`}
     >
       {icon}
@@ -188,7 +188,7 @@ function ExternalNotesView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-gray-500">
+      <div className="flex items-center justify-center py-16 text-muted">
         <Loader2 className="w-6 h-6 animate-spin mr-2" /> Fetching posts from YKPao Review…
       </div>
     );
@@ -199,26 +199,26 @@ function ExternalNotesView() {
     <>
       {/* Search */}
       <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g. exam tips, revision, or Biology"
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          className="w-full pl-10 pr-4 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
         />
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-gray-400">
+      <div className="flex items-center gap-2 text-xs text-muted">
         <BookOpen className="w-3.5 h-3.5" />
         <span>Sourced from <a href="https://review.ykpao.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">review.ykpao.com</a></span>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-          <BookOpen className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No posts found</h3>
-          <p className="text-sm text-gray-500 mt-1">Try a different search.</p>
+        <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
+          <BookOpen className="w-12 h-12 mx-auto text-muted mb-3" />
+          <h3 className="text-lg font-bold text-primary">No posts found</h3>
+          <p className="text-sm text-muted mt-1">Try a different search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -240,25 +240,25 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
   return (
     <button
       onClick={onOpen}
-      className="text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-300 transition-all p-5 flex flex-col"
+      className="text-left bg-surface rounded-lg border border-line hover:border-green-300 transition-all p-5 flex flex-col"
     >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {note.author[0]?.toUpperCase() ?? 'K'}
         </div>
-        <span className="text-xs text-gray-500 truncate">{note.author}</span>
-        <span className="text-xs text-gray-400 ml-auto">
+        <span className="text-xs text-muted truncate">{note.author}</span>
+        <span className="text-xs text-muted ml-auto">
           {new Date(note.publishedAt ?? note.pubDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
       </div>
 
-      <h3 className="font-bold text-gray-900 dark:text-gray-100 mt-3 line-clamp-2">{note.title}</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-3 flex-1">{note.excerpt}</p>
+      <h3 className="font-bold text-primary mt-3 line-clamp-2">{note.title}</h3>
+      <p className="text-sm text-muted mt-1 line-clamp-3 flex-1">{note.excerpt}</p>
 
       {note.categories.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {note.categories.slice(0, 3).map((c, i) => (
-            <span key={i} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
+            <span key={i} className="text-xs px-2 py-0.5 bg-surface-raised text-secondary rounded-md">
               {c}
             </span>
           ))}
@@ -266,7 +266,7 @@ function ExternalNoteCard({ note, onOpen }: { note: ExternalNote; onOpen: () => 
       )}
 
       {showStats && (
-        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-subtle text-xs text-muted">
           {note.reads != null && (
             <span className="inline-flex items-center gap-1" title="Views">
               <Eye className="w-3.5 h-3.5" /> {fmtCompact(note.reads)}
@@ -294,28 +294,28 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-surface rounded-lg shadow-overlay w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
+        <div className="px-6 py-4 border-b border-line flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-500">by {note.author}</span>
-              <span className="text-xs text-gray-400">· {new Date(note.pubDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              <span className="text-xs text-muted">by {note.author}</span>
+              <span className="text-xs text-muted">· {new Date(note.pubDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{note.title}</h2>
+            <h2 className="text-xl font-bold text-primary mt-1">{note.title}</h2>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <a
               href={note.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              className="p-2 text-muted hover:text-green-600 hover:bg-surface-hover rounded-md transition-colors"
               title="Open original" aria-label="Open original"
             >
               <Eye className="w-5 h-5" />
             </a>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+            <button onClick={onClose} className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -323,7 +323,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {/* Post stats bar */}
-          <div className="flex flex-wrap items-center gap-4 mb-4 pb-3 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap items-center gap-4 mb-4 pb-3 border-b border-subtle text-xs text-muted">
             <span className="inline-flex items-center gap-1" title="Published">
               <Clock className="w-3.5 h-3.5" />
               {new Date(note.publishedAt ?? note.pubDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -348,7 +348,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
           {note.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {note.categories.map((c, i) => (
-                <span key={i} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
+                <span key={i} className="text-xs px-2 py-0.5 bg-surface-raised text-secondary rounded-md">
                   {c}
                 </span>
               ))}
@@ -356,20 +356,20 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
           )}
           {note.content ? (
             <div
-              className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-secondary [&_a]:underline hover:[&_a]:text-secondary [&_img]:rounded-md [&_img]:max-w-full"
+              className="prose prose-sm max-w-none text-primary [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-secondary [&_a]:underline hover:[&_a]:text-secondary [&_img]:rounded-md [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
             />
           ) : loadingContent ? (
-            <div className="flex items-center justify-center py-12 text-gray-400">
+            <div className="flex items-center justify-center py-12 text-muted">
               <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading content…
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">No content available. <a href={note.link} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">View original →</a></p>
+            <p className="text-sm text-muted italic">No content available. <a href={note.link} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">View original →</a></p>
           )}
 
           {/* Comment notice */}
           {note.commentCount == null && (
-            <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <div className="mt-6 p-3 bg-surface-raised dark:bg-gray-700/50 border border-line rounded-lg text-xs text-muted flex items-center gap-2">
               <MessageCircle className="w-4 h-4 flex-shrink-0" />
               <span>
                 Comments are loaded on the original site (require its own login).
@@ -549,20 +549,20 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       {/* Header + upload */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">School Resources</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-lg font-bold text-primary">School Resources</h3>
+          <p className="text-xs text-muted">
             {total.toLocaleString()} resource{total === 1 ? '' : 's'} • Browse files by name, subject, folder, or upload date.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          <div className="inline-flex rounded-lg border border-line bg-surface p-1">
             <button
               type="button"
               onClick={() => switchViewMode('list')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 !isBrowserView
                   ? 'bg-green-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  : 'text-secondary hover:bg-surface-hover'
               }`}
               title="List view" aria-label="List view"
             >
@@ -575,7 +575,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 isBrowserView
                   ? 'bg-green-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  : 'text-secondary hover:bg-surface-hover'
               }`}
               title="Folder browser" aria-label="Folder browser"
             >
@@ -595,19 +595,19 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       {/* Search + filters */}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(180px,0.8fr)_minmax(180px,0.8fr)_minmax(150px,0.6fr)_minmax(120px,0.5fr)]">
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="e.g. worksheet, 2024, Biology, or Ms Lee"
-            className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-10 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
           />
           {query && (
             <button
               type="button"
               onClick={() => { setQuery(''); setPage(1); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted hover:text-secondary hover:bg-surface-hover"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -617,7 +617,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={subjectFilter}
           onChange={(e) => { setSubjectFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="">All subjects</option>
           {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
@@ -625,7 +625,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={categoryFilter}
           onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="">All categories</option>
           {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -633,7 +633,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <select
           value={sortBy}
           onChange={(e) => { setSortBy(e.target.value as ResourceSort); setPage(1); }}
-          className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="createdAt">Newest first</option>
           <option value="updatedAt">Recently updated</option>
@@ -646,7 +646,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <button
             type="button"
             onClick={() => setSortOrder((current) => (current === 'desc' ? 'asc' : 'desc'))}
-            className="inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-lg border border-strong bg-surface px-3 py-2.5 text-sm font-medium text-secondary hover:bg-surface-hover"
             title="Toggle sort order" aria-label="Toggle sort order"
           >
             <ArrowUpDown className="w-4 h-4" />
@@ -655,7 +655,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="w-24 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-green-500"
+            className="w-24 px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary outline-none focus:ring-2 focus:ring-green-500"
             title="Rows per page" aria-label="Rows per page"
           >
             <option value={50}>50</option>
@@ -667,22 +667,22 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
 
       {/* List / Browser */}
       {loading && resources.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-gray-500">
+        <div className="flex items-center justify-center py-16 text-muted">
           <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading resources…
         </div>
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
       ) : resources.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-          <Library className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No resources yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
+          <Library className="w-12 h-12 mx-auto text-muted mb-3" />
+          <h3 className="text-lg font-bold text-primary">No resources yet</h3>
+          <p className="text-sm text-muted mt-1">
             {query || subjectFilter || categoryFilter ? 'Try a different search or filter.' : 'Upload the first school resource.'}
           </p>
           {(query || subjectFilter || categoryFilter) && (
             <button
               onClick={clearFilters}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-4 py-2 text-sm font-medium text-secondary hover:bg-surface-hover"
             >
               <X className="w-4 h-4" /> Clear filters
             </button>
@@ -701,15 +701,15 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           loadLimit={BROWSER_RESOURCE_LIMIT}
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-            <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="overflow-hidden rounded-lg border border-line bg-surface">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div className="flex items-center gap-3 text-xs text-muted">
               <span>{pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of {total.toLocaleString()}</span>
               {loading && <span className="inline-flex items-center gap-1 text-green-600"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Refreshing</span>}
             </div>
             <button
               onClick={clearFilters}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-xs font-medium text-secondary hover:bg-surface-hover"
             >
               <X className="w-3.5 h-3.5" /> Clear filters
             </button>
@@ -717,7 +717,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
 
           <div className="overflow-x-auto">
             <table className="min-w-[1120px] w-full border-collapse">
-              <thead className="bg-gray-50/80 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-900/60 dark:text-gray-400">
+              <thead className="bg-surface-raised/80 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <tr>
                   <th className="px-4 py-3">File</th>
                   <th className="px-4 py-3">Description</th>
@@ -742,7 +742,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-subtle">
                 {resources.map((resource) => (
                   <ResourceRow
                     key={resource.id}
@@ -756,7 +756,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
             </table>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-line px-4 py-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
             <p>
               Showing {pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of {total.toLocaleString()}
             </p>
@@ -764,17 +764,17 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
               <button
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 disabled={page <= 1}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-sm font-medium text-secondary hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronLeft className="w-4 h-4" /> Prev
               </button>
-              <span className="text-xs uppercase tracking-wide text-gray-400">
+              <span className="text-xs uppercase tracking-wide text-muted">
                 Page {page.toLocaleString()} of {totalPages.toLocaleString()}
               </span>
               <button
                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                 disabled={page >= totalPages}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-sm font-medium text-secondary hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>
@@ -810,37 +810,37 @@ function ResourceRow({
 }) {
   const ext = resource.fileName.split('.').pop()?.toUpperCase() ?? 'FILE';
   return (
-    <tr className="align-top transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-900/40">
+    <tr className="align-top transition-colors hover:bg-surface-raised/70">
       <td className="px-4 py-3">
         <button type="button" onClick={onOpen} className="flex items-start gap-3 text-left">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-[10px] font-bold text-white">
             {ext}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{resource.title}</span>
-            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{resource.fileName}</span>
+            <span className="block truncate text-sm font-semibold text-primary">{resource.title}</span>
+            <span className="block truncate text-xs text-muted">{resource.fileName}</span>
           </span>
         </button>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+      <td className="px-4 py-3 text-sm text-secondary">
         <p className="max-w-[280px] truncate font-medium">{formatResourceDescription(resource)}</p>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {resource.subject ?? '—'}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {resource.category ?? '—'}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {fmtSize(resource.fileSize)}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {fmtDate(resource.updatedAt)}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {resource.downloads.toLocaleString()}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-secondary">
         {resource.uploader.name ?? 'Staff'}
       </td>
       <td className="px-4 py-3">
@@ -849,7 +849,7 @@ function ResourceRow({
             type="button"
             onClick={onOpen}
             disabled={opening}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-xs font-medium text-secondary hover:bg-surface-hover disabled:cursor-wait disabled:opacity-60"
           >
             {opening ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
             Open
@@ -900,8 +900,8 @@ function ResourceBrowserView({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700 lg:flex-row lg:items-center lg:justify-between">
+    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+      <div className="flex flex-col gap-3 border-b border-line px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
             <button
@@ -910,7 +910,7 @@ function ResourceBrowserView({
               className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium ${
                 currentFolderId === null
                   ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  : 'text-secondary hover:bg-surface-hover'
               }`}
               title="All resources" aria-label="All resources"
             >
@@ -921,14 +921,14 @@ function ResourceBrowserView({
               const active = index === breadcrumb.length - 1;
               return (
                 <span key={crumb.id} className="inline-flex min-w-0 items-center gap-1">
-                  <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-300" />
+                  <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted" />
                   <button
                     type="button"
                     onClick={() => onChangeFolder(crumb.id)}
                     className={`max-w-[14rem] truncate rounded-md px-2 py-1 font-medium ${
                       active
                         ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                        : 'text-secondary hover:bg-surface-hover'
                     }`}
                     title={crumb.name} aria-label={crumb.name}
                   >
@@ -938,7 +938,7 @@ function ResourceBrowserView({
               );
             })}
           </div>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-muted">
             {directFileCount.toLocaleString()} file{directFileCount === 1 ? '' : 's'} in {currentLabel}
             {total > loadLimit ? ` • showing first ${loadLimit.toLocaleString()} filtered results` : ''}
           </p>
@@ -947,7 +947,7 @@ function ResourceBrowserView({
           type="button"
           onClick={goUp}
           disabled={breadcrumb.length === 0}
-          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-sm font-medium text-secondary hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
           Up
@@ -955,13 +955,13 @@ function ResourceBrowserView({
       </div>
 
       <div className="grid min-h-[32rem] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="border-b border-gray-200 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-900/30 lg:border-b-0 lg:border-r">
-          <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Folders</p>
+        <aside className="border-b border-line bg-surface-raised/70 lg:border-b-0 lg:border-r">
+          <div className="border-b border-line px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Folders</p>
           </div>
           <div className="max-h-[32rem] overflow-y-auto p-2">
             {folders.length === 0 ? (
-              <div className="px-3 py-8 text-center text-sm text-gray-400">
+              <div className="px-3 py-8 text-center text-sm text-muted">
                 No subfolders here.
               </div>
             ) : (
@@ -971,17 +971,17 @@ function ResourceBrowserView({
                     key={folder.id}
                     type="button"
                     onClick={() => onChangeFolder(folder.id)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-white dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface"
                     title={folder.name} aria-label={folder.name}
                   >
                     <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{folder.name}</span>
-                      <span className="block text-xs text-gray-400">
+                      <span className="block text-xs text-muted">
                         {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
                       </span>
                     </span>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
                   </button>
                 ))}
               </div>
@@ -990,30 +990,30 @@ function ResourceBrowserView({
         </aside>
 
         <section className="min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
               <FolderOpen className="h-4 w-4 text-amber-500" />
               <span>{currentLabel}</span>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               {folders.length.toLocaleString()} folder{folders.length === 1 ? '' : 's'} • {files.length.toLocaleString()} direct file{files.length === 1 ? '' : 's'}
             </p>
           </div>
 
           {folders.length > 0 && (
-            <div className="grid gap-2 border-b border-gray-200 p-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2 border-b border-line p-4 sm:grid-cols-2 xl:grid-cols-3">
               {folders.map((folder) => (
                 <button
                   key={folder.id}
                   type="button"
                   onClick={() => onChangeFolder(folder.id)}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
+                  className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/40 dark:bg-gray-900/40 dark:hover:border-green-800 dark:hover:bg-green-950/20"
                   title={folder.name} aria-label={folder.name}
                 >
                   <Folder className="h-5 w-5 flex-shrink-0 text-amber-500" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{folder.name}</span>
-                    <span className="block text-xs text-gray-400">
+                    <span className="block truncate text-sm font-semibold text-primary">{folder.name}</span>
+                    <span className="block text-xs text-muted">
                       {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
                     </span>
                   </span>
@@ -1023,7 +1023,7 @@ function ResourceBrowserView({
           )}
 
           {files.length === 0 ? (
-            <div className="flex min-h-[22rem] flex-col items-center justify-center px-4 text-center text-gray-400">
+            <div className="flex min-h-[22rem] flex-col items-center justify-center px-4 text-center text-muted">
               <FolderOpen className="mb-3 h-10 w-10" />
               <p className="text-sm font-medium">No files directly in this folder</p>
               <p className="mt-1 text-xs">Open a subfolder from the left panel.</p>
@@ -1031,7 +1031,7 @@ function ResourceBrowserView({
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-[900px] w-full border-collapse">
-                <thead className="bg-gray-50/80 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-900/60 dark:text-gray-400">
+                <thead className="bg-surface-raised/80 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">File</th>
                     <th className="px-4 py-3">Description</th>
@@ -1044,7 +1044,7 @@ function ResourceBrowserView({
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-subtle">
                   {files.map((resource) => (
                     <ResourceRow
                       key={resource.id}
@@ -1257,34 +1257,34 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-surface rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-primary flex items-center gap-2">
               <Upload className="w-5 h-5 text-green-600" /> Upload School Resource
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {mode === 'single' ? 'Share a file with the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+          <button onClick={onClose} className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Mode toggle */}
         <div className="px-6 pt-4">
-          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm">
+          <div className="inline-flex p-1 bg-surface-raised rounded-lg text-sm">
             <button
               type="button"
               onClick={() => { setMode('single'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'single'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-surface text-primary'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               <Upload className="w-3.5 h-3.5" /> Single File
@@ -1294,8 +1294,8 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               onClick={() => { setMode('folder'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'folder'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-surface text-primary'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               <FolderUp className="w-3.5 h-3.5" /> Folder
@@ -1309,13 +1309,13 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <>
               {/* File picker */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">File</label>
                 {!fileMeta ? (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -1324,14 +1324,14 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{fileMeta.name}</span>
-                    <span className="text-xs text-gray-400">{(fileMeta.size / 1024).toFixed(0)} KB</span>
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
+                    <Paperclip className="w-4 h-4 text-muted flex-shrink-0" />
+                    <span className="flex-1 truncate text-sm text-secondary">{fileMeta.name}</span>
+                    <span className="text-xs text-muted">{(fileMeta.size / 1024).toFixed(0)} KB</span>
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors"
+                      className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1348,47 +1348,47 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Title</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject (optional)</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">Subject (optional)</label>
                   <input
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category (optional)</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">Category (optional)</label>
                   <input
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Description (optional)</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none resize-y"
                 />
               </div>
             </>
@@ -1396,30 +1396,30 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
             <>
               {/* Folder picker */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Folder</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Folder</label>
                 {folderItems.length === 0 ? (
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-colors"
                   >
-                    <FolderUp className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                    <FolderUp className="w-6 h-6 mx-auto mb-2 text-muted" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-muted mt-2">
                       Supports PDF, Word, Excel, PowerPoint, TXT, Markdown, images. Hidden/system files and files over 25 MB are skipped.
                     </p>
                   </button>
                 ) : (
-                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <span className="text-sm font-medium text-secondary">
                         {folderItems.length} file{folderItems.length === 1 ? '' : 's'} ready
                       </span>
                       <button
                         type="button"
                         onClick={handleRemoveFolder}
                         disabled={folderBusy}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
+                        className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1427,10 +1427,10 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                     </div>
                     <ul className="max-h-48 overflow-y-auto space-y-1 pr-1">
                       {folderItems.map((it, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                          <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                          <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
-                          <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
+                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-surface border border-subtle">
+                          <FileIcon className="w-3.5 h-3.5 text-muted flex-shrink-0" />
+                          <span className="flex-1 truncate text-secondary" title={it.relativePath}>{it.relativePath}</span>
+                          <span className="text-muted flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
                           {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
                           {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
                           {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
@@ -1460,25 +1460,25 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               {folderItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Apply Subject to all (optional)</label>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Apply Subject to all (optional)</label>
                     <input
                       type="text"
                       value={folderSubject}
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Apply Category to all (optional)</label>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Apply Category to all (optional)</label>
                     <input
                       type="text"
                       value={folderCategory}
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -1501,11 +1501,11 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             disabled={submitting || folderBusy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>

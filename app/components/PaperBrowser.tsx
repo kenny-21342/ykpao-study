@@ -50,7 +50,7 @@ const EMPTY_SELECTION: Selection = {
 };
 
 const CARD =
-  'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500 dark:hover:border-green-500 transition-all text-left';
+  'rounded-lg border border-line bg-surface hover:border-green-500 dark:hover:border-green-500 transition-all text-left';
 const CARD_ACTIVE =
   'rounded-lg border-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-left';
 
@@ -88,7 +88,7 @@ function Skeleton({ count, height = 'h-20' }: { count: number; height?: string }
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className={`${height} rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse`}
+          className={`${height} rounded-lg bg-surface-raised animate-pulse`}
         />
       ))}
     </div>
@@ -112,7 +112,7 @@ function Step({
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs font-semibold text-white">
           {index}
         </span>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
           {title}
         </h2>
       </div>
@@ -260,8 +260,8 @@ export default function PaperBrowser() {
     <div className="space-y-8 p-4 md:p-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Past Papers</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl font-bold text-primary">Past Papers</h1>
+          <p className="text-sm text-muted">
             Browse complete papers by curriculum, subject, year and exam series.
           </p>
         </div>
@@ -271,7 +271,7 @@ export default function PaperBrowser() {
               window.history.pushState(null, '', window.location.pathname);
               setSelection(EMPTY_SELECTION);
             }}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center gap-1.5 rounded-md border border-strong px-3 py-1.5 text-sm text-secondary hover:bg-surface-hover"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Start over
@@ -281,21 +281,21 @@ export default function PaperBrowser() {
 
       {/* Breadcrumb of the cascade so far. */}
       {(activeCurriculum || activeSubject) && (
-        <nav className="flex flex-wrap items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm text-secondary">
           {activeCurriculum && (
             <button
               onClick={() => update({ subject: null, year: null, session: null })}
-              className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-sm px-2 py-1 hover:bg-surface-hover"
             >
               {activeCurriculum.label}
             </button>
           )}
           {activeSubject && (
             <>
-              <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted" />
               <button
                 onClick={() => update({ year: null, session: null })}
-                className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-1 hover:bg-surface-hover"
               >
                 {activeSubject.name}
               </button>
@@ -303,10 +303,10 @@ export default function PaperBrowser() {
           )}
           {selection.year !== null && (
             <>
-              <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted" />
               <button
                 onClick={() => update({ session: null })}
-                className="rounded-sm px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="rounded-sm px-2 py-1 hover:bg-surface-hover"
               >
                 {selection.year}
               </button>
@@ -342,11 +342,11 @@ export default function PaperBrowser() {
               >
                 <div className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="font-semibold text-gray-900 dark:text-white">
+                  <span className="font-semibold text-primary">
                     {curriculum.label}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted">
                   {curriculum.subjectCount} subjects · {curriculum.paperCount.toLocaleString()} papers
                 </p>
               </button>
@@ -373,12 +373,12 @@ export default function PaperBrowser() {
                   <div className="flex items-start gap-2">
                     <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-900 dark:text-white">
+                      <p className="truncate font-medium text-primary">
                         {subject.name}
                       </p>
                       {/* Two Cambridge syllabuses share the name "Computer
                           Science", so the code is what tells them apart. */}
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-muted">
                         {subject.code.startsWith('ib-') ? '' : `${subject.code} · `}
                         {subject.paperCount} papers
                       </p>
@@ -405,7 +405,7 @@ export default function PaperBrowser() {
                   className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                     selection.year === year.year
                       ? 'bg-green-500 text-white'
-                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
+                      : 'border border-strong text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
                   }`}
                 >
                   {year.year}
@@ -427,7 +427,7 @@ export default function PaperBrowser() {
                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   selection.session === session.session
                     ? 'bg-green-500 text-white'
-                    : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
+                    : 'border border-strong text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400'
                 }`}
               >
                 {session.label}
@@ -442,12 +442,12 @@ export default function PaperBrowser() {
       {selection.session && (
         <Step index={5} title="Paper" innerRef={(node) => { stepRefs.current[5] = node; }}>
           {loadingPapers ? (
-            <div className="flex items-center gap-2 py-8 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 py-8 text-sm text-muted">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading papers…
             </div>
           ) : instances.length === 0 ? (
-            <p className="py-8 text-sm text-gray-500 dark:text-gray-400">
+            <p className="py-8 text-sm text-muted">
               No papers found for this series.
             </p>
           ) : (
@@ -455,13 +455,13 @@ export default function PaperBrowser() {
               {instances.map((instance) => (
                 <div
                   key={instance.key}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <Layers className="h-4 w-4 text-gray-400" />
+                    <Layers className="h-4 w-4 text-muted" />
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{instance.label}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="font-medium text-primary">{instance.label}</p>
+                      <p className="text-xs text-muted">
                         {instance.subjectName} · {instance.year} · {instance.sessionLabel}
                       </p>
                     </div>
@@ -472,7 +472,7 @@ export default function PaperBrowser() {
                       <span key={document.id} className="inline-flex items-center">
                         <Link
                           href={`/papers/${document.id}`}
-                          className="inline-flex items-center gap-1.5 rounded-l-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center gap-1.5 rounded-l-md border border-strong px-3 py-1.5 text-sm text-secondary hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >
                           {document.docType === 'au' ? (
                             <Music className="h-3.5 w-3.5" />
@@ -481,7 +481,7 @@ export default function PaperBrowser() {
                           )}
                           {documentLabel(document)}
                           {document.pageCount ? (
-                            <span className="text-xs text-gray-400">{document.pageCount}p</span>
+                            <span className="text-xs text-muted">{document.pageCount}p</span>
                           ) : null}
                         </Link>
                         <a
@@ -495,7 +495,7 @@ export default function PaperBrowser() {
                               ? ` (${formatBytes(document.sizeBytes)})`
                               : ''
                           }`}
-                          className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 px-2 py-1.5 text-gray-500 hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                          className="inline-flex items-center rounded-r-md border border-l-0 border-strong px-2 py-1.5 text-muted hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>

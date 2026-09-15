@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
         className="fixed inset-0 object-cover"
       />
 
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
             <h1 className="text-3xl font-bold text-primary mb-2">
               Forgot Password
             </h1>
-            <p className="text-gray-600">
+            <p className="text-secondary">
               {sent
                 ? 'Check your inbox for the next step'
                 : "Enter your email and we'll send you a reset link"}
@@ -87,16 +87,16 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-secondary mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                     placeholder="student@example.com"
                     required
                     autoFocus
@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-secondary">
               Remembered it?{' '}
               <Link
                 href="/auth/login"
@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          <div className="mt-8 text-center text-xs text-gray-500">
+          <div className="mt-8 text-center text-xs text-muted">
             <p>
               Signing in with Google? That account has no password — use the Google
               button on the sign-in page.

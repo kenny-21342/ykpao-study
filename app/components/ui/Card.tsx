@@ -6,7 +6,7 @@ import { cn } from './cn';
  *
  * Thirty-eight of these shells were retyped by hand across the app, which is
  * why four different border radii ended up in use at near-parity. There is
- * also a block of `:where([class~="rounded-lg"][class~="bg-white"])` selectors
+ * also a block of `:where([class~="rounded-lg"][class~="bg-surface"])` selectors
  * in globals.css whose only job is to bolt a shadow onto those duplicated
  * strings after the fact; this component is what lets that be deleted.
  *

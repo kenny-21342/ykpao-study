@@ -73,33 +73,33 @@ export default function AnnouncementBanner() {
           className={`rounded-lg p-4 border ${
             a.pinned
               ? 'bg-accent-subtle border-green-200 dark:border-green-900/50'
-              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+              : 'bg-surface border-line'
           }`}
         >
           <div className="flex items-start gap-3">
             <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-              a.pinned ? 'bg-green-500' : 'bg-gray-400'
+              a.pinned ? 'bg-accent' : 'bg-muted'
             }`}>
               {a.pinned ? <Pin className="w-4 h-4 text-white" /> : <Megaphone className="w-4 h-4 text-white" />}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <h4 className="min-w-0 pr-2 text-sm font-bold leading-snug break-words text-gray-900 dark:text-gray-100">
+                <h4 className="min-w-0 pr-2 text-sm font-bold leading-snug break-words text-primary">
                   {a.title}
                 </h4>
                 <button
                   onClick={() => dismiss(a.id)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs flex-shrink-0"
+                  className="text-muted hover:text-secondary text-xs flex-shrink-0"
                   title="Dismiss" aria-label="Dismiss"
                 >
                   ✕
                 </button>
               </div>
               <div
-                className="mt-1 break-words text-sm text-gray-600 dark:text-gray-400 prose-sm max-w-none [&_p]:my-1 [&_a]:break-words [&_a]:text-green-600 [&_a]:underline [&_img]:max-w-full"
+                className="mt-1 break-words text-sm text-secondary prose-sm max-w-none [&_p]:my-1 [&_a]:break-words [&_a]:text-green-600 [&_a]:underline [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }}
               />
-              <p className="text-[10px] text-gray-400 mt-1.5">
+              <p className="text-[10px] text-muted mt-1.5">
                 {new Date(a.createdAt).toLocaleDateString(undefined, {
                   month: 'short', day: 'numeric', year: 'numeric',
                 })}
@@ -120,7 +120,7 @@ export default function AnnouncementBanner() {
       {visible.length > 0 && visible.length <= 3 && (
         <Link
           href="/announcements"
-          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-secondary"
         >
           All announcements
           <ChevronRight className="w-3 h-3" />

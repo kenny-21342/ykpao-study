@@ -51,11 +51,11 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
 
   return (
     <div className="relative flex h-[calc(100vh-15rem)] min-h-[520px] flex-col">
-      <div className="flex items-center justify-end border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-end border-b border-line bg-surface px-4 py-2">
         <a
           href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
           download={fileName}
-          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-secondary transition-colors hover:bg-surface-hover"
           title="Download PDF" aria-label="Download PDF"
         >
           <Download className="h-4 w-4" />
@@ -65,11 +65,11 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
       {!loaded && (
         <SkeletonRegion
           label="Loading the paper"
-          className="pointer-events-none absolute inset-x-0 bottom-0 top-[41px] z-10 flex flex-col items-center gap-3 overflow-hidden bg-gray-100 p-6 dark:bg-gray-900"
+          className="pointer-events-none absolute inset-x-0 bottom-0 top-[41px] z-10 flex flex-col items-center gap-3 overflow-hidden bg-surface-raised p-6"
         >
           {/* Page-shaped, so the wait looks like a document arriving rather
               than an error. */}
-          <div className="w-full max-w-2xl space-y-3 rounded-md bg-white p-8 dark:bg-gray-800">
+          <div className="w-full max-w-2xl space-y-3 rounded-md bg-surface p-8">
             <Skeleton className="h-5 w-1/3" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-full" />
@@ -79,7 +79,7 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
             <Skeleton className="h-3 w-2/3" />
           </div>
           {slow && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-secondary">
               Still downloading this paper — scans can be a few megabytes.
             </p>
           )}
@@ -95,8 +95,8 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
       >
         {/* Reached only when the browser can't render `data` inline (some
             mobile browsers, or a PDF plugin that's been disabled). */}
-        <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-100 p-8 text-center dark:bg-gray-900">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex h-full flex-col items-center justify-center gap-3 bg-surface-raised p-8 text-center">
+          <p className="text-sm text-secondary">
             Your browser can&apos;t preview this PDF inline.
           </p>
           <a

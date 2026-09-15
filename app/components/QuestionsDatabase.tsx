@@ -437,7 +437,7 @@ export default function QuestionsDatabase({
               <Brain className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold">Added to your review queue{count ? ` (${count} due)` : ''}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">See it in Study → Review</p>
+                <p className="text-xs text-muted">See it in Study → Review</p>
               </div>
               <button
                 onClick={() => {
@@ -561,29 +561,29 @@ export default function QuestionsDatabase({
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative">
+    <div className="h-full flex flex-col bg-surface-raised relative">
       {/* Easter-egg unlock dot + drawer */}
       <UnlockWidget onUnlocked={() => { setVaultUnlocked(true); setShowVault(true); }} />
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
+      <div className="bg-surface border-b border-line px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Practice</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+            <h2 className="text-2xl font-bold text-primary">Practice</h2>
+            <p className="text-sm text-secondary mt-0.5">
               {showVault ? 'STEP / Competition vault' : 'Browse past-paper questions and switch into practice mode'}
             </p>
           </div>
           <div className="flex items-center space-x-3 flex-shrink-0">
             {/* Vault toggle — only visible once unlocked. */}
             {vaultUnlocked && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
+              <div className="flex bg-surface-raised rounded-md p-1">
                 <button
                   onClick={() => setShowVault(false)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     !showVault
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-surface text-primary'
+                      : 'text-secondary hover:text-primary'
                   }`}
                 >
                   Past Papers
@@ -592,8 +592,8 @@ export default function QuestionsDatabase({
                   onClick={() => setShowVault(true)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${
                     showVault
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-surface text-primary'
+                      : 'text-secondary hover:text-primary'
                   }`}
                 >
                   <Lock className="w-3 h-3" /> Vault
@@ -602,19 +602,19 @@ export default function QuestionsDatabase({
             )}
             {/* Past-paper mode toggle — hidden when viewing the vault. */}
             {!showVault && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1" role="group" aria-label="Content scope">
-                <button onClick={() => changeScope('enrolled')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'enrolled' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>My courses</button>
-                <button onClick={() => changeScope('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'all' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>All subjects</button>
+              <div className="flex bg-surface-raised rounded-md p-1" role="group" aria-label="Content scope">
+                <button onClick={() => changeScope('enrolled')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'enrolled' ? 'bg-surface text-primary' : 'text-secondary'}`}>My courses</button>
+                <button onClick={() => changeScope('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium ${scope === 'all' ? 'bg-surface text-primary' : 'text-secondary'}`}>All subjects</button>
               </div>
             )}
             {!showVault && (
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
+              <div className="flex bg-surface-raised rounded-md p-1">
                 <button
                   onClick={() => { setMode('browse'); screenCtx.updateData({ practiceMode: 'browse' }); }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     mode === 'browse'
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-surface text-primary'
+                      : 'text-secondary hover:text-primary'
                   }`}
                 >
                   Browse
@@ -623,8 +623,8 @@ export default function QuestionsDatabase({
                   onClick={() => { setMode('practice'); screenCtx.updateData({ practiceMode: 'practice' }); }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     mode === 'practice'
-                      ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-surface text-primary'
+                      : 'text-secondary hover:text-primary'
                   }`}
                 >
                   Practice
@@ -634,7 +634,7 @@ export default function QuestionsDatabase({
             {!showVault && (
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-surface-raised hover:bg-surface-active rounded-md transition-colors"
               >
                 <Filter className="w-4 h-4" />
                 <span>{showFilters ? 'Hide' : 'Filters'}</span>
@@ -646,7 +646,7 @@ export default function QuestionsDatabase({
         {/* Top search box for past-paper mode */}
         {!showVault && (
           <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <input
               type="search"
               value={searchBox}
@@ -657,7 +657,7 @@ export default function QuestionsDatabase({
                 }
               }}
               placeholder="Search by question code (e.g. 0610-S25-P21-Q2) or topic (e.g. Inheritance)…"
-              className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full pl-9 pr-3 py-2 bg-surface-raised border border-line rounded-md text-sm text-primary focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         )}
@@ -691,16 +691,16 @@ export default function QuestionsDatabase({
           // list left roughly nothing for either, and the filters are a
           // toggle, so on a small screen they take the screen and the list
           // steps aside until they are dismissed.
-          <div className="w-full md:w-80 md:shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Filters</h3>
+          <div className="w-full md:w-80 md:shrink-0 bg-surface border-r border-line p-4 md:p-6 overflow-y-auto">
+            <h3 className="text-lg font-bold text-primary mb-4">Filters</h3>
 
             {/* Subject Filter */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+              <label className="block text-sm font-medium text-secondary mb-2">Subject</label>
               <select
                 value={selectedSubject}
                 onChange={(e) => { setSelectedSubject(e.target.value); setSelectedTopic(''); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
               >
                 <option value="">All Subjects</option>
                 {filters.subjects.map((subject) => (
@@ -713,11 +713,11 @@ export default function QuestionsDatabase({
 
             {/* Year Filter */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year</label>
+              <label className="block text-sm font-medium text-secondary mb-2">Year</label>
               <select
                 value={selectedYear}
                 onChange={(e) => { setSelectedYear(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
               >
                 <option value="">All Years</option>
                 {filters.years.map((year) => (
@@ -728,11 +728,11 @@ export default function QuestionsDatabase({
 
             {/* Session Filter */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Session</label>
+              <label className="block text-sm font-medium text-secondary mb-2">Session</label>
               <select
                 value={selectedSession}
                 onChange={(e) => { setSelectedSession(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
               >
                 <option value="">All Sessions</option>
                 {filters.sessions.map((session) => (
@@ -743,11 +743,11 @@ export default function QuestionsDatabase({
 
             {/* Paper Number Filter */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Paper</label>
+              <label className="block text-sm font-medium text-secondary mb-2">Paper</label>
               <select
                 value={selectedPaper}
                 onChange={(e) => { setSelectedPaper(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
               >
                 <option value="">All Papers</option>
                 {filters.paperNumbers.map((paper) => (
@@ -759,11 +759,11 @@ export default function QuestionsDatabase({
             {/* Topic Filter */}
             {filters.topics && filters.topics.length > 0 && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topic / Sub-subject</label>
+                <label className="block text-sm font-medium text-secondary mb-2">Topic / Sub-subject</label>
                 <select
                   value={selectedTopic}
                   onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
                 >
                   <option value="">All Topics</option>
                   {filters.topics.map((t) => (
@@ -780,9 +780,9 @@ export default function QuestionsDatabase({
                 type="checkbox"
                 checked={onlyBookmarked}
                 onChange={(e) => { setOnlyBookmarked(e.target.checked); setPage(1); }}
-                className="w-4 h-4 rounded-sm border-gray-300 text-green-600 focus:ring-green-500"
+                className="w-4 h-4 rounded-sm border-strong text-green-600 focus:ring-green-500"
               />
-              <label htmlFor="only-bookmarked" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 cursor-pointer">
+              <label htmlFor="only-bookmarked" className="text-sm font-medium text-secondary flex items-center gap-1 cursor-pointer">
                 <Star className="w-3.5 h-3.5" /> Starred only
               </label>
             </div>
@@ -798,7 +798,7 @@ export default function QuestionsDatabase({
                 setOnlyBookmarked(false);
                 setPage(1);
               }}
-              className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors text-sm font-medium"
+              className="w-full px-4 py-2 bg-surface-raised hover:bg-surface-active rounded-md transition-colors text-sm font-medium"
             >
               Clear All Filters
             </button>
@@ -815,16 +815,16 @@ export default function QuestionsDatabase({
           <div
             className={`${
               selectedQuestion ? 'hidden md:block md:w-2/5' : 'w-full'
-            } border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}
+            } border-r border-line overflow-y-auto`}
           >
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
               </div>
             ) : loadError ? (
-              <div className="flex flex-col items-center justify-center h-64 px-6 text-center text-gray-600 dark:text-gray-400">
+              <div className="flex flex-col items-center justify-center h-64 px-6 text-center text-secondary">
                 <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
-                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                <p className="font-semibold text-primary">
                   Couldn&apos;t load questions
                 </p>
                 <p className="mt-1 text-sm max-w-sm">{loadError}</p>
@@ -836,13 +836,13 @@ export default function QuestionsDatabase({
                 </button>
               </div>
             ) : questions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col items-center justify-center h-64 text-muted">
                 <BookOpen className="w-16 h-16 mb-4" />
                 <p>No questions found</p>
                 <p className="text-sm">Try adjusting your filters</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              <ul className="divide-y divide-subtle">
                 {/* The row is a <button> inside the <li>, not an <li onClick>:
                     a click handler on the list item is unreachable by keyboard,
                     so the question list could not be navigated with Tab/Enter. */}
@@ -855,19 +855,19 @@ export default function QuestionsDatabase({
                     className={`block w-full text-left px-4 py-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-500 ${
                       selectedQuestion?.id === question.id
                         ? 'bg-green-50 dark:bg-green-900/20 border-l-2 border-green-500'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-l-2 border-transparent'
+                        : 'hover:bg-surface-hover dark:hover:bg-gray-800/50 border-l-2 border-transparent'
                     }`}
                   >
                     {/* Row 1: the question code (prominent, monospace) */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <span className="font-mono text-sm font-semibold text-primary">
                         {formatQuestionCode(question)}
                       </span>
                       {question.bookmarked && (
                         <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                       )}
                       {question.marks > 0 && (
-                        <span className="text-[10px] text-gray-400">[{question.marks} marks]</span>
+                        <span className="text-[10px] text-muted">[{question.marks} marks]</span>
                       )}
                     </div>
                     {/* Row 2: labels (topic + subject) */}
@@ -898,17 +898,17 @@ export default function QuestionsDatabase({
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2 bg-surface border border-strong rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-hover"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-secondary">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2 bg-surface border border-strong rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-hover"
                 >
                   Next
                 </button>
@@ -918,13 +918,13 @@ export default function QuestionsDatabase({
 
           {/* Question Detail Panel */}
           {selectedQuestion && (
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-4 md:p-6">
+            <div className="flex-1 overflow-y-auto bg-surface p-4 md:p-6">
               {/* The only way back to the list on a phone, where the list is
                   not on screen at all. Redundant on desktop, where both panes
                   are visible, so it is hidden there. */}
               <button
                 onClick={() => setSelectedQuestion(null)}
-                className="md:hidden mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300"
+                className="md:hidden mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary"
               >
                 <ChevronLeft className="w-4 h-4" />
                 All questions
@@ -932,7 +932,7 @@ export default function QuestionsDatabase({
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-xl font-bold font-mono text-gray-900 dark:text-white">
+                    <h3 className="text-xl font-bold font-mono text-primary">
                       {formatQuestionCode(selectedQuestion)}
                     </h3>
                     {selectedQuestion.topic && selectedQuestion.topic !== 'General' && (
@@ -945,21 +945,21 @@ export default function QuestionsDatabase({
                     <button
                       onClick={() => toggleBookmark(selectedQuestion)}
                       title={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'} aria-label={selectedQuestion.bookmarked ? 'Remove from starred' : 'Star this question'}
-                      className={`p-1.5 rounded-md transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                      className={`p-1.5 rounded-md transition-colors ${selectedQuestion.bookmarked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-muted hover:text-amber-500 hover:bg-surface-hover'}`}
                     >
                       <Star className={`w-5 h-5 ${selectedQuestion.bookmarked ? 'fill-amber-500' : ''}`} />
                     </button>
                     <button
                       onClick={() => setSelectedQuestion(null)}
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      className="text-muted hover:text-secondary"
                     >
                       ✕
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-sm">{selectedQuestion.subject_name}</span>
+                <div className="flex items-center space-x-2 text-sm text-secondary mb-4">
+                  <span className="px-2 py-1 bg-surface-raised rounded-sm">{selectedQuestion.subject_name}</span>
                   <span>•</span>
                   <span>{selectedQuestion.year}</span>
                   <span>•</span>
@@ -975,7 +975,7 @@ export default function QuestionsDatabase({
                 </div>
 
                 <div className="prose dark:prose-invert max-w-none">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-md">
+                  <div className="p-4 bg-surface-raised rounded-md">
                     <FormattedMessage content={selectedQuestion.content} />
                   </div>
                 </div>
@@ -983,13 +983,13 @@ export default function QuestionsDatabase({
                 {/* Display figures linked to this question */}
                 {selectedQuestion.has_diagram === 1 && paperImages.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center space-x-2">
+                    <h4 className="text-sm font-semibold text-secondary mb-3 flex items-center space-x-2">
                       <ImageIcon className="w-4 h-4" />
                       <span>Figures for this question:</span>
                     </h4>
                     <div className="grid grid-cols-1 gap-4">
                       {paperImages.map((imgUrl, idx) => (
-                        <div key={idx} className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden bg-white dark:bg-gray-800 p-2">
+                        <div key={idx} className="border border-strong rounded-md overflow-hidden bg-surface p-2">
                           <Image
                             src={imgUrl}
                             alt={`Figure ${idx + 1}`}
@@ -999,7 +999,7 @@ export default function QuestionsDatabase({
                             className="max-w-full h-auto mx-auto"
                             onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }}
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
+                          <p className="text-xs text-muted mt-1 text-center">
                             {imgUrl.split('/').pop()}
                           </p>
                         </div>
@@ -1019,12 +1019,12 @@ export default function QuestionsDatabase({
 
               {/* Practice mode */}
               {mode === 'practice' && (
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-6 pt-6 border-t border-line">
                   <div className="mb-5 border border-amber-200 dark:border-amber-900/70 bg-amber-50/70 dark:bg-amber-950/20 rounded-md p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Lightbulb className="w-4 h-4 text-amber-600" />
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Progressive hints</h4>
+                        <h4 className="text-sm font-bold text-primary">Progressive hints</h4>
                       </div>
                       <button
                         onClick={requestHint}
@@ -1050,7 +1050,7 @@ export default function QuestionsDatabase({
 
                   {/* Drawing canvas + photo upload toggle */}
                   <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                    <h4 className="text-lg font-bold text-primary flex items-center space-x-2">
                       <Pencil className="w-5 h-5 text-green-500" />
                       <span>Your Answer</span>
                     </h4>
@@ -1067,7 +1067,7 @@ export default function QuestionsDatabase({
                       )}
                       <button
                         onClick={() => imageInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-surface-raised text-secondary hover:bg-surface-hover transition-all"
                       >
                         <ImageIcon className="w-4 h-4" />
                         Upload photo
@@ -1095,11 +1095,11 @@ export default function QuestionsDatabase({
                   )}
 
                   {uploadedImageUrl && (
-                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-md border border-line bg-surface-raised dark:bg-gray-800/50">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={uploadedImageUrl} alt="Uploaded answer" className="w-16 h-16 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
-                      <div className="flex-1 min-w-0 text-xs text-gray-600 dark:text-gray-400">
-                        <p className="font-semibold text-gray-700 dark:text-gray-300">Photo attached</p>
+                      <img src={uploadedImageUrl} alt="Uploaded answer" className="w-16 h-16 object-cover rounded-md border border-line" />
+                      <div className="flex-1 min-w-0 text-xs text-secondary">
+                        <p className="font-semibold text-secondary">Photo attached</p>
                         <p>Transcribe it or submit as-is.</p>
                       </div>
                       <button onClick={() => setUploadedImageUrl(null)} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
@@ -1118,7 +1118,7 @@ export default function QuestionsDatabase({
                   />
 
                   <div className="mt-3 flex items-center justify-between">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-muted">
                       {answer.trim().length === 0
                         ? 'Write something to get AI feedback.'
                         : `${answer.trim().length} chars`}
@@ -1146,12 +1146,12 @@ export default function QuestionsDatabase({
                         </div>
                       )}
                       {grade && markscheme && (
-                        <div className="inline-flex items-center rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-0.5 text-xs font-semibold">
+                        <div className="inline-flex items-center rounded-md border border-line bg-surface-raised p-0.5 text-xs font-semibold">
                           {(['ai', 'markscheme', 'split'] as const).map((v) => (
                             <button
                               key={v}
                               onClick={() => setFeedbackView(v)}
-                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                              className={`px-2.5 py-1 rounded-md transition-colors ${feedbackView === v ? 'bg-surface text-emerald-700 dark:text-emerald-300' : 'text-muted hover:text-secondary'}`}
                             >
                               {v === 'ai' ? 'AI feedback' : v === 'markscheme' ? 'Mark scheme' : 'Both'}
                             </button>
@@ -1161,18 +1161,18 @@ export default function QuestionsDatabase({
                       {feedbackView === 'split' && grade && markscheme ? (
                         <div className="grid gap-4 lg:grid-cols-2">
                           <div>
-                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">AI explanation</h5>
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">AI explanation</h5>
                             <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
-                              <span className="font-semibold text-gray-900 dark:text-white">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
+                              <span className="font-semibold text-primary">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                             </div>
                             {grade.explanation && (
-                              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm">
+                              <div className="mt-2 p-3 bg-surface-raised rounded-md text-sm">
                                 <FormattedMessage content={grade.explanation} />
                               </div>
                             )}
                           </div>
                           <div>
-                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Official mark scheme</h5>
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Official mark scheme</h5>
                             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800 prose dark:prose-invert max-w-none">
                               {parseMarkschemeContent(markscheme.content)}
                             </div>
@@ -1187,12 +1187,12 @@ export default function QuestionsDatabase({
                       ) : grade ? (
                         <div>
                           <div className={`p-4 rounded-md border ${grade.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
-                            <span className="font-semibold text-gray-900 dark:text-white">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
+                            <span className="font-semibold text-primary">Score: {grade.score ?? 0}{grade.maxScore ? ` / ${grade.maxScore}` : ''} marks</span>
                           </div>
                           {grade.strengths && grade.strengths.length > 0 && (
                             <div className="mt-3">
                               <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">What you did well</h5>
-                              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                              <ul className="list-disc list-inside space-y-1 text-sm text-secondary">
                                 {grade.strengths.map((s, i) => <li key={i}><FormattedMessage content={s} /></li>)}
                               </ul>
                             </div>
@@ -1200,22 +1200,22 @@ export default function QuestionsDatabase({
                           {grade.weaknesses && grade.weaknesses.length > 0 && (
                             <div className="mt-3">
                               <h5 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">What to improve</h5>
-                              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                              <ul className="list-disc list-inside space-y-1 text-sm text-secondary">
                                 {grade.weaknesses.map((w, i) => <li key={i}><FormattedMessage content={w} /></li>)}
                               </ul>
                             </div>
                           )}
                           {grade.explanation && (
                             <div className="mt-3">
-                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Explanation</h5>
-                              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm">
+                              <h5 className="text-sm font-semibold text-secondary mb-2">Explanation</h5>
+                              <div className="p-3 bg-surface-raised rounded-md text-sm">
                                 <FormattedMessage content={grade.explanation} />
                               </div>
                             </div>
                           )}
                           {grade.modelAnswer && (
                             <div className="mt-3">
-                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Model answer</h5>
+                              <h5 className="text-sm font-semibold text-secondary mb-2">Model answer</h5>
                               <div className="p-3 bg-surface-raised border border-line rounded-md text-sm">
                                 <FormattedMessage content={grade.modelAnswer} />
                               </div>
@@ -1228,13 +1228,13 @@ export default function QuestionsDatabase({
 
                   {recentAttempts.length > 0 && !grade && (
                     <div className="mt-6">
-                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
+                      <h5 className="text-sm font-semibold text-secondary mb-2 flex items-center space-x-2">
                         <Trophy className="w-4 h-4 text-warning" />
                         <span>Your previous attempts</span>
                       </h5>
                       <div className="space-y-1">
                         {recentAttempts.map((a) => (
-                          <div key={a.id} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 p-2 bg-gray-50 dark:bg-gray-900 rounded-sm">
+                          <div key={a.id} className="flex items-center justify-between text-xs text-secondary p-2 bg-surface-raised rounded-sm">
                             <span className="flex items-center space-x-2">
                               {a.isCorrect ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-amber-500" />}
                               <span>{a.score}{a.maxScore ? ` / ${a.maxScore}` : ''}</span>

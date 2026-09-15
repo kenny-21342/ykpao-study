@@ -94,7 +94,7 @@ export default function AnnouncementManager() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Announcements</h1>
-          <p className="text-sm text-gray-500 mt-1">Publish platform-wide announcements. Notifications are sent to all matched users.</p>
+          <p className="text-sm text-muted mt-1">Publish platform-wide announcements. Notifications are sent to all matched users.</p>
         </div>
         <button
           onClick={() => setCreating(true)}
@@ -108,32 +108,32 @@ export default function AnnouncementManager() {
       {loading ? <LoadingSpinner /> : (
         <div className="space-y-3">
           {items.length === 0 ? (
-            <p className="text-sm text-gray-400 italic py-8 text-center">No announcements yet.</p>
+            <p className="text-sm text-muted italic py-8 text-center">No announcements yet.</p>
           ) : (
             items.map((a) => (
-              <div key={a.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+              <div key={a.id} className="bg-surface rounded-lg border border-line p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium uppercase ${SEVERITY_STYLES[a.severity] ?? SEVERITY_STYLES.info}`}>{a.severity}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-sm">{a.audience}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-surface-raised text-secondary rounded-sm">{a.audience}</span>
                       {a.pinned && <Pin className="w-3.5 h-3.5 text-secondary" />}
-                      {!a.published && <span className="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-sm">DRAFT</span>}
+                      {!a.published && <span className="text-[10px] px-1.5 py-0.5 bg-surface-active text-secondary rounded-sm">DRAFT</span>}
                     </div>
                     <h3 className="font-medium text-sm">{a.title}</h3>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{a.body.replace(/<[^>]+>/g, '')}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
+                    <p className="text-xs text-muted mt-1 line-clamp-2">{a.body.replace(/<[^>]+>/g, '')}</p>
+                    <p className="text-[10px] text-muted mt-1">
                       by {a.author?.name ?? a.author?.email ?? 'Admin'} · {new Date(a.publishedAt).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => togglePublished(a)} title={a.published ? 'Unpublish' : 'Publish'} aria-label={a.published ? 'Unpublish' : 'Publish'} className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <button onClick={() => togglePublished(a)} title={a.published ? 'Unpublish' : 'Publish'} aria-label={a.published ? 'Unpublish' : 'Publish'} className="p-1.5 rounded-md text-muted hover:bg-surface-hover">
                       {a.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} aria-label={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-secondary' : 'text-gray-400'}`}>
+                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} aria-label={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-md hover:bg-surface-hover ${a.pinned ? 'text-secondary' : 'text-muted'}`}>
                       <Pin className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-muted hover:bg-surface-hover">
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button onClick={() => remove(a.id)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
@@ -189,10 +189,10 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
+      <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-line sticky top-0 bg-surface z-10">
           <h2 className="font-bold flex items-center gap-2"><Megaphone className="w-5 h-5" /> {announcement ? 'Edit Announcement' : 'New Announcement'}</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1 text-muted hover:text-secondary"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">
           {error && <ErrorBox message={error} />}
@@ -203,7 +203,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Library closes at 4 pm on Friday"
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+              className="w-full px-3 py-2 bg-surface-raised border border-line rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
           <div>
@@ -213,7 +213,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1.5">Severity</label>
-              <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
+              <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full px-3 py-2 bg-surface-raised border border-line rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
                 <option value="info">Info</option>
                 <option value="success">Success</option>
                 <option value="warning">Warning</option>
@@ -222,7 +222,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Audience</label>
-              <select value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
+              <select value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full px-3 py-2 bg-surface-raised border border-line rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
                 <option value="all">All users</option>
                 <option value="students">Students only</option>
                 <option value="teachers">Teachers only</option>
@@ -240,8 +240,8 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
             </label>
           </div>
         </div>
-        <div className="p-5 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2 sticky bottom-0 bg-white dark:bg-gray-900">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
+        <div className="p-5 border-t border-line flex justify-end gap-2 sticky bottom-0 bg-surface">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-line rounded-md hover:bg-surface-hover">Cancel</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {saving ? 'Saving…' : 'Save'}

@@ -99,7 +99,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
     // question is stored as an image of the printed paper) and present marking
     // it yourself as the way it works, not as a consolation.
     return (
-      <p className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+      <p className="px-4 py-3 text-xs text-muted">
         {keyed
           ? 'This question is stored as a scan of the printed paper, so hints aren\u2019t available for it. Your answer is still marked against the answer key.'
           : 'This question is stored as a scan of the printed paper, so it can\u2019t be marked automatically. Answer it, then mark yourself against the mark scheme below \u2014 that is how the bank is designed to be used.'}
@@ -129,7 +129,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   return (
     <div className="space-y-2 px-4 py-3">
       {hints.map((hint) => (
-        <p key={hint.level} className="text-sm text-gray-700 dark:text-gray-200">
+        <p key={hint.level} className="text-sm text-secondary">
           <span className="font-medium">Hint {hint.level}: </span>
           {hint.text}
         </p>
@@ -139,7 +139,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
         type="button"
         onClick={requestHint}
         disabled={loading || hints.length >= 3}
-        className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+        className="inline-flex items-center gap-2 rounded-md border border-strong px-3 py-1.5 text-sm text-secondary hover:bg-surface-hover disabled:opacity-50"
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {hints.length === 0 ? 'Get a hint' : hints.length >= 3 ? 'No more hints' : 'Another hint'}
@@ -336,10 +336,10 @@ export default function BankPractice({
       <div className="h-full grid place-items-center p-6">
         <div className="max-w-md text-center">
           <GraduationCap className="w-10 h-10 mx-auto text-green-600 mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-primary">
             Sign in to practise
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-sm text-secondary mt-2">
             The question bank is scoped to the subjects you study, and your attempts
             and bookmarks are saved to your account.
           </p>
@@ -370,14 +370,14 @@ export default function BankPractice({
           ← Back to questions
         </button>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-secondary">
             {selected.paper.subject} · {paperLabel(selected.paper)}
           </p>
           <button
             type="button"
             onClick={() => toggleBookmark(selected.id)}
             aria-pressed={bookmarked.has(selected.id)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-strong px-2.5 py-1 text-xs text-secondary hover:bg-surface-hover"
           >
             <Star
               className={`h-3.5 w-3.5 ${
@@ -389,7 +389,7 @@ export default function BankPractice({
           </button>
         </div>
         <BankQuestionCard question={selected} />
-          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-lg border border-line bg-surface">
             <AssistancePanel question={selected} />
           </div>
         </div>
@@ -408,7 +408,7 @@ export default function BankPractice({
           where self-marking is described, which is why meeting it cold made
           the intended flow read as a broken AI feature. */}
       <PreviewNotice feature="question-bank" />
-      <div className="inline-flex rounded-md bg-gray-100 p-0.5 dark:bg-gray-800">
+      <div className="inline-flex rounded-md bg-surface-raised p-0.5">
         {(['enrolled', 'all'] as const).map((option) => (
           <button
             key={option}
@@ -425,8 +425,8 @@ export default function BankPractice({
             }}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
               scope === option
-                ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-white'
-                : 'text-gray-600 dark:text-gray-400'
+                ? 'bg-surface text-primary'
+                : 'text-secondary'
             }`}
           >
             {option === 'enrolled' ? 'My courses' : 'All subjects'}
@@ -443,8 +443,8 @@ export default function BankPractice({
           }}
           className={`ml-1 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
             onlyBookmarked
-              ? 'bg-white text-gray-900 dark:bg-gray-900 dark:text-white'
-              : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-surface text-primary'
+              : 'text-secondary'
           }`}
         >
           <Star
@@ -460,7 +460,7 @@ export default function BankPractice({
           aria-label="Subject"
           value={subject}
           onChange={(e) => changeFilter(setSubject)(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
         >
           <option value="">All subjects</option>
           {filters.subjects.map((option) => (
@@ -471,7 +471,7 @@ export default function BankPractice({
           aria-label="Year"
           value={year}
           onChange={(e) => changeFilter(setYear)(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
         >
           <option value="">All years</option>
           {filters.years.map((option) => (
@@ -482,7 +482,7 @@ export default function BankPractice({
           aria-label="Session"
           value={session}
           onChange={(e) => changeFilter(setSession)(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
         >
           <option value="">All sessions</option>
           {filters.sessions.map((option) => (
@@ -493,7 +493,7 @@ export default function BankPractice({
           aria-label="Paper"
           value={paperNumber}
           onChange={(e) => changeFilter(setPaperNumber)(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
         >
           <option value="">All papers</option>
           {filters.paperNumbers.map((option) => (
@@ -509,7 +509,7 @@ export default function BankPractice({
             aria-label="Topic"
             value={topic}
             onChange={(e) => changeFilter(setTopic)(e.target.value)}
-            className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 sm:col-span-4"
+            className="col-span-2 rounded-md border border-strong px-2 py-1.5 text-sm bg-surface sm:col-span-4"
           >
             <option value="">All topics</option>
             {filters.topics.map((option) => (
@@ -525,7 +525,7 @@ export default function BankPractice({
             aria-label="Command term"
             value={commandTerm}
             onChange={(e) => changeFilter(setCommandTerm)(e.target.value)}
-            className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 sm:col-span-4"
+            className="col-span-2 rounded-md border border-strong px-2 py-1.5 text-sm bg-surface sm:col-span-4"
           >
             <option value="">All command terms</option>
             {filters.commandTerms.map((option) => (
@@ -535,7 +535,7 @@ export default function BankPractice({
         )}
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-muted">
         {listLoading ? 'Loading…' : `${total.toLocaleString()} questions`}
       </p>
 
@@ -546,7 +546,7 @@ export default function BankPractice({
       )}
 
       {!listLoading && questions.length === 0 && !listError && (
-        <div className="flex flex-col items-center gap-2 py-12 text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col items-center gap-2 py-12 text-muted">
           <Search className="h-6 w-6" aria-hidden="true" />
           <p className="text-sm">No questions match those filters.</p>
         </div>
@@ -560,7 +560,7 @@ export default function BankPractice({
             // button -- a button inside a button is invalid and the inner one
             // stops responding. The row is a container; the open action and
             // the star are siblings inside it.
-            className="flex items-center rounded-lg border border-gray-200 bg-white hover:border-strong hover:bg-surface-hover dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700/40"
+            className="flex items-center rounded-lg border border-line bg-surface hover:border-strong hover:bg-surface-hover dark:hover:bg-gray-700/40"
           >
             <button
               type="button"
@@ -573,19 +573,19 @@ export default function BankPractice({
                 <img
                   src={question.thumbnail.url}
                   alt=""
-                  className="hidden h-16 w-28 shrink-0 rounded-sm border border-gray-200 object-cover object-top dark:border-gray-600 sm:block"
+                  className="hidden h-16 w-28 shrink-0 rounded-sm border border-line object-cover object-top sm:block"
                 />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-gray-900 dark:text-white">
+                <span className="block text-sm font-medium text-primary">
                   Question {question.rootNumber}
                   {question.totalMarks !== null && (
-                    <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+                    <span className="ml-2 text-xs font-normal text-muted">
                       {question.totalMarks} marks
                     </span>
                   )}
                 </span>
-                <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                <span className="block truncate text-xs text-muted">
                   {question.paper.subject} · {paperLabel(question.paper)}
                 </span>
               </span>
@@ -604,7 +604,7 @@ export default function BankPractice({
                   ? `Remove star from question ${question.rootNumber}`
                   : `Star question ${question.rootNumber}`
               }
-              className="shrink-0 self-stretch px-3 text-gray-400 hover:text-amber-500"
+              className="shrink-0 self-stretch px-3 text-muted hover:text-amber-500"
             >
               <Star
                 className={`h-4 w-4 ${
@@ -623,18 +623,18 @@ export default function BankPractice({
             type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
             disabled={page <= 1 || listLoading}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600"
+            className="rounded-md border border-strong px-3 py-1.5 text-sm disabled:opacity-40"
           >
             Previous
           </button>
-          <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
+          <span className="text-xs tabular-nums text-muted">
             Page {page} of {lastPage.toLocaleString()}
           </span>
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(lastPage, current + 1))}
             disabled={page >= lastPage || listLoading}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600"
+            className="rounded-md border border-strong px-3 py-1.5 text-sm disabled:opacity-40"
           >
             Next
           </button>

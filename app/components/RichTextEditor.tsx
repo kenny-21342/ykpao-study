@@ -60,8 +60,8 @@ function MenuButton({
       aria-label={title}
       // Toggles must report whether they are on, not merely look it.
       aria-pressed={active === undefined ? undefined : active}
-      className={`p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-        active ? 'bg-surface-raised text-secondary' : 'text-gray-700 dark:text-gray-300'
+      className={`p-2 rounded-sm hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+        active ? 'bg-surface-raised text-secondary' : 'text-secondary'
       }`}
     >
       {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
@@ -109,7 +109,7 @@ export default function RichTextEditor({
         previewRef.current.innerHTML = '<span class="text-red-500">Invalid LaTeX</span>';
       }
     } else if (previewRef.current) {
-      previewRef.current.innerHTML = '<span class="text-gray-400">Your formula here</span>';
+      previewRef.current.innerHTML = '<span class="text-muted">Your formula here</span>';
     }
   }, [latexInput, latexDisplay]);
 
@@ -258,17 +258,17 @@ export default function RichTextEditor({
   };
 
   return (
-    <div className="border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden">
+    <div className="border border-strong rounded-md overflow-hidden">
       {/* Toolbar.
           `dark:` variants were missing entirely, so in dark mode this was a
           white strip across the top of a dark editor. */}
       <div
         role="toolbar"
         aria-label="Formatting"
-        className="bg-gray-50 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 p-2 flex flex-wrap gap-1"
+        className="bg-surface-raised border-b border-strong p-2 flex flex-wrap gap-1"
       >
         {/* Undo/Redo */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().undo().run()}
             icon={Undo}
@@ -282,7 +282,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Text Formatting */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             active={editor.isActive('bold')}
@@ -310,7 +310,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Headings */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             active={editor.isActive('heading', { level: 1 })}
@@ -332,7 +332,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Lists */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             active={editor.isActive('bulletList')}
@@ -349,7 +349,7 @@ export default function RichTextEditor({
 
         {!compactToolbar || showMoreTools ? <>
         {/* Alignment */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <MenuButton
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             active={editor.isActive({ textAlign: 'left' })}
@@ -377,10 +377,10 @@ export default function RichTextEditor({
         </div>
 
         {/* Highlight & Color */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <button
             onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
-            className={`p-2 rounded-sm hover:bg-gray-100 transition-colors ${
+            className={`p-2 rounded-sm hover:bg-surface-hover transition-colors ${
               editor.isActive('highlight') ? 'bg-warning-subtle' : ''
             }`}
             title="Highlight" aria-label="Highlight"
@@ -398,7 +398,7 @@ export default function RichTextEditor({
         </div>
 
         {/* Font Size */}
-        <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-2 mr-1">
+        <div className="flex gap-1 border-r border-strong pr-2 mr-1">
           <select
             value={fontSize}
             onChange={(e) => {
@@ -406,7 +406,7 @@ export default function RichTextEditor({
               editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
             }}
             aria-label="Font size"
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-sm"
+            className="px-2 py-1 text-xs border border-strong bg-surface text-secondary rounded-sm"
           >
             <option value="12px">12px</option>
             <option value="14px">14px</option>
@@ -427,7 +427,7 @@ export default function RichTextEditor({
             disabled={uploadingImage}
           />
           {uploadingImage && (
-            <div className="p-2 text-gray-500">
+            <div className="p-2 text-muted">
               <Loader2 className="w-4 h-4 animate-spin" />
             </div>
           )}
@@ -491,20 +491,20 @@ export default function RichTextEditor({
             onClick={() => setShowLatexModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay max-w-lg w-full p-6">
+            <div className="bg-surface rounded-lg shadow-overlay max-w-lg w-full p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert LaTeX Formula</h3>
+                <h3 className="text-lg font-bold text-primary">Insert LaTeX Formula</h3>
                 <button
                   type="button"
                   onClick={() => setShowLatexModal(false)}
-                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-muted hover:text-secondary rounded-md hover:bg-surface-hover"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-secondary mb-2">
                     LaTeX Expression
                   </label>
                   <input
@@ -512,12 +512,12 @@ export default function RichTextEditor({
                     value={latexInput}
                     onChange={(e) => setLatexInput(e.target.value)}
                     placeholder="e.g. x^2 + y^2 = r^2"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLatex()}
                     autoFocus
                   />
                 </div>
-                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-secondary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={latexDisplay}
@@ -526,11 +526,11 @@ export default function RichTextEditor({
                   />
                   Display mode (centered block)
                 </label>
-                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md border border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
+                <div className="bg-surface-raised p-3 rounded-md border border-line">
+                  <p className="text-xs text-secondary mb-2">Preview:</p>
                   <div ref={previewRef} className="text-center text-lg"></div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-muted">
                   <p className="font-semibold mb-1">Common examples:</p>
                   <ul className="space-y-1">
                     <li>• <code>x^2 + y^2 = r^2</code></li>
@@ -543,7 +543,7 @@ export default function RichTextEditor({
                   <button
                     type="button"
                     onClick={() => setShowLatexModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex-1 px-4 py-2 border border-strong text-secondary rounded-md hover:bg-surface-hover"
                   >
                     Cancel
                   </button>
@@ -570,20 +570,20 @@ export default function RichTextEditor({
             onClick={() => setShowLinkModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay max-w-md w-full p-6">
+            <div className="bg-surface rounded-lg shadow-overlay max-w-md w-full p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Insert Link</h3>
+                <h3 className="text-lg font-bold text-primary">Insert Link</h3>
                 <button
                   type="button"
                   onClick={() => setShowLinkModal(false)}
-                  className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-muted hover:text-secondary rounded-md hover:bg-surface-hover"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-secondary mb-2">
                     URL
                   </label>
                   <input
@@ -591,21 +591,21 @@ export default function RichTextEditor({
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     placeholder="e.g. https://school.edu/physics-notes"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                     autoFocus
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Link text <span className="text-gray-400 font-normal">(optional — uses selected text if blank)</span>
+                  <label className="block text-sm font-medium text-secondary mb-2">
+                    Link text <span className="text-muted font-normal">(optional — uses selected text if blank)</span>
                   </label>
                   <input
                     type="text"
                     value={linkText}
                     onChange={(e) => setLinkText(e.target.value)}
                     placeholder="e.g. Read the worked example"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-surface text-primary"
                     onKeyDown={(e) => e.key === 'Enter' && insertLink()}
                   />
                 </div>
@@ -622,7 +622,7 @@ export default function RichTextEditor({
                   <button
                     type="button"
                     onClick={() => setShowLinkModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex-1 px-4 py-2 border border-strong text-secondary rounded-md hover:bg-surface-hover"
                   >
                     Cancel
                   </button>

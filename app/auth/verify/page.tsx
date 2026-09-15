@@ -29,7 +29,7 @@ function AuthPanel({ title, subtitle, children }: {
         className="fixed inset-0 object-cover"
       />
 
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
@@ -38,7 +38,7 @@ function AuthPanel({ title, subtitle, children }: {
             <h1 className="text-3xl font-bold text-primary mb-2">
               {title}
             </h1>
-            <p className="text-gray-600">{subtitle}</p>
+            <p className="text-secondary">{subtitle}</p>
           </div>
           {children}
         </div>
@@ -128,7 +128,7 @@ function VerifyView() {
   if (status === 'checking') {
     return (
       <AuthPanel title="Confirming" subtitle="One moment while we check your link.">
-        <div className="flex items-center space-x-3 text-gray-600">
+        <div className="flex items-center space-x-3 text-secondary">
           <Loader2 className="w-5 h-5 animate-spin text-green-600" />
           <span className="text-sm">Confirming your email address&hellip;</span>
         </div>
@@ -181,11 +181,11 @@ function VerifyView() {
       ) : (
         <form onSubmit={handleResend} className="space-y-5">
           <div>
-            <label htmlFor="verify-email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="verify-email" className="block text-sm font-medium text-secondary mb-2">
               Email address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
               <input
                 id="verify-email"
                 type="email"
@@ -193,7 +193,7 @@ function VerifyView() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-strong focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition"
                 placeholder="you@example.com"
               />
             </div>
@@ -209,7 +209,7 @@ function VerifyView() {
         </form>
       )}
 
-      <p className="mt-6 text-sm text-gray-600">
+      <p className="mt-6 text-sm text-secondary">
         <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-700">
           Back to sign in
         </Link>

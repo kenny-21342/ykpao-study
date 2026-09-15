@@ -86,7 +86,7 @@ export default function AccountSettingsPage() {
   if (status === 'loading' || status === 'unauthenticated') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     );
   }
@@ -223,11 +223,11 @@ export default function AccountSettingsPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Account Settings</h1>
+          <h1 className="text-2xl font-bold text-primary">Account Settings</h1>
         </div>
 
         {error && (
@@ -241,7 +241,7 @@ export default function AccountSettingsPage() {
         <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-green-600" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Profile</h2>
+            <h2 className="text-lg font-bold text-primary">Profile</h2>
           </div>
 
           {/* Avatar picker */}
@@ -258,7 +258,7 @@ export default function AccountSettingsPage() {
               <button
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-700 border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 hover:scale-110 transition-transform disabled:opacity-50"
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-surface border-2 border-green-500 rounded-full flex items-center justify-center text-green-600 hover:scale-110 transition-transform disabled:opacity-50"
                 title="Upload avatar" aria-label="Upload avatar"
               >
                 {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -272,8 +272,8 @@ export default function AccountSettingsPage() {
               />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Avatar</p>
-              <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, or WEBP. Shown next to your name across the app.</p>
+              <p className="text-sm font-medium text-secondary">Avatar</p>
+              <p className="text-xs text-muted mt-0.5">PNG, JPG, or WEBP. Shown next to your name across the app.</p>
               {avatarUrl && (
                 <button onClick={() => removeImage('avatar')} className="mt-1.5 inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
                   <Trash2 className="w-3 h-3" /> Remove avatar
@@ -284,12 +284,12 @@ export default function AccountSettingsPage() {
 
           {/* Background image picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">App background (optional)</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">App background (optional)</label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => bgInputRef.current?.click()}
                 disabled={uploadingBg}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised border border-strong rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-50"
               >
                 {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
                 {uploadingBg ? 'Uploading…' : bgUrl ? 'Change background' : 'Upload background'}
@@ -304,7 +304,7 @@ export default function AccountSettingsPage() {
               {bgUrl && (
                 <>
                   <div
-                    className="h-10 w-16 overflow-hidden rounded-md border border-gray-200 bg-cover bg-center dark:border-gray-600"
+                    className="h-10 w-16 overflow-hidden rounded-md border border-line bg-cover bg-center"
                     style={{ backgroundImage: `url(${JSON.stringify(bgUrl)})` }}
                     aria-label="Current app background preview"
                     role="img"
@@ -315,20 +315,20 @@ export default function AccountSettingsPage() {
                 </>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">Displayed behind the translucent app shell. Wide landscape images work best.</p>
+            <p className="text-xs text-muted mt-1">Displayed behind the translucent app shell. Wide landscape images work best.</p>
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Display name</label>
+          <div className="border-t border-subtle pt-4">
+            <label className="block text-sm font-medium text-secondary mb-1.5">Display name</label>
             <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
                 type="text"
                 value={name}
                 disabled={profileLoading}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={profileLoading ? 'Loading…' : undefined}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             {profileError && (
@@ -337,17 +337,17 @@ export default function AccountSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
                 type="email"
                 value={session?.user?.email ?? ''}
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-line rounded-lg text-sm text-muted"
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
+            <p className="text-xs text-muted mt-1">Email cannot be changed.</p>
           </div>
 
           <button
@@ -368,43 +368,43 @@ export default function AccountSettingsPage() {
         <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-green-600" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Change Password</h2>
+            <h2 className="text-lg font-bold text-primary">Change Password</h2>
           </div>
 
           {isOAuth ? (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted">
               You signed in with a social account (Google). Password management is not available.
             </p>
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Current password</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Current password</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   placeholder="••••••••"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">New password</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">New password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                     placeholder="••••••••"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm new password</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">Confirm new password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                     placeholder="••••••••"
                   />
                 </div>
@@ -425,7 +425,7 @@ export default function AccountSettingsPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/usage"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-secondary bg-surface border border-line rounded-lg hover:bg-surface-hover transition-colors"
           >
             Usage & API Credits →
           </Link>

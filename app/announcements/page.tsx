@@ -35,7 +35,7 @@ export default function AnnouncementsPage() {
       <div className="min-h-screen bg-canvas">
         {/* Top bar */}
         <header className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-green-600 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-green-600 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
@@ -49,8 +49,8 @@ export default function AnnouncementsPage() {
               <Megaphone className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Announcements</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">All platform updates and notices</p>
+              <h1 className="text-2xl font-bold text-primary">Announcements</h1>
+              <p className="text-sm text-muted">All platform updates and notices</p>
             </div>
           </div>
 
@@ -66,12 +66,12 @@ export default function AnnouncementsPage() {
               happens next -- rather than a single grey sentence that reads
               like something failed. */}
           {!loading && announcements.length === 0 && (
-            <div className="rounded-lg border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-              <Megaphone className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <div className="rounded-lg border border-dashed border-strong bg-surface p-12 text-center">
+              <Megaphone className="mx-auto mb-3 h-12 w-12 text-muted" />
+              <h3 className="text-lg font-bold text-primary">
                 Nothing announced yet
               </h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-muted">
                 Notices from your teachers and admins appear here, and in the bell at the top
                 of the app.
               </p>
@@ -85,7 +85,7 @@ export default function AnnouncementsPage() {
               className={`min-w-0 rounded-lg p-6 border ${
                 a.pinned
                   ? 'bg-accent-subtle border-green-200 dark:border-green-900/50'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                  : 'bg-surface border-line'
               }`}
             >
               <div className="flex items-center gap-2 mb-3">
@@ -94,20 +94,20 @@ export default function AnnouncementsPage() {
                     <Pin className="w-3 h-3" /> Pinned
                   </span>
                 )}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted">
                   {new Date(a.createdAt).toLocaleDateString(undefined, {
                     month: 'long', day: 'numeric', year: 'numeric',
                   })}
                 </span>
                 {a.author?.name && (
-                  <span className="text-xs text-gray-400">· {a.author.name}</span>
+                  <span className="text-xs text-muted">· {a.author.name}</span>
                 )}
               </div>
-              <h2 className="mb-2 break-words text-lg font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="mb-2 break-words text-lg font-bold text-primary">
                 {a.title}
               </h2>
               <div
-                className="max-w-none break-words text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert
+                className="max-w-none break-words text-sm text-secondary prose prose-sm dark:prose-invert
                   [&_a]:break-words [&_a]:text-green-600 [&_a]:underline [&_img]:max-w-full
                   [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }}

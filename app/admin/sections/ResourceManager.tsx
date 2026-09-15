@@ -88,7 +88,7 @@ export default function ResourceManager() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">School Resources</h1>
-          <p className="text-sm text-gray-500 mt-1">Upload, edit, and manage public learning materials.</p>
+          <p className="text-sm text-muted mt-1">Upload, edit, and manage public learning materials.</p>
         </div>
         <button
           onClick={() => setUploadOpen(true)}
@@ -101,8 +101,8 @@ export default function ResourceManager() {
       {error && <ErrorBox message={error} />}
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none" />
       </div>
 
       {/* Only show the spinner before the first result set arrives. Swapping
@@ -111,31 +111,31 @@ export default function ResourceManager() {
       {loading && !data ? <LoadingSpinner /> : data && (
         <div className="space-y-3">
           {data.items.length === 0 ? (
-            <p className="text-sm text-gray-400 italic py-8 text-center">No resources found.</p>
+            <p className="text-sm text-muted italic py-8 text-center">No resources found.</p>
           ) : (
             data.items.map((r) => (
-              <div key={r.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 flex items-start gap-3">
-                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-5 h-5 text-gray-400" />
+              <div key={r.id} className="bg-surface rounded-lg border border-line p-4 flex items-start gap-3">
+                <div className="w-10 h-10 bg-surface-raised rounded-md flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-muted" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium text-sm truncate">{r.title}</h3>
-                  {r.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{r.description}</p>}
-                  <p className="text-xs text-gray-400 mt-1">
+                  {r.description && <p className="text-xs text-muted mt-0.5 line-clamp-2">{r.description}</p>}
+                  <p className="text-xs text-muted mt-1">
                     {r.category && <span className="mr-2">{r.category}</span>}
                     {r.subject && <span className="mr-2">· {r.subject}</span>}
                     · {(r.fileSize / 1024 / 1024).toFixed(1)} MB
                     · {r.downloads} downloads
                   </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
+                  <p className="text-[10px] text-muted mt-0.5">
                     by {r.uploader?.name ?? r.uploader?.email} · {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <a href={r.fileUrl} download className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download" aria-label="Download">
+                  <a href={r.fileUrl} download className="p-1.5 rounded-md text-muted hover:bg-surface-hover" title="Download" aria-label="Download">
                     <Download className="w-4 h-4" />
                   </a>
-                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:text-primary hover:bg-surface-hover">
+                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-muted hover:text-primary hover:bg-surface-hover">
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
@@ -151,15 +151,15 @@ export default function ResourceManager() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-sm rounded-md border border-strong disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs text-gray-500">Page {page} of {data.totalPages}</span>
+              <span className="text-xs text-muted">Page {page} of {data.totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-sm rounded-md border border-strong disabled:opacity-40"
               >
                 Next
               </button>
@@ -385,32 +385,32 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       onClick={folderBusy ? undefined : onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-surface rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-primary flex items-center gap-2">
               <Upload className="w-5 h-5 text-secondary" /> Upload School Resources
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {mode === 'single' ? 'Publish a file to the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
             </p>
           </div>
-          <button onClick={onClose} disabled={submitting || folderBusy} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-40">
+          <button onClick={onClose} disabled={submitting || folderBusy} className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="px-6 pt-4">
-          <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm">
+          <div className="inline-flex p-1 bg-surface-raised rounded-lg text-sm">
             <button
               type="button"
               onClick={() => { setMode('single'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'single'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-surface text-primary'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               <Upload className="w-3.5 h-3.5" /> Single File
@@ -420,8 +420,8 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
               onClick={() => { setMode('folder'); setError(null); }}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
                 mode === 'folder'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-surface text-primary'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               <FolderUp className="w-3.5 h-3.5" /> Folder
@@ -433,13 +433,13 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           {mode === 'single' ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">File</label>
                 {!fileMeta ? (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -448,14 +448,14 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{fileMeta.name}</span>
-                    <span className="text-xs text-gray-400">{(fileMeta.size / 1024).toFixed(0)} KB</span>
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
+                    <Paperclip className="w-4 h-4 text-muted flex-shrink-0" />
+                    <span className="flex-1 truncate text-sm text-secondary">{fileMeta.name}</span>
+                    <span className="text-xs text-muted">{(fileMeta.size / 1024).toFixed(0)} KB</span>
                     <button
                       type="button"
                       onClick={() => setFileMeta(null)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors"
+                      className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors"
                       title="Remove file" aria-label="Remove file"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -466,77 +466,77 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Title</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject (optional)</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">Subject (optional)</label>
                   <input
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category (optional)</label>
+                  <label className="block text-sm font-medium text-secondary mb-1.5">Category (optional)</label>
                   <input
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Description (optional)</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
                 />
               </div>
             </>
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Folder</label>
+                <label className="block text-sm font-medium text-secondary mb-1.5">Folder</label>
                 {folderItems.length === 0 ? (
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-strong hover:bg-surface-hover transition-colors"
                   >
-                    <FolderUp className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                    <FolderUp className="w-6 h-6 mx-auto mb-2 text-muted" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-muted mt-2">
                       Supports PDF, Word, Excel, PowerPoint, TXT, Markdown, images. Hidden/system files and files over 25 MB are skipped.
                     </p>
                   </button>
                 ) : (
-                  <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <span className="text-sm font-medium text-secondary">
                         {folderItems.length} file{folderItems.length === 1 ? '' : 's'} ready
                       </span>
                       <button
                         type="button"
                         onClick={() => { setFolderItems([]); setError(null); }}
                         disabled={folderBusy}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
+                        className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-50"
                         title="Clear selection" aria-label="Clear selection"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -544,10 +544,10 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     </div>
                     <ul className="max-h-48 overflow-y-auto space-y-1 pr-1">
                       {folderItems.map((it, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                          <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                          <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
-                          <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
+                        <li key={idx} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm bg-surface border border-subtle">
+                          <FileIcon className="w-3.5 h-3.5 text-muted flex-shrink-0" />
+                          <span className="flex-1 truncate text-secondary" title={it.relativePath}>{it.relativePath}</span>
+                          <span className="text-muted flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
                           {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
                           {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
                           {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
@@ -576,25 +576,25 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
               {folderItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Apply Subject to all (optional)</label>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Apply Subject to all (optional)</label>
                     <input
                       type="text"
                       value={folderSubject}
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Apply Category to all (optional)</label>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Apply Category to all (optional)</label>
                     <input
                       type="text"
                       value={folderCategory}
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -616,11 +616,11 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           {error && <ErrorBox message={error} />}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             disabled={submitting || folderBusy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -735,84 +735,84 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-surface rounded-lg shadow-overlay w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
+          <h2 className="text-lg font-bold text-primary flex items-center gap-2">
             <Pencil className="w-5 h-5 text-secondary" /> Edit Resource
           </h2>
-          <button onClick={onClose} disabled={saving} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-40">
+          <button onClick={onClose} disabled={saving} className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Title</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+              className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject</label>
+              <label className="block text-sm font-medium text-secondary mb-1.5">Subject</label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Physics"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+                className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category</label>
+              <label className="block text-sm font-medium text-secondary mb-1.5">Category</label>
               <input
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+                className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File name (shown to students)</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">File name (shown to students)</label>
             <input
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+              className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
+              className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Replace file</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Replace file</label>
             {replacement ? (
               <div className="flex items-center gap-3 px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
                 <Paperclip className="w-4 h-4 text-secondary flex-shrink-0" />
-                <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{replacement.name}</span>
-                <span className="text-xs text-gray-400">{(replacement.size / 1024).toFixed(0)} KB</span>
+                <span className="flex-1 truncate text-sm text-secondary">{replacement.name}</span>
+                <span className="text-xs text-muted">{(replacement.size / 1024).toFixed(0)} KB</span>
                 <button
                   type="button"
                   onClick={() => setReplacement(null)}
                   disabled={saving}
-                  className="p-1 text-gray-400 hover:text-red-600 rounded-sm transition-colors disabled:opacity-40"
+                  className="p-1 text-muted hover:text-red-600 rounded-sm transition-colors disabled:opacity-40"
                   title="Undo replacement" aria-label="Undo replacement"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -823,7 +823,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full px-4 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
+                className="w-full px-4 py-4 border-2 border-dashed border-strong rounded-lg text-sm text-muted hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
               >
                 {uploading ? (
                   <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -832,7 +832,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 )}
               </button>
             )}
-            <p className="text-[11px] text-gray-400 mt-1">
+            <p className="text-[11px] text-muted mt-1">
               Current: {resource.fileName} · {(resource.fileSize / 1024 / 1024).toFixed(1)} MB
             </p>
             <input ref={fileInputRef} type="file" accept={ACCEPT_ATTR} onChange={handleFilePick} className="hidden" />
@@ -841,11 +841,11 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
           {error && <ErrorBox message={error} />}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -872,7 +872,7 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-md p-6"
+        className="bg-surface rounded-lg shadow-overlay w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -880,8 +880,8 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
             <TriangleAlert className="w-5 h-5 text-red-600" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Delete resource?</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            <h3 className="text-lg font-bold text-primary">Delete resource?</h3>
+            <p className="text-sm text-secondary mt-1">
               <span className="font-medium">{resource.title}</span> will be permanently removed,
               along with the stored file ({(resource.fileSize / 1024 / 1024).toFixed(1)} MB). Students
               lose access immediately, and search stops returning it. This cannot be undone.
@@ -892,7 +892,7 @@ function DeleteDialog({ resource, busy, onCancel, onConfirm }: { resource: Resou
           <button
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50"
           >
             Keep it
           </button>

@@ -104,9 +104,9 @@ export default async function LandingPage() {
   const stats = await loadStats();
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <main className="min-h-screen bg-surface text-primary">
       {/* Top bar */}
-      <header className="border-b border-gray-200 dark:border-gray-800">
+      <header className="border-b border-line">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent">
@@ -117,7 +117,7 @@ export default async function LandingPage() {
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/auth/login"
-              className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+              className="px-4 py-2 text-sm font-medium rounded-md text-secondary hover:bg-surface-hover transition"
             >
               Sign in
             </Link>
@@ -140,7 +140,7 @@ export default async function LandingPage() {
           </span>
           .
         </h1>
-        <p className="mt-6 text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+        <p className="mt-6 text-lg sm:text-xl text-secondary max-w-2xl leading-relaxed">
           A revision platform built around the IGCSE and A-level archive: every question
           separated from its paper, paired with its mark scheme, and ready to practise,
           mark and come back to.
@@ -155,7 +155,7 @@ export default async function LandingPage() {
           </Link>
           <Link
             href="/auth/login"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-strong hover:bg-surface-hover transition"
           >
             I already have an account
           </Link>
@@ -173,11 +173,11 @@ export default async function LandingPage() {
             ].map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-6 py-5"
+                className="rounded-lg border border-line bg-surface-raised dark:bg-gray-900/50 px-6 py-5"
               >
                 <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
                 <dd className="mt-3 text-3xl font-bold tabular-nums">{value}</dd>
-                <dt className="mt-1 text-sm text-gray-600 dark:text-gray-400">{label}</dt>
+                <dt className="mt-1 text-sm text-secondary">{label}</dt>
               </div>
             ))}
           </dl>
@@ -185,7 +185,7 @@ export default async function LandingPage() {
       </section>
 
       {/* What it does */}
-      <section className="border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/30">
+      <section className="border-t border-line bg-surface-raised/60">
         <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Six things it does
@@ -194,13 +194,13 @@ export default async function LandingPage() {
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6"
+                className="rounded-lg border border-line bg-surface p-6"
               >
                 <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30">
                   <Icon className="w-5 h-5 text-green-600 dark:text-green-500" />
                 </span>
                 <h3 className="mt-4 font-semibold">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-sm leading-relaxed text-secondary">
                   {body}
                 </p>
               </div>
@@ -218,7 +218,7 @@ export default async function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
               What is still unfinished
             </h2>
-            <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+            <p className="mt-3 text-secondary max-w-2xl leading-relaxed">
               This is a student project, still being built. Two parts are usable but
               incomplete, and you should know which before you rely on them.
             </p>
@@ -242,12 +242,12 @@ export default async function LandingPage() {
       </section>
 
       {/* Closing call to action */}
-      <section className="border-t border-gray-200 dark:border-gray-800">
+      <section className="border-t border-line">
         <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Start with one question
           </h2>
-          <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-secondary max-w-xl mx-auto leading-relaxed">
             Making an account takes a minute and needs nothing but a working school
             email address.
           </p>
@@ -261,17 +261,17 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-200 dark:border-gray-800">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-500">
+      <footer className="border-t border-line">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
           <span>YKPao Study</span>
           <nav className="flex items-center gap-6">
-            <Link href="/terms" className="hover:text-gray-900 dark:hover:text-gray-300 transition">
+            <Link href="/terms" className="hover:text-primary transition">
               Terms
             </Link>
-            <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-gray-300 transition">
+            <Link href="/privacy" className="hover:text-primary transition">
               Privacy
             </Link>
-            <Link href="/auth/login" className="hover:text-gray-900 dark:hover:text-gray-300 transition">
+            <Link href="/auth/login" className="hover:text-primary transition">
               Sign in
             </Link>
           </nav>

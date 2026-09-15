@@ -27,7 +27,7 @@ export default function PapersLayout({ children }: { children: React.ReactNode }
     useSidebarChrome();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-surface-raised">
       <SidebarScrim open={mobileOpen} onClose={closeMobile} />
 
       <AppSidebar
@@ -42,27 +42,27 @@ export default function PapersLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center space-x-4">
             <button
               onClick={openMobile}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:hidden"
+              className="p-2 hover:bg-surface-hover rounded-md transition-colors lg:hidden"
               aria-label="Open navigation"
               aria-expanded={mobileOpen}
             >
-              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Menu className="w-5 h-5 text-secondary" />
             </button>
 
             <button
               onClick={toggleCollapsed}
-              className="hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:block"
+              className="hidden p-2 hover:bg-surface-hover rounded-md transition-colors lg:block"
               aria-label={collapsedPreference ? 'Expand sidebar' : 'Collapse sidebar'}
               title={collapsedPreference ? 'Show sidebar' : 'Hide sidebar'}
             >
               {collapsedPreference ? (
-                <PanelLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <PanelLeft className="w-5 h-5 text-secondary" />
               ) : (
-                <PanelLeftClose className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <PanelLeftClose className="w-5 h-5 text-secondary" />
               )}
             </button>
 
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Past Papers</h1>
+            <h1 className="text-xl font-bold text-primary">Past Papers</h1>
           </div>
 
           <div className="flex items-center space-x-4">

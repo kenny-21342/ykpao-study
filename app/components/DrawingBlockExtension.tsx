@@ -27,7 +27,7 @@ import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
 const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-40 items-center justify-center text-sm text-gray-500">Loading drawing…</div>
+    <div className="flex h-40 items-center justify-center text-sm text-muted">Loading drawing…</div>
   ),
 });
 
@@ -145,7 +145,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
       <NodeViewWrapper className="drawing-block-editing" contentEditable={false}>
         <div
           ref={frameRef}
-          className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-md border border-line bg-surface p-2"
         >
           {canvasWidth !== null && (
             <DrawingCanvas
@@ -168,7 +168,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
               type="button"
               onClick={() => setEditing(false)}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+              className="inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-secondary"
             >
               <X className="h-3.5 w-3.5" />
               Cancel
@@ -187,7 +187,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
           <img
             src={thumbnailUrl}
             alt="Note drawing"
-            className="max-w-full rounded-md border border-gray-200 dark:border-gray-700"
+            className="max-w-full rounded-md border border-line"
           />
         )}
         {editable && (
@@ -196,7 +196,7 @@ function DrawingBlockView({ node, updateAttributes, editor }: NodeViewProps) {
             onClick={openEditor}
             disabled={loadingStrokes}
             title="Edit drawing" aria-label="Edit drawing"
-            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-700 opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
+            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-secondary opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-100 dark:bg-gray-900/90"
           >
             {loadingStrokes ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
             Edit

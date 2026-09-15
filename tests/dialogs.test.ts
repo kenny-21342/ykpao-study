@@ -194,8 +194,9 @@ test('the editor toolbar names every button and reports toggle state', async () 
   assert.match(src, /aria-pressed=\{active === undefined \? undefined : active\}/);
 
   // The toolbar had no dark: variants at all — a white strip across a dark
-  // editor.
-  assert.match(src, /bg-gray-50 dark:bg-gray-800 border-b/);
+  // editor. The pair it was fixed with is now one token, so the regression it
+  // guards is "the toolbar takes a themed surface", not that exact class pair.
+  assert.match(src, /bg-surface-raised border-b/);
 });
 
 test('the exam timer does not animate for reduced-motion users or narrate itself', async () => {

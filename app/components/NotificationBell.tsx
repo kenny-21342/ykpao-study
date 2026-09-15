@@ -225,7 +225,7 @@ export default function NotificationBell() {
       <button
         ref={buttonRef}
         onClick={onOpen}
-        className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
+        className="relative p-2.5 text-secondary hover:bg-surface-hover rounded-lg transition-all duration-200"
         title="Notifications"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
@@ -240,14 +240,14 @@ export default function NotificationBell() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-h-[28rem] overflow-hidden"
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface rounded-lg shadow-overlay border border-line z-50 flex flex-col max-h-[28rem] overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-subtle">
+            <h3 className="text-sm font-bold text-primary">
               Notifications
               {unreadCount > 0 && (
-                <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-xs font-medium text-muted">
                   {unreadCount} unread
                 </span>
               )}
@@ -265,7 +265,7 @@ export default function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="md:hidden p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-sm"
+                className="md:hidden p-1 text-muted hover:text-secondary rounded-sm"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -275,19 +275,19 @@ export default function NotificationBell() {
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {loading && notifications.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-gray-400">
+              <div className="flex items-center justify-center py-10 text-muted">
                 <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-12 px-6 text-center">
-                <Bell className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">All caught up</p>
-                <p className="text-xs text-gray-400 mt-0.5">You have no notifications yet.</p>
+                <Bell className="w-8 h-8 mx-auto text-muted mb-2" />
+                <p className="text-sm font-medium text-muted">All caught up</p>
+                <p className="text-xs text-muted mt-0.5">You have no notifications yet.</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+              <ul className="divide-y divide-subtle">
                 {notifications.map((n) => {
-                  const meta = TYPE_META[n.type] ?? { icon: Bell, tint: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' };
+                  const meta = TYPE_META[n.type] ?? { icon: Bell, tint: 'bg-surface-raised text-muted' };
                   const Icon = meta.icon;
                   const clickAction = CLICK_EVENTS[n.type];
                   return (
@@ -306,7 +306,7 @@ export default function NotificationBell() {
                             setOpen(false);
                           }
                         }}
-                        className={`flex gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                        className={`flex gap-3 px-4 py-3 hover:bg-surface-hover dark:hover:bg-gray-700/50 transition-colors ${
                           !n.read ? 'bg-green-50/40 dark:bg-green-900/10' : ''
                         }`}
                       >
@@ -324,15 +324,15 @@ export default function NotificationBell() {
 
                         {/* Body */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
+                          <p className="text-sm text-primary leading-snug">
                             {stripHtml(n.title)}
                           </p>
                           {n.body && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                            <p className="text-xs text-muted mt-0.5 line-clamp-2">
                               {stripHtml(n.body)}
                             </p>
                           )}
-                          <p className="text-[11px] text-gray-400 mt-1">{fmtRelative(n.createdAt)}</p>
+                          <p className="text-[11px] text-muted mt-1">{fmtRelative(n.createdAt)}</p>
                         </div>
 
                         {/* Unread dot */}
@@ -352,7 +352,7 @@ export default function NotificationBell() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
+            <div className="px-4 py-2 border-t border-subtle text-center">
               <button
                 onClick={() => {
                   setOpen(false);
@@ -360,7 +360,7 @@ export default function NotificationBell() {
                   // can route to its discussions tab without tight coupling.
                   window.dispatchEvent(new CustomEvent('open-discussions'));
                 }}
-                className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="text-xs font-medium text-muted hover:text-secondary"
               >
                 Go to discussions
               </button>

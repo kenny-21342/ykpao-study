@@ -102,7 +102,7 @@ export default function LoginPage() {
       {/* Right-edge rectangular form panel.
           On mobile it stacks below the image (panel takes full width); on
           lg+ it pins to the right side as a solid column. */}
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}
@@ -113,22 +113,22 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold text-primary mb-2">
               Welcome Back
             </h1>
-            <p className="text-gray-600">Sign in to continue your learning journey</p>
+            <p className="text-secondary">Sign in to continue your learning journey</p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="student@example.com"
                   required
                 />
@@ -136,16 +136,16 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -201,10 +201,10 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-line"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Or continue with</span>
+                <span className="px-4 bg-surface text-muted">Or continue with</span>
               </div>
             </div>
 
@@ -212,7 +212,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="w-full py-3 border-2 border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-3 group"
+                className="w-full py-3 border-2 border-line rounded-lg font-medium hover:bg-surface-hover transition-all flex items-center justify-center gap-3 group"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -220,14 +220,14 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className="text-gray-700 group-hover:text-gray-900">Continue with Google</span>
+                <span className="text-secondary group-hover:text-primary">Continue with Google</span>
               </button>
             </div>
           </div>
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-secondary">
               Don&apos;t have an account?{' '}
               <Link href="/auth/signup" className="text-green-600 font-semibold hover:text-green-700 transition-colors">
                 Sign Up
@@ -236,7 +236,7 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 text-center text-xs text-gray-500">
+          <div className="mt-8 text-center text-xs text-muted">
             <p>By signing in, you agree to our Terms of Service and Privacy Policy</p>
           </div>
         </div>

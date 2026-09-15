@@ -124,8 +124,8 @@ function legacyMeta(slug: string): LabelMeta {
   return {
     slug,
     name: slug,
-    badge: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
-    pill: 'bg-gray-600 text-white',
+    badge: 'bg-surface-raised text-secondary',
+    pill: 'bg-surface-inverse text-inverse',
   };
 }
 
@@ -159,11 +159,11 @@ export default function DiscussionBoard({
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
               <MessagesSquare className="w-6 h-6 text-green-600" />
               Discussion Board
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-secondary mt-1">
               Ask questions, share insights, and discuss with the community.
             </p>
           </div>
@@ -179,18 +179,18 @@ export default function DiscussionBoard({
           their session is still resolving.
         */}
         {status === 'loading' && (
-          <div className="flex items-center justify-center py-16 text-gray-500">
+          <div className="flex items-center justify-center py-16 text-muted">
             <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading…
           </div>
         )}
 
         {status === 'unauthenticated' && (
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-12 text-center">
-            <MessagesSquare className="w-10 h-10 mx-auto text-gray-400" />
-            <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <div className="rounded-lg border border-line bg-surface px-6 py-12 text-center">
+            <MessagesSquare className="w-10 h-10 mx-auto text-muted" />
+            <h3 className="mt-4 text-lg font-semibold text-primary">
               Sign in to join the discussion
             </h3>
-            <p className="mt-1 text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-secondary">
               The board is open to signed-in members of the school community.
             </p>
             <a
@@ -278,8 +278,8 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
       {/* Header + actions */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">General Discussion</h3>
-          <p className="text-xs text-gray-500">{threads.length} thread{threads.length === 1 ? '' : 's'}</p>
+          <h3 className="text-lg font-bold text-primary">General Discussion</h3>
+          <p className="text-xs text-muted">{threads.length} thread{threads.length === 1 ? '' : 's'}</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -292,18 +292,18 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
       {/* Search + label filter */}
       <div className="flex flex-col gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g. inheritance, 0610-S25-P21-Q2, or momentum"
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
           />
         </div>
         {(labels.length > 0 || legacyCategories.length > 0) && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <span className="hidden md:inline-flex items-center gap-1 text-xs font-semibold text-gray-400 uppercase tracking-wide pr-1">
+            <span className="hidden md:inline-flex items-center gap-1 text-xs font-semibold text-muted uppercase tracking-wide pr-1">
               <Tag className="w-3.5 h-3.5" />
             </span>
             <button
@@ -311,7 +311,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
               className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
                 activeCategory === ''
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  : 'bg-surface-raised text-secondary hover:bg-surface-active'
               }`}
             >
               All
@@ -325,7 +325,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
                   className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors capitalize ${
                     active
                       ? l.pill
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      : 'bg-surface-raised text-secondary hover:bg-surface-active'
                   }`}
                 >
                   {l.name}
@@ -340,8 +340,8 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
                   onClick={() => setActiveCategory((cur) => (cur === c ? '' : c))}
                   className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
                     active
-                      ? 'bg-gray-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-surface-inverse text-inverse'
+                      : 'bg-surface-raised text-secondary hover:bg-surface-active'
                   }`}
                 >
                   {c}
@@ -351,7 +351,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
             {activeCategory && (
               <button
                 onClick={() => setActiveCategory('')}
-                className="ml-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="ml-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full text-muted hover:text-secondary"
                 title="Clear label filter" aria-label="Clear label filter"
               >
                 <X className="w-3 h-3" /> Clear
@@ -363,16 +363,16 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
 
       {/* List */}
       {loading && threads.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-gray-500">
+        <div className="flex items-center justify-center py-16 text-muted">
           <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading threads…
         </div>
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
       ) : threads.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-          <MessageSquare className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No threads yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
+          <MessageSquare className="w-12 h-12 mx-auto text-muted mb-3" />
+          <h3 className="text-lg font-bold text-primary">No threads yet</h3>
+          <p className="text-sm text-muted mt-1">
             {query ? 'Try a different search.' : 'Start the conversation — create the first thread.'}
           </p>
         </div>
@@ -384,7 +384,7 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
             <button
               key={t.id}
               onClick={() => onOpen(t.id)}
-              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-300 transition-all p-4 flex items-center gap-4"
+              className="w-full text-left bg-surface rounded-lg border border-line hover:border-green-300 transition-all p-4 flex items-center gap-4"
             >
               <div className="flex-shrink-0">
                 {avatar(t.author.name, t.author.image, 'sm')}
@@ -393,21 +393,21 @@ function ThreadsView({ onOpen }: { onOpen: (threadId: string) => void }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   {t.pinned && <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />}
                   {t.locked && <Lock className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{t.title}</h4>
+                  <h4 className="font-semibold text-primary truncate">{t.title}</h4>
                   {meta && (
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-md flex-shrink-0 ${meta.badge}`}>
                       {meta.name}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                <p className="text-xs text-muted mt-0.5 truncate">
                   by {t.author.name ?? 'Anonymous'} • {fmtDate(t.createdAt)}
                 </p>
               </div>
-              <div className="flex items-center gap-5 flex-shrink-0 text-xs text-gray-500">
+              <div className="flex items-center gap-5 flex-shrink-0 text-xs text-muted">
                 <span className="inline-flex items-center gap-1"><Reply className="w-3.5 h-3.5" /> {t.replyCount}</span>
                 <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {t.views}</span>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <ChevronRight className="w-4 h-4 text-muted" />
               </div>
             </button>
             );
@@ -465,29 +465,29 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div className="bg-surface rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Thread</h2>
-            <p className="text-xs text-gray-500 mt-0.5">General Discussion</p>
+            <h2 className="text-lg font-bold text-primary">New Thread</h2>
+            <p className="text-xs text-muted mt-0.5">General Discussion</p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+          <button onClick={onClose} className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Title</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Help with 0610-S25-P21-Q2"
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Label</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Label</label>
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
@@ -495,7 +495,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
                 className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
                   category === ''
                     ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    : 'bg-surface-raised text-secondary hover:bg-surface-active'
                 }`}
               >
                 None
@@ -508,7 +508,7 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
                     type="button"
                     onClick={() => setCategory(l.slug)}
                     className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-                      active ? l.pill : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      active ? l.pill : 'bg-surface-raised text-secondary hover:bg-surface-active'
                     }`}
                   >
                     {l.name}
@@ -516,10 +516,10 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
                 );
               })}
             </div>
-            <p className="text-xs text-gray-400 mt-1">Pick a label so others can find your thread.</p>
+            <p className="text-xs text-muted mt-1">Pick a label so others can find your thread.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Body (optional)</label>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Body (optional)</label>
             <RichTextEditor
               content={content}
               onChange={setContent}
@@ -528,8 +528,8 @@ function CreateThreadDialog({ labels, onClose, onCreated }: { labels: LabelMeta[
           </div>
           {error && <ErrorBanner message={error} />}
         </div>
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-          <button onClick={onClose} disabled={submitting} className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50">
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50">
             Cancel
           </button>
           <button
@@ -783,7 +783,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-gray-500">
+      <div className="flex items-center justify-center py-16 text-muted">
         <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading thread…
       </div>
     );
@@ -791,7 +791,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
   if (error || !thread) {
     return (
       <div className="space-y-4">
-        <button onClick={onBack} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-secondary bg-surface border border-strong rounded-lg hover:bg-surface-hover transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to threads
         </button>
         <ErrorBanner message={error ?? 'Thread not found'} />
@@ -805,7 +805,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-secondary bg-surface border border-strong rounded-lg hover:bg-surface-hover transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> All threads
         </button>
@@ -821,36 +821,36 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
       </div>
 
       {/* Original post */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
+      <div className="bg-surface rounded-lg border border-line overflow-hidden">
+        <div className="px-5 py-4 border-b border-subtle flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               {thread.pinned && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md"><Pin className="w-3 h-3" /> Pinned</span>}
               {thread.locked && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-700 rounded-md"><Lock className="w-3 h-3" /> Locked</span>}
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{thread.title}</h2>
+              <h2 className="text-xl font-bold text-primary">{thread.title}</h2>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted mt-1">
               by {thread.author.name ?? 'Anonymous'} • {fmtDate(thread.createdAt)}
             </p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => voteOnThread(1)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-sm"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-sm"
               title="Upvote" aria-label="Upvote"
             >
               <ThumbsUp className="w-3.5 h-3.5" /> {(thread.upvotes ?? 0) > 0 && thread.upvotes}
             </button>
             <button
               onClick={() => voteOnThread(-1)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-red-500 transition-colors rounded-sm"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-500 transition-colors rounded-sm"
               title="Downvote" aria-label="Downvote"
             >
               <ThumbsDown className="w-3.5 h-3.5" /> {(thread.downvotes ?? 0) > 0 && thread.downvotes}
             </button>
             <button
               onClick={flagThread}
-              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-sm transition-colors"
+              className="p-1.5 text-muted hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-sm transition-colors"
               title="Report this thread" aria-label="Report this thread"
             >
               <Flag className="w-3.5 h-3.5" />
@@ -861,7 +861,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
             {canDeleteThread && (
               <button
                 onClick={handleDelete}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm transition-colors"
+                className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm transition-colors"
                 title="Delete thread" aria-label="Delete thread"
               >
                 <Trash2 className="w-4 h-4" />
@@ -870,10 +870,10 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
           </div>
         </div>
         <div className="px-5 py-4">
-          <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200">
-            {thread.content ? <RichContent html={thread.content} /> : <p className="text-gray-400 italic">No body.</p>}
+          <div className="prose prose-sm max-w-none text-primary">
+            {thread.content ? <RichContent html={thread.content} /> : <p className="text-muted italic">No body.</p>}
           </div>
-          <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
+          <div className="flex items-center gap-4 mt-4 text-xs text-muted">
             <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {thread.views} views</span>
             <span className="inline-flex items-center gap-1"><Reply className="w-3.5 h-3.5" /> {thread.posts.length} replies</span>
           </div>
@@ -882,32 +882,32 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
 
       {/* Replies */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+        <h3 className="text-sm font-bold text-muted uppercase tracking-wide">
           {thread.posts.length} {thread.posts.length === 1 ? 'Reply' : 'Replies'}
         </h3>
 
         {thread.posts.length === 0 ? (
-          <p className="text-sm text-gray-400 italic py-4">No replies yet. Be the first to respond.</p>
+          <p className="text-sm text-muted italic py-4">No replies yet. Be the first to respond.</p>
         ) : (
           thread.posts.map((post) => {
             const isOwner = !!currentUserId && currentUserId === post.author.id;
             const isEditing = editingId === post.id;
             const edited = new Date(post.updatedAt).getTime() > new Date(post.createdAt).getTime();
             return (
-              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex gap-4">
+              <div key={post.id} className="bg-surface rounded-lg border border-line p-4 flex gap-4">
                 <div className="flex-shrink-0">{avatar(post.author.name, post.author.image, 'sm')}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs">
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">{post.author.name ?? 'Anonymous'}</span>
-                      <span className="text-gray-400"> · {fmtDate(post.createdAt)}</span>
-                      {edited && <span className="text-gray-400 italic"> · edited</span>}
+                      <span className="font-semibold text-secondary">{post.author.name ?? 'Anonymous'}</span>
+                      <span className="text-muted"> · {fmtDate(post.createdAt)}</span>
+                      {edited && <span className="text-muted italic"> · edited</span>}
                     </p>
                     <div className="flex items-center gap-3">
                       {isOwner && !isEditing && (
                         <button
                           onClick={() => startEdit(post)}
-                          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                          className="inline-flex items-center gap-1 text-xs text-muted hover:text-green-600 dark:hover:text-green-400 transition-colors"
                           title="Edit your reply" aria-label="Edit your reply"
                         >
                           <Pencil className="w-3.5 h-3.5" /> Edit
@@ -917,21 +917,21 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <>
                           <button
                             onClick={() => voteOnPost(post.id, 1)}
-                            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                             title="Upvote" aria-label="Upvote"
                           >
                             <ThumbsUp className="w-3.5 h-3.5" /> {(post.upvotes ?? 0) > 0 && post.upvotes}
                           </button>
                           <button
                             onClick={() => voteOnPost(post.id, -1)}
-                            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted hover:text-red-500 transition-colors"
                             title="Downvote" aria-label="Downvote"
                           >
                             <ThumbsDown className="w-3.5 h-3.5" /> {(post.downvotes ?? 0) > 0 && post.downvotes}
                           </button>
                           <button
                             onClick={() => flagPost(post.id)}
-                            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted hover:text-amber-600 transition-colors"
                             title="Report this post" aria-label="Report this post"
                           >
                             <Flag className="w-3.5 h-3.5" />
@@ -953,7 +953,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                         <button
                           onClick={cancelEdit}
                           disabled={savingEdit}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 text-xs font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-md transition-colors disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -968,7 +968,7 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
                       </div>
                     </div>
                   ) : (
-                    <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 mt-1.5">
+                    <div className="prose prose-sm max-w-none text-primary mt-1.5">
                       <RichContent html={post.content} />
                     </div>
                   )}
@@ -981,12 +981,12 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
 
       {/* Reply box */}
       {thread.locked ? (
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-500 flex items-center gap-2">
+        <div className="bg-surface-raised border border-line rounded-lg p-4 text-sm text-muted flex items-center gap-2">
           <Lock className="w-4 h-4" /> This thread is locked. New replies are disabled.
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Post a reply</label>
+        <div className="bg-surface rounded-lg border border-line p-4 space-y-3">
+          <label className="block text-sm font-medium text-secondary">Post a reply</label>
           <RichTextEditor
             content={reply}
             onChange={setReply}

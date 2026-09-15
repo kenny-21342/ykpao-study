@@ -34,8 +34,8 @@ export function LegalPage({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      <header className="border-b border-gray-200 dark:border-gray-800">
+    <main className="min-h-screen bg-surface text-primary">
+      <header className="border-b border-line">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             <span className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-accent">
@@ -54,7 +54,7 @@ export function LegalPage({
 
       <article className="max-w-3xl mx-auto px-6 py-12 sm:py-16">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-3 text-sm text-gray-500 dark:text-gray-500">Last updated {updated}</p>
+        <p className="mt-3 text-sm text-muted">Last updated {updated}</p>
 
         {LEGAL_COPY_IS_DRAFT && (
           <div className="mt-8 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
@@ -73,10 +73,10 @@ export function LegalPage({
 
         <div className="mt-10 space-y-10">{children}</div>
 
-        <footer className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-500 flex gap-6">
-          <Link href="/terms" className="hover:text-gray-900 dark:hover:text-gray-300">Terms</Link>
-          <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-gray-300">Privacy</Link>
-          <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-300">Home</Link>
+        <footer className="mt-16 pt-8 border-t border-line text-sm text-muted flex gap-6">
+          <Link href="/terms" className="hover:text-primary">Terms</Link>
+          <Link href="/privacy" className="hover:text-primary">Privacy</Link>
+          <Link href="/" className="hover:text-primary">Home</Link>
         </footer>
       </article>
     </main>
@@ -88,7 +88,7 @@ export function Section({ heading, children }: { heading: string; children: Reac
   return (
     <section>
       <h2 className="text-xl font-semibold tracking-tight">{heading}</h2>
-      <div className="mt-3 space-y-3 text-gray-700 dark:text-gray-300 leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_a]:text-green-600 [&_a]:underline">
+      <div className="mt-3 space-y-3 text-secondary leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_a]:text-green-600 [&_a]:underline">
         {children}
       </div>
     </section>

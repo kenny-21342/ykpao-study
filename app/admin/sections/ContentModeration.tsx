@@ -100,13 +100,13 @@ export default function ContentModeration() {
       {confirmDialog}
       <header>
         <h1 className="text-2xl font-bold">Content Moderation</h1>
-        <p className="text-sm text-gray-500 mt-1">Review and moderate all user-generated content.</p>
+        <p className="text-sm text-muted mt-1">Review and moderate all user-generated content.</p>
       </header>
 
       {error && <ErrorBox message={error} />}
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -114,7 +114,7 @@ export default function ContentModeration() {
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               type === t.key
                 ? 'border-line text-secondary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                : 'border-transparent text-muted hover:text-secondary'
             }`}
           >
             {t.label}
@@ -124,13 +124,13 @@ export default function ContentModeration() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
           type="text"
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="e.g. spam report, calculus thread, or @maria"
-          className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+          className="w-full pl-9 pr-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         />
       </div>
 
@@ -141,22 +141,22 @@ export default function ContentModeration() {
         <>
           <div className="space-y-3">
             {data.items.length === 0 ? (
-              <p className="text-sm text-gray-400 italic py-8 text-center">No content found.</p>
+              <p className="text-sm text-muted italic py-8 text-center">No content found.</p>
             ) : (
               data.items.map((item) => {
                 const author = item.author ?? item.user ?? item.uploader;
                 const preview = item.title ?? item.content ?? item.description ?? '(no text)';
                 return (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+                  <div key={item.id} className="bg-surface rounded-lg border border-line p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-surface-raised text-secondary rounded-sm">PINNED</span>}
                           {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-sm">LOCKED</span>}
-                          <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleString()}</span>
+                          <span className="text-xs text-muted">{new Date(item.createdAt).toLocaleString()}</span>
                         </div>
                         <p className="text-sm font-medium line-clamp-2">{preview}</p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-muted mt-1">
                           by {author?.name ?? author?.email ?? 'Unknown'}
                           {item.thread && <> · in <span className="text-secondary">{item.thread.title}</span></>}
                           {item._count && <> · {item._count.posts} replies</>}
@@ -171,7 +171,7 @@ export default function ContentModeration() {
                               onClick={() => patchThread(item.id, item.pinned ? 'unpin' : 'pin')}
                               disabled={actionLoading === item.id + (item.pinned ? 'unpin' : 'pin')}
                               title={item.pinned ? 'Unpin' : 'Pin'} aria-label={item.pinned ? 'Unpin' : 'Pin'}
-                              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              className="p-1.5 rounded-md text-muted hover:bg-surface-hover"
                             >
                               {item.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                             </button>
@@ -179,7 +179,7 @@ export default function ContentModeration() {
                               onClick={() => patchThread(item.id, item.locked ? 'unlock' : 'lock')}
                               disabled={actionLoading === item.id + (item.locked ? 'unlock' : 'lock')}
                               title={item.locked ? 'Unlock' : 'Lock'} aria-label={item.locked ? 'Unlock' : 'Lock'}
-                              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              className="p-1.5 rounded-md text-muted hover:bg-surface-hover"
                             >
                               {item.locked ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                             </button>
@@ -203,12 +203,12 @@ export default function ContentModeration() {
 
           {data.totalPages > 1 && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">Page {data.page} of {data.totalPages} · {data.total} items</p>
+              <p className="text-xs text-muted">Page {data.page} of {data.totalPages} · {data.total} items</p>
               <div className="flex gap-1">
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page >= data.totalPages} className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30">
+                <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page >= data.totalPages} className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

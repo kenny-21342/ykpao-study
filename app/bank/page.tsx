@@ -31,18 +31,18 @@ export default async function BankIndexPage() {
   const papers = await listBankPapers();
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-surface-raised">
       <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
         <div>
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-green-600 dark:text-gray-400"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-green-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Past papers
           </Link>
-          <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">Question bank</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="mt-1 text-xl font-bold text-primary">Question bank</h1>
+          <p className="text-sm text-muted">
             Past-paper questions, one at a time, shown as they appear on the paper.
           </p>
         </div>
@@ -50,28 +50,28 @@ export default async function BankIndexPage() {
         <PreviewNotice feature="question-bank" />
 
         {papers.length === 0 ? (
-          <p className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <p className="rounded-lg border border-line bg-surface p-6 text-sm text-muted">
             No papers have been published to the bank yet.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
+          <ul className="divide-y divide-subtle overflow-hidden rounded-lg border border-line bg-surface">
             {papers.map((paper) => (
               <li key={paper.id}>
                 <Link
                   href={`/bank/papers/${paper.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-surface-hover"
                 >
-                  <FileText className="h-4 w-4 flex-shrink-0 text-gray-400" aria-hidden="true" />
+                  <FileText className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="block truncate text-sm font-medium text-primary">
                       {paper.subject.name} · Paper{' '}
                       {paper.variant ? `${paper.paperNumber}${paper.variant}` : paper.paperNumber}
                     </span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    <span className="block text-xs text-muted">
                       {paper.year} · {SESSIONS[paper.session] ?? paper.session}
                     </span>
                   </span>
-                  <span className="flex-shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                  <span className="flex-shrink-0 text-xs tabular-nums text-muted">
                     {paper._count.questions}
                   </span>
                 </Link>

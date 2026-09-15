@@ -176,7 +176,7 @@ type View =
 const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
   generating: {
     label: 'Building…',
-    cls: 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+    cls: 'bg-surface-raised text-secondary border-line',
   },
   failed: {
     label: 'Failed',
@@ -288,11 +288,11 @@ export default function MockExams() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
               <ClipboardList className="w-6 h-6 text-green-600" />
               Mock Exams
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-secondary mt-1">
               Build a paper from the question bank, sit it under timed conditions, and
               get multiple-choice answers marked the moment you submit.
             </p>
@@ -344,7 +344,7 @@ export default function MockExams() {
 
         {/* List */}
         {loadingList && exams.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">
+          <div className="flex items-center justify-center py-16 text-muted">
             <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading exams…
           </div>
         ) : listError ? (
@@ -410,24 +410,24 @@ function StatCard({
     purple: 'bg-surface-raised text-secondary',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+    <div className="bg-surface rounded-lg p-5 border border-line">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
         {icon}
       </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
+      <p className="text-2xl font-bold text-primary">{value}</p>
+      <p className="text-xs font-medium text-muted mt-0.5">{label}</p>
     </div>
   );
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+    <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
       <div className="w-16 h-16 mx-auto rounded-lg bg-accent flex items-center justify-center mb-4">
         <Sparkles className="w-8 h-8 text-white" />
       </div>
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No mock exams yet</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+      <h3 className="text-lg font-bold text-primary">No mock exams yet</h3>
+      <p className="text-sm text-muted mt-1 max-w-md mx-auto">
         Create your first mock exam. Pick a subject and a mark total —
         we&apos;ll assemble a paper from real past-paper questions.
       </p>
@@ -456,11 +456,11 @@ function ExamCard({
       : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow p-5">
+    <div className="bg-surface rounded-lg border border-line transition-shadow p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+            <h3 className="text-lg font-bold text-primary truncate">
               {exam.title}
             </h3>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${meta.cls}`}>
@@ -468,11 +468,11 @@ function ExamCard({
             </span>
           </div>
           {exam.description && exam.status !== 'failed' && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+            <p className="text-sm text-muted mt-1 line-clamp-2">
               {exam.description}
             </p>
           )}
-          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted flex-wrap">
             {exam.subjectCode && (
               <span className="inline-flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5" /> {exam.subjectCode}
@@ -497,7 +497,7 @@ function ExamCard({
               <div className={`text-2xl font-bold ${pct >= 70 ? 'text-green-600' : pct >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
                 {pct}%
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted">
                 {Math.round(exam.score ?? 0)} / {exam.totalMarks}
               </div>
             </div>
@@ -505,29 +505,29 @@ function ExamCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-subtle">
         <div className="flex items-center gap-2">
           {exam.topics.slice(0, 3).map((t) => (
-            <span key={t} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
+            <span key={t} className="text-xs px-2 py-1 bg-surface-raised text-secondary rounded-md">
               {t}
             </span>
           ))}
           {exam.topics.length > 3 && (
-            <span className="text-xs text-gray-400">+{exam.topics.length - 3}</span>
+            <span className="text-xs text-muted">+{exam.topics.length - 3}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {exam.status === 'completed' && (
             <button
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-md transition-colors"
             >
               <Eye className="w-4 h-4" /> Review
             </button>
           )}
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+            className="p-2 text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
             title="Delete" aria-label="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -540,7 +540,7 @@ function ExamCard({
               {exam.generationError ?? 'This paper could not be generated.'}
             </span>
           ) : exam.status === 'generating' ? (
-            <span className="text-xs text-gray-500 dark:text-gray-400">Still building…</span>
+            <span className="text-xs text-muted">Still building…</span>
           ) : exam.status !== 'completed' ? (
             <button
               onClick={onOpen}
@@ -669,13 +669,13 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generate a Mock Exam</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-2xl font-bold text-primary">Generate a Mock Exam</h2>
+            <p className="text-sm text-muted">
               {mode === 'predicted'
                 ? curatedPrediction
                   ? 'A paper shaped after the structure of your subject\u2019s real past papers, with the questions chosen for you.'
@@ -690,16 +690,16 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         {/* Wizard steps indicator */}
         <div className="flex items-center gap-2 text-sm">
           <StepDot n={1} label="Configure" active />
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 h-px bg-surface-active" />
           <StepDot n={2} label="Generate" />
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 h-px bg-surface-active" />
           <StepDot n={3} label="Take Exam" />
         </div>
 
         {/* Form card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+        <div className="bg-surface rounded-lg border border-line p-6 space-y-5">
           {loadingFilters ? (
-            <div className="flex items-center justify-center py-10 text-gray-500">
+            <div className="flex items-center justify-center py-10 text-muted">
               <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading subjects…
             </div>
           ) : (
@@ -712,7 +712,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'mock'
                         ? 'bg-accent text-white border-transparent shadow'
-                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
+                        : 'bg-surface text-secondary border-strong hover:border-green-400'
                     }`}
                   >
                     Mock exam
@@ -723,13 +723,13 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'predicted'
                         ? 'bg-accent text-white border-transparent shadow'
-                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-strong'
+                        : 'bg-surface text-secondary border-strong hover:border-strong'
                     }`}
                   >
                     Predicted paper
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-muted mt-1">
                   Predicted papers use the question bank plus observed paper structure and mark schemes.
                 </p>
               </Field>
@@ -740,7 +740,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Paper 2 mechanics refresher"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 />
               </Field>
 
@@ -749,7 +749,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   // Rather than an empty dropdown above a dead button. This is
                   // reachable: a student may be enrolled only in subjects whose
                   // mark schemes have not been linked yet.
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-muted">
                     None of your subjects have marked questions in the bank yet, so a
                     paper cannot be assembled. Browse the question bank in Practice
                     in the meantime.
@@ -758,7 +758,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   <select
                     value={subjectCode}
                     onChange={(e) => setSubjectCode(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                   >
                     {subjects.map((s) => (
                       <option key={s.code} value={s.code}>
@@ -786,7 +786,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                       className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all capitalize ${
                         difficulty === d
                           ? 'bg-accent text-white border-transparent shadow'
-                          : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-green-400'
+                          : 'bg-surface text-secondary border-strong hover:border-green-400'
                       }`}
                     >
                       {d}
@@ -807,7 +807,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     onChange={(e) => setTotalMarks(Number(e.target.value))}
                     className="w-full accent-green-600"
                   />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <div className="flex justify-between text-xs text-muted mt-1">
                     <span>20</span><span>120</span>
                   </div>
                 </Field>
@@ -822,7 +822,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
                     className="w-full accent-green-600"
                   />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <div className="flex justify-between text-xs text-muted mt-1">
                     <span>30m</span><span>3h</span>
                   </div>
                 </Field>
@@ -835,9 +835,9 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     value={topicsRaw}
                     onChange={(e) => setTopicsRaw(e.target.value)}
                     placeholder="e.g. kinematics, forces, momentum"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2.5 bg-surface border border-strong rounded-lg text-sm text-primary focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                   />
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Leave blank to sample across the whole subject.
                   </p>
                 </Field>
@@ -853,7 +853,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           <button
             onClick={onCancel}
             disabled={generating}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -892,7 +892,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+      <span className="block text-sm font-medium text-secondary mb-1.5">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       {children}
@@ -908,11 +908,11 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active?
           ? 'bg-green-500 text-white'
           : active
             ? 'bg-accent text-white shadow'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+            : 'bg-surface-active text-muted'
       }`}>
         {done ? <CheckCircle2 className="w-4 h-4" /> : n}
       </div>
-      <span className={`text-xs font-medium ${active ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400'}`}>
+      <span className={`text-xs font-medium ${active ? 'text-primary' : 'text-muted'}`}>
         {label}
       </span>
     </div>
@@ -1131,7 +1131,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-muted">
         <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading exam…
       </div>
     );
@@ -1148,14 +1148,14 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
         <Loader2 className="w-7 h-7 animate-spin text-green-600" />
-        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Building your paper…</p>
-        <p className="max-w-sm text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-lg font-semibold text-primary">Building your paper…</p>
+        <p className="max-w-sm text-sm text-secondary">
           Choosing questions from the bank. This usually takes under a minute, and
           the timer does not start until the paper is ready.
         </p>
         <button
           onClick={onExit}
-          className="mt-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="mt-2 rounded-lg border border-strong px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover"
         >
           Back to exams
         </button>
@@ -1226,7 +1226,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
     <div className="h-full flex flex-col">
       {confirmDialog}
       {/* Exam top bar: title, timer, progress */}
-      <div className="px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+      <div className="px-6 py-3 bg-surface border-b border-line flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={async () => {
@@ -1245,18 +1245,18 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               await saveProgress();
               onExit();
             }}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-md transition-colors"
             title="Save & exit exam" aria-label="Save & exit exam"
           >
             <X className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{exam.title}</h2>
-            <p className="text-xs text-gray-500">
+            <h2 className="text-sm font-bold text-primary truncate">{exam.title}</h2>
+            <p className="text-xs text-muted">
               {exam.subjectCode ?? 'Exam'} • {totalItems} questions • {exam.totalMarks} marks
             </p>
             {exam.description && (
-              <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">{exam.description}</p>
+              <p className="text-[11px] text-muted mt-1 line-clamp-2">{exam.description}</p>
             )}
           </div>
         </div>
@@ -1278,13 +1278,13 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-semibold tabular-nums ${
               timeLow
                 ? 'bg-red-50 text-red-700 border border-red-200 motion-safe:animate-pulse'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                : 'bg-surface-raised text-secondary'
             }`}
           >
             <Clock className="w-4 h-4" aria-hidden="true" />
             {secondsLeft !== null ? fmtTime(secondsLeft) : '—'}
           </div>
-          <span className="text-xs text-gray-500 hidden md:inline">
+          <span className="text-xs text-muted hidden md:inline">
             {answeredCount}/{totalItems} answered
             {flaggedCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -1297,8 +1297,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
       <div className="flex-1 flex overflow-hidden">
         {/* Question navigator sidebar */}
-        <aside className="w-14 md:w-48 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-2 flex-shrink-0">
-          <p className="hidden md:block text-xs font-semibold text-gray-400 uppercase px-2 py-2">Questions</p>
+        <aside className="w-14 md:w-48 bg-surface-raised border-r border-line overflow-y-auto p-2 flex-shrink-0">
+          <p className="hidden md:block text-xs font-semibold text-muted uppercase px-2 py-2">Questions</p>
           <div className="grid grid-cols-1 gap-1">
             {exam.items.map((it, idx) => {
               const answered = !!(answers[it.id] ?? '').trim();
@@ -1312,7 +1312,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                       ? 'bg-accent text-white font-semibold'
                       : answered
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
+                        : 'text-secondary hover:bg-surface-active'
                   }`}
                   title={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`} aria-label={`Q${it.number}${it.part || ''}${it.subPart || ''}${isFlagged ? ' (flagged for review)' : ''}`}
                 >
@@ -1338,13 +1338,13 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             {/* Question header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md">
+                <span className="text-xs font-semibold px-2 py-1 bg-surface-raised text-secondary rounded-md">
                   {item.sectionTitle}
                 </span>
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                <span className="text-sm font-bold text-primary">
                   Question {activeIdx + 1} of {totalItems}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted">
                   Q{item.number}{item.part || ''}{item.subPart || ''}
                 </span>
               </div>
@@ -1358,7 +1358,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors ${
                     flagged[item.id]
                       ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
-                      : 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                      : 'bg-surface text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20'
                   }`}
                   title={flagged[item.id] ? 'Remove review flag' : 'Mark for review'} aria-label={flagged[item.id] ? 'Remove review flag' : 'Mark for review'}
                 >
@@ -1369,8 +1369,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             </div>
 
             {/* Question content */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-              <div className="prose prose-sm max-w-none text-gray-900 dark:text-gray-100">
+            <div className="bg-surface border border-line rounded-lg p-5">
+              <div className="prose prose-sm max-w-none text-primary">
                 <ExamContent
                   content={item.content}
                   strips={item.strips}
@@ -1392,7 +1392,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               */}
             {item.options?.length ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-secondary mb-2">
                   Your answer
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1409,7 +1409,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         className={`h-12 w-12 rounded-lg border text-base font-semibold transition-all ${
                           selected
                             ? 'border-green-500 bg-green-500 text-white shadow'
-                            : 'border-gray-300 text-gray-700 hover:border-green-500 hover:bg-green-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30'
+                            : 'border-strong text-secondary hover:border-green-500 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-900/30'
                         }`}
                       >
                         {letter}
@@ -1417,16 +1417,16 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-muted mt-2">
                   {answers[item.id]?.trim() ? 'Answer saved' : 'Not yet answered'} • You can change your answer until you submit.
-                  {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
+                  {saving && <span className="ml-2 text-muted">• Saving…</span>}
                   {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
                 </p>
               </div>
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium text-secondary">
                     Your answer
                   </label>
                   <div className="flex items-center gap-2">
@@ -1451,16 +1451,16 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                         };
                         input.click();
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-surface-raised text-secondary hover:bg-surface-hover transition-all"
                     >
                       <ImageIcon className="w-3.5 h-3.5" /> Upload photo
                     </button>
                   </div>
                 </div>
                 {images[item.id] && (
-                  <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded-sm border border-gray-200 dark:border-gray-700" />
-                    <span className="text-xs text-gray-500 flex-1">Photo attached — transcribe or submit as-is.</span>
+                  <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-line bg-surface-raised dark:bg-gray-800/50">
+                    <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded-sm border border-line" />
+                    <span className="text-xs text-muted flex-1">Photo attached — transcribe or submit as-is.</span>
                     <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-red-600 hover:text-red-700">Remove</button>
                   </div>
                 )}
@@ -1469,9 +1469,9 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   onChange={(html) => setAnswers((a) => ({ ...a, [item.id]: html }))}
                   placeholder="Explain your method, final answer, and any LaTeX working."
                 />
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-muted mt-1.5">
                   {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit.
-                  {saving && <span className="ml-2 text-gray-400">• Saving…</span>}
+                  {saving && <span className="ml-2 text-muted">• Saving…</span>}
                   {!saving && lastSavedAt && <span className="ml-2 text-green-500">• Saved to server</span>}
                 </p>
                 <QuestionScratchpadPanel questionRef={{ mockExamItemId: item.id }} className="mt-2" />
@@ -1483,7 +1483,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               <button
                 onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
                 disabled={activeIdx === 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ArrowLeft className="w-4 h-4" /> Previous
               </button>
@@ -1507,24 +1507,24 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
             </div>
 
             {confirmSubmit && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-                <div className="mx-4 w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-overlay">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Submit Exam?</h3>
-                  <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/50 backdrop-blur-sm">
+                <div className="mx-4 w-full max-w-md rounded-lg bg-surface p-6 shadow-overlay">
+                  <h3 className="text-lg font-bold text-primary">Submit Exam?</h3>
+                  <div className="mt-3 space-y-2 text-sm text-secondary">
                     <p>You&apos;ve answered {answeredCount} of {totalItems} questions.</p>
                     {flaggedCount > 0 && (
                       <p className="text-amber-600 dark:text-amber-400 font-medium">
                         {flaggedCount} question{flaggedCount === 1 ? ' is' : 's are'} still flagged for review.
                       </p>
                     )}
-                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                    <p className="font-medium text-primary">
                       Submit for grading now? You cannot change your answers afterwards.
                     </p>
                   </div>
                   <div className="mt-6 flex items-center justify-end gap-3">
                     <button
                       onClick={() => setConfirmSubmit(false)}
-                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                      className="px-4 py-2.5 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-lg transition-colors"
                     >
                       Go back
                     </button>
@@ -1594,7 +1594,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-muted">
         <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading results…
       </div>
     );
@@ -1706,7 +1706,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
           return (
             <div key={sectionTitle} className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{sectionTitle}</h3>
+                <h3 className="text-lg font-bold text-primary">{sectionTitle}</h3>
                 <span className={`text-sm font-semibold ${gradeColor}`}>
                   {Math.round(sectionScore)} / {sectionMax} marks
                 </span>
@@ -1719,40 +1719,40 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                 const wrong = item.isCorrect === false && (item.score ?? 0) === 0;
                 const unanswered = item.attemptedAt === null;
                 return (
-                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div key={item.id} className="bg-surface rounded-lg border border-line overflow-hidden">
                     <button
                       onClick={() => toggleItem(item.id)}
-                      className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                      className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-surface-hover dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
                           full ? 'bg-green-100 text-green-600'
                             : partial ? 'bg-amber-100 text-amber-600'
                             : wrong ? 'bg-red-100 text-red-600'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-surface-raised text-muted'
                         }`}>
                           {full ? <CheckCircle2 className="w-5 h-5" />
                             : unanswered ? <Clock className="w-5 h-5" />
                             : <XCircle className="w-5 h-5" />}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <p className="text-sm font-semibold text-primary truncate">
                             Q{item.number}{item.part || ''}{item.subPart || ''}{' '}
-                            <span className="text-gray-400 font-normal">· {item.marks} marks</span>
+                            <span className="text-muted font-normal">· {item.marks} marks</span>
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-muted mt-0.5">
                             {unanswered ? 'Not attempted' : `Scored ${item.score ?? 0} / ${item.marks}`}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                      <ChevronRight className={`w-5 h-5 text-muted flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                     </button>
 
                     {isOpen && (
-                      <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                      <div className="px-4 pb-4 pt-1 border-t border-subtle space-y-4">
                         <div>
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Question</p>
-                          <div className="text-sm text-gray-900 dark:text-gray-100">
+                          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Question</p>
+                          <div className="text-sm text-primary">
                             <ExamContent
                               content={item.content}
                               strips={item.strips}
@@ -1762,13 +1762,13 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Your answer</p>
+                          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Your answer</p>
                           {item.answer ? (
-                            <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                            <div className="bg-surface-raised border border-line rounded-lg p-3 text-sm text-primary whitespace-pre-wrap">
                               {item.answer}
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-400 italic">No answer submitted.</p>
+                            <p className="text-sm text-muted italic">No answer submitted.</p>
                           )}
                         </div>
 
@@ -1845,13 +1845,13 @@ function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; labe
     indigo: 'bg-surface-raised text-secondary',
   };
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
+    <div className="bg-surface rounded-lg border border-line p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${tints[tint]}`}>
         {icon}
       </div>
       <div>
-        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-xl font-bold text-primary">{value}</p>
+        <p className="text-xs text-muted">{label}</p>
       </div>
     </div>
   );

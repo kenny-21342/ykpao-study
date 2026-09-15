@@ -114,7 +114,7 @@ function ZoomOverlay({
       <button
         type="button"
         onClick={onClose}
-        className="sticky top-2 left-full z-10 mr-2 rounded-full bg-white/90 p-2 text-gray-900 shadow-overlay"
+        className="sticky top-2 left-full z-10 mr-2 rounded-full bg-white/90 p-2 text-primary shadow-overlay"
         aria-label="Close"
       >
         <X className="h-5 w-5" aria-hidden="true" />
@@ -237,7 +237,7 @@ function AnswerPanel({
     // one to render a stepper would be worse than the true/false it replaces.
     const canAwardMarks = isCorrect === null && total !== null && total > 1;
     return (
-      <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div className="border-t border-subtle px-4 py-3">
         {isCorrect === true && (
           <p className="text-sm font-medium text-green-700 dark:text-green-400">Correct.</p>
         )}
@@ -256,7 +256,7 @@ function AnswerPanel({
         )}
         {isCorrect === null && !canAwardMarks && (
           <div className="space-y-2">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
+            <p className="text-sm text-secondary">
               Answer saved. Check it against the mark scheme below, then mark it.
             </p>
             <div className="flex gap-2">
@@ -272,7 +272,7 @@ function AnswerPanel({
                 type="button"
                 disabled={marking}
                 onClick={() => selfMark({ selfMarkedCorrect: false })}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                className="rounded-md border border-strong px-3 py-1.5 text-sm font-medium text-secondary hover:bg-surface-hover disabled:opacity-50"
               >
                 I got it wrong
               </button>
@@ -281,7 +281,7 @@ function AnswerPanel({
         )}
         {canAwardMarks && (
           <div className="space-y-2">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
+            <p className="text-sm text-secondary">
               Answer saved. Read the mark scheme below, then award yourself the marks
               you would have earned.
             </p>
@@ -294,19 +294,19 @@ function AnswerPanel({
                   type="button"
                   disabled={marking}
                   onClick={() => selfMark({ awardedMarks: mark })}
-                  className="h-9 min-w-9 rounded-md border border-gray-300 px-2 text-sm font-semibold tabular-nums text-gray-700 hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+                  className="h-9 min-w-9 rounded-md border border-strong px-2 text-sm font-semibold tabular-nums text-secondary hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:hover:border-green-500 dark:hover:bg-green-900/30"
                 >
                   {mark}
                 </button>
               ))}
-              <span className="self-center pl-1 text-xs text-gray-500 dark:text-gray-400">
+              <span className="self-center pl-1 text-xs text-muted">
                 out of {total}
               </span>
             </div>
           </div>
         )}
         {awardedMarks !== null && outOfMarks !== null && (
-          <p className="text-sm font-medium text-gray-900 dark:text-white">
+          <p className="text-sm font-medium text-primary">
             You awarded yourself {awardedMarks} of {outOfMarks} marks.
           </p>
         )}
@@ -325,7 +325,7 @@ function AnswerPanel({
   }
 
   return (
-    <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+    <div className="border-t border-subtle px-4 py-3">
       {answerLetter ? (
         <div className="flex flex-wrap gap-2">
           {optionLettersFor(answerLetter).map((letter) => (
@@ -334,7 +334,7 @@ function AnswerPanel({
               type="button"
               disabled={saving}
               onClick={() => submit(letter)}
-              className="h-10 w-10 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-green-500 dark:hover:bg-green-900/30"
+              className="h-10 w-10 rounded-md border border-strong text-sm font-semibold text-secondary hover:border-green-500 hover:bg-green-50 disabled:opacity-50 dark:hover:border-green-500 dark:hover:bg-green-900/30"
             >
               {letter}
             </button>
@@ -347,7 +347,7 @@ function AnswerPanel({
             onChange={(event) => setAnswer(event.target.value)}
             rows={3}
             placeholder="Write your working, then mark it against the mark scheme."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            className="w-full rounded-md border border-strong px-3 py-2 text-sm bg-surface text-primary"
           />
           <QuestionScratchpadPanel questionRef={{ bankQuestionId: question.id }} />
           <button
@@ -385,9 +385,9 @@ function CommandTermPanel({ slugs }: { slugs: string[] }) {
   if (!terms.length) return null;
 
   return (
-    <div className="border-t border-gray-100 px-4 py-2.5 dark:border-gray-700">
+    <div className="border-t border-subtle px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400">Asks you to</span>
+        <span className="text-xs text-muted">Asks you to</span>
         {terms.map((term) => (
           <span
             key={term.slug}
@@ -400,7 +400,7 @@ function CommandTermPanel({ slugs }: { slugs: string[] }) {
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
-          className="ml-auto text-xs text-gray-500 underline-offset-2 hover:underline dark:text-gray-400"
+          className="ml-auto text-xs text-muted underline-offset-2 hover:underline"
         >
           {open ? 'Hide' : 'What earns the marks?'}
         </button>
@@ -408,8 +408,8 @@ function CommandTermPanel({ slugs }: { slugs: string[] }) {
       {open && (
         <ul className="mt-2 space-y-1.5">
           {terms.map((term) => (
-            <li key={term.slug} className="text-xs text-gray-600 dark:text-gray-300">
-              <span className="font-semibold text-gray-900 dark:text-white">{term.label}:</span>{' '}
+            <li key={term.slug} className="text-xs text-secondary">
+              <span className="font-semibold text-primary">{term.label}:</span>{' '}
               {term.guidance}
             </li>
           ))}
@@ -424,12 +424,12 @@ export default function BankQuestionCard({ question }: { question: Question }) {
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
 
   return (
-    <article className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <header className="flex items-baseline justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+    <article className="rounded-lg border border-line bg-surface">
+      <header className="flex items-baseline justify-between gap-3 border-b border-subtle px-4 py-3">
+        <h2 className="text-sm font-semibold text-primary">
           Question {question.rootNumber}
         </h2>
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-3 text-xs text-muted">
           {question.totalMarks !== null && <span>{question.totalMarks} marks</span>}
           <button
             type="button"
@@ -437,7 +437,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
             // A crop is ~1420px of A4 column. Fitted to a 390px phone that puts
             // 11pt body text at roughly 8.5 CSS px: sharp, but too small to
             // work from for long, so full size has to be one tap away.
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface-hover hover:text-secondary"
           >
             <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
             Enlarge
@@ -466,12 +466,12 @@ export default function BankQuestionCard({ question }: { question: Question }) {
 
       {question.markScheme &&
         (question.markScheme.strips.length > 0 || question.markScheme.answerLetter) && (
-        <div className="border-t border-gray-100 dark:border-gray-700">
+        <div className="border-t border-subtle">
           <button
             type="button"
             onClick={() => setShowAnswer((open) => !open)}
             aria-expanded={showAnswer}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/50"
+            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-secondary hover:bg-surface-hover dark:hover:bg-gray-700/50"
           >
             {showAnswer ? 'Hide mark scheme' : 'Show mark scheme'}
             {showAnswer ? (
@@ -481,7 +481,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
             )}
           </button>
           {showAnswer && (
-            <div className="border-t border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40 sm:p-4">
+            <div className="border-t border-subtle bg-surface-raised p-2 dark:bg-gray-900/40 sm:p-4">
               {question.markScheme.strips.length > 0 ? (
                 <StripStack
                   strips={question.markScheme.strips}
@@ -490,7 +490,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
                 />
               ) : (
                 // A multiple-choice key is a letter, not an image.
-                <p className="text-sm text-gray-700 dark:text-gray-200">
+                <p className="text-sm text-secondary">
                   Answer:{' '}
                   <span className="font-semibold">{question.markScheme.answerLetter}</span>
                 </p>
@@ -512,8 +512,8 @@ export default function BankQuestionCard({ question }: { question: Question }) {
         question.markScheme &&
         (question.markScheme.strips.length > 0 || question.markScheme.answerLetter)
       ) && (
-        <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="border-t border-subtle px-4 py-3">
+          <p className="text-sm text-muted">
             No mark scheme for this question yet. The question paper is complete
             &mdash; it is the matching scheme that is still being processed.
           </p>

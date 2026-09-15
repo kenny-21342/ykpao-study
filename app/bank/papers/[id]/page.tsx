@@ -45,20 +45,20 @@ export default async function BankPaperPage({
   const variant = paper.variant ? `${paper.paperNumber}${paper.variant}` : `${paper.paperNumber}`;
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-surface-raised">
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
         <div>
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-green-600 dark:text-gray-400"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-green-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Past papers
           </Link>
-          <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-xl font-bold text-primary">
             {paper.subject} · Paper {variant}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted">
             {paper.board} · {paper.year} · {session} ·{' '}
             {paper.questions.length === 1
               ? '1 question'
@@ -69,7 +69,7 @@ export default async function BankPaperPage({
         <PreviewNotice feature="question-bank" />
 
         {paper.questions.length === 0 ? (
-          <p className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <p className="rounded-lg border border-line bg-surface p-6 text-sm text-muted">
             No questions from this paper have been published yet.
           </p>
         ) : (

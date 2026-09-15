@@ -214,12 +214,12 @@ export default function AiProviderPanel() {
     <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-green-600" />
-        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Provider</h2>
+        <h2 className="text-lg font-bold text-primary">AI Provider</h2>
       </div>
 
-      <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+      <div className="space-y-2 text-xs text-muted">
         <p>
-          <span className="font-semibold text-gray-700 dark:text-gray-300">
+          <span className="font-semibold text-secondary">
             Everything except AI already works without this.
           </span>{' '}
           Past papers, the question bank, notes, mock exam papers and your study plan need no key
@@ -234,7 +234,7 @@ export default function AiProviderPanel() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-muted">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading…
         </div>
       ) : (
@@ -262,8 +262,8 @@ export default function AiProviderPanel() {
           )}
 
           {/* Current state, in one line the student can act on. */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-1.5">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+          <div className="rounded-lg border border-line bg-surface-raised/60 p-3 space-y-1.5">
+            <p className="text-sm font-medium text-primary">
               {state?.textEnabled
                 ? state.source === 'shared'
                   ? 'AI is on, using a shared key an administrator granted you.'
@@ -271,11 +271,11 @@ export default function AiProviderPanel() {
                 : 'AI is currently switched off for your account.'}
             </p>
             {state?.hasOwnKey && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-muted">
                 Stored key: <span className="font-mono">{state.keyHint ?? '••••'}</span>
               </p>
             )}
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <p className="text-xs text-muted flex items-center gap-1.5">
               <Eye className="w-3 h-3" />
               Handwriting OCR (photos of your working):{' '}
               {state?.visionEnabled ? 'available' : 'unavailable'}
@@ -288,7 +288,7 @@ export default function AiProviderPanel() {
           {/* Step 1: pick a provider, which fills the two fields nobody can
               guess. Skippable -- "Something else" leaves them blank. */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-secondary mb-1.5">
               Who is providing the AI?
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -301,7 +301,7 @@ export default function AiProviderPanel() {
                   className={`rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                     provider === candidate.id
                       ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
-                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
+                      : 'border-strong text-secondary hover:border-green-400'
                   }`}
                 >
                   {candidate.name}
@@ -314,14 +314,14 @@ export default function AiProviderPanel() {
                 className={`rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                   provider === 'other'
                     ? 'border-green-500 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-green-400'
+                    : 'border-strong text-secondary hover:border-green-400'
                 }`}
               >
                 Something else
               </button>
             </div>
             {chosen && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs text-muted mt-2">
                 {chosen.note}{' '}
                 <a
                   href={chosen.keysUrl}
@@ -335,7 +335,7 @@ export default function AiProviderPanel() {
               </p>
             )}
             {provider === 'other' && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs text-muted mt-2">
                 Any OpenAI-compatible endpoint works, including a school proxy. Fill in the
                 endpoint and model name your provider documents.
               </p>
@@ -343,7 +343,7 @@ export default function AiProviderPanel() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-secondary mb-1.5">
               API key
             </label>
             <input
@@ -352,15 +352,15 @@ export default function AiProviderPanel() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={state?.hasOwnKey ? 'Leave blank to keep your saved key' : 'sk-…'}
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-muted mt-1">
               Stored encrypted. It can be replaced or deleted, but never displayed again.
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-secondary mb-1.5">
               API endpoint
             </label>
             <input
@@ -368,9 +368,9 @@ export default function AiProviderPanel() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.deepseek.com/v1"
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-muted mt-1">
               The base URL of an OpenAI-compatible API. Must be https. <code>/chat/completions</code>{' '}
               is added for you if you leave it off.
             </p>
@@ -378,7 +378,7 @@ export default function AiProviderPanel() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block text-sm font-medium text-secondary mb-1.5">
                 Text model
               </label>
               <input
@@ -386,14 +386,14 @@ export default function AiProviderPanel() {
                 value={textModel}
                 onChange={(e) => setTextModel(e.target.value)}
                 placeholder="deepseek-chat"
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Tutoring, hints, grading, mock exams.
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block text-sm font-medium text-secondary mb-1.5">
                 Vision model (optional)
               </label>
               <input
@@ -401,9 +401,9 @@ export default function AiProviderPanel() {
                 value={visionModel}
                 onChange={(e) => setVisionModel(e.target.value)}
                 placeholder="Qwen/Qwen3-VL-32B-Instruct"
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full px-4 py-2.5 bg-surface-raised border border-strong rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Needed only to photograph handwritten work. Leave blank and everything else still
                 works.
               </p>
@@ -431,7 +431,7 @@ export default function AiProviderPanel() {
               onClick={testKey}
               disabled={testing || saving || !state?.hasOwnKey}
               title={state?.hasOwnKey ? undefined : 'Save your own API key first'} aria-label={state?.hasOwnKey ? undefined : 'Save your own API key first'}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-secondary bg-white/70 dark:bg-gray-900/60 border border-strong rounded-lg hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
               {testing ? 'Testing…' : 'Test my key'}
@@ -474,7 +474,7 @@ export default function AiProviderPanel() {
                 {/* Said every time, pass or fail: a green tick above covers the
                     text model only. Checking the vision model would mean
                     uploading a real image and paying for a real OCR call. */}
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted">
                   This tested your text model{testResult.model ? ` (${testResult.model})` : ''} only.
                   {visionModel.trim()
                     ? ` Your vision model (${visionModel.trim()}) was not tested — handwriting OCR needs a real image, so it is only exercised the first time you photograph your working.`

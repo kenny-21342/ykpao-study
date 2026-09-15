@@ -10,7 +10,7 @@ import { useMeasuredCanvasWidth } from './useMeasuredCanvasWidth';
 const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-40 items-center justify-center text-sm text-gray-500">Loading scratchpad…</div>
+    <div className="flex h-40 items-center justify-center text-sm text-muted">Loading scratchpad…</div>
   ),
 });
 
@@ -89,7 +89,7 @@ export default function QuestionScratchpadPanel({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-secondary hover:bg-surface-hover"
       >
         <PenTool className="h-4 w-4" />
         Scratchpad
@@ -100,7 +100,7 @@ export default function QuestionScratchpadPanel({
           so say so in words. Without it a student has no way to know their
           working is being kept. */}
       {open && (
-        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+        <span className="ml-2 text-xs text-muted">
           {isDirty ? 'Saving…' : 'Working saved automatically'}
         </span>
       )}

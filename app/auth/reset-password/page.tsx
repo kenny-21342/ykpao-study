@@ -23,7 +23,7 @@ function AuthPanel({ title, subtitle, children }: {
         className="fixed inset-0 object-cover"
       />
 
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
@@ -32,7 +32,7 @@ function AuthPanel({ title, subtitle, children }: {
             <h1 className="text-3xl font-bold text-primary mb-2">
               {title}
             </h1>
-            <p className="text-gray-600">{subtitle}</p>
+            <p className="text-secondary">{subtitle}</p>
           </div>
           {children}
         </div>
@@ -141,36 +141,36 @@ function ResetPasswordForm() {
     <AuthPanel title="Reset Password" subtitle="Choose a new password for your account">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-secondary mb-2">
             New Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               autoFocus
               minLength={8}
             />
           </div>
-          <p className="mt-2 text-xs text-gray-500">At least 8 characters.</p>
+          <p className="mt-2 text-xs text-muted">At least 8 characters.</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-secondary mb-2">
             Confirm New Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
             <input
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               placeholder="••••••••"
               required
               minLength={8}
@@ -203,7 +203,7 @@ function ResetPasswordForm() {
       </form>
 
       <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-secondary">
           <Link
             href="/auth/login"
             className="text-green-600 font-semibold hover:text-green-700 transition-colors"

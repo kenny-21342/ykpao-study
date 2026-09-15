@@ -63,7 +63,7 @@ import type { RemoteCursor } from './RemoteCursors';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-72 items-center justify-center text-sm text-gray-500">
+    <div className="flex h-72 items-center justify-center text-sm text-muted">
       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading editor
     </div>
   ),
@@ -73,7 +73,7 @@ const RichContent = dynamic(() => import('./RichContent'), { ssr: false });
 const DrawingCanvas = dynamic(() => import('./DrawingCanvas'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-80 items-center justify-center text-sm text-gray-500">
+    <div className="flex h-80 items-center justify-center text-sm text-muted">
       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading canvas
     </div>
   ),
@@ -1227,7 +1227,7 @@ export default function NotesTextbookPage() {
         className={`group relative flex min-h-9 items-center gap-2 rounded-md px-2 text-sm ${
           selectedPage?.id === page.id
             ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            : 'text-secondary hover:bg-surface-hover'
         }`}
       >
         <button className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left" onClick={() => void openPage(page.id)}>
@@ -1238,13 +1238,13 @@ export default function NotesTextbookPage() {
         </button>
         <button
           onClick={() => setPageMenuId((current) => current === page.id ? null : page.id)}
-          className="shrink-0 rounded-sm p-1 text-gray-400 hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+          className="shrink-0 rounded-sm p-1 text-muted hover:bg-surface hover:text-secondary"
           title="Page actions" aria-label="Page actions"
         >
           <MoreVertical className="h-3.5 w-3.5" />
         </button>
         {pageMenuId === page.id && (
-          <div className="absolute right-1 top-9 z-30 w-48 rounded-md border border-gray-200 bg-white p-1 shadow-overlay dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute right-1 top-9 z-30 w-48 rounded-md border border-line bg-surface p-1 shadow-overlay">
             {page.accessRole !== 'viewer' && (
               <button onClick={() => { void openPage(page.id).then(() => patchMetadata({ favorite: !page.favorite })); setPageMenuId(null); }} className="menu-row">
                 <Star className="h-4 w-4" /> {page.favorite ? 'Remove favorite' : 'Add favorite'}
@@ -1277,10 +1277,10 @@ export default function NotesTextbookPage() {
       <div className="grid h-full min-h-[400px] place-items-center p-6">
         <div className="max-w-md text-center">
           <NotebookIcon className="mx-auto mb-4 h-10 w-10 text-green-600" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-primary">
             Sign in to use your notebook
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-secondary">
             Your notebooks, pages, and drawings are private to your account.
           </p>
           <a
@@ -1295,23 +1295,23 @@ export default function NotesTextbookPage() {
   }
 
   return (
-    <div className="relative flex h-full min-h-[600px] overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <div className="relative flex h-full min-h-[600px] overflow-hidden bg-surface text-primary">
       {confirmDialog}
       {sidebarOpen && <button aria-label="Close notes navigation" className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[min(88vw,340px)] flex-col border-r border-gray-200 bg-gray-50 transition-transform dark:border-gray-800 dark:bg-gray-900 lg:relative lg:inset-auto lg:z-20 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
-        <div className="border-b border-gray-200 p-3 dark:border-gray-800">
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[min(88vw,340px)] flex-col border-r border-line bg-surface-raised transition-transform lg:relative lg:inset-auto lg:z-20 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+        <div className="border-b border-line p-3">
           <div className="mb-3 flex items-center gap-2">
             <NotebookIcon className="h-4 w-4 text-emerald-600" />
             <h2 className="text-sm font-semibold">Notes</h2>
-            <span className="ml-auto text-xs text-gray-400">{allPages.length} pages</span>
-            <button onClick={() => setSidebarCollapsed(true)} className="hidden rounded-sm p-1.5 text-gray-500 hover:bg-gray-200 lg:block dark:hover:bg-gray-800" title="Hide navigation" aria-label="Hide navigation"><PanelLeftClose className="h-4 w-4" /></button>
-            <button onClick={() => setSidebarOpen(false)} className="rounded-sm p-1.5 text-gray-500 hover:bg-gray-200 lg:hidden dark:hover:bg-gray-800" title="Close navigation" aria-label="Close navigation"><X className="h-4 w-4" /></button>
+            <span className="ml-auto text-xs text-muted">{allPages.length} pages</span>
+            <button onClick={() => setSidebarCollapsed(true)} className="hidden rounded-sm p-1.5 text-muted hover:bg-surface-active lg:block" title="Hide navigation" aria-label="Hide navigation"><PanelLeftClose className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(false)} className="rounded-sm p-1.5 text-muted hover:bg-surface-active lg:hidden" title="Close navigation" aria-label="Close navigation"><X className="h-4 w-4" /></button>
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="e.g. cell respiration, revision, or chapter 5 notes" className="h-9 w-full rounded-md border border-gray-200 bg-white pl-8 pr-9 text-sm outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-950" />
-            <button onClick={() => { setCommandOpen(true); setCommandQuery(''); }} className="absolute right-2 top-2 rounded-sm border border-gray-200 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-gray-700" title="Quick navigation" aria-label="Quick navigation">⌘K</button>
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="e.g. cell respiration, revision, or chapter 5 notes" className="h-9 w-full rounded-md border border-line bg-surface pl-8 pr-9 text-sm outline-none focus:border-emerald-500" />
+            <button onClick={() => { setCommandOpen(true); setCommandQuery(''); }} className="absolute right-2 top-2 rounded-sm border border-line px-1.5 py-0.5 text-[10px] text-muted" title="Quick navigation" aria-label="Quick navigation">⌘K</button>
           </div>
           <div className="mt-2 grid grid-cols-4 gap-1" aria-label="Page filters">
             {([
@@ -1320,74 +1320,74 @@ export default function NotesTextbookPage() {
               ['recent', Clock3, 'Recent'],
               ['archive', Archive, 'Archive'],
             ] as const).map(([mode, Icon, label]) => (
-              <button key={mode} onClick={() => setFilterMode(mode)} title={label} aria-label={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-white text-emerald-700 dark:bg-gray-800 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <button key={mode} onClick={() => setFilterMode(mode)} title={label} aria-label={label} className={`flex h-8 items-center justify-center rounded-md ${filterMode === mode ? 'bg-surface text-emerald-700 dark:text-emerald-300' : 'text-muted hover:bg-surface-hover'}`}>
                 <Icon className="h-4 w-4" />
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-b border-gray-200 p-2 dark:border-gray-800">
+        <div className="flex items-center gap-2 border-b border-line p-2">
           <button onClick={() => { setCreating({ kind: 'notebook' }); setNewName(''); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2 text-xs font-semibold text-white hover:bg-emerald-700"><Plus className="h-3.5 w-3.5" /> Notebook</button>
           <button
             onClick={() => startCreatePage()}
             disabled={!defaultPageSectionId}
-            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 text-xs font-medium hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-strong bg-surface px-2 text-xs font-medium hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
             title={defaultPageSectionId ? 'Add page' : 'Create a section before adding a page'} aria-label={defaultPageSectionId ? 'Add page' : 'Create a section before adding a page'}
           >
             <Plus className="h-3.5 w-3.5" /> Page
           </button>
           {selectedNotebookId && !isSharedNotebook(selectedNotebookId) && (
-            <button onClick={() => { setCreating({ kind: 'section', notebookId: selectedNotebookId }); setNewName(''); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 text-xs font-medium hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"><FolderPlus className="h-3.5 w-3.5" /> Section</button>
+            <button onClick={() => { setCreating({ kind: 'section', notebookId: selectedNotebookId }); setNewName(''); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-strong bg-surface px-2 text-xs font-medium hover:bg-surface-hover"><FolderPlus className="h-3.5 w-3.5" /> Section</button>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-sm text-gray-500"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading</div>
+            <div className="flex items-center justify-center py-12 text-sm text-muted"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading</div>
           ) : error ? (
             <div className="p-4 text-center text-sm text-red-600"><p>{error}</p><button onClick={() => void load()} className="mt-2 underline">Retry</button></div>
           ) : searchQuery || filterMode !== 'all' ? (
             <div className="space-y-1">
               {flatResults.map(renderPageRow)}
-              {flatResults.length === 0 && <p className="px-3 py-10 text-center text-sm text-gray-400">No matching pages</p>}
+              {flatResults.length === 0 && <p className="px-3 py-10 text-center text-sm text-muted">No matching pages</p>}
             </div>
           ) : notebooks.length === 0 ? (
-            <div className="px-6 py-14 text-center text-gray-500"><NotebookIcon className="mx-auto mb-3 h-8 w-8 opacity-50" /><p className="text-sm font-medium">Create your first notebook</p></div>
+            <div className="px-6 py-14 text-center text-muted"><NotebookIcon className="mx-auto mb-3 h-8 w-8 opacity-50" /><p className="text-sm font-medium">Create your first notebook</p></div>
           ) : (
             <div className="space-y-2">
               {notebooks.map((notebook) => {
                 const expanded = expandedNotebooks.has(notebook.id);
                 return (
                   <div key={notebook.id}>
-                    <div className={`flex items-center rounded-md ${selectedNotebookId === notebook.id ? 'bg-gray-200/70 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800/70'}`}>
+                    <div className={`flex items-center rounded-md ${selectedNotebookId === notebook.id ? 'bg-surface-active/70 bg-surface' : 'hover:bg-surface-hover'}`}>
                       <button onClick={() => { setSelectedNotebookId(notebook.id); toggleNotebook(notebook.id); }} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm font-semibold">
-                        {expanded ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />}
+                        {expanded ? <ChevronDown className="h-4 w-4 shrink-0 text-muted" /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted" />}
                         <span>{notebook.icon || '📓'}</span><span className="truncate">{notebook.name}</span>
                       </button>
                     </div>
                     {expanded && (
-                      <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2 dark:border-gray-700">
+                      <div className="ml-3 mt-1 space-y-1 border-l border-line pl-2">
                         {notebook.sections.map((section) => {
                           const sectionExpanded = expandedSections.has(section.id);
                           const pages = section.pages.filter((page) => !page.archived);
                           return (
                             <div key={section.id}>
-                              <div className="group flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <button onClick={() => toggleSection(section.id)} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs font-medium text-gray-600 dark:text-gray-300">
+                              <div className="group flex items-center rounded-md hover:bg-surface-hover">
+                                <button onClick={() => toggleSection(section.id)} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs font-medium text-secondary">
                                   {sectionExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                                   <BookOpen className="h-3.5 w-3.5" /><span className="truncate">{section.name}</span>
                                 </button>
-                                {!isSharedNotebook(notebook.id) && <button onClick={() => startCreatePage(section.id)} className="mr-1 rounded-sm p-1 text-gray-400 hover:bg-white hover:text-emerald-600 dark:hover:bg-gray-700" title="Add page" aria-label="Add page"><Plus className="h-3.5 w-3.5" /></button>}
+                                {!isSharedNotebook(notebook.id) && <button onClick={() => startCreatePage(section.id)} className="mr-1 rounded-sm p-1 text-muted hover:bg-surface hover:text-emerald-600" title="Add page" aria-label="Add page"><Plus className="h-3.5 w-3.5" /></button>}
                               </div>
                               {sectionExpanded && (
                                 <div className="ml-3 space-y-0.5">
                                   {pages.map((page) => renderPageRow({ page, notebook, section }))}
                                   {pages.length === 0 && (
-                                    <div className="flex items-center gap-2 px-2 py-2 text-xs text-gray-400">
+                                    <div className="flex items-center gap-2 px-2 py-2 text-xs text-muted">
                                       <span className="flex-1">No pages</span>
                                       {!isSharedNotebook(notebook.id) && (
-                                        <button onClick={() => startCreatePage(section.id)} className="inline-flex items-center gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1 font-medium text-gray-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                                        <button onClick={() => startCreatePage(section.id)} className="inline-flex items-center gap-1 rounded-sm border border-line bg-surface px-2 py-1 font-medium text-secondary hover:border-emerald-300 hover:text-emerald-700">
                                           <Plus className="h-3 w-3" /> Page
                                         </button>
                                       )}
@@ -1409,8 +1409,8 @@ export default function NotesTextbookPage() {
       </aside>
 
       <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex min-h-14 items-center gap-2 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-gray-950 sm:px-4">
-          <button onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); else setSidebarOpen(true); }} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Open notes navigation" aria-label="Open notes navigation"><Menu className="h-5 w-5" /></button>
+        <header className="flex min-h-14 items-center gap-2 border-b border-line bg-surface px-3 sm:px-4">
+          <button onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); else setSidebarOpen(true); }} className="rounded-md p-2 text-muted hover:bg-surface-hover" title="Open notes navigation" aria-label="Open notes navigation"><Menu className="h-5 w-5" /></button>
           {selectedPage ? <>
             <span className="hidden text-xl sm:block">{selectedPage.icon || '📝'}</span>
             <input
@@ -1426,25 +1426,25 @@ export default function NotesTextbookPage() {
               {canEdit(selectedPage) && <button onClick={() => setShowDrawing(true)} className="toolbar-command" title="Draw and insert" aria-label="Draw and insert"><PenTool className="h-4 w-4" /><span>Draw</span></button>}
               <button onClick={() => openAI(false)} className="toolbar-command" title="Ask AI about this note" aria-label="Ask AI about this note"><Sparkles className="h-4 w-4" /><span>Ask AI</span></button>
             </div>
-            <div className="flex items-center gap-1 border-l border-gray-200 pl-2 dark:border-gray-800">
+            <div className="flex items-center gap-1 border-l border-line pl-2">
               {canEdit(selectedPage) && (
                 <button
                   onClick={() => setPreviewMode((value) => !value)}
-                  className={`rounded-md p-2 ${previewMode ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`rounded-md p-2 ${previewMode ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-muted hover:bg-surface-hover'}`}
                   title={previewMode ? 'Back to editing' : 'Preview rendered note'} aria-label={previewMode ? 'Back to editing' : 'Preview rendered note'}
                 >
                   {previewMode ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               )}
               <SaveIndicator state={saveState} />
-              {canEdit(selectedPage) && <button onClick={() => void savePage({ manual: true })} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-emerald-700 dark:hover:bg-gray-800" title="Save version" aria-label="Save version"><Save className="h-4 w-4" /></button>}
-              <button onClick={() => { setActivePanel(null); setSplitOpen((open) => !open); }} className={`rounded-md p-2 ${splitOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title="Split study view" aria-label="Split study view"><SplitSquareHorizontal className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('comments')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Comments" aria-label="Comments"><MessageSquare className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('share')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Share" aria-label="Share"><Share2 className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('history')} className="hidden rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 sm:block" title="Version history" aria-label="Version history"><History className="h-4 w-4" /></button>
-              <button onClick={() => openPanel('details')} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Page details" aria-label="Page details"><MoreVertical className="h-4 w-4" /></button>
+              {canEdit(selectedPage) && <button onClick={() => void savePage({ manual: true })} className="rounded-md p-2 text-muted hover:bg-surface-hover hover:text-emerald-700" title="Save version" aria-label="Save version"><Save className="h-4 w-4" /></button>}
+              <button onClick={() => { setActivePanel(null); setSplitOpen((open) => !open); }} className={`rounded-md p-2 ${splitOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'text-muted hover:bg-surface-hover'}`} title="Split study view" aria-label="Split study view"><SplitSquareHorizontal className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('comments')} className="rounded-md p-2 text-muted hover:bg-surface-hover" title="Comments" aria-label="Comments"><MessageSquare className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('share')} className="rounded-md p-2 text-muted hover:bg-surface-hover" title="Share" aria-label="Share"><Share2 className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('history')} className="hidden rounded-md p-2 text-muted hover:bg-surface-hover sm:block" title="Version history" aria-label="Version history"><History className="h-4 w-4" /></button>
+              <button onClick={() => openPanel('details')} className="rounded-md p-2 text-muted hover:bg-surface-hover" title="Page details" aria-label="Page details"><MoreVertical className="h-4 w-4" /></button>
             </div>
-          </> : <><span className="font-semibold">Notebook workspace</span><span className="text-sm text-gray-400">Select a page to begin</span></>}
+          </> : <><span className="font-semibold">Notebook workspace</span><span className="text-sm text-muted">Select a page to begin</span></>}
         </header>
 
         {selectedPage && (draftRecovery || conflictPage || saveState === 'offline') && (
@@ -1461,16 +1461,16 @@ export default function NotesTextbookPage() {
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {openingPage ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-gray-500"><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening page</div>
+            <div className="flex flex-1 items-center justify-center text-sm text-muted"><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening page</div>
           ) : selectedPage ? <>
             <main className={`${splitOpen ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col overflow-hidden`}>
-              <div className="flex items-center gap-2 overflow-x-auto border-b border-gray-100 px-4 py-2 dark:border-gray-900 xl:hidden">
+              <div className="flex items-center gap-2 overflow-x-auto border-b border-subtle px-4 py-2 xl:hidden">
                 <button onClick={() => void addReview()} className="toolbar-command"><RefreshCw className="h-4 w-4" /> Review</button>
                 <button onClick={() => void addStudyTask()} className="toolbar-command"><Zap className="h-4 w-4" /> Task</button>
                 {canEdit(selectedPage) && <button onClick={() => setShowDrawing(true)} className="toolbar-command"><PenTool className="h-4 w-4" /> Draw</button>}
                 <button onClick={() => openAI(false)} className="toolbar-command"><Sparkles className="h-4 w-4" /> AI</button>
               </div>
-              <div className="flex-1 overflow-y-auto bg-gray-50/50 p-3 dark:bg-gray-950 sm:p-5">
+              <div className="flex-1 overflow-y-auto bg-surface-raised p-3 sm:p-5">
                 <div className="mx-auto max-w-5xl">
                   {canEdit(selectedPage) && !previewMode ? (
                     <RichTextEditor
@@ -1487,90 +1487,90 @@ export default function NotesTextbookPage() {
                       yjsRemoteUpdate={yjsRemoteUpdate}
                     />
                   ) : (
-                    <div className="min-h-[440px] rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-                      <div className="mb-4 text-xs font-semibold uppercase text-gray-400">
+                    <div className="min-h-[440px] rounded-md border border-line bg-surface p-6">
+                      <div className="mb-4 text-xs font-semibold uppercase text-muted">
                         {canEdit(selectedPage) ? 'Preview' : 'Shared read-only page'}
                       </div>
-                      {editContent ? <RichContent html={editContent} /> : <p className="text-gray-400">This page is empty.</p>}
+                      {editContent ? <RichContent html={editContent} /> : <p className="text-muted">This page is empty.</p>}
                     </div>
                   )}
                 </div>
               </div>
-              <footer className="flex min-h-9 items-center gap-3 border-t border-gray-200 bg-white px-4 text-xs text-gray-500 dark:border-gray-800 dark:bg-gray-950">
+              <footer className="flex min-h-9 items-center gap-3 border-t border-line bg-surface px-4 text-xs text-muted">
                 <span>Revision {selectedPage.revision}</span>
                 <span>{stripHtml(editContent).split(/\s+/).filter(Boolean).length} words</span>
                 {selectedText && <span className="truncate text-emerald-700 dark:text-emerald-300">Selection: {selectedText}</span>}
                 <div className="ml-auto flex -space-x-1.5">
-                  {effectivePresence.slice(0, 5).map((item) => <div key={item.user.id} title={item.user.name || item.user.email} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-accent text-[9px] font-bold text-white dark:border-gray-950">{initials(item.user)}</div>)}
+                  {effectivePresence.slice(0, 5).map((item) => <div key={item.user.id} title={item.user.name || item.user.email} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-accent text-[9px] font-bold text-accent-fg">{initials(item.user)}</div>)}
                 </div>
               </footer>
             </main>
 
             {splitOpen && (
-              <aside className="flex w-full flex-col border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 lg:w-[44%] lg:min-w-[360px]">
-                <div className="flex h-12 items-center gap-2 border-b border-gray-200 px-3 dark:border-gray-800">
+              <aside className="flex w-full flex-col border-l border-line bg-surface lg:w-[44%] lg:min-w-[360px]">
+                <div className="flex h-12 items-center gap-2 border-b border-line px-3">
                   <SplitSquareHorizontal className="h-4 w-4 text-emerald-600" /><span className="text-sm font-semibold">Study question</span>
-                  <button onClick={() => setSplitOpen(false)} className="ml-auto rounded-sm p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Close split view" aria-label="Close split view"><PanelRightClose className="h-4 w-4" /></button>
+                  <button onClick={() => setSplitOpen(false)} className="ml-auto rounded-sm p-1.5 text-muted hover:bg-surface-hover" title="Close split view" aria-label="Close split view"><PanelRightClose className="h-4 w-4" /></button>
                 </div>
-                <div className="border-b border-gray-200 p-3 dark:border-gray-800">
-                  <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" /><input value={questionSearch} onChange={(event) => { const value = event.target.value; setQuestionSearch(value); setQuestionResults([]); setQuestionSearchError(null); setQuestionSearchAttempted(false); setQuestionSearching(value.trim().length >= 2); }} placeholder="e.g. inheritance, 0610-S25-P21-Q2, or plant nutrition" className="h-9 w-full rounded-md border border-gray-300 bg-white pl-8 pr-9 text-sm outline-none focus:border-emerald-500 dark:border-gray-700 dark:bg-gray-900" />{questionSearching && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-gray-400" />}</div>
+                <div className="border-b border-line p-3">
+                  <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted" /><input value={questionSearch} onChange={(event) => { const value = event.target.value; setQuestionSearch(value); setQuestionResults([]); setQuestionSearchError(null); setQuestionSearchAttempted(false); setQuestionSearching(value.trim().length >= 2); }} placeholder="e.g. inheritance, 0610-S25-P21-Q2, or plant nutrition" className="h-9 w-full rounded-md border border-strong bg-surface pl-8 pr-9 text-sm outline-none focus:border-emerald-500" />{questionSearching && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted" />}</div>
                   {questionSearchError && <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{questionSearchError}</p>}
-                  {questionResults.length > 0 && <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900">{questionResults.map((result) => <button key={result.id} onClick={() => { void loadQuestion(Number(result.id.replace('question-', ''))); setQuestionResults([]); setQuestionSearch(''); }} className="block w-full rounded-sm px-2 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"><span className="block truncate text-xs font-semibold">{result.title}</span><span className="mt-0.5 block line-clamp-2 text-xs text-gray-500">{result.snippet}</span></button>)}</div>}
-                  {questionSearch.trim().length >= 2 && questionSearchAttempted && !questionSearchError && questionResults.length === 0 && <p className="mt-2 text-xs text-gray-500">No matching questions found.</p>}
+                  {questionResults.length > 0 && <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-line bg-surface p-1">{questionResults.map((result) => <button key={result.id} onClick={() => { void loadQuestion(Number(result.id.replace('question-', ''))); setQuestionResults([]); setQuestionSearch(''); }} className="block w-full rounded-sm px-2 py-2 text-left hover:bg-surface-hover"><span className="block truncate text-xs font-semibold">{result.title}</span><span className="mt-0.5 block line-clamp-2 text-xs text-muted">{result.snippet}</span></button>)}</div>}
+                  {questionSearch.trim().length >= 2 && questionSearchAttempted && !questionSearchError && questionResults.length === 0 && <p className="mt-2 text-xs text-muted">No matching questions found.</p>}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {questionLoading ? <div className="flex justify-center py-16 text-sm text-gray-500"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading question</div> : question ? <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2"><h3 className="font-mono text-sm font-bold">{questionCode(question)}</h3><span className="rounded-sm bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800">{question.marks} marks</span></div>
-                    <div className="text-xs text-gray-500">{question.subject_name} · {question.topic}</div>
-                    <div className="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"><FormattedMessage content={question.content} /></div>
-                    {question.images?.map((imagePath, index) => <div key={imagePath} className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900"><Image src={imagePath} alt={`Question figure ${index + 1}`} width={1000} height={700} unoptimized className="mx-auto h-auto max-h-80 max-w-full object-contain" /></div>)}
+                  {questionLoading ? <div className="flex justify-center py-16 text-sm text-muted"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading question</div> : question ? <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2"><h3 className="font-mono text-sm font-bold">{questionCode(question)}</h3><span className="rounded-sm bg-surface-raised px-2 py-1 text-xs">{question.marks} marks</span></div>
+                    <div className="text-xs text-muted">{question.subject_name} · {question.topic}</div>
+                    <div className="rounded-md border border-line bg-surface-raised p-4"><FormattedMessage content={question.content} /></div>
+                    {question.images?.map((imagePath, index) => <div key={imagePath} className="rounded-md border border-line bg-surface p-2"><Image src={imagePath} alt={`Question figure ${index + 1}`} width={1000} height={700} unoptimized className="mx-auto h-auto max-h-80 max-w-full object-contain" /></div>)}
                     <div className="flex flex-wrap gap-2">
                       {canEdit(selectedPage) && <button onClick={insertQuestionIntoNote} className="primary-command"><FolderInput className="h-4 w-4" /> Insert into note</button>}
                       {markscheme && <button onClick={() => setShowMarkscheme((show) => !show)} className="secondary-command">{showMarkscheme ? 'Hide' : 'Show'} mark scheme</button>}
                     </div>
                     {showMarkscheme && markscheme && <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30"><h4 className="mb-2 text-xs font-bold uppercase text-amber-800 dark:text-amber-300">Mark scheme</h4><FormattedMessage content={markscheme.content} /></div>}
-                  </div> : <div className="px-8 py-16 text-center text-gray-500"><Search className="mx-auto mb-3 h-8 w-8 opacity-50" /><p className="text-sm font-medium">Find a past-paper question to study beside your notes.</p></div>}
+                  </div> : <div className="px-8 py-16 text-center text-muted"><Search className="mx-auto mb-3 h-8 w-8 opacity-50" /><p className="text-sm font-medium">Find a past-paper question to study beside your notes.</p></div>}
                 </div>
               </aside>
             )}
 
             {activePanel && (
-              <aside className="absolute inset-0 z-30 flex flex-col border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 sm:left-auto sm:w-[360px] lg:static">
-                <div className="flex h-14 items-center gap-2 border-b border-gray-200 px-4 dark:border-gray-800">
+              <aside className="absolute inset-0 z-30 flex flex-col border-l border-line bg-surface sm:left-auto sm:w-[360px] lg:static">
+                <div className="flex h-14 items-center gap-2 border-b border-line px-4">
                   <h3 className="text-sm font-semibold capitalize">{activePanel === 'share' ? 'Share and presence' : activePanel}</h3>
-                  <button onClick={() => setActivePanel(null)} className="ml-auto rounded-sm p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-4 w-4" /></button>
+                  <button onClick={() => setActivePanel(null)} className="ml-auto rounded-sm p-1.5 text-muted hover:bg-surface-hover"><X className="h-4 w-4" /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {panelLoading && activePanel !== 'details' ? <div className="flex justify-center py-12 text-sm text-gray-500"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading</div> : null}
+                  {panelLoading && activePanel !== 'details' ? <div className="flex justify-center py-12 text-sm text-muted"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading</div> : null}
                   {activePanel === 'details' && <div className="space-y-5">
                     <label className="block"><span className="field-label">Page icon</span><input value={selectedPage.icon} maxLength={16} disabled={!canEdit(selectedPage)} onChange={(event) => { const value = event.target.value; setSelectedPage((page) => page ? { ...page, icon: value } : page); }} onBlur={(event) => void patchMetadata({ icon: event.target.value })} className="field-input" placeholder="e.g. Bio, M1, Ch4" /></label>
                     <label className="block"><span className="field-label">Tags</span><input value={tagInput} disabled={!canEdit(selectedPage)} onChange={(event) => setTagInput(event.target.value)} onBlur={() => void patchMetadata({ tags: tagInput.split(',').map((tag) => tag.trim()).filter(Boolean) })} className="field-input" placeholder="e.g. biology, revision, cells" /></label>
                     <div className="flex flex-wrap gap-2">{selectedPage.tags.map((tag) => <span key={tag} className="rounded-sm bg-surface-raised px-2 py-1 text-xs text-secondary"><Tags className="mr-1 inline h-3 w-3" />{tag}</span>)}</div>
                     {selectedPage.accessRole === 'owner' && <label className="block"><span className="field-label">Move to section</span><select value={selectedPage.sectionId} onChange={(event) => void movePageToSection(event.target.value)} className="field-input">{editableSections.map((section) => <option key={section.id} value={section.id}>{section.notebookName} / {section.name}</option>)}</select></label>}
-                    <div className="space-y-2 border-t border-gray-200 pt-4 dark:border-gray-800">
+                    <div className="space-y-2 border-t border-line pt-4">
                       <button onClick={() => void patchMetadata({ favorite: !selectedPage.favorite })} disabled={!canEdit(selectedPage)} className="panel-action"><Star className={`h-4 w-4 ${selectedPage.favorite ? 'fill-amber-400 text-amber-500' : ''}`} /> {selectedPage.favorite ? 'Remove from favorites' : 'Add to favorites'}</button>
                       {selectedPage.accessRole === 'owner' && <button onClick={() => void patchMetadata({ archived: !selectedPage.archived })} className="panel-action">{selectedPage.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />} {selectedPage.archived ? 'Restore page' : 'Archive page'}</button>}
                       <button onClick={() => void duplicatePage(selectedPage.id)} className="panel-action"><Copy className="h-4 w-4" /> Duplicate page</button>
                     </div>
-                    <div className="border-t border-gray-200 pt-4 text-xs text-gray-500 dark:border-gray-800"><p>Revision {selectedPage.revision}</p><p className="mt-1">Updated {formatDate(selectedPage.updatedAt)}</p><p className="mt-1 capitalize">Access: {selectedPage.accessRole || 'owner'}</p></div>
+                    <div className="border-t border-line pt-4 text-xs text-muted"><p>Revision {selectedPage.revision}</p><p className="mt-1">Updated {formatDate(selectedPage.updatedAt)}</p><p className="mt-1 capitalize">Access: {selectedPage.accessRole || 'owner'}</p></div>
                   </div>}
-                  {activePanel === 'history' && !panelLoading && <div className="space-y-2">{snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-md border border-gray-200 p-3 dark:border-gray-800"><div className="flex items-start gap-2"><FileClock className="mt-0.5 h-4 w-4 text-gray-400" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{snapshot.title}</p><p className="mt-1 text-xs text-gray-500">Revision {snapshot.revision} · {snapshot.reason} · {formatDate(snapshot.createdAt)}</p>{snapshot.createdBy && <p className="mt-1 text-xs text-gray-400">{snapshot.createdBy.name || snapshot.createdBy.email}</p>}</div>{canEdit(selectedPage) && <button onClick={() => void restoreSnapshot(snapshot.id)} className="rounded-sm p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Restore version" aria-label="Restore version"><RefreshCw className="h-4 w-4" /></button>}</div></div>)}{snapshots.length === 0 && <p className="py-10 text-center text-sm text-gray-400">Versions appear after autosaves and manual saves.</p>}</div>}
+                  {activePanel === 'history' && !panelLoading && <div className="space-y-2">{snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-md border border-line p-3"><div className="flex items-start gap-2"><FileClock className="mt-0.5 h-4 w-4 text-muted" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{snapshot.title}</p><p className="mt-1 text-xs text-muted">Revision {snapshot.revision} · {snapshot.reason} · {formatDate(snapshot.createdAt)}</p>{snapshot.createdBy && <p className="mt-1 text-xs text-muted">{snapshot.createdBy.name || snapshot.createdBy.email}</p>}</div>{canEdit(selectedPage) && <button onClick={() => void restoreSnapshot(snapshot.id)} className="rounded-sm p-1.5 text-muted hover:bg-surface-hover" title="Restore version" aria-label="Restore version"><RefreshCw className="h-4 w-4" /></button>}</div></div>)}{snapshots.length === 0 && <p className="py-10 text-center text-sm text-muted">Versions appear after autosaves and manual saves.</p>}</div>}
                   {activePanel === 'comments' && !panelLoading && <div className="space-y-4">
                     <div><textarea value={commentText} onChange={(event) => setCommentText(event.target.value)} className="field-input min-h-20 resize-y" placeholder={selectedText ? 'Add a question or correction for the selected text' : 'Add a page-level question, correction, or reminder'} />{selectedText && <p className="mt-1 line-clamp-2 text-xs text-emerald-700 dark:text-emerald-300">Attached to: “{selectedText}”</p>}<button onClick={() => void addComment()} disabled={!commentText.trim()} className="primary-command mt-2"><MessageSquare className="h-4 w-4" /> Comment</button></div>
-                    <label className="flex items-center gap-2 text-xs text-gray-500"><input type="checkbox" checked={includeResolved} onChange={(event) => setIncludeResolved(event.target.checked)} /> Show resolved</label>
-                    {comments.map((comment) => <div key={comment.id} className={`rounded-md border p-3 ${comment.resolved ? 'border-gray-200 opacity-60 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800'}`}><div className="flex items-center gap-2"><div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 text-[9px] font-bold text-white">{initials(comment.user)}</div><span className="truncate text-xs font-semibold">{comment.user.name || comment.user.email}</span><span className="ml-auto text-[10px] text-gray-400">{formatDate(comment.createdAt)}</span></div>{comment.anchor && <blockquote className="mt-2 border-l-2 border-emerald-400 pl-2 text-xs text-gray-500">{comment.anchor}</blockquote>}<p className="mt-2 whitespace-pre-wrap text-sm">{comment.content}</p><button onClick={() => void resolveComment(comment)} className="mt-2 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300">{comment.resolved ? 'Reopen' : 'Resolve'}</button></div>)}
+                    <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={includeResolved} onChange={(event) => setIncludeResolved(event.target.checked)} /> Show resolved</label>
+                    {comments.map((comment) => <div key={comment.id} className={`rounded-md border p-3 ${comment.resolved ? 'border-line opacity-60' : 'border-line'}`}><div className="flex items-center gap-2"><div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-inverse text-[9px] font-bold text-inverse">{initials(comment.user)}</div><span className="truncate text-xs font-semibold">{comment.user.name || comment.user.email}</span><span className="ml-auto text-[10px] text-muted">{formatDate(comment.createdAt)}</span></div>{comment.anchor && <blockquote className="mt-2 border-l-2 border-emerald-400 pl-2 text-xs text-muted">{comment.anchor}</blockquote>}<p className="mt-2 whitespace-pre-wrap text-sm">{comment.content}</p><button onClick={() => void resolveComment(comment)} className="mt-2 text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300">{comment.resolved ? 'Reopen' : 'Resolve'}</button></div>)}
                   </div>}
                   {activePanel === 'share' && !panelLoading && <div className="space-y-5">
-                    <div><p className="field-label">Active now</p><div className="mt-2 flex flex-wrap gap-2">{effectivePresence.map((item) => <div key={item.user.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-2 py-1.5 text-xs dark:bg-gray-900"><span className="h-2 w-2 rounded-full bg-emerald-500" />{item.user.name || item.user.email}</div>)}</div></div>
-                    {selectedPage.accessRole === 'owner' && <div className="border-y border-gray-200 py-4 dark:border-gray-800"><p className="field-label">Invite collaborator</p><input type="email" value={shareEmail} onChange={(event) => setShareEmail(event.target.value)} className="field-input mt-2" placeholder="student@example.com" /><div className="mt-2 flex gap-2"><select value={shareRole} onChange={(event) => setShareRole(event.target.value as 'editor' | 'viewer')} className="field-input flex-1"><option value="editor">Can edit</option><option value="viewer">Can view</option></select><button onClick={() => void inviteCollaborator()} disabled={!shareEmail.trim()} className="primary-command"><UserPlus className="h-4 w-4" /> Invite</button></div></div>}
+                    <div><p className="field-label">Active now</p><div className="mt-2 flex flex-wrap gap-2">{effectivePresence.map((item) => <div key={item.user.id} className="flex items-center gap-2 rounded-md bg-surface-raised px-2 py-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-500" />{item.user.name || item.user.email}</div>)}</div></div>
+                    {selectedPage.accessRole === 'owner' && <div className="border-y border-line py-4"><p className="field-label">Invite collaborator</p><input type="email" value={shareEmail} onChange={(event) => setShareEmail(event.target.value)} className="field-input mt-2" placeholder="student@example.com" /><div className="mt-2 flex gap-2"><select value={shareRole} onChange={(event) => setShareRole(event.target.value as 'editor' | 'viewer')} className="field-input flex-1"><option value="editor">Can edit</option><option value="viewer">Can view</option></select><button onClick={() => void inviteCollaborator()} disabled={!shareEmail.trim()} className="primary-command"><UserPlus className="h-4 w-4" /> Invite</button></div></div>}
                     {owner && <PersonRow person={owner} label="Owner" />}
-                    <div className="space-y-2">{collaborators.map((collaborator) => <div key={collaborator.id} className="flex items-center gap-3 rounded-md border border-gray-200 p-2 dark:border-gray-800"><PersonAvatar person={collaborator.user} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{collaborator.user.name || collaborator.user.email}</p><p className="text-xs capitalize text-gray-500">{collaborator.role}</p></div>{selectedPage.accessRole === 'owner' && <button onClick={() => void removeCollaborator(collaborator.userId)} className="rounded-sm p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"><X className="h-4 w-4" /></button>}</div>)}</div>
+                    <div className="space-y-2">{collaborators.map((collaborator) => <div key={collaborator.id} className="flex items-center gap-3 rounded-md border border-line p-2"><PersonAvatar person={collaborator.user} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{collaborator.user.name || collaborator.user.email}</p><p className="text-xs capitalize text-muted">{collaborator.role}</p></div>{selectedPage.accessRole === 'owner' && <button onClick={() => void removeCollaborator(collaborator.userId)} className="rounded-sm p-1.5 text-muted hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"><X className="h-4 w-4" /></button>}</div>)}</div>
                   </div>}
                 </div>
               </aside>
             )}
           </> : (
-            <div className="flex flex-1 items-center justify-center bg-gray-50/70 p-8 text-center dark:bg-gray-950"><div className="max-w-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><FileText className="h-7 w-7 text-emerald-600" /></div><h2 className="text-lg font-semibold">Choose a note page</h2><p className="mt-2 text-sm text-gray-500">Search, browse a notebook, or create a page from the navigation panel.</p><button onClick={() => setSidebarOpen(true)} className="primary-command mx-auto mt-4 lg:hidden"><Menu className="h-4 w-4" /> Open notes</button></div></div>
+            <div className="flex flex-1 items-center justify-center bg-surface-raised p-8 text-center"><div className="max-w-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md border border-line bg-surface"><FileText className="h-7 w-7 text-emerald-600" /></div><h2 className="text-lg font-semibold">Choose a note page</h2><p className="mt-2 text-sm text-muted">Search, browse a notebook, or create a page from the navigation panel.</p><button onClick={() => setSidebarOpen(true)} className="primary-command mx-auto mt-4 lg:hidden"><Menu className="h-4 w-4" /> Open notes</button></div></div>
           )}
         </div>
       </section>
@@ -1581,16 +1581,16 @@ export default function NotesTextbookPage() {
           onClick={() => { if (!drawingUploading) setShowDrawing(false); }}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-white shadow-overlay dark:bg-gray-900"
+            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-surface shadow-overlay"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+            <div className="flex items-center gap-2 border-b border-line px-4 py-3">
               <PenTool className="h-4 w-4 text-emerald-600" />
               <h3 className="text-sm font-semibold">Drawing</h3>
               <button
                 onClick={() => setShowDrawing(false)}
                 disabled={drawingUploading}
-                className="ml-auto rounded-sm p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800"
+                className="ml-auto rounded-sm p-1.5 text-muted hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                 title="Close" aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -1613,7 +1613,7 @@ export default function NotesTextbookPage() {
               />
               )}
               {drawingUploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm font-medium text-gray-600 backdrop-blur-sm dark:bg-gray-900/70 dark:text-gray-300">
+                <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm font-medium text-secondary backdrop-blur-sm dark:bg-gray-900/70">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading drawing
                 </div>
               )}
@@ -1624,17 +1624,17 @@ export default function NotesTextbookPage() {
 
       {commandOpen && (
         <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[12vh]" onClick={() => setCommandOpen(false)}>
-          <div className="w-full max-w-xl overflow-hidden rounded-md border border-gray-200 bg-white shadow-overlay dark:border-gray-700 dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-center gap-2 border-b border-gray-200 px-3 dark:border-gray-700"><Search className="h-5 w-5 text-gray-400" /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="e.g. Biology, Cell transport, or Mock exam notes" className="h-12 flex-1 bg-transparent text-sm outline-none" /><button onClick={() => setCommandOpen(false)} className="rounded-sm border border-gray-200 px-2 py-1 text-xs text-gray-400 dark:border-gray-700">Esc</button></div>
-            <div className="max-h-[55vh] overflow-y-auto p-2">{flatResults.map((location) => <button key={location.page.id} onClick={() => { setCommandOpen(false); void openPage(location.page.id); }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"><span>{location.page.icon || '📝'}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{location.page.title}</span><span className="block truncate text-xs text-gray-500">{location.notebook.name} / {location.section.name}</span></span></button>)}{flatResults.length === 0 && <p className="py-10 text-center text-sm text-gray-400">No pages found</p>}</div>
+          <div className="w-full max-w-xl overflow-hidden rounded-md border border-line bg-surface shadow-overlay" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center gap-2 border-b border-line px-3"><Search className="h-5 w-5 text-muted" /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="e.g. Biology, Cell transport, or Mock exam notes" className="h-12 flex-1 bg-transparent text-sm outline-none" /><button onClick={() => setCommandOpen(false)} className="rounded-sm border border-line px-2 py-1 text-xs text-muted">Esc</button></div>
+            <div className="max-h-[55vh] overflow-y-auto p-2">{flatResults.map((location) => <button key={location.page.id} onClick={() => { setCommandOpen(false); void openPage(location.page.id); }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-surface-hover"><span>{location.page.icon || '📝'}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{location.page.title}</span><span className="block truncate text-xs text-muted">{location.notebook.name} / {location.section.name}</span></span></button>)}{flatResults.length === 0 && <p className="py-10 text-center text-sm text-muted">No pages found</p>}</div>
           </div>
         </div>
       )}
 
       {creating && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4" onClick={() => setCreating(null)}>
-          <div className="w-full max-w-sm rounded-md bg-white p-5 shadow-overlay dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-center"><h3 className="font-semibold">New {creating.kind}</h3><button onClick={() => setCreating(null)} className="ml-auto rounded-sm p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-4 w-4" /></button></div>
+          <div className="w-full max-w-sm rounded-md bg-surface p-5 shadow-overlay" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center"><h3 className="font-semibold">New {creating.kind}</h3><button onClick={() => setCreating(null)} className="ml-auto rounded-sm p-1 text-muted hover:bg-surface-hover"><X className="h-4 w-4" /></button></div>
             <input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleCreate(); }} placeholder={`${creating.kind} name`} className="field-input mt-4" />
             <div className="mt-4 flex justify-end gap-2"><button onClick={() => setCreating(null)} className="secondary-command">Cancel</button><button onClick={() => void handleCreate()} disabled={!newName.trim() || submitting} className="primary-command">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create</button></div>
           </div>
@@ -1669,7 +1669,7 @@ export default function NotesTextbookPage() {
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
-  if (state === 'saving') return <span className="hidden items-center gap-1 text-xs text-gray-500 sm:flex"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving</span>;
+  if (state === 'saving') return <span className="hidden items-center gap-1 text-xs text-muted sm:flex"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving</span>;
   if (state === 'offline') return <span className="hidden items-center gap-1 text-xs text-amber-600 sm:flex"><CloudOff className="h-3.5 w-3.5" /> Offline</span>;
   if (state === 'conflict') return <span className="hidden items-center gap-1 text-xs text-red-600 sm:flex"><RefreshCw className="h-3.5 w-3.5" /> Conflict</span>;
   if (state === 'error') return <span className="hidden text-xs text-red-600 sm:block">Save failed</span>;
@@ -1682,5 +1682,5 @@ function PersonAvatar({ person }: { person: Person }) {
 }
 
 function PersonRow({ person, label }: { person: Person; label: string }) {
-  return <div className="flex items-center gap-3 rounded-md border border-gray-200 p-2 dark:border-gray-800"><PersonAvatar person={person} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{person.name || person.email}</p><p className="text-xs text-gray-500">{label}</p></div></div>;
+  return <div className="flex items-center gap-3 rounded-md border border-line p-2"><PersonAvatar person={person} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{person.name || person.email}</p><p className="text-xs text-muted">{label}</p></div></div>;
 }

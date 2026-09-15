@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <header>
         <h1 className="text-2xl font-bold">Platform Overview</h1>
-        <p className="text-sm text-gray-500 mt-1">Real-time snapshot of your platform&apos;s health.</p>
+        <p className="text-sm text-muted mt-1">Real-time snapshot of your platform&apos;s health.</p>
       </header>
 
       {/* KPI cards */}
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
                   style={{ height: `${(s.count / maxSignup) * 100}%`, minHeight: s.count > 0 ? '4px' : '0' }}
                   title={`${s.date}: ${s.count}`}
                 />
-                <span className="text-[9px] text-gray-400 -rotate-45 origin-center whitespace-nowrap">{s.date}</span>
+                <span className="text-[9px] text-muted -rotate-45 origin-center whitespace-nowrap">{s.date}</span>
               </div>
             ))}
           </div>
@@ -81,8 +81,8 @@ export default function AdminDashboard() {
             <div className="space-y-2">
               {stats.charts.usageByFeature.map((u) => (
                 <div key={u.feature} className="flex items-center gap-3">
-                  <span className="text-xs w-32 truncate text-gray-600 dark:text-gray-400">{u.feature}</span>
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 overflow-hidden">
+                  <span className="text-xs w-32 truncate text-secondary">{u.feature}</span>
+                  <div className="flex-1 bg-surface-raised rounded-full h-5 overflow-hidden">
                     <div
                       className="h-full bg-warning rounded-full flex items-center justify-end pr-2"
                       style={{ width: `${Math.max(2, (u.cost / maxUsage) * 100)}%` }}
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
                       <span className="text-[10px] text-white font-medium">${u.cost.toFixed(3)}</span>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-400 w-16 text-right">{u.requests} req</span>
+                  <span className="text-xs text-muted w-16 text-right">{u.requests} req</span>
                 </div>
               ))}
             </div>
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
               <StatRow key={r.role} label={r.role} value={r.count} />
             ))
           )}
-          <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
+          <div className="pt-2 mt-2 border-t border-subtle">
             <StatRow label="Banned" value={stats.users.banned} />
           </div>
         </InfoCard>
@@ -137,20 +137,20 @@ export default function AdminDashboard() {
 
 function KpiCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub: string }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+    <div className="bg-surface rounded-lg border border-line p-4">
       <div className={`w-10 h-10 rounded-md bg-surface-raised flex items-center justify-center mb-3`}>
         <Icon className="w-5 h-5 text-secondary" />
       </div>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-      <p className="text-[10px] text-gray-400 mt-1">{sub}</p>
+      <p className="text-xs text-muted mt-0.5">{label}</p>
+      <p className="text-[10px] text-muted mt-1">{sub}</p>
     </div>
   );
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-surface rounded-lg border border-line p-5">
       <h3 className="text-sm font-semibold mb-4">{title}</h3>
       {children}
     </div>
@@ -159,7 +159,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-surface rounded-lg border border-line p-5">
       <h3 className="text-sm font-semibold mb-3">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
@@ -169,7 +169,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 function StatRow({ icon: Icon, label, value }: { icon?: typeof Users; label: string; value: number | string }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+      <span className="flex items-center gap-2 text-secondary">
         {Icon && <Icon className="w-3.5 h-3.5" />}
         {label}
       </span>
@@ -179,7 +179,7 @@ function StatRow({ icon: Icon, label, value }: { icon?: typeof Users; label: str
 }
 
 function Empty() {
-  return <p className="text-sm text-gray-400 italic py-4 text-center">No data</p>;
+  return <p className="text-sm text-muted italic py-4 text-center">No data</p>;
 }
 
 export function LoadingSpinner() {

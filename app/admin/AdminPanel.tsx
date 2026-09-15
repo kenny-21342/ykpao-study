@@ -38,7 +38,7 @@ export default function AdminPanel() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex">
+    <div className="min-h-screen bg-surface-raised text-primary flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -49,23 +49,23 @@ export default function AdminPanel() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-40 transition-transform duration-200 ${
+        className={`fixed lg:sticky top-0 left-0 h-screen w-64 bg-surface border-r border-line flex flex-col z-40 transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <div className="p-5 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 bg-accent rounded-md flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-bold text-sm">Admin Console</h1>
-              <p className="text-[10px] text-gray-500">Super Administrator</p>
+              <p className="text-[10px] text-muted">Super Administrator</p>
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="lg:hidden p-1 text-muted hover:text-secondary"
           >
             <X className="w-5 h-5" />
           </button>
@@ -82,7 +82,7 @@ export default function AdminPanel() {
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                 section === key
                   ? 'bg-surface-raised text-secondary'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  : 'text-secondary hover:bg-surface-hover'
               }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
@@ -91,10 +91,10 @@ export default function AdminPanel() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-3 border-t border-line">
           <Link
             href="/"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-secondary hover:bg-surface-hover transition-colors"
           >
             <ArrowLeft className="w-4 h-4 flex-shrink-0" />
             Back to App
@@ -105,10 +105,10 @@ export default function AdminPanel() {
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar (mobile) */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
+        <header className="lg:hidden sticky top-0 z-20 bg-surface border-b border-line px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 text-muted hover:text-secondary rounded-md hover:bg-surface-hover"
           >
             <Menu className="w-5 h-5" />
           </button>

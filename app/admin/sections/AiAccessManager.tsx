@@ -111,7 +111,7 @@ export default function AiAccessManager() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <header>
         <h1 className="text-2xl font-bold">AI Access</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-muted mt-1">
           Who may spend the platform&apos;s shared AI key instead of their own.
         </p>
       </header>
@@ -148,7 +148,7 @@ export default function AiAccessManager() {
       {/* Standing liability: everyone holding a grant right now, regardless of
           the search filter below. */}
       {data && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-surface rounded-lg border border-line p-4">
           <div className="flex items-center gap-2 mb-2">
             <KeyRound className="w-4 h-4 text-secondary" />
             <h2 className="font-semibold text-sm">
@@ -158,10 +158,10 @@ export default function AiAccessManager() {
             </h2>
           </div>
           {data.grants.length > 0 && (
-            <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+            <ul className="text-xs text-muted space-y-1">
               {data.grants.map((g) => (
                 <li key={g.userId} className="flex flex-wrap items-center gap-x-2">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                  <span className="font-medium text-secondary">
                     {g.name ?? 'Unnamed'}
                   </span>
                   <span>{g.email}</span>
@@ -183,20 +183,20 @@ export default function AiAccessManager() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="Search by name or email"
             aria-label="Search users by name or email"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
           />
         </div>
         <select
           value={grantedOnly ? 'granted' : 'all'}
           onChange={(e) => { setGrantedOnly(e.target.value === 'granted'); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+          className="px-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         >
           <option value="all">All users</option>
           <option value="granted">On the shared key</option>
@@ -207,10 +207,10 @@ export default function AiAccessManager() {
           keystroke otherwise makes the table flash. */}
       {loading && !data ? <LoadingSpinner /> : data && (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-surface rounded-lg border border-line overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 text-xs uppercase">
+                <thead className="bg-surface-raised dark:bg-gray-800/50 text-muted text-xs uppercase">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">User</th>
                     <th className="text-left px-4 py-3 font-medium">Pays for AI with</th>
@@ -218,9 +218,9 @@ export default function AiAccessManager() {
                     <th className="text-right px-4 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                <tbody className="divide-y divide-subtle">
                   {data.users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                    <tr key={u.id} className="hover:bg-surface-hover dark:hover:bg-gray-800/30">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar name={u.name} image={u.image} />
@@ -230,26 +230,26 @@ export default function AiAccessManager() {
                               {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-secondary" />}
                               {u.banned && <span className="text-[10px] text-red-600 font-medium">BANNED</span>}
                             </p>
-                            <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                            <p className="text-xs text-muted truncate">{u.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <PaysWith user={u} />
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
+                      <td className="px-4 py-3 text-xs text-muted">
                         {u.sharedKeyAccess ? (
                           <>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-medium">
                               <Wallet className="w-3 h-3" /> Billed to you
                             </span>
-                            <span className="block mt-1 text-gray-400">
+                            <span className="block mt-1 text-muted">
                               {u.grantedAt ? new Date(u.grantedAt).toLocaleDateString() : 'date unknown'}
                               {u.grantedBy ? ` · by ${u.grantedBy}` : ''}
                             </span>
                           </>
                         ) : (
-                          <span className="text-gray-400">None</span>
+                          <span className="text-muted">None</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -281,7 +281,7 @@ export default function AiAccessManager() {
                   ))}
                   {data.users.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-400">
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted">
                         No users match this search.
                       </td>
                     </tr>
@@ -293,7 +293,7 @@ export default function AiAccessManager() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               {data.users.length} of {data.total} users · Page {data.page} of {data.totalPages}
             </p>
             <div className="flex gap-1">
@@ -301,7 +301,7 @@ export default function AiAccessManager() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Previous page"
-                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -309,7 +309,7 @@ export default function AiAccessManager() {
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
                 aria-label="Next page"
-                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -327,7 +327,7 @@ export default function AiAccessManager() {
           aria-modal="true"
           aria-labelledby="grant-confirm-title"
         >
-          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+          <div className="bg-surface rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="grant-confirm-title" className="font-bold flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-amber-600" />
@@ -336,12 +336,12 @@ export default function AiAccessManager() {
               <button
                 onClick={() => setConfirming(null)}
                 aria-label="Cancel"
-                className="p-1 text-gray-400 hover:text-gray-700"
+                className="p-1 text-muted hover:text-secondary"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-secondary">
               <span className="font-medium">{confirming.name ?? 'This account'}</span>{' '}
               ({confirming.email}) will be able to use the platform&apos;s shared AI key.
               Every request they make — tutoring, hints, grading, mock exams — is charged to
@@ -356,7 +356,7 @@ export default function AiAccessManager() {
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => setConfirming(null)}
-                className="flex-1 py-2.5 rounded-md border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex-1 py-2.5 rounded-md border border-line text-sm font-medium hover:bg-surface-hover"
               >
                 Cancel
               </button>
@@ -389,7 +389,7 @@ function PaysWith({ user }: { user: AiAccessUser }) {
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 font-medium">
           <KeyRound className="w-3 h-3" /> Their own key
         </span>
-        {user.textModel && <span className="block mt-1 text-gray-400 truncate">{user.textModel}</span>}
+        {user.textModel && <span className="block mt-1 text-muted truncate">{user.textModel}</span>}
       </div>
     );
   }
@@ -400,7 +400,7 @@ function PaysWith({ user }: { user: AiAccessUser }) {
       </span>
     );
   }
-  return <span className="text-xs text-gray-400">AI switched off</span>;
+  return <span className="text-xs text-muted">AI switched off</span>;
 }
 
 function Avatar({ name, image }: { name: string | null; image: string | null }) {

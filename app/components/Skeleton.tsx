@@ -16,7 +16,7 @@
  * exactly that media query.
  */
 
-const BASE = 'motion-safe:animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700';
+const BASE = 'motion-safe:animate-pulse rounded-sm bg-surface-active';
 
 /** One grey bar. Give it a width and a height in the caller's own grid. */
 export function Skeleton({ className = '' }: { className?: string }) {
@@ -52,7 +52,7 @@ export function SkeletonCard({ lines = 2, className = '' }: { lines?: number; cl
   return (
     <div
       aria-hidden="true"
-      className={`rounded-lg border border-gray-200 p-4 dark:border-gray-700 ${className}`}
+      className={`rounded-lg border border-line p-4 ${className}`}
     >
       <div className={`${BASE} h-4 w-1/3`} />
       <SkeletonText lines={lines} className="mt-3" />

@@ -74,7 +74,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
 
   if (!data) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-500">
+      <div className="flex h-64 items-center justify-center text-sm text-muted">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading paper…
       </div>
@@ -89,15 +89,15 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         <div>
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-green-600 dark:text-gray-400"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-green-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Past papers
           </Link>
-          <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-xl font-bold text-primary">
             {data.instance.subjectName} · {data.instance.label}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted">
             {data.curriculum.label} · {data.instance.year} · {data.instance.sessionLabel}
           </p>
         </div>
@@ -114,7 +114,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
       {/* One tab per document in this sitting: paper, audio, mark scheme,
           inserts. A listening sitting carries four tracks, all of docType
           `au`, so tabs are labelled by track number rather than by type. */}
-      <div className="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap gap-1 border-b border-line">
         {data.instance.documents.map((document) => (
           <button
             key={document.id}
@@ -122,7 +122,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
             className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               document.id === active.id
                 ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'border-transparent text-muted hover:text-secondary'
             }`}
           >
             {documentLabel(document)}
@@ -130,14 +130,14 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         ))}
       </div>
 
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="rounded-lg border border-line bg-surface overflow-hidden">
         {active.docType === 'au' ? (
           <div className="space-y-3 p-6">
-            <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <div className="flex items-center gap-2 text-primary">
               <Music className="h-5 w-5 text-green-600" />
               <h2 className="font-semibold">{documentLabel(active)}</h2>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-muted">
               The recording for this listening paper. Play it alongside the question paper and
               score booklet, which are the other tabs above.
             </p>

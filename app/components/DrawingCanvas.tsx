@@ -511,9 +511,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       <div className={`drawing-canvas-wrapper ${className}`}>
         {confirmDialog}
         {/* Toolbar */}
-        <div className="flex items-center gap-1 mb-2 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 flex-wrap">
+        <div className="flex items-center gap-1 mb-2 p-1.5 bg-surface-raised rounded-md border border-line flex-wrap">
           {/* Tool selection */}
-          <div className="flex items-center gap-0.5 bg-white dark:bg-gray-900 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-0.5 bg-surface rounded-md p-0.5 border border-line">
             <ToolButton active={tool === 'pen'} onClick={() => setTool('pen')} title="Pen">
               <Pencil className="w-4 h-4" />
             </ToolButton>
@@ -531,14 +531,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           <div className="relative">
             <button
               onClick={() => setShowColorPicker((s) => !s)}
-              className="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-700 flex items-center justify-center"
+              className="w-8 h-8 rounded-md border border-line flex items-center justify-center"
               title="Color" aria-label="Color"
               style={{ backgroundColor: tool === 'eraser' ? '#fff' : color }}
             >
-              {tool === 'eraser' && <span className="text-[10px] text-gray-500">Erase</span>}
+              {tool === 'eraser' && <span className="text-[10px] text-muted">Erase</span>}
             </button>
             {showColorPicker && (
-              <div className="absolute top-9 left-0 z-10 bg-white dark:bg-gray-800 rounded-md shadow-overlay border border-gray-200 dark:border-gray-700 p-2 grid grid-cols-4 gap-1.5">
+              <div className="absolute top-9 left-0 z-10 bg-surface rounded-md shadow-overlay border border-line p-2 grid grid-cols-4 gap-1.5">
                 {COLORS.map((c) => (
                   <button
                     key={c}
@@ -562,7 +562,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                   key={s}
                   onClick={() => setPenSize(s)}
                   className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                    penSize === s ? 'bg-green-100 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    penSize === s ? 'bg-green-100 dark:bg-green-900/30' : 'hover:bg-surface-hover'
                   }`}
                 >
                   <span
@@ -634,7 +634,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
-            className={`border border-gray-200 dark:border-gray-700 rounded-md bg-white touch-none ${
+            className={`border border-line rounded-md bg-surface touch-none ${
               tool === 'pen' ? 'cursor-crosshair' : tool === 'eraser' ? 'cursor-cell' : 'cursor-text'
             }`}
             style={{ width, height }}
@@ -647,7 +647,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               onChange={(e) => updateTextBox(tb.id, e.target.value)}
               onBlur={() => commitTextBox(tb.id, tb.text)}
               placeholder="e.g. Force, angle, or x = 3"
-              className="absolute bg-transparent border border-dashed border-gray-300 rounded-sm p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
+              className="absolute bg-transparent border border-dashed border-strong rounded-sm p-1 resize-none outline-none focus:border-green-500 focus:bg-white/50"
               style={{
                 left: `${tb.x}px`,
                 top: `${tb.y}px`,
@@ -687,7 +687,7 @@ function ToolButton({
       className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
         active
           ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-          : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+          : 'text-muted hover:bg-surface-hover'
       }`}
     >
       {children}
@@ -696,7 +696,7 @@ function ToolButton({
 }
 
 function Divider() {
-  return <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-0.5" />;
+  return <div className="w-px h-6 bg-surface-active mx-0.5" />;
 }
 
 export default DrawingCanvas;

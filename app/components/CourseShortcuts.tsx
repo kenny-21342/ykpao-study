@@ -38,7 +38,7 @@ type Course = {
 };
 
 const CARD =
-  'group flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30';
+  'group flex flex-col gap-3 rounded-lg border border-line bg-surface-raised p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30';
 
 /** The browse cascade reads `curriculum` as `board|qualification`. */
 function papersHref(scope: Scope | undefined): string {
@@ -80,7 +80,7 @@ export default function CourseShortcuts({
     return (
       <SkeletonRegion
         label="Loading your courses"
-        className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6"
+        className="rounded-lg border border-line bg-surface p-5 md:p-6"
       >
         <Skeleton className="h-5 w-40" />
         <Skeleton className="mt-2 h-3 w-64" />
@@ -94,11 +94,11 @@ export default function CourseShortcuts({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6">
+    <section className="rounded-lg border border-line bg-surface p-5 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Your courses</h2>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <h2 className="text-lg font-bold text-primary">Your courses</h2>
+          <p className="mt-1 text-xs text-muted">
             {courses.length > 0
               ? 'Jump straight into a subject.'
               : 'Pick your subjects once and they will be waiting here.'}
@@ -106,7 +106,7 @@ export default function CourseShortcuts({
         </div>
         <Link
           href="/account"
-          className="inline-flex items-center gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:border-gray-700 dark:text-gray-300 dark:hover:border-emerald-500/50"
+          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:hover:border-emerald-500/50"
         >
           <Settings2 className="h-3.5 w-3.5" />
           {courses.length > 0 ? 'Edit courses' : 'Choose courses'}
@@ -116,7 +116,7 @@ export default function CourseShortcuts({
       {courses.length === 0 ? (
         <Link
           href="/account"
-          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 py-10 text-gray-500 transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:border-gray-800 dark:bg-gray-950/40 dark:text-gray-400"
+          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-10 text-muted transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:bg-gray-950/40"
         >
           <Plus className="h-8 w-8 opacity-40" />
           <p className="mt-3 text-sm font-medium">No subjects yet</p>
@@ -139,10 +139,10 @@ export default function CourseShortcuts({
                       It is always set, so the old `subject || name` never once
                       reached the name.
                     */}
-                    <p className="truncate font-semibold text-gray-900 dark:text-gray-100" title={course.name || course.subject}>
+                    <p className="truncate font-semibold text-primary" title={course.name || course.subject}>
                       {course.name || course.subject}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-0.5 truncate text-xs text-muted">
                       {course.level}
                       {course.targetGrade ? ` · target ${course.targetGrade}` : ''}
                     </p>
@@ -155,22 +155,22 @@ export default function CourseShortcuts({
                 <div className="flex flex-wrap gap-1.5">
                   <Link
                     href={papersHref(scope)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
                   >
                     <Library className="h-3.5 w-3.5" />
                     Past papers
-                    <ArrowRight className="h-3 w-3 text-gray-400" />
+                    <ArrowRight className="h-3 w-3 text-muted" />
                   </Link>
                   <button
                     onClick={onOpenPractice}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Practice
                   </button>
                   <button
                     onClick={onOpenMockExams}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:bg-gray-900 dark:text-gray-300"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-emerald-700"
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Mock exam

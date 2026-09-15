@@ -152,7 +152,7 @@ export function SidebarScrim({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
+      className="fixed inset-0 z-40 bg-surface/50 backdrop-blur-sm lg:hidden"
       onClick={onClose}
       aria-hidden="true"
     />
@@ -212,7 +212,7 @@ export default function AppSidebar({
     `w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
       isActive
         ? 'bg-accent text-white'
-        : 'text-gray-700 hover:bg-gray-100'
+        : 'text-secondary hover:bg-surface-hover'
     }`;
   const labelClass = collapsed ? 'sr-only' : '';
 
@@ -248,7 +248,7 @@ export default function AppSidebar({
           overlay to escape from, so it is hidden from `lg` up. */}
       <button
         onClick={onCloseMobile}
-        className="absolute right-3 top-3 rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+        className="absolute right-3 top-3 rounded-md p-2 text-muted hover:bg-surface-hover lg:hidden"
         aria-label="Close navigation"
       >
         <X className="h-5 w-5" />
@@ -283,14 +283,14 @@ export default function AppSidebar({
           type="button"
           onClick={() => setSearchOpen(true)}
           title="Search (⌘K)" aria-label="Search (⌘K)"
-          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800`}
+          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-lg text-secondary hover:bg-surface-hover transition-all duration-200`}
         >
           <span className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
             <Search className="w-5 h-5" />
             <span className={labelClass}>Search</span>
           </span>
           {!collapsed && (
-            <span className="rounded-md border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:border-gray-700">
+            <span className="rounded-md border border-line px-1.5 py-0.5 text-[10px] font-medium text-muted">
               ⌘K
             </span>
           )}
@@ -323,11 +323,11 @@ export default function AppSidebar({
           // A placeholder, not the signed-out buttons: offering "Sign In" to
           // someone who is already signed in is the whole bug.
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3 px-3'} py-3`}>
-            <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+            <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-lg bg-surface-active" />
             {!collapsed && (
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-24 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
-                <div className="h-2.5 w-32 animate-pulse rounded-sm bg-gray-100 dark:bg-gray-800" />
+                <div className="h-3 w-24 animate-pulse rounded-sm bg-surface-active" />
+                <div className="h-2.5 w-32 animate-pulse rounded-sm bg-surface-raised" />
               </div>
             )}
           </div>
@@ -336,7 +336,7 @@ export default function AppSidebar({
             <button
               onClick={() => setAccountOpen(!accountOpen)}
               title={user?.name ?? 'Account'} aria-label={user?.name ?? 'Account'}
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3 py-3'} rounded-lg hover:bg-surface-hover transition-all duration-200 focus:outline-none`}
             >
               <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
                 {user?.image ? (
@@ -349,10 +349,10 @@ export default function AppSidebar({
               {!collapsed && (
                 <>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student'}</p>
-                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                    <p className="text-sm font-semibold text-primary truncate">{user?.name ?? 'Student'}</p>
+                    <p className="text-xs text-muted truncate">{user?.email}</p>
                   </div>
-                  <Settings className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                  <Settings className="w-4 h-4 flex-shrink-0 text-muted" />
                 </>
               )}
             </button>
@@ -360,22 +360,22 @@ export default function AppSidebar({
             {accountOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
-                <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-overlay py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{user?.name ?? 'Student Account'}</p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
+                <div className={`absolute bottom-full mb-2 bg-surface border border-line rounded-lg shadow-overlay py-2 z-50 ${collapsed ? 'left-0 w-72' : 'left-0 right-0'}`}>
+                  <div className="px-4 py-3 border-b border-subtle">
+                    <p className="text-sm font-semibold text-primary truncate">{user?.name ?? 'Student Account'}</p>
+                    <p className="text-xs text-muted truncate mt-0.5">{user?.email}</p>
                   </div>
                   <div className="py-1">
                     <a
                       href="/account"
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-secondary hover:bg-surface-hover transition-colors"
                     >
                       <User className="w-4 h-4" />
                       <span>Account Settings</span>
                     </a>
                     <a
                       href="/usage"
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-secondary hover:bg-surface-hover transition-colors"
                     >
                       <BarChart3 className="w-4 h-4" />
                       <span>Usage &amp; API Credits</span>
@@ -390,7 +390,7 @@ export default function AppSidebar({
                       </a>
                     )}
                   </div>
-                  <div className="border-t border-gray-100 mt-1 pt-1">
+                  <div className="border-t border-subtle mt-1 pt-1">
                     <button
                       onClick={async () => {
                         await signOut({
@@ -422,7 +422,7 @@ export default function AppSidebar({
             <Link
               href="/auth/signup"
               title="Create Account" aria-label="Create Account"
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-200`}
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-center space-x-2 px-4'} py-3 text-sm font-medium text-secondary bg-surface border border-line rounded-lg hover:bg-surface-hover transition-all duration-200`}
             >
               <User className="w-4 h-4" />
               <span className={collapsed ? 'sr-only' : ''}>Create Account</span>

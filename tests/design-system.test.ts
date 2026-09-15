@@ -253,3 +253,45 @@ test('the accuracy scale is defined once, in tokens', async () => {
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// 10. The neutral ramp is tokens, not a light value plus a dark patch
+// ---------------------------------------------------------------------------
+
+test('no raw grey utility survives outside the deliberate translucent set', async () => {
+  // 3,382 grey utilities, almost all written as a light/dark pair, which is
+  // what made dark mode a patch rather than a theme. They are now ~20 tokens.
+  //
+  // Two things are deliberately still raw, and both are theme-independent on
+  // purpose: `text-white` on a coloured surface (an accent button's label is
+  // white in both themes) and translucent white glass over the sidebar blur
+  // and the auth hero image.
+  const RAW = /(?<![\w:./-])(?:[a-z-]+:)*(?:bg|text|border|divide)-(?:gray-\d+|white)(?![\w./-])/g;
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(RAW)) {
+      if (/(?:^|:)text-white$/.test(m[0])) continue;
+      offenders.push(`${path.relative(ROOT, file)}: ${m[0]}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `raw grey reintroduced:\n${offenders.join('\n')}`);
+});
+
+test('no dark: variant of a themed token', async () => {
+  // A token already switches with the theme, so `dark:bg-surface` is at best
+  // noise and at worst a claim that it does not — which is how the old
+  // light-value-plus-dark-patch habit would grow back.
+  const TOKENS = 'surface|surface-raised|surface-hover|surface-active|surface-inverse'
+    + '|canvas|line|subtle|strong|primary|secondary|muted|inverse|accent|accent-text'
+    + '|accent-subtle|warning|warning-subtle|danger|danger-subtle';
+  const pattern = new RegExp(`\\bdark:(?:[a-z-]+:)*(?:bg|text|border|divide)-(?:${TOKENS})(?![\\w-])`, 'g');
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(pattern)) {
+      offenders.push(`${path.relative(ROOT, file)}: ${m[0]}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `dark: variant of a themed token:\n${offenders.join('\n')}`);
+});

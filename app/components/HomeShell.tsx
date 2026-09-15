@@ -627,7 +627,7 @@ export default function SmartEduPlatform() {
     <TabContextSync activeTab={activeTab} />
     {/* h-dvh, not h-screen: on mobile browsers h-screen ignores the dynamic
         toolbars and the bottom of the app gets clipped. */}
-    <div className="relative isolate flex h-dvh text-gray-900 dark:text-gray-100 transition-colors overflow-hidden">
+    <div className="relative isolate flex h-dvh text-primary transition-colors overflow-hidden">
       {/* Background image layer (user-customizable, behind the glass shell) */}
       {visibleBgImage ? (
         <>
@@ -664,29 +664,29 @@ export default function SmartEduPlatform() {
             {/* Mobile: open the navigation drawer. */}
             <button
               onClick={() => openMobile()}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:hidden"
+              className="p-2 hover:bg-surface-hover rounded-md transition-colors lg:hidden"
               aria-label="Open navigation"
               aria-expanded={isMobileNavOpen}
             >
-              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Menu className="w-5 h-5 text-secondary" />
             </button>
 
             {/* Desktop: collapse the sidebar to icons. */}
             <button
               onClick={toggleCollapsed}
-              className="hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors lg:block"
+              className="hidden p-2 hover:bg-surface-hover rounded-md transition-colors lg:block"
               aria-label={isMainSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               title={isMainSidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
             >
               {isMainSidebarCollapsed ? (
-                <PanelLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <PanelLeft className="w-5 h-5 text-secondary" />
               ) : (
-                <PanelLeftClose className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <PanelLeftClose className="w-5 h-5 text-secondary" />
               )}
             </button>
 
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-xl font-bold text-primary">
                 {activeTab === 'dashboard' && 'Dashboard'}
                 {activeTab === 'study' && 'Study'}
                 {activeTab === 'practice' && 'Practice'}
@@ -702,7 +702,7 @@ export default function SmartEduPlatform() {
               className={`p-2.5 rounded-lg transition-all duration-200 ${
                 isAIAssistantOpen
                   ? 'bg-accent text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'text-secondary hover:bg-surface-hover'
               }`}
               title="AI Tutor" aria-label="AI Tutor"
             >
@@ -722,14 +722,14 @@ export default function SmartEduPlatform() {
             <div className="mx-auto max-w-7xl space-y-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  <h1 className="text-3xl font-bold text-primary">
                     {isSessionLoading
                       ? 'Welcome back!'
                       : `Welcome back, ${user?.name?.split(' ')[0] ?? 'Student'}!`}
                   </h1>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">One next step, then the next.</p>
+                  <p className="mt-1 text-sm text-secondary">One next step, then the next.</p>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                <div className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-secondary">
                   <Calendar className="h-4 w-4" />
                   Today
                 </div>
@@ -755,34 +755,34 @@ export default function SmartEduPlatform() {
               {stats?.nudges && stats.nudges.length > 0 && (
                 <section className="flex flex-wrap gap-2" aria-label="Study updates">
                   {stats.nudges.map((nudge) => (
-                    <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openPracticeOrPapers()} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
+                    <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openPracticeOrPapers()} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line bg-surface px-3 text-xs font-semibold text-secondary hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
                       {nudge.type === 'reviews' ? <Brain className="h-4 w-4 text-emerald-600" /> : nudge.type === 'stalled' ? <Calendar className="h-4 w-4 text-amber-600" /> : <Database className="h-4 w-4 text-secondary" />}
                       {nudge.label}
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
+                      <ArrowRight className="h-3.5 w-3.5 text-muted" />
                     </button>
                   ))}
                 </section>
               )}
 
-              <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6">
+              <section className="rounded-lg border border-line bg-surface p-5 md:p-6">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-2xl">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Next step</p>
-                    <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Next step</p>
+                    <h2 className="mt-2 text-2xl font-bold text-primary">
                       {isSessionLoading ? 'Getting your dashboard ready…' : dashboardFocus.title}
                     </h2>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-2 text-sm text-secondary">
                       {isSessionLoading ? 'One moment.' : dashboardFocus.body}
                     </p>
                     {isAuthenticated && learningOverview && (
-                      <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                        <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 dark:border-gray-700 dark:bg-gray-800">
+                      <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-muted">
+                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
                           {learningOverview.summary.tasksDue} tasks due
                         </span>
-                        <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 dark:border-gray-700 dark:bg-gray-800">
+                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
                           {learningOverview.dueReviews} reviews due
                         </span>
-                        <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 dark:border-gray-700 dark:bg-gray-800">
+                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
                           {learningOverview.summary.topicsMastered} mastered
                         </span>
                       </div>
@@ -816,13 +816,13 @@ export default function SmartEduPlatform() {
                       <button
                         key={shortcut.label}
                         onClick={shortcut.action}
-                        className="inline-flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-700 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
+                        className="inline-flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left text-sm font-semibold text-secondary transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
                       >
                         <span className="inline-flex items-center gap-2">
                           <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                           {shortcut.label}
                         </span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <ArrowRight className="h-4 w-4 text-muted" />
                       </button>
                     );
                   })}
@@ -843,12 +843,12 @@ export default function SmartEduPlatform() {
                   return (
                     <div
                       key={card.label}
-                      className="rounded-lg border border-gray-200 bg-white p-5 transition-shadow dark:border-gray-800 dark:bg-gray-900"
+                      className="rounded-lg border border-line bg-surface p-5 transition-shadow"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{card.label}</p>
-                          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
+                          <p className="text-sm font-medium text-secondary">{card.label}</p>
+                          <p className="mt-2 text-3xl font-bold text-primary">{card.value}</p>
                           <p className={`mt-2 flex items-center text-xs ${card.helperClass ?? tone.helper}`}>
                             {card.helper}
                           </p>
@@ -870,7 +870,7 @@ export default function SmartEduPlatform() {
               <section aria-labelledby="weak-topics-heading">
                 <h2
                   id="weak-topics-heading"
-                  className="mb-3 text-lg font-bold text-gray-900 dark:text-gray-100"
+                  className="mb-3 text-lg font-bold text-primary"
                 >
                   Where you are losing marks
                 </h2>
@@ -878,11 +878,11 @@ export default function SmartEduPlatform() {
               </section>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-                <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+                <section className="rounded-lg border border-line bg-surface p-6">
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent activity</h2>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Keep the streak moving from here.</p>
+                      <h2 className="text-lg font-bold text-primary">Recent activity</h2>
+                      <p className="mt-1 text-xs text-muted">Keep the streak moving from here.</p>
                     </div>
                     <button
                       onClick={openPracticeOrPapers}
@@ -894,7 +894,7 @@ export default function SmartEduPlatform() {
                   </div>
                   <div className="space-y-3">
                     {recentActivity.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 py-12 text-gray-500 dark:border-gray-800 dark:bg-gray-950/40">
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-12 text-muted dark:bg-gray-950/40">
                         <BookMarked className="h-10 w-10 opacity-40" />
                         <p className="mt-3 text-sm font-medium">No activity yet</p>
                         <p className="mt-1 text-xs">{bankIsPreview ? 'Open a past paper to get started.' : 'Answer a few questions to fill this in.'}</p>
@@ -904,18 +904,18 @@ export default function SmartEduPlatform() {
                         <button
                           key={idx}
                           onClick={() => openRoute({ tab: 'practice', practiceMode: 'browse' })}
-                          className="flex w-full items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
+                          className="flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface-raised px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
                         >
                           <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-raised text-secondary">
                               <BookMarked className="h-5 w-5" />
                             </div>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{a.subject}</p>
-                              <p className="truncate text-sm text-gray-600 dark:text-gray-400">{a.questions} question{a.questions === 1 ? '' : 's'}{a.accuracy === null ? ' · not marked yet' : ` · ${a.accuracy}% accuracy`}</p>
+                              <p className="truncate font-semibold text-primary">{a.subject}</p>
+                              <p className="truncate text-sm text-secondary">{a.questions} question{a.questions === 1 ? '' : 's'}{a.accuracy === null ? ' · not marked yet' : ` · ${a.accuracy}% accuracy`}</p>
                             </div>
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">{a.timeLabel}</span>
+                          <span className="text-xs text-muted">{a.timeLabel}</span>
                         </button>
                       ))
                     )}
@@ -924,8 +924,8 @@ export default function SmartEduPlatform() {
 
                 <div className="space-y-6">
                   <DailyChallenge />
-                  <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Study shortcuts</h2>
+                  <section className="rounded-lg border border-line bg-surface p-5">
+                    <h2 className="text-lg font-bold text-primary">Study shortcuts</h2>
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       {[
                         { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
@@ -938,13 +938,13 @@ export default function SmartEduPlatform() {
                           <button
                             key={item.label}
                             onClick={item.action}
-                            className="inline-flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-left text-sm font-semibold text-gray-700 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
+                            className="inline-flex items-center justify-between gap-2 rounded-lg border border-line bg-surface-raised px-3 py-3 text-left text-sm font-semibold text-secondary transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
                           >
                             <span className="inline-flex items-center gap-2">
                               <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                               {item.label}
                             </span>
-                            <ArrowRight className="h-4 w-4 text-gray-400" />
+                            <ArrowRight className="h-4 w-4 text-muted" />
                           </button>
                         );
                       })}

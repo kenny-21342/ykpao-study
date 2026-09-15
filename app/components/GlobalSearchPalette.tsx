@@ -102,25 +102,25 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 px-4 pt-24" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-lg bg-white shadow-overlay dark:bg-gray-900"
+        className="w-full max-w-xl rounded-lg bg-surface shadow-overlay"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-          <Search className="h-5 w-5 flex-shrink-0 text-gray-400" />
+        <div className="flex items-center gap-3 border-b border-subtle px-4 py-3">
+          <Search className="h-5 w-5 flex-shrink-0 text-muted" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search notes, questions, resources, discussions…"
-            className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
+            className="flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-muted"
           />
-          {loading && <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-gray-400" />}
+          {loading && <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-muted" />}
           <button
             type="button"
             onClick={onClose}
             aria-label="Close search"
-            className="flex-shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="flex-shrink-0 rounded-md p-1 text-muted hover:bg-surface-hover"
           >
             <X className="h-4 w-4" />
           </button>
@@ -129,26 +129,26 @@ export default function GlobalSearchPalette({ open, onClose }: { open: boolean; 
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {error && <p className="px-3 py-4 text-sm text-red-500">{error}</p>}
           {!error && !loading && query.trim().length >= 2 && results.length === 0 && (
-            <p className="px-3 py-4 text-sm text-gray-500">No results for &ldquo;{query.trim()}&rdquo;.</p>
+            <p className="px-3 py-4 text-sm text-muted">No results for &ldquo;{query.trim()}&rdquo;.</p>
           )}
           {!error && query.trim().length < 2 && (
-            <p className="px-3 py-4 text-sm text-gray-400">Type at least 2 characters to search.</p>
+            <p className="px-3 py-4 text-sm text-muted">Type at least 2 characters to search.</p>
           )}
           {results.map((result) => (
             <a
               key={result.id}
               href={result.url}
               onClick={onClose}
-              className="block rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="block rounded-lg px-3 py-2.5 hover:bg-surface-hover"
             >
               <div className="flex items-center gap-2">
-                <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                <span className="rounded-md bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
                   {TYPE_LABEL[result.type]}
                 </span>
-                <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{result.title}</span>
+                <span className="truncate text-sm font-medium text-primary">{result.title}</span>
               </div>
               {result.snippet && (
-                <p className="mt-0.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{plainTextPreview(result.snippet)}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted">{plainTextPreview(result.snippet)}</p>
               )}
             </a>
           ))}

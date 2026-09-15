@@ -108,10 +108,10 @@ export default function PWAInstall() {
   // Android/Chrome install prompt.
   if (deferred) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 p-4 animate-in slide-in-from-bottom">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-surface rounded-lg shadow-overlay border border-line p-4 animate-in slide-in-from-bottom">
         <button
           onClick={dismiss}
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute top-2 right-2 text-muted hover:text-secondary"
           aria-label="Dismiss"
         >
           <X className="w-4 h-4" />
@@ -121,8 +121,8 @@ export default function PWAInstall() {
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Install YKPao Study</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm font-bold text-primary">Install YKPao Study</p>
+            <p className="text-xs text-muted mt-0.5">
               Add to your home screen for offline access to notes and review cards.
             </p>
             <button
@@ -140,10 +140,10 @@ export default function PWAInstall() {
   // iOS hint (no programmatic install, so just instructions).
   if (showIOSHint) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white dark:bg-gray-800 rounded-lg shadow-overlay border border-gray-200 dark:border-gray-700 p-4">
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-surface rounded-lg shadow-overlay border border-line p-4">
         <button
           onClick={dismiss}
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute top-2 right-2 text-muted hover:text-secondary"
           aria-label="Dismiss"
         >
           <X className="w-4 h-4" />
@@ -153,8 +153,8 @@ export default function PWAInstall() {
             <Download className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Install YKPao Study</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm font-bold text-primary">Install YKPao Study</p>
+            <p className="text-xs text-muted mt-1">
               Tap <Share className="inline w-3 h-3" /> then &ldquo;Add to Home Screen&rdquo;{' '}
               <Plus className="inline w-3 h-3" /> to study offline.
             </p>

@@ -140,7 +140,7 @@ export default function SignupPage() {
           sizes="100vw"
           className="fixed inset-0 object-cover"
         />
-        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
           <div className="w-full">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
@@ -149,7 +149,7 @@ export default function SignupPage() {
               <h1 className="text-3xl font-bold text-primary mb-2">
                 Check your inbox
               </h1>
-              <p className="text-gray-600">One last step before you can sign in.</p>
+              <p className="text-secondary">One last step before you can sign in.</p>
             </div>
 
             {created.emailSent ? (
@@ -173,7 +173,7 @@ export default function SignupPage() {
               Send another link
             </Link>
 
-            <p className="mt-6 text-sm text-gray-600">
+            <p className="mt-6 text-sm text-secondary">
               Already confirmed?{' '}
               <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-700">
                 Sign in
@@ -201,7 +201,7 @@ export default function SignupPage() {
       />
 
       {/* Right-edge rectangular form panel. */}
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-white flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}
@@ -212,22 +212,22 @@ export default function SignupPage() {
             <h1 className="text-3xl font-bold text-primary mb-2">
               Create Account
             </h1>
-            <p className="text-gray-600">Start your learning journey today</p>
+            <p className="text-secondary">Start your learning journey today</p>
           </div>
 
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Full Name
               </label>
               <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="e.g. Alex Chen"
                   required
                 />
@@ -235,16 +235,16 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-strong rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder="student@example.com"
                   required
                 />
@@ -252,11 +252,11 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="password"
                   value={formData.password}
@@ -265,14 +265,14 @@ export default function SignupPage() {
                   aria-describedby="password-rules"
                   aria-invalid={touched.password && Boolean(passwordProblem)}
                   className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                    touched.password && passwordProblem ? 'border-red-400' : 'border-gray-300'
+                    touched.password && passwordProblem ? 'border-red-400' : 'border-strong'
                   }`}
                   placeholder="••••••••"
                   required
                 />
               </div>
               {/* State the rule up front instead of only rejecting after submit. */}
-              <p id="password-rules" className="mt-2 text-xs text-gray-500">
+              <p id="password-rules" className="mt-2 text-xs text-muted">
                 At least {MIN_PASSWORD_LENGTH} characters. Mixing letters, numbers,
                 and symbols makes it stronger.
               </p>
@@ -286,17 +286,17 @@ export default function SignupPage() {
                     <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'medium' || passwordStrength === 'strong' ? passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent' : 'bg-subtle'}`} />
                     <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'strong' ? 'bg-accent' : 'bg-subtle'}`} />
                   </div>
-                  <p className="mt-1 text-xs text-gray-500 capitalize">{passwordStrength} password</p>
+                  <p className="mt-1 text-xs text-muted capitalize">{passwordStrength} password</p>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Confirm Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="password"
                   value={formData.confirmPassword}
@@ -304,7 +304,7 @@ export default function SignupPage() {
                   onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
                   aria-invalid={touched.confirmPassword && Boolean(confirmProblem)}
                   className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                    touched.confirmPassword && confirmProblem ? 'border-red-400' : 'border-gray-300'
+                    touched.confirmPassword && confirmProblem ? 'border-red-400' : 'border-strong'
                   }`}
                   placeholder="••••••••"
                   required
@@ -348,10 +348,10 @@ export default function SignupPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-line"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Or continue with</span>
+                <span className="px-4 bg-surface text-muted">Or continue with</span>
               </div>
             </div>
 
@@ -359,7 +359,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="w-full py-3 border-2 border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-3 group"
+                className="w-full py-3 border-2 border-line rounded-lg font-medium hover:bg-surface-hover transition-all flex items-center justify-center gap-3 group"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -367,14 +367,14 @@ export default function SignupPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className="text-gray-700 group-hover:text-gray-900">Continue with Google</span>
+                <span className="text-secondary group-hover:text-primary">Continue with Google</span>
               </button>
             </div>
           </div>
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-secondary">
               Already have an account?{' '}
               <Link href="/auth/login" className="text-green-600 font-semibold hover:text-green-700 transition-colors">
                 Sign In
@@ -383,14 +383,14 @@ export default function SignupPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 text-center text-xs text-gray-500">
+          <div className="mt-8 text-center text-xs text-muted">
             <p>
               By creating an account, you agree to our{' '}
-              <Link href="/terms" className="underline hover:text-gray-700">
+              <Link href="/terms" className="underline hover:text-secondary">
                 Terms of Use
               </Link>{' '}
               and{' '}
-              <Link href="/privacy" className="underline hover:text-gray-700">
+              <Link href="/privacy" className="underline hover:text-secondary">
                 Privacy Notice
               </Link>
               .

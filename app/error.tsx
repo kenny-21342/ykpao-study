@@ -31,15 +31,15 @@ export default function AppError({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-lg border border-line bg-surface p-8 text-center">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
           <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
         </div>
 
-        <h1 className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="mb-2 text-xl font-bold text-primary">
           Something went wrong
         </h1>
-        <p className="mb-6 text-sm leading-6 text-gray-600 dark:text-gray-400">
+        <p className="mb-6 text-sm leading-6 text-secondary">
           This page didn&apos;t load properly. Your work is saved — trying again
           usually fixes it.
         </p>
@@ -54,14 +54,14 @@ export default function AppError({
           </button>
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 px-5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-strong px-5 text-sm font-semibold text-secondary transition-colors hover:bg-surface-hover"
           >
             Back to dashboard
           </Link>
         </div>
 
         {error.digest && (
-          <p className="mt-6 text-[11px] text-gray-400 dark:text-gray-600">
+          <p className="mt-6 text-[11px] text-muted">
             Reference: {error.digest}
           </p>
         )}

@@ -44,6 +44,13 @@
   --text-muted:     #8A8A83;
   --text-inverse:   #FFFFFF;
 
+  /* The high-contrast surface: primary confirm buttons and selected pills,
+     written everywhere as `bg-gray-900 dark:bg-white`. It is the one surface
+     that flips with the theme rather than shifting, and --text-inverse is
+     already its exact foreground in both. */
+  --surface-inverse:       #1A1A19;
+  --surface-inverse-hover: #333330;
+
   /* One accent, one hue. Deeper than the old green-500/emerald-500 pair,
      which were two different hues doing one job. White on this is 4.6:1. */
   --accent:         #1A7F4B;
@@ -105,6 +112,9 @@
   --text-muted:     #77776F;
   --text-inverse:   #0C0C0B;
 
+  --surface-inverse:       #F5F5F3;
+  --surface-inverse-hover: #E2E2DF;
+
   /* Same family, lifted for the dark canvas. `accent-text` is a separate,
      much lighter value because the solid accent is unreadable as text here. */
   --accent:         #1E8A52;
@@ -149,6 +159,8 @@
   --color-secondary:      var(--text-secondary);
   --color-muted:          var(--text-muted);
   --color-inverse:        var(--text-inverse);
+  --color-surface-inverse:       var(--surface-inverse);
+  --color-surface-inverse-hover: var(--surface-inverse-hover);
 
   --color-accent:         var(--accent);
   --color-accent-hover:   var(--accent-hover);

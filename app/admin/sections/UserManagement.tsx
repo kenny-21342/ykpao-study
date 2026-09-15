@@ -205,7 +205,7 @@ export default function UserManagement() {
       {confirmDialog}
       <header>
         <h1 className="text-2xl font-bold">User Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage accounts, roles, and access.</p>
+        <p className="text-sm text-muted mt-1">Manage accounts, roles, and access.</p>
       </header>
 
       {error && <ErrorBox message={error} />}
@@ -213,19 +213,19 @@ export default function UserManagement() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="e.g. Alex Chen, student@example.com, or editor"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
+          className="px-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         >
           <option value="all">All roles</option>
           <option value="student">Students</option>
@@ -239,10 +239,10 @@ export default function UserManagement() {
           search box was still being typed into. */}
       {loading && !data ? <LoadingSpinner /> : data && (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-surface rounded-lg border border-line overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 text-xs uppercase">
+                <thead className="bg-surface-raised dark:bg-gray-800/50 text-muted text-xs uppercase">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">User</th>
                     <th className="text-left px-4 py-3 font-medium">Role</th>
@@ -251,9 +251,9 @@ export default function UserManagement() {
                     <th className="text-right px-4 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                <tbody className="divide-y divide-subtle">
                   {data.users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                    <tr key={u.id} className="hover:bg-surface-hover dark:hover:bg-gray-800/30">
                       <td className="px-4 py-3">
                         <button onClick={() => setDetailUser(u)} className="flex items-center gap-3 text-left">
                           <Avatar name={u.name} image={u.image} />
@@ -262,7 +262,7 @@ export default function UserManagement() {
                               {u.name ?? 'Unnamed'}
                               {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-secondary" />}
                             </p>
-                            <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                            <p className="text-xs text-muted truncate">{u.email}</p>
                           </div>
                         </button>
                       </td>
@@ -271,7 +271,7 @@ export default function UserManagement() {
                           value={u.role}
                           disabled={u.effectiveAdmin || actionLoading === u.id}
                           onChange={(e) => updateRole(u.id, e.target.value)}
-                          className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-1 focus:ring-ring/25 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="text-xs px-2 py-1 bg-surface-raised border border-line rounded-md focus:ring-1 focus:ring-ring/25 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <option value="student">student</option>
                           <option value="teacher">teacher</option>
@@ -280,10 +280,10 @@ export default function UserManagement() {
                         {u.banned && <span className="ml-2 text-[10px] text-red-600 font-medium">BANNED</span>}
                         {!u.emailVerified && <span className="ml-2 text-[10px] text-amber-600 font-medium">UNVERIFIED</span>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
+                      <td className="px-4 py-3 text-xs text-muted">
                         {u._count.posts} posts · {u._count.notes} notes · {u._count.mockExams} exams
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
@@ -293,7 +293,7 @@ export default function UserManagement() {
                             aria-label={u.emailVerified ? `Remove email verification for ${u.email}` : `Mark ${u.email} verified`}
                             className={`p-1.5 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               u.emailVerified
-                                ? 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                ? 'text-muted hover:bg-surface-hover'
                                 : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
                             }`}
                           >
@@ -340,21 +340,21 @@ export default function UserManagement() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               {data.users.length} of {data.total} users · Page {data.page} of {data.totalPages}
             </p>
             <div className="flex gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30"
+                className="p-2 rounded-md border border-line hover:bg-surface-hover disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -366,16 +366,16 @@ export default function UserManagement() {
       {/* User detail modal */}
       {detailUser && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDetailUser(null)}>
-          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-lg max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Avatar name={detailUser.name} image={detailUser.image} size="lg" />
                 <div>
                   <h3 className="font-bold">{detailUser.name ?? 'Unnamed'}</h3>
-                  <p className="text-sm text-gray-500">{detailUser.email}</p>
+                  <p className="text-sm text-muted">{detailUser.email}</p>
                 </div>
               </div>
-              <button onClick={() => setDetailUser(null)} className="p-1 text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+              <button onClick={() => setDetailUser(null)} className="p-1 text-muted hover:text-secondary"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2 text-sm">
               <DetailRow label="Role" value={detailUser.role} />
@@ -384,7 +384,7 @@ export default function UserManagement() {
               <DetailRow label="Email verified" value={detailUser.emailVerified ? new Date(detailUser.emailVerified).toLocaleString() : 'Not verified — sign-in is blocked'} />
               <DetailRow label="Joined" value={new Date(detailUser.createdAt).toLocaleString()} />
               <DetailRow label="Onboarded" value={detailUser.onboardedAt ? new Date(detailUser.onboardedAt).toLocaleString() : 'Not yet'} />
-              <hr className="border-gray-100 dark:border-gray-800 my-2" />
+              <hr className="border-subtle my-2" />
               <DetailRow label="Notes" value={detailUser._count.notes} />
               <DetailRow label="Threads" value={detailUser._count.threads} />
               <DetailRow label="Posts" value={detailUser._count.posts} />
@@ -406,7 +406,7 @@ export default function UserManagement() {
           aria-modal="true"
           aria-labelledby="temp-password-title"
         >
-          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+          <div className="bg-surface rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="temp-password-title" className="font-bold flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-secondary" />
@@ -415,18 +415,18 @@ export default function UserManagement() {
               <button
                 onClick={() => setTempPassword(null)}
                 aria-label="Close"
-                className="p-1 text-gray-400 hover:text-gray-700"
+                className="p-1 text-muted hover:text-secondary"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-secondary">
               Give this to <span className="font-medium">{tempPassword.email}</span>.
               It is shown once — after you close this dialog it cannot be retrieved,
               only reset again.
             </p>
             <div className="mt-4 flex items-center gap-2">
-              <code className="flex-1 px-3 py-2.5 rounded-md bg-gray-100 dark:bg-gray-800 font-mono text-base tracking-wider select-all break-all">
+              <code className="flex-1 px-3 py-2.5 rounded-md bg-surface-raised font-mono text-base tracking-wider select-all break-all">
                 {tempPassword.password}
               </code>
               <button
@@ -435,7 +435,7 @@ export default function UserManagement() {
                 }}
                 title="Copy to clipboard"
                 aria-label="Copy temporary password to clipboard"
-                className="p-2.5 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="p-2.5 rounded-md border border-line hover:bg-surface-hover"
               >
                 <Copy className="w-4 h-4" />
               </button>
@@ -446,7 +446,7 @@ export default function UserManagement() {
             </p>
             <button
               onClick={() => setTempPassword(null)}
-              className="mt-5 w-full py-2.5 rounded-md bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium"
+              className="mt-5 w-full py-2.5 rounded-md bg-surface-inverse text-inverse font-medium"
             >
               Done
             </button>
@@ -471,7 +471,7 @@ function Avatar({ name, image, size = 'sm' }: { name: string | null; image: stri
 function DetailRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex justify-between">
-      <span className="text-gray-500">{label}</span>
+      <span className="text-muted">{label}</span>
       <span className="font-medium">{typeof value === 'number' ? value.toLocaleString() : value}</span>
     </div>
   );
