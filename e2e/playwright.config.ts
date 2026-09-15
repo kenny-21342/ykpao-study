@@ -1,5 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
+import dotenv from 'dotenv';
+
+/**
+ * Playwright is not Next.js: nothing here reads `.env.local` on its own, so
+ * the three E2E variables had to be typed on the command line every run. Load
+ * the same file `next dev` does, without overriding anything already exported
+ * in the shell — so a one-off `E2E_BASE_URL=... npm run e2e` still wins.
+ */
+dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const STATE_PATH = path.join(__dirname, '.auth', 'student.json');
 
