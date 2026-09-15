@@ -59,6 +59,7 @@ const TEXT = [
 const ACCENT = [
   ['accent', 'bg-accent', 'text-accent-fg'],
   ['accent-hover', 'bg-accent-hover', 'text-accent-fg'],
+  ['accent-active', 'bg-accent-active', 'text-accent-fg'],
   ['accent-subtle', 'bg-accent-subtle', 'text-accent-text'],
 ] as const;
 
@@ -69,6 +70,27 @@ const SEMANTIC = [
   ['warning-subtle', 'bg-warning-subtle', 'text-warning'],
 ] as const;
 
+/* Added after Phase 1, so the styleguide did not know about them. */
+const INVERSE = [
+  ['surface-inverse', 'bg-surface-inverse', 'text-inverse'],
+  ['surface-inverse-hover', 'bg-surface-inverse-hover', 'text-inverse'],
+] as const;
+
+/*
+ * The one place hue still carries information: five accuracy bands. Both
+ * themes are on screen here together, which is the point -- the labels take
+ * --text-inverse, which FLIPS with the theme, so the light steps have to be
+ * darker than the dark ones. Three of five were below 4.5:1 when first
+ * written because I had that backwards.
+ */
+const BANDS = [
+  ['band-1', 'bg-band-1', 'Critical'],
+  ['band-2', 'bg-band-2', 'Weak'],
+  ['band-3', 'bg-band-3', 'OK'],
+  ['band-4', 'bg-band-4', 'Strong'],
+  ['band-5', 'bg-band-5', 'Mastered'],
+] as const;
+
 const TYPE = [
   ['text-xl', 'text-xl', '28px — page titles'],
   ['text-lg', 'text-lg', '20px — section headings'],
@@ -77,12 +99,16 @@ const TYPE = [
   ['text-xs', 'text-xs', '13px — metadata'],
 ] as const;
 
+/*
+ * This table documents class names as data, so the radius sweep rewrote it
+ * along with the code it describes -- leaving two `rounded-md` rows, one of
+ * them labelled 10px, and two rows for the xl/2xl aliases that no longer
+ * exist. Three scales, one rule, and nothing aliased.
+ */
 const RADII = [
   ['rounded-sm', '4px — badges, chips'],
-  ['rounded-md', '6px — buttons, inputs, rows'],
-  ['rounded-md', '10px — cards, panels, modals'],
-  ['rounded-lg', 'aliased to 10px'],
-  ['rounded-lg', 'aliased to 10px'],
+  ['rounded-md', '6px — a control you operate'],
+  ['rounded-lg', '10px — a surface you put things on'],
 ] as const;
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
@@ -196,6 +222,34 @@ export default function StyleGuide() {
               <div key={name} className={`${bg} ${fg} rounded-md px-5 py-4 min-w-[12rem] border border-line`}>
                 <code className="font-mono text-xs block">{bg}</code>
                 <span className="text-sm">Sample</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          title="Inverse surface"
+          note="The high-contrast confirm button and selected pill. The one surface that flips with the theme rather than shifting."
+        >
+          <div className="flex flex-wrap gap-3">
+            {INVERSE.map(([name, bg, fg]) => (
+              <div key={name} className={`${bg} ${fg} rounded-md px-5 py-4 min-w-[14rem] border border-line`}>
+                <code className="font-mono text-xs block">{bg}</code>
+                <span className="text-sm">Confirm</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          title="Accuracy bands"
+          note="The only place hue still carries information. Labels take --text-inverse, which flips with the theme — so the light steps are darker than the dark ones, and every step is measured at 4.5:1 or better against the label it actually gets."
+        >
+          <div className="flex flex-wrap gap-2">
+            {BANDS.map(([name, bg, label]) => (
+              <div key={name} className={`${bg} text-inverse rounded-md px-4 py-3 min-w-[9rem]`}>
+                <code className="font-mono text-xs block opacity-80">{bg}</code>
+                <span className="text-sm font-semibold">{label}</span>
               </div>
             ))}
           </div>

@@ -372,3 +372,28 @@ test('the dashboard does not grow back into a wall of boxes', async () => {
     'the heatmap has no entrance at all',
   );
 });
+
+// ---------------------------------------------------------------------------
+// 13. The styleguide keeps up with the tokens
+// ---------------------------------------------------------------------------
+
+test('every themed token appears on the styleguide page', async () => {
+  // /admin/styleguide is the QA surface: the place a contrast pair can be
+  // checked in both themes at once. A token that never reaches it is a token
+  // nobody ever looks at, which is how three of the accuracy bands shipped
+  // below 4.5:1.
+  const css = stripCssComments(await read('app/globals.css'));
+  const inline = css.slice(css.indexOf('@theme inline'), css.indexOf('@theme {'));
+  const tokens = [...inline.matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
+  assert.ok(tokens.length > 20, 'expected the token block to be found');
+
+  const page = await read('app/admin/styleguide/page.tsx');
+  // These are foregrounds and utilities shown *through* the pairs above, not
+  // swatches of their own.
+  const SHOWN_VIA_PAIRS = new Set([
+    'accent-fg', 'accent-text', 'accent-border', 'inverse',
+    'danger-border', 'warning-border', 'background', 'foreground', 'ring',
+  ]);
+  const missing = tokens.filter((t) => !SHOWN_VIA_PAIRS.has(t) && !page.includes(t));
+  assert.deepEqual(missing, [], `tokens with no swatch on the styleguide: ${missing.join(', ')}`);
+});
