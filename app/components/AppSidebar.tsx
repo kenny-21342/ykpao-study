@@ -383,7 +383,7 @@ export default function AppSidebar({
                     {user?.isAdmin && (
                       <a
                         href="/admin"
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-secondary hover:bg-surface-hover transition-colors font-medium"
                       >
                         <ShieldCheck className="w-4 h-4" />
                         <span>Admin Console</span>

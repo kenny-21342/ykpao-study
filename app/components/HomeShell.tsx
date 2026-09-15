@@ -107,10 +107,10 @@ type LearningOverview = {
 type StatTone = 'blue' | 'green' | 'orange' | 'purple';
 
 const statToneStyles: Record<StatTone, { icon: string; helper: string }> = {
-  blue: { icon: 'bg-blue-50 text-blue-600', helper: 'text-blue-600' },
+  blue: { icon: 'bg-surface-raised text-secondary', helper: 'text-secondary' },
   green: { icon: 'bg-green-50 text-green-600', helper: 'text-green-600' },
-  orange: { icon: 'bg-orange-50 text-orange-600', helper: 'text-orange-600' },
-  purple: { icon: 'bg-purple-50 text-purple-600', helper: 'text-purple-600' },
+  orange: { icon: 'bg-warning-subtle text-warning', helper: 'text-warning' },
+  purple: { icon: 'bg-surface-raised text-secondary', helper: 'text-secondary' },
 };
 
 const formatStat = (value: number | undefined, suffix = '') => {
@@ -756,7 +756,7 @@ export default function SmartEduPlatform() {
                 <section className="flex flex-wrap gap-2" aria-label="Study updates">
                   {stats.nudges.map((nudge) => (
                     <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openPracticeOrPapers()} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
-                      {nudge.type === 'reviews' ? <Brain className="h-4 w-4 text-emerald-600" /> : nudge.type === 'stalled' ? <Calendar className="h-4 w-4 text-amber-600" /> : <Database className="h-4 w-4 text-blue-600" />}
+                      {nudge.type === 'reviews' ? <Brain className="h-4 w-4 text-emerald-600" /> : nudge.type === 'stalled' ? <Calendar className="h-4 w-4 text-amber-600" /> : <Database className="h-4 w-4 text-secondary" />}
                       {nudge.label}
                       <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
                     </button>
@@ -907,7 +907,7 @@ export default function SmartEduPlatform() {
                           className="flex w-full items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-raised text-secondary">
                               <BookMarked className="h-5 w-5" />
                             </div>
                             <div className="min-w-0">

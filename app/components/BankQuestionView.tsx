@@ -391,7 +391,7 @@ function CommandTermPanel({ slugs }: { slugs: string[] }) {
         {terms.map((term) => (
           <span
             key={term.slug}
-            className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+            className="rounded-full bg-surface-raised px-2 py-0.5 text-xs font-medium text-secondary"
           >
             {term.label}
           </span>

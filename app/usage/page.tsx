@@ -224,10 +224,10 @@ export default function UsagePage() {
 
 function SummaryCard({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: string; tint: 'blue' | 'green' | 'amber' | 'purple' }) {
   const tints: Record<string, string> = {
-    blue: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300',
+    blue: 'bg-surface-raised text-secondary',
     green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
     amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
-    purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
+    purple: 'bg-surface-raised text-secondary',
   };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">

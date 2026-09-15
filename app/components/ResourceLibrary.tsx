@@ -356,7 +356,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
           )}
           {note.content ? (
             <div
-              className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-blue-600 [&_a]:underline hover:[&_a]:text-blue-800 [&_img]:rounded-md [&_img]:max-w-full"
+              className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 [&_p]:my-2 [&_ul]:my-2 [&_li]:ml-4 [&_li]:list-disc [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-semibold [&_a]:text-secondary [&_a]:underline hover:[&_a]:text-secondary [&_img]:rounded-md [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
             />
           ) : loadingContent ? (
@@ -1431,7 +1431,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
                           <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                           <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
-                          {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin flex-shrink-0" />}
+                          {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
                           {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
                           {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
                           {it.status === 'error' && (
@@ -1485,7 +1485,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
               )}
 
               {folderBusy && (
-                <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                <div className="text-xs text-secondary flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Uploading {folderDoneCount}/{folderItems.length}…
                 </div>

@@ -61,7 +61,7 @@ function MenuButton({
       // Toggles must report whether they are on, not merely look it.
       aria-pressed={active === undefined ? undefined : active}
       className={`p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-        active ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
+        active ? 'bg-surface-raised text-secondary' : 'text-gray-700 dark:text-gray-300'
       }`}
     >
       {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
@@ -381,7 +381,7 @@ export default function RichTextEditor({
           <button
             onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
             className={`p-2 rounded-sm hover:bg-gray-100 transition-colors ${
-              editor.isActive('highlight') ? 'bg-yellow-200' : ''
+              editor.isActive('highlight') ? 'bg-warning-subtle' : ''
             }`}
             title="Highlight" aria-label="Highlight"
             type="button"

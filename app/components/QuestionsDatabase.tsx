@@ -872,16 +872,16 @@ export default function QuestionsDatabase({
                     </div>
                     {/* Row 2: labels (topic + subject) */}
                     <div className="mt-1 flex flex-wrap items-center gap-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-surface-raised text-secondary">
                         {question.subject_name}
                       </span>
                       {question.topic && question.topic !== 'General' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-surface-raised text-secondary">
                           {question.topic}
                         </span>
                       )}
                       {question.has_diagram === 1 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 flex items-center gap-0.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-surface-raised text-secondary flex items-center gap-0.5">
                           <Eye className="w-2.5 h-2.5" /> diagram
                         </span>
                       )}
@@ -936,7 +936,7 @@ export default function QuestionsDatabase({
                       {formatQuestionCode(selectedQuestion)}
                     </h3>
                     {selectedQuestion.topic && selectedQuestion.topic !== 'General' && (
-                      <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-sm text-xs font-medium">
+                      <span className="px-2 py-0.5 bg-surface-raised text-secondary rounded-sm text-xs font-medium">
                         {selectedQuestion.topic}
                       </span>
                     )}
@@ -1009,8 +1009,8 @@ export default function QuestionsDatabase({
                 )}
 
                 {selectedQuestion.has_diagram === 1 && paperImages.length === 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <div className="mt-4 p-3 bg-surface-raised border border-line rounded-md">
+                    <p className="text-sm text-secondary">
                       📷 This question references a diagram, but no figure has been linked to it yet.
                     </p>
                   </div>
@@ -1216,7 +1216,7 @@ export default function QuestionsDatabase({
                           {grade.modelAnswer && (
                             <div className="mt-3">
                               <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Model answer</h5>
-                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
+                              <div className="p-3 bg-surface-raised border border-line rounded-md text-sm">
                                 <FormattedMessage content={grade.modelAnswer} />
                               </div>
                             </div>
@@ -1229,7 +1229,7 @@ export default function QuestionsDatabase({
                   {recentAttempts.length > 0 && !grade && (
                     <div className="mt-6">
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
-                        <Trophy className="w-4 h-4 text-yellow-500" />
+                        <Trophy className="w-4 h-4 text-warning" />
                         <span>Your previous attempts</span>
                       </h5>
                       <div className="space-y-1">

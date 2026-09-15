@@ -84,7 +84,7 @@ export default function AnnouncementsPage() {
               key={a.id}
               className={`min-w-0 rounded-lg p-6 border ${
                 a.pinned
-                  ? 'bg-accent-subtle dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900/50'
+                  ? 'bg-accent-subtle border-green-200 dark:border-green-900/50'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
               }`}
             >

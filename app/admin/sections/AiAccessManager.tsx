@@ -150,7 +150,7 @@ export default function AiAccessManager() {
       {data && (
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <KeyRound className="w-4 h-4 text-indigo-500" />
+            <KeyRound className="w-4 h-4 text-secondary" />
             <h2 className="font-semibold text-sm">
               {data.grants.length === 0
                 ? 'Nobody is on the shared key'
@@ -190,13 +190,13 @@ export default function AiAccessManager() {
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="Search by name or email"
             aria-label="Search users by name or email"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
           />
         </div>
         <select
           value={grantedOnly ? 'granted' : 'all'}
           onChange={(e) => { setGrantedOnly(e.target.value === 'granted'); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         >
           <option value="all">All users</option>
           <option value="granted">On the shared key</option>
@@ -227,7 +227,7 @@ export default function AiAccessManager() {
                           <div className="min-w-0">
                             <p className="font-medium truncate flex items-center gap-1.5">
                               {u.name ?? 'Unnamed'}
-                              {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-indigo-500" />}
+                              {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-secondary" />}
                               {u.banned && <span className="text-[10px] text-red-600 font-medium">BANNED</span>}
                             </p>
                             <p className="text-xs text-gray-400 truncate">{u.email}</p>

@@ -365,7 +365,7 @@ export default function BankPractice({
         <button
           type="button"
           onClick={() => setSelected(null)}
-          className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+          className="text-sm text-accent-text hover:underline"
         >
           ← Back to questions
         </button>
@@ -560,7 +560,7 @@ export default function BankPractice({
             // button -- a button inside a button is invalid and the inner one
             // stops responding. The row is a container; the open action and
             // the star are siblings inside it.
-            className="flex items-center rounded-lg border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-gray-700/40"
+            className="flex items-center rounded-lg border border-gray-200 bg-white hover:border-strong hover:bg-surface-hover dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700/40"
           >
             <button
               type="button"

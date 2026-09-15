@@ -29,9 +29,9 @@ const CLICK_EVENTS: Record<string, { event: string; param?: string }> = {
 
 // Icon + tint per notification type. Falls back to a generic bell.
 const TYPE_META: Record<string, { icon: typeof Bell; tint: string }> = {
-  discussion_answer: { icon: MessageSquare, tint: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' },
+  discussion_answer: { icon: MessageSquare, tint: 'bg-surface-raised text-secondary' },
   discussion_reply: { icon: Reply, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  discussion_mention: { icon: AtSign, tint: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300' },
+  discussion_mention: { icon: AtSign, tint: 'bg-surface-raised text-secondary' },
 };
 
 function fmtRelative(iso: string) {

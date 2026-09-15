@@ -64,6 +64,17 @@
 
   --focus-ring:     #1A7F4B;
 
+  /* The one place hue still carries information rather than decorating: a
+     five-step sequential scale for accuracy bands. Defined once here so the
+     heatmap cannot drift from its own legend, and chosen dark enough that
+     --text-inverse reads on every step — the old scale needed a special-case
+     dark foreground on the yellow band alone. */
+  --band-1:         #B42318;  /* critical */
+  --band-2:         #C4632A;  /* weak     */
+  --band-3:         #A8801F;  /* ok       */
+  --band-4:         #3F8C5C;  /* strong   */
+  --band-5:         #1A7F4B;  /* mastered */
+
   /* The only shadow that survives, and only on things that float above the
      page. Everything else separates with a border. */
   --shadow-overlay: 0 8px 28px -6px rgb(24 24 22 / 0.14),
@@ -111,6 +122,12 @@
 
   --focus-ring:     #5FC98C;
 
+  --band-1:         #D64B3F;
+  --band-2:         #D6803F;
+  --band-3:         #C2A03A;
+  --band-4:         #4FA771;
+  --band-5:         #5FC98C;
+
   --shadow-overlay: 0 8px 28px -6px rgb(0 0 0 / 0.55),
                     0 2px 8px -2px rgb(0 0 0 / 0.40);
 }
@@ -147,6 +164,12 @@
   --color-warning-border: var(--warning-border);
 
   --color-ring:           var(--focus-ring);
+
+  --color-band-1:         var(--band-1);
+  --color-band-2:         var(--band-2);
+  --color-band-3:         var(--band-3);
+  --color-band-4:         var(--band-4);
+  --color-band-5:         var(--band-5);
   --shadow-overlay:       var(--shadow-overlay);
 
   /* Kept for the three existing bg-background/text-foreground call sites. */

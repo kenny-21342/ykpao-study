@@ -147,7 +147,7 @@ function VerifyView() {
         </div>
         <Link
           href="/auth/login"
-          className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
+          className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover transition"
         >
           Go to sign in
         </Link>
@@ -202,7 +202,7 @@ function VerifyView() {
           <button
             type="submit"
             disabled={sending}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed transition"
           >
             {sending ? 'Sending…' : 'Send a new link'}
           </button>

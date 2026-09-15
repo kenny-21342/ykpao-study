@@ -143,7 +143,7 @@ export default function CompetitionVault() {
                       {q.labels.slice(0, 4).map((l, i) => (
                         <span
                           key={i}
-                          className="text-[10px] px-1.5 py-0.5 rounded-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
+                          className="text-[10px] px-1.5 py-0.5 rounded-sm bg-surface-raised text-secondary"
                         >
                           {l}
                         </span>
@@ -188,7 +188,7 @@ export default function CompetitionVault() {
                 {selected.labels.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {selected.labels.map((l, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-surface-raised text-secondary">
                         <Tag className="w-2.5 h-2.5" /> {l}
                       </span>
                     ))}

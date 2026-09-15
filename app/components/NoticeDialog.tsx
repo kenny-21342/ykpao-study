@@ -42,9 +42,9 @@ type NoticeTone = 'info' | 'success' | 'warning' | 'error';
 const TONE_META: Record<NoticeTone, { icon: typeof Info; accent: string; iconBg: string; border: string }> = {
   info: {
     icon: Info,
-    accent: 'text-blue-700 dark:text-blue-300',
-    iconBg: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
-    border: 'border-blue-200 dark:border-blue-900/50',
+    accent: 'text-secondary',
+    iconBg: 'bg-surface-raised text-secondary',
+    border: 'border-line',
   },
   success: {
     icon: CheckCircle2,

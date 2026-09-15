@@ -24,7 +24,7 @@ type Announcement = {
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
-  info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  info: 'bg-surface-raised text-secondary',
   success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
   warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
@@ -98,7 +98,7 @@ export default function AnnouncementManager() {
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover"
         >
           <Plus className="w-4 h-4" /> New
         </button>
@@ -117,7 +117,7 @@ export default function AnnouncementManager() {
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium uppercase ${SEVERITY_STYLES[a.severity] ?? SEVERITY_STYLES.info}`}>{a.severity}</span>
                       <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-sm">{a.audience}</span>
-                      {a.pinned && <Pin className="w-3.5 h-3.5 text-indigo-500" />}
+                      {a.pinned && <Pin className="w-3.5 h-3.5 text-secondary" />}
                       {!a.published && <span className="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-sm">DRAFT</span>}
                     </div>
                     <h3 className="font-medium text-sm">{a.title}</h3>
@@ -130,7 +130,7 @@ export default function AnnouncementManager() {
                     <button onClick={() => togglePublished(a)} title={a.published ? 'Unpublish' : 'Publish'} aria-label={a.published ? 'Unpublish' : 'Publish'} className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
                       {a.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} aria-label={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-indigo-500' : 'text-gray-400'}`}>
+                    <button onClick={() => togglePinned(a)} title={a.pinned ? 'Unpin' : 'Pin'} aria-label={a.pinned ? 'Unpin' : 'Pin'} className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 ${a.pinned ? 'text-secondary' : 'text-gray-400'}`}>
                       <Pin className="w-4 h-4" />
                     </button>
                     <button onClick={() => setEditing(a)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -203,7 +203,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Library closes at 4 pm on Friday"
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
           <div>
@@ -213,7 +213,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1.5">Severity</label>
-              <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
                 <option value="info">Info</option>
                 <option value="success">Success</option>
                 <option value="warning">Warning</option>
@@ -222,7 +222,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Audience</label>
-              <select value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <select value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none">
                 <option value="all">All users</option>
                 <option value="students">Students only</option>
                 <option value="teachers">Teachers only</option>
@@ -242,7 +242,7 @@ function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement: 
         </div>
         <div className="p-5 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2 sticky bottom-0 bg-white dark:bg-gray-900">
           <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {saving ? 'Saving…' : 'Save'}
           </button>

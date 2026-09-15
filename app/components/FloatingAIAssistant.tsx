@@ -121,49 +121,42 @@ const STUDY_ACTIONS: Array<{
   title: string;
   description: string;
   icon: typeof Sparkles;
-  tone: string;
 }> = [
   {
     id: 'study-week',
     title: 'Build my study week',
     description: 'Create seven days of practice, note review, a focused mock exam, and reading suggestions.',
     icon: CalendarRange,
-    tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
   },
   {
     id: 'todo-plan',
     title: 'Plan from to-dos',
     description: 'Rebuild the week around my pending tasks and keep the rest of the plan aligned.',
     icon: ListTodo,
-    tone: 'bg-lime-50 text-lime-700 dark:bg-lime-950/40 dark:text-lime-300',
   },
   {
     id: 'daily-practice',
     title: 'Schedule daily practice',
     description: 'Add one targeted past-paper question per day to your plan.',
     icon: ListTodo,
-    tone: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300',
   },
   {
     id: 'mock-exam',
     title: 'Create a focused mock',
     description: 'Assemble a ready-to-take exam from your weakest available topics.',
     icon: ClipboardList,
-    tone: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
   },
   {
     id: 'predicted-paper',
     title: 'Generate predicted paper',
     description: 'Create a paper forecast and mark-scheme guide from the question bank.',
     icon: FileText,
-    tone: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-300',
   },
   {
     id: 'materials',
     title: 'Recommend materials',
     description: 'Find accessible notes and school resources for your priority topics.',
     icon: Library,
-    tone: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
   },
 ];
 
@@ -547,7 +540,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
             <div className="space-y-2">
               {STUDY_ACTIONS.map((action) => {
                 const Icon = action.icon;
-                return <button key={action.id} onClick={() => void runAction(action.id)} disabled={Boolean(actionLoading) || isLoading} className="flex w-full items-start gap-3 rounded-md border border-gray-200 p-3 text-left hover:border-emerald-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${action.tone}`}>{actionLoading === action.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}</span><span className="min-w-0"><span className="block text-sm font-semibold">{action.title}</span><span className="mt-1 block text-xs leading-5 text-gray-500 dark:text-gray-400">{action.description}</span></span></button>;
+                return <button key={action.id} onClick={() => void runAction(action.id)} disabled={Boolean(actionLoading) || isLoading} className="flex w-full items-start gap-3 rounded-md border border-gray-200 p-3 text-left hover:border-emerald-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"><span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-raised text-secondary'}>{actionLoading === action.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}</span><span className="min-w-0"><span className="block text-sm font-semibold">{action.title}</span><span className="mt-1 block text-xs leading-5 text-gray-500 dark:text-gray-400">{action.description}</span></span></button>;
               })}
             </div>
           </div>
@@ -558,7 +551,9 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
 }
 
 function CoverageIndicator({ coverage }: { coverage: CorpusCoverage }) {
-  const tone = coverage.status === 'complete' ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-300' : coverage.status === 'extracting' ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300' : 'text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300';
+  const tone = coverage.status === 'complete' ? 'bg-accent-subtle text-accent-text'
+    : coverage.status === 'extracting' ? 'bg-warning-subtle text-warning'
+    : 'bg-surface-raised text-secondary';
   return <div className={`mt-2 flex items-start gap-2 rounded-md px-2 py-1.5 text-[10px] ${tone}`}><span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current" /><span><strong>Corpus: {coverage.status}</strong> {coverage.label}{coverage.limitations.length > 0 && <span className="block mt-0.5">{coverage.limitations[0]}</span>}</span></div>;
 }
 
@@ -610,7 +605,7 @@ function ActionResult({ data, onNavigate, onProposalUpdate }: { data: StudyActio
         {data.exam ? <button onClick={() => onNavigate('mock-exams')} className="result-link"><ClipboardList className="h-3.5 w-3.5" /> Open {data.exam.title}</button> : null}
       </div>
       {data.questions && data.questions.length > 0 && <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800"><p className="mb-1 text-[10px] font-bold uppercase text-gray-400">Practice questions</p>{data.questions.slice(0, 3).map((question) => <button key={question.id} onClick={() => onNavigate('practice', question.id)} className="block w-full truncate rounded-sm px-1.5 py-1 text-left text-xs text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30">{question.topic} · {question.subject}</button>)}</div>}
-      {data.materials && data.materials.length > 0 && <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800"><p className="mb-1 text-[10px] font-bold uppercase text-gray-400">Recommended material</p>{data.materials.slice(0, 4).map((material) => <a key={`${material.type}-${material.id}`} href={material.url} target={material.type === 'resource' ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30">{material.type === 'resource' ? <Library className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}<span className="truncate">{material.title}</span></a>)}</div>}
+      {data.materials && data.materials.length > 0 && <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800"><p className="mb-1 text-[10px] font-bold uppercase text-gray-400">Recommended material</p>{data.materials.slice(0, 4).map((material) => <a key={`${material.type}-${material.id}`} href={material.url} target={material.type === 'resource' ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary hover:bg-surface-hover">{material.type === 'resource' ? <Library className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}<span className="truncate">{material.title}</span></a>)}</div>}
       <style jsx global>{`
         .result-link { display: inline-flex; min-height: 1.75rem; align-items: center; gap: .375rem; border-radius: .25rem; background: rgb(5 150 105); padding: .25rem .5rem; font-size: .6875rem; font-weight: 700; color: white; }
         .result-link:hover { background: rgb(4 120 87); }

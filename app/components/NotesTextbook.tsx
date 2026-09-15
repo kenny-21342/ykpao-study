@@ -1234,7 +1234,7 @@ export default function NotesTextbookPage() {
           <span className="w-4 shrink-0 text-center">{page.icon || <FileText className="h-3.5 w-3.5" />}</span>
           <span className="truncate">{page.title}</span>
           {page.favorite && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-500" />}
-          {page.collaborators && page.collaborators.length > 0 && <Users className="h-3 w-3 shrink-0 text-cyan-600" />}
+          {page.collaborators && page.collaborators.length > 0 && <Users className="h-3 w-3 shrink-0 text-secondary" />}
         </button>
         <button
           onClick={() => setPageMenuId((current) => current === page.id ? null : page.id)}
@@ -1501,7 +1501,7 @@ export default function NotesTextbookPage() {
                 <span>{stripHtml(editContent).split(/\s+/).filter(Boolean).length} words</span>
                 {selectedText && <span className="truncate text-emerald-700 dark:text-emerald-300">Selection: {selectedText}</span>}
                 <div className="ml-auto flex -space-x-1.5">
-                  {effectivePresence.slice(0, 5).map((item) => <div key={item.user.id} title={item.user.name || item.user.email} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-cyan-700 text-[9px] font-bold text-white dark:border-gray-950">{initials(item.user)}</div>)}
+                  {effectivePresence.slice(0, 5).map((item) => <div key={item.user.id} title={item.user.name || item.user.email} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-accent text-[9px] font-bold text-white dark:border-gray-950">{initials(item.user)}</div>)}
                 </div>
               </footer>
             </main>
@@ -1545,7 +1545,7 @@ export default function NotesTextbookPage() {
                   {activePanel === 'details' && <div className="space-y-5">
                     <label className="block"><span className="field-label">Page icon</span><input value={selectedPage.icon} maxLength={16} disabled={!canEdit(selectedPage)} onChange={(event) => { const value = event.target.value; setSelectedPage((page) => page ? { ...page, icon: value } : page); }} onBlur={(event) => void patchMetadata({ icon: event.target.value })} className="field-input" placeholder="e.g. Bio, M1, Ch4" /></label>
                     <label className="block"><span className="field-label">Tags</span><input value={tagInput} disabled={!canEdit(selectedPage)} onChange={(event) => setTagInput(event.target.value)} onBlur={() => void patchMetadata({ tags: tagInput.split(',').map((tag) => tag.trim()).filter(Boolean) })} className="field-input" placeholder="e.g. biology, revision, cells" /></label>
-                    <div className="flex flex-wrap gap-2">{selectedPage.tags.map((tag) => <span key={tag} className="rounded-sm bg-cyan-50 px-2 py-1 text-xs text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200"><Tags className="mr-1 inline h-3 w-3" />{tag}</span>)}</div>
+                    <div className="flex flex-wrap gap-2">{selectedPage.tags.map((tag) => <span key={tag} className="rounded-sm bg-surface-raised px-2 py-1 text-xs text-secondary"><Tags className="mr-1 inline h-3 w-3" />{tag}</span>)}</div>
                     {selectedPage.accessRole === 'owner' && <label className="block"><span className="field-label">Move to section</span><select value={selectedPage.sectionId} onChange={(event) => void movePageToSection(event.target.value)} className="field-input">{editableSections.map((section) => <option key={section.id} value={section.id}>{section.notebookName} / {section.name}</option>)}</select></label>}
                     <div className="space-y-2 border-t border-gray-200 pt-4 dark:border-gray-800">
                       <button onClick={() => void patchMetadata({ favorite: !selectedPage.favorite })} disabled={!canEdit(selectedPage)} className="panel-action"><Star className={`h-4 w-4 ${selectedPage.favorite ? 'fill-amber-400 text-amber-500' : ''}`} /> {selectedPage.favorite ? 'Remove from favorites' : 'Add to favorites'}</button>
@@ -1678,7 +1678,7 @@ function SaveIndicator({ state }: { state: SaveState }) {
 }
 
 function PersonAvatar({ person }: { person: Person }) {
-  return <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-700 text-[10px] font-bold text-white">{initials(person)}</div>;
+  return <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-fg">{initials(person)}</div>;
 }
 
 function PersonRow({ person, label }: { person: Person; label: string }) {

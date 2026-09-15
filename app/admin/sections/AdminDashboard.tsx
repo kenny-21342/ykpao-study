@@ -63,7 +63,7 @@ export default function AdminDashboard() {
               // and a fortnight of signups drew as a row of ticks.
               <div key={s.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1 group">
                 <div
-                  className="w-full bg-indigo-500 dark:bg-indigo-400 rounded-t-sm hover:bg-indigo-600 transition-colors"
+                  className="w-full bg-accent rounded-t-sm hover:bg-accent-hover transition-colors"
                   style={{ height: `${(s.count / maxSignup) * 100}%`, minHeight: s.count > 0 ? '4px' : '0' }}
                   title={`${s.date}: ${s.count}`}
                 />
@@ -185,7 +185,7 @@ function Empty() {
 export function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-line border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }

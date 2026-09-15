@@ -102,7 +102,7 @@ export default function ResourceManager() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+        <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none" />
       </div>
 
       {/* Only show the spinner before the first result set arrives. Swapping
@@ -135,7 +135,7 @@ export default function ResourceManager() {
                   <a href={r.fileUrl} download className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Download" aria-label="Download">
                     <Download className="w-4 h-4" />
                   </a>
-                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                  <button onClick={() => setEditTarget(r)} title="Edit" aria-label="Edit" className="p-1.5 rounded-md text-gray-400 hover:text-primary hover:bg-surface-hover">
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button onClick={() => setDeleteTarget(r)} title="Delete" aria-label="Delete" className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
@@ -391,7 +391,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-indigo-500" /> Upload School Resources
+              <Upload className="w-5 h-5 text-secondary" /> Upload School Resources
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {mode === 'single' ? 'Publish a file to the whole school.' : 'Upload a whole folder — each file becomes its own resource.'}
@@ -439,7 +439,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
+                    className="w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
@@ -472,7 +472,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Y10 Physics S1 Revision Worksheet"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                 />
               </div>
 
@@ -484,7 +484,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Physics"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
                 <div>
@@ -494,7 +494,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
                   />
                 </div>
               </div>
@@ -506,7 +506,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Revision sheet covering Newton's laws and graph interpretation."
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
                 />
               </div>
             </>
@@ -518,7 +518,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                   <button
                     type="button"
                     onClick={() => folderInputRef.current?.click()}
-                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors"
+                    className="w-full px-4 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors"
                   >
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
@@ -548,7 +548,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                           <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                           <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={it.relativePath}>{it.relativePath}</span>
                           <span className="text-gray-400 flex-shrink-0">{(it.file.size / 1024).toFixed(0)} KB</span>
-                          {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin flex-shrink-0" />}
+                          {it.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-secondary animate-spin flex-shrink-0" />}
                           {it.status === 'publishing' && <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin flex-shrink-0" />}
                           {it.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
                           {it.status === 'error' && (
@@ -583,7 +583,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                       onChange={(e) => setFolderSubject(e.target.value)}
                       placeholder="e.g. Physics"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                   <div>
@@ -594,14 +594,14 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
                       onChange={(e) => setFolderCategory(e.target.value)}
                       placeholder="e.g. Worksheet, Slides, Exam, or Handout"
                       disabled={folderBusy}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-60"
+                      className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none disabled:opacity-60"
                     />
                   </div>
                 </div>
               )}
 
               {folderBusy && (
-                <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                <div className="text-xs text-secondary flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Uploading {folderDoneCount}/{folderItems.length}…
                 </div>
@@ -740,7 +740,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Pencil className="w-5 h-5 text-indigo-500" /> Edit Resource
+            <Pencil className="w-5 h-5 text-secondary" /> Edit Resource
           </h2>
           <button onClick={onClose} disabled={saving} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
@@ -754,7 +754,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
 
@@ -766,7 +766,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Physics"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
               />
             </div>
             <div>
@@ -776,7 +776,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Worksheet, Slides, Exam, or Handout"
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
               />
             </div>
           </div>
@@ -787,7 +787,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none"
             />
           </div>
 
@@ -797,15 +797,15 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-ring/25 outline-none resize-y"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Replace file</label>
             {replacement ? (
-              <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-                <Paperclip className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-surface-raised border border-line rounded-lg">
+                <Paperclip className="w-4 h-4 text-secondary flex-shrink-0" />
                 <span className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{replacement.name}</span>
                 <span className="text-xs text-gray-400">{(replacement.size / 1024).toFixed(0)} KB</span>
                 <button
@@ -823,7 +823,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full px-4 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 hover:border-strong hover:bg-surface-hover transition-colors disabled:opacity-50"
               >
                 {uploading ? (
                   <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>

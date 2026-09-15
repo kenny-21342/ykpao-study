@@ -113,7 +113,7 @@ export default function ContentModeration() {
             onClick={() => { setType(t.key); setPage(1); setQ(''); }}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               type === t.key
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                ? 'border-line text-secondary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -130,7 +130,7 @@ export default function ContentModeration() {
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="e.g. spam report, calculus thread, or @maria"
-          className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         />
       </div>
 
@@ -151,14 +151,14 @@ export default function ContentModeration() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-sm">PINNED</span>}
+                          {item.pinned && <span className="text-[10px] px-1.5 py-0.5 bg-surface-raised text-secondary rounded-sm">PINNED</span>}
                           {item.locked && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-sm">LOCKED</span>}
                           <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleString()}</span>
                         </div>
                         <p className="text-sm font-medium line-clamp-2">{preview}</p>
                         <p className="text-xs text-gray-400 mt-1">
                           by {author?.name ?? author?.email ?? 'Unknown'}
-                          {item.thread && <> · in <span className="text-indigo-500">{item.thread.title}</span></>}
+                          {item.thread && <> · in <span className="text-secondary">{item.thread.title}</span></>}
                           {item._count && <> · {item._count.posts} replies</>}
                           {item.views != null && <> · {item.views} views</>}
                           {item.downloads != null && <> · {item.downloads} downloads</>}

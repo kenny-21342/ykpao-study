@@ -168,7 +168,7 @@ export default function SignupPage() {
 
             <Link
               href={`/auth/verify?email=${encodeURIComponent(created.email)}`}
-              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:from-green-600 hover:to-emerald-700 transition"
+              className="block w-full text-center py-3 px-4 rounded-lg font-semibold text-white bg-accent hover:bg-accent-hover transition"
             >
               Send another link
             </Link>
@@ -282,9 +282,9 @@ export default function SignupPage() {
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex items-center gap-1">
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'weak' ? 'bg-red-400' : passwordStrength === 'medium' ? 'bg-yellow-400' : 'bg-green-400'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'medium' || passwordStrength === 'strong' ? passwordStrength === 'medium' ? 'bg-yellow-400' : 'bg-green-400' : 'bg-gray-200'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'strong' ? 'bg-green-400' : 'bg-gray-200'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'weak' ? 'bg-danger' : passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'medium' || passwordStrength === 'strong' ? passwordStrength === 'medium' ? 'bg-warning' : 'bg-accent' : 'bg-subtle'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${passwordStrength === 'strong' ? 'bg-accent' : 'bg-subtle'}`} />
                   </div>
                   <p className="mt-1 text-xs text-gray-500 capitalize">{passwordStrength} password</p>
                 </div>

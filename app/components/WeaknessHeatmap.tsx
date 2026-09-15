@@ -46,11 +46,11 @@ type WeaknessData = {
 
 // Colour band for the heatmap cell, based on accuracy 0–100.
 function bandFor(acc: number): { bg: string; text: string; label: string } {
-  if (acc >= 85) return { bg: 'bg-emerald-500', text: 'text-white', label: 'Mastered' };
-  if (acc >= 70) return { bg: 'bg-green-400', text: 'text-white', label: 'Strong' };
-  if (acc >= 55) return { bg: 'bg-yellow-400', text: 'text-yellow-900', label: 'OK' };
-  if (acc >= 40) return { bg: 'bg-orange-400', text: 'text-white', label: 'Weak' };
-  return { bg: 'bg-red-500', text: 'text-white', label: 'Critical' };
+  if (acc >= 85) return { bg: 'bg-band-5', text: 'text-inverse', label: 'Mastered' };
+  if (acc >= 70) return { bg: 'bg-band-4', text: 'text-inverse', label: 'Strong' };
+  if (acc >= 55) return { bg: 'bg-band-3', text: 'text-inverse', label: 'OK' };
+  if (acc >= 40) return { bg: 'bg-band-2', text: 'text-inverse', label: 'Weak' };
+  return { bg: 'bg-band-1', text: 'text-inverse', label: 'Critical' };
 }
 
 export default function WeaknessHeatmap() {
@@ -134,11 +134,11 @@ export default function WeaknessHeatmap() {
   return (
     <div className="space-y-6">
       {/* Header / CTA */}
-      <div className="bg-warning-subtle dark:from-red-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 rounded-lg p-6 border border-orange-200 dark:border-orange-900/50">
+      <div className="bg-warning-subtle rounded-lg p-6 border border-warning-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Flame className="w-5 h-5 text-orange-500" />
+              <Flame className="w-5 h-5 text-warning" />
               Focus Areas
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -192,15 +192,15 @@ export default function WeaknessHeatmap() {
       <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orange-500" />
+            <AlertTriangle className="w-4 h-4 text-warning" />
             Topic Mastery Heatmap
           </h4>
           <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
-            <span className="px-1.5 py-0.5 rounded-sm bg-red-500 text-white">Critical</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-orange-400 text-white">Weak</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-yellow-400 text-yellow-900">OK</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-green-400 text-white">Strong</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-emerald-500 text-white">Mastered</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-band-1 text-inverse">Critical</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-band-2 text-inverse">Weak</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-band-3 text-inverse">OK</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-band-4 text-inverse">Strong</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-band-5 text-inverse">Mastered</span>
           </div>
         </div>
 
@@ -226,7 +226,7 @@ export default function WeaknessHeatmap() {
       {data.recommended.length > 0 && (
         <div className="bg-white rounded-lg p-6 border border-gray-200">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <TrendingDown className="w-4 h-4 text-red-500" />
+            <TrendingDown className="w-4 h-4 text-danger" />
             Recommended for Practice
           </h4>
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">

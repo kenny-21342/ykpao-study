@@ -219,13 +219,13 @@ export default function UserManagement() {
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             placeholder="e.g. Alex Chen, student@example.com, or editor"
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none"
         >
           <option value="all">All roles</option>
           <option value="student">Students</option>
@@ -260,7 +260,7 @@ export default function UserManagement() {
                           <div className="min-w-0">
                             <p className="font-medium truncate flex items-center gap-1.5">
                               {u.name ?? 'Unnamed'}
-                              {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-indigo-500" />}
+                              {u.effectiveAdmin && <Shield className="w-3.5 h-3.5 text-secondary" />}
                             </p>
                             <p className="text-xs text-gray-400 truncate">{u.email}</p>
                           </div>
@@ -271,7 +271,7 @@ export default function UserManagement() {
                           value={u.role}
                           disabled={u.effectiveAdmin || actionLoading === u.id}
                           onChange={(e) => updateRole(u.id, e.target.value)}
-                          className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-1 focus:ring-ring/25 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <option value="student">student</option>
                           <option value="teacher">teacher</option>
@@ -304,7 +304,7 @@ export default function UserManagement() {
                             disabled={actionLoading === u.id}
                             title="Reset password"
                             aria-label={`Reset password for ${u.email}`}
-                            className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-md text-secondary hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
@@ -409,7 +409,7 @@ export default function UserManagement() {
           <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 id="temp-password-title" className="font-bold flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-blue-600" />
+                <KeyRound className="w-5 h-5 text-secondary" />
                 Temporary password set
               </h3>
               <button

@@ -180,3 +180,43 @@ test('the only shadow in the app is the overlay token', async () => {
     'shadow-overlay must be surfaced through @theme inline to switch with the theme',
   );
 });
+
+// ---------------------------------------------------------------------------
+// 9. Hue means something, or it is not used
+// ---------------------------------------------------------------------------
+
+test('no decorative colour families survive', async () => {
+  // The audit found 17 families. Thirteen of them carried no meaning at all —
+  // six AI actions in six hues, notification tints, "info" panels in blue.
+  // What is left is the accent (green/emerald), the two semantic tones (amber,
+  // red) and the neutral ramp, all of which are being moved onto tokens.
+  const DECORATIVE = [
+    'indigo', 'purple', 'violet', 'blue', 'cyan', 'fuchsia',
+    'lime', 'orange', 'yellow', 'teal', 'sky', 'pink', 'rose',
+  ];
+  const pattern = new RegExp(`\\b[a-z-]+-(?:${DECORATIVE.join('|')})-\\d+`, 'g');
+
+  const offenders: string[] = [];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(pattern)) {
+      offenders.push(`${path.relative(ROOT, file)}: ${m[0]}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `decorative colour reintroduced:\n${offenders.join('\n')}`);
+});
+
+test('the accuracy scale is defined once, in tokens', async () => {
+  // The heatmap is the one place hue still carries information. Its five bands
+  // were hardcoded twice — once in bandFor() and once in the legend beside it,
+  // which is exactly how a legend drifts from the thing it explains.
+  const css = stripCssComments(await read('app/globals.css'));
+  const dark = css.slice(css.indexOf('.dark {'), css.indexOf('@theme inline'));
+  for (let i = 1; i <= 5; i += 1) {
+    assert.match(css, new RegExp(`--band-${i}:\\s*#`), `--band-${i} has no light value`);
+    assert.match(dark, new RegExp(`--band-${i}:\\s*#`), `--band-${i} has no dark value`);
+  }
+
+  const src = await read('app/components/WeaknessHeatmap.tsx');
+  assert.doesNotMatch(src, /bg-(emerald|green|yellow|orange|red)-\d/, 'the scale left its tokens');
+});

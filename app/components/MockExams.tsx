@@ -184,7 +184,7 @@ const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
   },
   generated: {
     label: 'Ready',
-    cls: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    cls: 'bg-surface-raised text-secondary border-line',
   },
   in_progress: {
     label: 'In Progress',
@@ -404,10 +404,10 @@ function StatCard({
   icon, label, value, tint,
 }: { icon: React.ReactNode; label: string; value: string | number; tint: 'blue' | 'green' | 'amber' | 'purple' }) {
   const tints: Record<string, string> = {
-    blue: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300',
+    blue: 'bg-surface-raised text-secondary',
     green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
     amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
-    purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
+    purple: 'bg-surface-raised text-secondary',
   };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
@@ -723,7 +723,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
                       mode === 'predicted'
                         ? 'bg-accent text-white border-transparent shadow'
-                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-fuchsia-400'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-strong'
                     }`}
                   >
                     Predicted paper
@@ -1838,11 +1838,11 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
 
 function SummaryStat({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: string; tint: 'blue' | 'green' | 'amber' | 'purple' | 'indigo' }) {
   const tints: Record<string, string> = {
-    blue: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300',
+    blue: 'bg-surface-raised text-secondary',
     green: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300',
     amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300',
-    purple: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300',
-    indigo: 'bg-indigo-50 text-indigo-600',
+    purple: 'bg-surface-raised text-secondary',
+    indigo: 'bg-surface-raised text-secondary',
   };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
@@ -1861,7 +1861,7 @@ function FeedbackBlock({ label, icon, tone, children }: { label: string; icon: R
   const tones: Record<string, string> = {
     green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',
     amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
-    blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
+    blue: 'bg-surface-raised border-line text-secondary',
   };
   return (
     <div className={`rounded-lg border p-3 ${tones[tone]}`}>

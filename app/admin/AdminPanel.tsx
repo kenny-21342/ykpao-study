@@ -81,7 +81,7 @@ export default function AdminPanel() {
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                 section === key
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                  ? 'bg-surface-raised text-secondary'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
