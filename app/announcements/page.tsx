@@ -32,7 +32,7 @@ export default function AnnouncementsPage() {
 
   return (
     <SessionProvider>
-      <div className="min-h-screen bg-canvas">
+      <div className="min-h-full bg-canvas">
         {/* Top bar */}
         <header className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 px-6 py-4 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-green-600 transition-colors">

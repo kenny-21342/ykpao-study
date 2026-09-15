@@ -85,7 +85,7 @@ export default function AccountSettingsPage() {
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     );
@@ -217,7 +217,7 @@ export default function AccountSettingsPage() {
   const isOAuth = !hasPassword;
 
   return (
-    <div className="min-h-screen bg-canvas p-4 md:p-8">
+    <div className="min-h-full bg-canvas p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">

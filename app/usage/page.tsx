@@ -84,14 +84,14 @@ export default function UsagePage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     );
   }
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8">
+      <div className="min-h-full flex items-center justify-center p-8">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-5 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600" />
           <p className="text-sm text-red-700">{error}</p>
@@ -106,7 +106,7 @@ export default function UsagePage() {
   const dayEntries = Object.entries(data.byDay).sort();
 
   return (
-    <div className="min-h-screen bg-canvas p-4 md:p-8">
+    <div className="min-h-full bg-canvas p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">

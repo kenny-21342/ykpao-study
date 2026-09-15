@@ -31,7 +31,7 @@ export default async function BankIndexPage() {
   const papers = await listBankPapers();
 
   return (
-    <main className="min-h-screen bg-surface-raised">
+    <main className="min-h-full bg-surface-raised">
       <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
         <div>
           <Link

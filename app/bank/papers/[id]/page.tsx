@@ -45,7 +45,7 @@ export default async function BankPaperPage({
   const variant = paper.variant ? `${paper.paperNumber}${paper.variant}` : `${paper.paperNumber}`;
 
   return (
-    <main className="min-h-screen bg-surface-raised">
+    <main className="min-h-full bg-surface-raised">
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
         <div>
           <Link
