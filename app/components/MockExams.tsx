@@ -1660,7 +1660,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
           <div className="mt-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <p className="text-accent-text text-sm">Mock Exam Results</p>
-              <h1 className="text-3xl font-bold mt-1">{exam.title}</h1>
+              <h2 className="text-3xl font-bold mt-1">{exam.title}</h2>
               <p className="text-accent-text text-sm mt-2">
                 {exam.subjectCode ?? 'Exam'} • Submitted {fmtDate(exam.submittedAt)}
               </p>

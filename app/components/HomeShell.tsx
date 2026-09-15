@@ -665,11 +665,14 @@ export default function SmartEduPlatform() {
             <div className="mx-auto max-w-7xl space-y-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-primary">
+                  {/* h2, not h1: the shell header already titles this view
+                      "Dashboard". Bigger than the h1 visually, one level below
+                      it semantically, which is the correct way round. */}
+                  <h2 className="text-3xl font-bold text-primary">
                     {isSessionLoading
                       ? 'Welcome back!'
                       : `Welcome back, ${user?.name?.split(' ')[0] ?? 'Student'}!`}
-                  </h1>
+                  </h2>
                   <p className="mt-1 text-sm text-secondary">One next step, then the next.</p>
                 </div>
               </div>
