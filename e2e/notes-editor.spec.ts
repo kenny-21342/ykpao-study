@@ -10,7 +10,7 @@ import { record, attachDiagnostics } from './helpers';
  * consecutively to be worth anything as a regression gate.
  */
 
-type Ids = { notebookId: string; sectionId: string; pageId: string };
+type Ids = { notebookId: string; sectionId: string; pageId: string; sectionName: string; pageTitle: string };
 
 async function createScratchPage(request: import('@playwright/test').APIRequestContext): Promise<Ids> {
   const stamp = Date.now().toString(36);
@@ -23,11 +23,37 @@ async function createScratchPage(request: import('@playwright/test').APIRequestC
   expect(sec.status(), 'POST /api/sections').toBe(201);
   const sectionId = (await sec.json()).id as string;
 
-  const pg = await request.post('/api/pages', { data: { sectionId, title: `e2e page ${stamp}` } });
+  const pageTitle = `e2e page ${stamp}`;
+  const pg = await request.post('/api/pages', { data: { sectionId, title: pageTitle } });
   expect(pg.status(), 'POST /api/pages').toBe(201);
   const pageId = (await pg.json()).id as string;
 
-  return { notebookId, sectionId, pageId };
+  return { notebookId, sectionId, pageId, sectionName: `e2e section ${stamp}`, pageTitle };
+}
+
+/**
+ * Open the scratch page in the notebook UI.
+ *
+ * These specs used to navigate straight to `/?tab=notes-textbook&pageId=...`,
+ * but no such deep link exists: nothing in routing.ts, HomeShell or
+ * NotesTextbook reads a `pageId` param, so the workspace opened with the tree
+ * rendered and no page selected, the editor never mounted, and all three specs
+ * failed on a missing `.ProseMirror`. Click the tree the way a student does.
+ */
+async function openScratchPage(page: import('@playwright/test').Page, ids: Ids) {
+  await page.goto('/?tab=notes-textbook');
+
+  const section = page.getByRole('button', { name: ids.sectionName, exact: true });
+  await expect(section).toBeVisible({ timeout: 90_000 });
+  await section.click();
+
+  const pageButton = page.getByRole('button', { name: ids.pageTitle, exact: true });
+  await expect(pageButton).toBeVisible({ timeout: 30_000 });
+  await pageButton.click();
+
+  const editor = page.locator('.ProseMirror').first();
+  await expect(editor).toBeVisible({ timeout: 90_000 });
+  return editor;
 }
 
 test.describe('notebook editor', () => {
@@ -46,10 +72,7 @@ test.describe('notebook editor', () => {
 
   test('bold, italic and the triple-asterisk case all live-render', async ({ page }, testInfo) => {
     const r = record(page);
-    await page.goto(`/?tab=notes-textbook&pageId=${ids.pageId}`);
-
-    const editor = page.locator('.ProseMirror').first();
-    await expect(editor).toBeVisible({ timeout: 90_000 });
+    const editor = await openScratchPage(page, ids);
     await editor.click();
 
     // Typed forward at a collapsed cursor, which is the only thing input
@@ -69,10 +92,7 @@ test.describe('notebook editor', () => {
 
   test('the LaTeX linter flags broken math and clears when it is fixed', async ({ page }, testInfo) => {
     const r = record(page);
-    await page.goto(`/?tab=notes-textbook&pageId=${ids.pageId}`);
-
-    const editor = page.locator('.ProseMirror').first();
-    await expect(editor).toBeVisible({ timeout: 90_000 });
+    const editor = await openScratchPage(page, ids);
     await editor.click();
 
     // Unbalanced braces: KaTeX throws, so the decoration must appear -- with
@@ -91,10 +111,7 @@ test.describe('notebook editor', () => {
 
   test('preview mode renders the page read-only without the shared-page banner', async ({ page }, testInfo) => {
     const r = record(page);
-    await page.goto(`/?tab=notes-textbook&pageId=${ids.pageId}`);
-
-    const editor = page.locator('.ProseMirror').first();
-    await expect(editor).toBeVisible({ timeout: 90_000 });
+    const editor = await openScratchPage(page, ids);
     await editor.click();
     await page.keyboard.type('Preview me');
 

@@ -6,7 +6,12 @@ test.describe('past paper browsing and filtering', () => {
     const r = record(page);
     await page.goto('/papers');
 
-    await expect(page.getByRole('heading', { name: /past papers/i })).toBeVisible();
+    // Scoped to `main` on purpose. The deployed build titles this route twice --
+    // once in the shell header, once in PaperBrowser -- so an unscoped lookup is
+    // a strict-mode violation rather than a test of anything. That duplicate is a
+    // real defect, but it belongs to the shell, and tests/app-chrome.test.ts
+    // already fails on it statically; this spec is about the cascade below.
+    await expect(page.getByRole('main').getByRole('heading', { name: /past papers/i })).toBeVisible();
 
     const step = (title: string) =>
       page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${title}$`, 'i') }) });

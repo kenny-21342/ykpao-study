@@ -48,7 +48,11 @@ test.describe('auth (signed out)', () => {
 
     const second = await page.context().newPage();
     await second.goto('/papers');
-    await expect(second.getByRole('heading', { name: /past papers/i })).toBeVisible();
+    // Scoped to `main`: the deployed build titles /papers twice, once in the
+    // shell header and once in PaperBrowser, so an unscoped lookup is a
+    // strict-mode violation. tests/app-chrome.test.ts fails on that duplicate
+    // statically; here the point is only that the session survived a new tab.
+    await expect(second.getByRole('main').getByRole('heading', { name: /past papers/i })).toBeVisible();
     const session = await second.request.get('/api/auth/session');
     expect(session.ok()).toBeTruthy();
     const body = await session.json();

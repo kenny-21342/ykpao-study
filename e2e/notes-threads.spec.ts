@@ -63,8 +63,13 @@ test.describe('discussion threads', () => {
     if (list.length > 0) {
       const one = await page.request.get(`/api/discussions/threads/${list[0].id}`);
       expect(one.status(), 'GET one thread').toBe(200);
-      const posts = await page.request.get(`/api/discussions/threads/${list[0].id}/posts`);
-      expect(posts.status(), 'GET thread posts').toBe(200);
+
+      // Posts arrive with the thread itself -- .../threads/[id] includes them,
+      // filtered so moderator-hidden posts never reach the client. There is no
+      // GET .../posts collection route by design (that path exports POST only),
+      // so asserting one here only ever tested a 405.
+      const thread = await one.json();
+      expect(Array.isArray(thread.posts ?? thread.thread?.posts), 'thread payload carries its posts').toBeTruthy();
     }
   });
 });

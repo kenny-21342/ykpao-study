@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
  * the same file `next dev` does, without overriding anything already exported
  * in the shell — so a one-off `E2E_BASE_URL=... npm run e2e` still wins.
  */
-dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local'), quiet: true });
 
 const STATE_PATH = path.join(__dirname, '.auth', 'student.json');
 

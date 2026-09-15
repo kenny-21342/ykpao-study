@@ -23,6 +23,26 @@ setup('authenticate', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: /^Dashboard$/ })).toBeVisible({ timeout: 45_000 });
 
+  // Clear the onboarding wizard if this account has never completed it.
+  //
+  // OnboardingWizard renders a `fixed inset-0` backdrop over the whole app, so
+  // every click in every downstream spec is swallowed by it -- Playwright
+  // reports "<div ...> intercepts pointer events" and retries until it times
+  // out, which reads like six unrelated product bugs rather than one piece of
+  // missing fixture state.
+  //
+  // Done through the API rather than by clicking Skip: the wizard renders a
+  // loading backdrop first and only paints its buttons once it has fetched the
+  // subject list, so driving the UI races that and silently does nothing. The
+  // route stamps `onboardedAt` and deliberately touches no enrollments, so this
+  // is idempotent and costs the account nothing it had.
+  const onboarding = await page.request.post('/api/onboarding', { data: { skip: true } });
+  expect(onboarding.status(), 'POST /api/onboarding {skip:true}').toBe(200);
+
+  // Reload so the session picks it up and no modal is captured in the state.
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Dashboard$/ })).toBeVisible({ timeout: 45_000 });
+
   fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
   await page.context().storageState({ path: STATE_PATH });
 });

@@ -1,6 +1,18 @@
 import { Page, TestInfo, expect } from '@playwright/test';
 
-export const TEST_PASSWORD = 'E2eTester!2026';
+/**
+ * The E2E student's real password, so the login spec exercises the same
+ * credential auth.setup.ts signs in with. It read a hardcoded literal before,
+ * which paired E2E_EMAIL with the wrong password and failed as "Invalid email
+ * or password" -- indistinguishable from a broken login page.
+ */
+export const TEST_PASSWORD = process.env.E2E_PASSWORD ?? 'E2eTester!2026';
+
+/**
+ * Deliberately NOT the real password: signUp() registers a brand-new address,
+ * and a throwaway account should never be given the QA student's credential.
+ */
+export const SIGNUP_PASSWORD = 'E2eTester!2026';
 
 /** Unique-per-run address so reruns never collide on the 409 "already registered". */
 export function newTestEmail(tag = 'e2e'): string {
@@ -47,8 +59,8 @@ export async function signUp(page: Page, email: string, name = 'E2E Tester') {
   await page.getByPlaceholder(/name/i).first().fill(name).catch(() => {});
   await page.locator('input[type="email"]').first().fill(email);
   const pw = page.locator('input[type="password"]');
-  await pw.nth(0).fill(TEST_PASSWORD);
-  if (await pw.count() > 1) await pw.nth(1).fill(TEST_PASSWORD);
+  await pw.nth(0).fill(SIGNUP_PASSWORD);
+  if (await pw.count() > 1) await pw.nth(1).fill(SIGNUP_PASSWORD);
   await page.getByRole('button', { name: /sign up|create account|register/i }).first().click();
   await page.waitForURL((u) => !u.pathname.startsWith('/auth/signup'), { timeout: 30_000 });
 }
