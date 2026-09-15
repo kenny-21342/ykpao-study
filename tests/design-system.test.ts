@@ -318,3 +318,45 @@ test('the compensation stylesheets are gone and nothing hardcodes a colour', asy
   const globals = stripCssComments(await read('app/globals.css'));
   assert.doesNotMatch(globals, /!important/, 'globals.css should not need to shout');
 });
+
+// ---------------------------------------------------------------------------
+// 12. The dashboard stays consolidated
+// ---------------------------------------------------------------------------
+
+test('the dashboard does not grow back into a wall of boxes', async () => {
+  const src = stripCssComments(await read('app/components/HomeShell.tsx'));
+  const start = src.indexOf("{activeTab === 'dashboard' && (");
+  // Not the `{/* VIEW 1: Study */}` marker — stripCssComments removes JSX
+  // comments too, so anchoring on one silently yields an empty slice.
+  const end = src.indexOf("{activeTab === 'study' && (");
+  assert.ok(start > 0 && end > start, 'could not locate the dashboard block');
+  const dashboard = src.slice(start, end);
+
+  // Eleven to fourteen bordered boxes met a student on first load, three of
+  // them stacked notices. Each inline card shell here is one of those.
+  const shells = dashboard.match(/rounded-lg border border-line bg-surface\b/g) ?? [];
+  assert.ok(shells.length <= 4,
+    `${shells.length} inline card shells on the dashboard; it was consolidated to at most 4`);
+
+  // One notice slot, not three stacked banners. AnnouncementBanner and
+  // AiKeyPrompt must sit inside the same conditional as the stats error.
+  const noticeSlot = dashboard.slice(
+    dashboard.indexOf('{statsError ?'),
+    dashboard.indexOf('Next step'),
+  );
+  assert.match(noticeSlot, /<AnnouncementBanner \/>/, 'the announcement banner left the notice slot');
+  assert.match(noticeSlot, /<AiKeyPrompt \/>/, 'the AI-key card left the notice slot');
+
+  // The four figures are one borderless row, not four cards with four accents.
+  assert.match(dashboard, /<StatRow>/, 'the figures are not in a StatRow');
+  assert.doesNotMatch(src, /statToneStyles/, 'the per-figure accent map came back');
+
+  // The heatmap belongs to Study > Coverage, which is what ?tab=weaknesses
+  // routes to; on the dashboard it was one more box for a new account.
+  assert.doesNotMatch(dashboard, /<WeaknessHeatmap/, 'the heatmap is back on the dashboard');
+  assert.match(
+    stripCssComments(await read('app/components/StudyCoach.tsx')),
+    /<WeaknessHeatmap \/>/,
+    'the heatmap has no entrance at all',
+  );
+});

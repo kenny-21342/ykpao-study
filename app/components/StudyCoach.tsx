@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
+import WeaknessHeatmap from './WeaknessHeatmap';
 import { plainTextPreview } from '@/lib/latex';
 
 type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery' | 'search';
@@ -449,6 +450,23 @@ export default function StudyCoach({
           <ReviewView reviews={reviews} busy={busy} onRate={rateReview} onOpenQuestion={onOpenQuestion} />
         )}
         {view === 'decks' && <DeckBrowser onOpenQuestion={onOpenQuestion} />}
+        {view === 'mastery' && (
+          /* The weakness heatmap and its ~470-line /api/weaknesses route were
+             both complete and both unreachable until this restyle; its first
+             entrance was the dashboard, which is where it made the box count
+             worse. Coverage is the view that is already about which topics are
+             weak, and `?tab=weaknesses` has always routed here. It renders its
+             own empty state for an account with no history. */
+          <section
+            aria-labelledby="weak-topics-heading"
+            className="mx-auto max-w-6xl px-4 pt-4 md:px-6 md:pt-6"
+          >
+            <h3 id="weak-topics-heading" className="mb-3 font-bold text-primary">
+              Where you are losing marks
+            </h3>
+            <WeaknessHeatmap />
+          </section>
+        )}
         {view === 'mastery' && overview && (
           <MasteryView topics={overview.mastery} subjects={overview.subjects} selectedSubject={selectedSubject} setSelectedSubject={setSelectedSubject} onOpenQuestion={onOpenQuestion} queue={overview.adaptiveQueue} />
         )}

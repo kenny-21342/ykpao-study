@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -30,9 +30,9 @@ import DailyChallenge from './DailyChallenge';
 import CourseShortcuts from '@/app/components/CourseShortcuts';
 import AnnouncementBanner from './AnnouncementBanner';
 import AiKeyPrompt from './AiKeyPrompt';
-import WeaknessHeatmap from './WeaknessHeatmap';
+import { StatRow, StatTile } from './ui';
 import { ScreenContextProvider, useScreenContext } from './ScreenContext';
-import { Database, Sparkles, TrendingUp, Clock, Award, Target, Star, Zap, BookMarked, Calendar, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
+import { Database, Sparkles, BookMarked, PanelLeftClose, PanelLeft, ClipboardList, Library, Brain, ArrowRight, Layers3, Menu } from 'lucide-react';
 
 type DashboardStats = {
   questionsAnswered: number;
@@ -96,15 +96,6 @@ type LearningOverview = {
     activeReviews: number;
   };
   latestExam: { id: string; title: string; score: number | null; totalMarks: number; submittedAt: string | null } | null;
-};
-
-type StatTone = 'blue' | 'green' | 'orange' | 'purple';
-
-const statToneStyles: Record<StatTone, { icon: string; helper: string }> = {
-  blue: { icon: 'bg-surface-raised text-secondary', helper: 'text-secondary' },
-  green: { icon: 'bg-green-50 text-green-600', helper: 'text-green-600' },
-  orange: { icon: 'bg-warning-subtle text-warning', helper: 'text-warning' },
-  purple: { icon: 'bg-surface-raised text-secondary', helper: 'text-secondary' },
 };
 
 const formatStat = (value: number | undefined, suffix = '') => {
@@ -436,78 +427,57 @@ export default function SmartEduPlatform() {
 
   const recentActivity = isAuthenticated && activity.length > 0 ? activity : [];
 
+  /**
+   * Four figures for the header row. They were four bordered cards, each with
+   * its own accent colour and a tinted icon square -- four colours for four
+   * things that mean the same kind of thing, and four of the eleven-odd boxes
+   * a student met on first load. StatTile carries no border and no icon.
+   */
   const statCards: Array<{
     label: string;
     value: string;
-    helper: ReactNode;
-    helperClass?: string;
-    icon: ReactNode;
-    tone: StatTone;
+    hint?: string;
+    delta?: { value: string; direction: 'up' | 'down' | 'flat' };
   }> = [
-        {
-          label: 'Questions Answered',
-          value: formatStat(stats?.questionsAnswered),
-          helper: (
-            <>
-              <TrendingUp className="w-3 h-3 mr-1" />
-              {stats
-                ? `${stats.weekDelta >= 0 ? '+' : ''}${stats.weekDelta}% this week`
-                : 'Loading practice history'}
-            </>
-          ),
-          helperClass: stats && stats.weekDelta < 0 ? 'text-red-600' : 'text-green-600',
-          icon: <Target className="w-6 h-6" />,
-          tone: 'blue',
-        },
-        {
-          label: 'Accuracy Rate',
-          value: formatStat(stats?.accuracy, '%'),
-          helper: (
-            <>
-              <Award className="w-3 h-3 mr-1" />
-              {stats && stats.accuracy >= 80
-                ? 'Great work!'
-                : stats && stats.accuracy > 0
-                  ? 'Keep practicing'
-                  : stats
-                    ? 'Start a session'
-                    : 'Loading graded attempts'}
-            </>
-          ),
-          icon: <Award className="w-6 h-6" />,
-          tone: 'green',
-        },
-        {
-          label: 'Study Streak',
-          value: stats ? `${formatStat(stats.studyStreak)} days` : '...',
-          helper: (
-            <>
-              <Zap className="w-3 h-3 mr-1" />
-              {stats
-                ? stats.studyStreak > 0 ? 'Keep it going!' : 'Study today to start'
-                : 'Loading activity days'}
-            </>
-          ),
-          icon: <Star className="w-6 h-6" />,
-          tone: 'orange',
-        },
-        {
-          label: 'Hours Studied',
-          value: stats ? `${formatStat(stats.hoursStudied)}h` : '...',
-          helper: (
-            <>
-              <Clock className="w-3 h-3 mr-1" />
-              {stats
-                ? stats.hoursStudied > 0
-                  ? `${stats.noteCount} note${stats.noteCount === 1 ? '' : 's'} written`
-                  : 'Log a session'
-                : 'Loading study sessions'}
-            </>
-          ),
-          icon: <Clock className="w-6 h-6" />,
-          tone: 'purple',
-        },
-      ];
+    {
+      label: 'Answered',
+      value: formatStat(stats?.questionsAnswered),
+      delta: stats
+        ? {
+            value: `${stats.weekDelta >= 0 ? '+' : ''}${stats.weekDelta}% this week`,
+            direction: stats.weekDelta > 0 ? 'up' : stats.weekDelta < 0 ? 'down' : 'flat',
+          }
+        : undefined,
+      hint: stats ? undefined : 'Loading practice history',
+    },
+    {
+      label: 'Accuracy',
+      value: formatStat(stats?.accuracy, '%'),
+      hint: stats
+        ? stats.accuracy >= 80
+          ? 'Great work'
+          : stats.accuracy > 0
+            ? 'Keep practicing'
+            : 'Start a session'
+        : 'Loading graded attempts',
+    },
+    {
+      label: 'Streak',
+      value: stats ? `${formatStat(stats.studyStreak)} days` : '...',
+      hint: stats
+        ? stats.studyStreak > 0 ? 'Keep it going' : 'Study today to start'
+        : 'Loading activity days',
+    },
+    {
+      label: 'Hours studied',
+      value: stats ? `${formatStat(stats.hoursStudied)}h` : '...',
+      hint: stats
+        ? stats.hoursStudied > 0
+          ? `${stats.noteCount} note${stats.noteCount === 1 ? '' : 's'} written`
+          : 'Log a session'
+        : 'Loading study sessions',
+    },
+  ];
 
   const dashboardFocus = useMemo(() => {
     if (!isAuthenticated) {
@@ -702,17 +672,31 @@ export default function SmartEduPlatform() {
                   </h1>
                   <p className="mt-1 text-sm text-secondary">One next step, then the next.</p>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-secondary">
-                  <Calendar className="h-4 w-4" />
-                  Today
-                </div>
               </div>
 
-              <AnnouncementBanner />
+              {/* The figures, borderless, in the header rather than as four
+                  separate cards below it. */}
+              <StatRow>
+                {statCards.map((card) => (
+                  <StatTile
+                    key={card.label}
+                    label={card.label}
+                    value={card.value}
+                    hint={card.hint}
+                    delta={card.delta}
+                  />
+                ))}
+              </StatRow>
 
-              {statsError && (
-                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-                  <span>{statsError} The figures below are not your real totals.</span>
+              {/* One notice slot. These were three stacked banners plus a
+                  pill row -- an announcement, a stats-failure warning and the
+                  AI-key card could all be on screen at once, above the thing
+                  the student came to do. Highest priority wins; the others
+                  wait. The stats error goes first because it says the figures
+                  directly above it are wrong. */}
+              {statsError ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning-border bg-warning-subtle px-4 py-3 text-sm text-warning">
+                  <span>{statsError} The figures above are not your real totals.</span>
                   <button
                     type="button"
                     onClick={() => setRefreshTick((n) => n + 1)}
@@ -721,20 +705,11 @@ export default function SmartEduPlatform() {
                     Try again
                   </button>
                 </div>
-              )}
-
-              <AiKeyPrompt />
-
-              {stats?.nudges && stats.nudges.length > 0 && (
-                <section className="flex flex-wrap gap-2" aria-label="Study updates">
-                  {stats.nudges.map((nudge) => (
-                    <button key={nudge.type} onClick={() => nudge.action === 'review' ? openRoute({ tab: 'study', studyView: 'review' }) : nudge.action === 'plan' ? openRoute({ tab: 'study', studyView: 'plan' }) : openPracticeOrPapers()} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line bg-surface px-3 text-xs font-semibold text-secondary hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30">
-                      {nudge.type === 'reviews' ? <Brain className="h-4 w-4 text-emerald-600" /> : nudge.type === 'stalled' ? <Calendar className="h-4 w-4 text-amber-600" /> : <Database className="h-4 w-4 text-secondary" />}
-                      {nudge.label}
-                      <ArrowRight className="h-3.5 w-3.5 text-muted" />
-                    </button>
-                  ))}
-                </section>
+              ) : (
+                <>
+                  <AnnouncementBanner />
+                  <AiKeyPrompt />
+                </>
               )}
 
               <section className="rounded-lg border border-line bg-surface p-5 md:p-6">
@@ -765,7 +740,7 @@ export default function SmartEduPlatform() {
                     {isSessionLoading ? null : dashboardFocus.primaryHref ? (
                       <Link
                         href={dashboardFocus.primaryHref}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
                       >
                         {dashboardFocus.primaryLabel}
                         <ArrowRight className="h-4 w-4" />
@@ -773,7 +748,7 @@ export default function SmartEduPlatform() {
                     ) : (
                       <button
                         onClick={dashboardFocus.primaryAction}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
                       >
                         {dashboardFocus.primaryLabel}
                         <ArrowRight className="h-4 w-4" />
@@ -800,6 +775,29 @@ export default function SmartEduPlatform() {
                     );
                   })}
                 </div>
+                {stats?.nudges && stats.nudges.length > 0 && (
+                  <div
+                    className="mt-4 flex flex-wrap gap-2 border-t border-subtle pt-4"
+                    aria-label="Study updates"
+                  >
+                    {stats.nudges.map((nudge) => (
+                      <button
+                        key={nudge.type}
+                        onClick={() =>
+                          nudge.action === 'review'
+                            ? openRoute({ tab: 'study', studyView: 'review' })
+                            : nudge.action === 'plan'
+                              ? openRoute({ tab: 'study', studyView: 'plan' })
+                              : openPracticeOrPapers()
+                        }
+                        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line bg-surface px-3 text-xs font-semibold text-secondary transition-colors hover:border-accent-border hover:bg-accent-subtle"
+                      >
+                        {nudge.label}
+                        <ArrowRight className="h-3.5 w-3.5 text-muted" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {isAuthenticated && (
@@ -808,47 +806,6 @@ export default function SmartEduPlatform() {
                   onOpenMockExams={() => openRoute({ tab: 'mock-exams' })}
                 />
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((card) => {
-                  const tone = statToneStyles[card.tone];
-
-                  return (
-                    <div
-                      key={card.label}
-                      className="rounded-lg border border-line bg-surface p-5 transition-shadow"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-secondary">{card.label}</p>
-                          <p className="mt-2 text-3xl font-bold text-primary">{card.value}</p>
-                          <p className={`mt-2 flex items-center text-xs ${card.helperClass ?? tone.helper}`}>
-                            {card.helper}
-                          </p>
-                        </div>
-                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tone.icon}`}>
-                          {card.icon}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* The weakness heatmap and its ~470-line /api/weaknesses route
-                  were both complete and both unreachable: nothing in the app
-                  imported the component. This is its entrance. It renders its
-                  own empty state for an account with no history, so it costs a
-                  new student nothing. */}
-              <section aria-labelledby="weak-topics-heading">
-                <h2
-                  id="weak-topics-heading"
-                  className="mb-3 text-lg font-bold text-primary"
-                >
-                  Where you are losing marks
-                </h2>
-                <WeaknessHeatmap />
-              </section>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
                 <section className="rounded-lg border border-line bg-surface p-6">
@@ -897,32 +854,6 @@ export default function SmartEduPlatform() {
 
                 <div className="space-y-6">
                   <DailyChallenge />
-                  <section className="rounded-lg border border-line bg-surface p-5">
-                    <h2 className="text-lg font-bold text-primary">Study shortcuts</h2>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      {[
-                        { label: 'Study', icon: Brain, action: () => openRoute({ tab: 'study', studyView: 'today' }) },
-                        practiceShortcut,
-                        { label: 'Materials', icon: Layers3, action: () => openRoute({ tab: 'materials' }) },
-                        { label: 'Mock exams', icon: ClipboardList, action: () => openRoute({ tab: 'mock-exams' }) },
-                      ].map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <button
-                            key={item.label}
-                            onClick={item.action}
-                            className="inline-flex items-center justify-between gap-2 rounded-lg border border-line bg-surface-raised px-3 py-3 text-left text-sm font-semibold text-secondary transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-950/30"
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                              {item.label}
-                            </span>
-                            <ArrowRight className="h-4 w-4 text-muted" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
                 </div>
               </div>
             </div>
