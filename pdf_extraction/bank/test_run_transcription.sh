@@ -128,18 +128,36 @@ check "caught the stall via the phase B marker" "$(grep -c 'chunk stalled' "$S/t
 check "did not wait out sleep 300" "$([ "$elapsed" -lt 180 ] && echo yes || echo no)" "yes"
 
 echo
-echo "7. the provider is judged by transport failures, not by hard questions"
+echo "7. a few hard questions are not an outage"
 fresh
-# 17 Sep: 36 of the last 40 completions failed, every one of them the model
-# returning unparseable JSON on a provider answering normally. The supervisor
-# read that as an outage and refused to spend anything. A chunk must run.
-seed 4 0 36
+# 17 Sep: the supervisor counted every failure, so a handful of questions the
+# model could not parse read as a dead provider and it refused to spend
+# anything. Content failures below the base rate must not stop the corpus.
+seed 16 0 4
 LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
   REMAINING_CMD='echo 5' CHUNK_CMD='echo CHUNK_RAN; exit 0' ONCE=1 \
   BACKOFF_MIN=1 BACKOFF_MAX=1 \
   bash "$RUN" >/dev/null 2>&1
-check "ran despite 90% content failures" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "1"
+check "ran despite 20% content failures" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "1"
 check "did not call it an outage" "$(grep -c 'provider unhealthy' "$S/t.log")" "0"
+
+echo
+echo "7b. but a flood of unusable responses is"
+fresh
+# 18 Sep: the reseller proxy kept answering 200 while returning prose where
+# JSON should be. Every failure was therefore a *content* failure, the
+# transport check scored it healthy, and 56% of calls burned three retries
+# each with the strips attached. Seventeen thousand calls over the two days
+# before had produced zero failures, so this rate cannot be hard questions.
+seed 8 0 12
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
+  REMAINING_CMD='echo 5' CHUNK_CMD='echo CHUNK_RAN; exit 0' ONCE=1 \
+  BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1 &
+sup=$!
+sleep 6; kill -TERM $sup 2>/dev/null; wait $sup 2>/dev/null
+check "spent nothing at 60% unusable" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "0"
+check "named the reason" "$([ "$(grep -c 'unusable responses' "$S/t.log")" -ge 1 ] && echo yes || echo no)" "yes"
 
 echo
 echo "8. a stale outage does not wedge the run forever"

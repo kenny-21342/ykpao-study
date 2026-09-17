@@ -67,6 +67,10 @@ STALL_SECS="${STALL_SECS:-1800}"
 # provider is treated as unhealthy. An integer, so the comparison is a shell
 # test rather than a dependency on bc being installed.
 UNHEALTHY_PCT="${UNHEALTHY_PCT:-60}"
+# A *content* failure rate this high is not hard questions, it is a broken
+# provider. See the note above recent_any_failure_pct for why this exists and
+# why the threshold is where it is.
+UNHEALTHY_ANY_PCT="${UNHEALTHY_ANY_PCT:-40}"
 BACKOFF_MIN="${BACKOFF_MIN:-60}"
 BACKOFF_MAX="${BACKOFF_MAX:-1800}"
 MAX_CONSECUTIVE_FAILURES="${MAX_CONSECUTIVE_FAILURES:-8}"
@@ -143,6 +147,39 @@ recent_failure_pct() {
                    or detail like '%504%'
                    or detail like '%429%'
                  ) then 1 else 0 end as transport
+          from bank_run_ledger
+         where completed_at >= datetime('now', '-${HEALTH_WINDOW_MIN} minutes')
+         order by completed_at desc
+         limit 60
+      );" 2>/dev/null || echo 0
+}
+
+# The gap the note above left open, and it cost real money on 18 Sep.
+#
+# "Only transport failures mean the provider is down" is true of a provider
+# that is up. It is false of a reseller proxy that keeps answering 200 while
+# returning prose where JSON should be: every one of those is a *content*
+# failure, so the check above scored the endpoint healthy while 56% of calls
+# came back unusable and each one had been retried three times with the
+# question strips attached.
+#
+# The honest signal is the base rate. Across 09-16 11:00 to 09-17 15:00 --
+# about 17,000 calls -- the ledger recorded zero failures in every single
+# hour. Hard questions do not produce a sustained 40% failure rate; only a
+# broken endpoint does. So this counts failures of any kind, and sits well
+# above anything the corpus itself has ever generated.
+#
+# It shares the window and the sample floor with the transport check, so it
+# inherits the 17 Sep fix for the frozen window: it can back off, and it can
+# always recover, because the window ages out whether or not work is running.
+recent_any_failure_pct() {
+  sqlite3 "file:${DB}?mode=ro" "
+    select case
+             when count(*) < ${HEALTH_MIN_SAMPLE} then 0
+             else cast(round(100.0 * sum(status = 'failed') / count(*)) as int)
+           end
+      from (
+        select status
           from bank_run_ledger
          where completed_at >= datetime('now', '-${HEALTH_WINDOW_MIN} minutes')
          order by completed_at desc
@@ -331,9 +368,15 @@ while true; do
   # Before spending anything, ask whether the provider is answering. A bad
   # stretch here means the next chunk would just manufacture `failed` rows.
   fail_pct=$(recent_failure_pct)
-  if [ "${fail_pct:-0}" -ge "$UNHEALTHY_PCT" ]; then
-    log "provider unhealthy: ${fail_pct}% of recent completions failed; waiting ${backoff}s"
-    status "waiting: provider ${fail_pct}% failures"
+  any_pct=$(recent_any_failure_pct)
+  if [ "${fail_pct:-0}" -ge "$UNHEALTHY_PCT" ] || [ "${any_pct:-0}" -ge "$UNHEALTHY_ANY_PCT" ]; then
+    if [ "${fail_pct:-0}" -ge "$UNHEALTHY_PCT" ]; then
+      why="${fail_pct}% transport"
+    else
+      why="${any_pct}% unusable responses"
+    fi
+    log "provider unhealthy: ${why} in the last ${HEALTH_WINDOW_MIN}m; waiting ${backoff}s"
+    status "waiting: provider ${why}"
     sleep "$backoff"
     backoff=$(( backoff * 2 )); [ "$backoff" -gt "$BACKOFF_MAX" ] && backoff="$BACKOFF_MAX"
     continue
