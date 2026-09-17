@@ -28,8 +28,11 @@
 # For an attended run in a terminal, plain `./run_transcription.sh` is fine.
 #
 # NOTE: bash reads a script incrementally, by byte offset. Editing this file
-# while a run is in flight can make the running copy jump into the middle of a
-# line. Stop the run before editing it.
+# in place while a run is in flight can make the running copy jump into the
+# middle of a line. Do not edit it in place. To change a live batch, write a
+# new file and `mv` it over this path: rename swaps the inode, the running
+# shell keeps reading the old one through its open descriptor, and the new
+# version takes effect at the next restart.
 #
 # WHY THIS SUPERVISES RATHER THAN JUST LOOPING
 #
@@ -257,6 +260,50 @@ on_signal() {
   exit 0
 }
 trap on_signal INT TERM
+
+# --- single instance -------------------------------------------------------
+#
+# launchd's KeepAlive starts a replacement the moment this agent exits, and on
+# 17 Sep it started one while the previous supervisor was still tearing down
+# its chunk -- two supervisors, one ledger, one corpus, both driving chunks.
+# The log shows it twice (10:53/11:19 and again at 14:15, where the loser was
+# signalled 67s after starting).
+#
+# mkdir is the atomic primitive available everywhere; macOS ships no flock.
+# The pid inside the directory is what lets a killed run's lock be reclaimed
+# instead of wedging the batch until someone notices.
+LOCK_DIR="${LOCK_DIR:-pdf_extraction/bank/.transcription.lock}"
+
+acquire_lock() {
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    echo $$ > "$LOCK_DIR/pid"
+    return 0
+  fi
+  local holder
+  holder=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
+    return 1
+  fi
+  log "clearing stale lock (pid ${holder:-unknown} is gone)"
+  rm -rf "$LOCK_DIR"
+  mkdir "$LOCK_DIR" 2>/dev/null || return 1
+  echo $$ > "$LOCK_DIR/pid"
+  return 0
+}
+
+# Only the holder releases it, so a refused start never clears the live run's
+# lock on its way out.
+release_lock() {
+  if [ -f "$LOCK_DIR/pid" ] && [ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" = "$$" ]; then
+    rm -rf "$LOCK_DIR"
+  fi
+}
+trap release_lock EXIT
+
+if ! acquire_lock; then
+  log "another supervisor holds the lock (pid $(cat "$LOCK_DIR/pid" 2>/dev/null)); exiting"
+  exit 0
+fi
 
 log "=== transcription supervisor started (chunk=$CHUNK concurrency=$CONCURRENCY spend=$SPEND) ==="
 status starting

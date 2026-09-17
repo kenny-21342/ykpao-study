@@ -10,7 +10,10 @@ set -u
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 S="$(mktemp -d)"
 trap 'rm -rf "$S"' EXIT
-RUN="$REPO/pdf_extraction/bank/run_transcription.sh"
+RUN="${RUN:-$REPO/pdf_extraction/bank/run_transcription.sh}"
+# Every case gets its own lock, so a test run can never be refused by -- or
+# steal the lock from -- a real batch running on this machine.
+export LOCK_DIR="$S/lock.default"
 pass=0; fail=0
 check() { if [ "$2" = "$3" ]; then echo "  ok   $1"; pass=$((pass+1)); else echo "  FAIL $1: got '$2' want '$3'"; fail=$((fail+1)); fi; }
 
@@ -172,6 +175,39 @@ sleep 3
 if [ -n "$child" ] && kill -0 "$child" 2>/dev/null; then still=alive; kill -KILL "$child" 2>/dev/null; else still=gone; fi
 check "chunk did not survive the supervisor" "$still" "gone"
 check "said so in the log" "$(grep -c 'stopping in-flight chunk' "$S/t.log")" "1"
+
+echo
+echo "10. a second supervisor refuses to start while one holds the lock"
+fresh
+# 17 Sep, twice: launchd's KeepAlive started a replacement while the previous
+# supervisor was still shutting down. Both then drove chunks against the same
+# ledger. The holder here is the test's own pid, which is certainly alive.
+LK="$S/lock"
+rm -rf "$LK"; mkdir "$LK"; echo $$ > "$LK/pid"
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" LOCK_DIR="$LK" \
+  REMAINING_CMD='echo 5' CHUNK_CMD="touch $S/ran; exit 0" \
+  BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1
+check "exited quietly" "$?" "0"
+check "ran no chunk" "$([ -e "$S/ran" ] && echo ran || echo no)" "no"
+check "said why" "$(grep -c 'another supervisor holds the lock' "$S/t.log")" "1"
+check "left the holder's lock alone" "$(cat "$LK/pid")" "$$"
+
+echo
+echo "11. a lock left behind by a killed supervisor is reclaimed"
+fresh
+rm -f "$S/ran"
+# Without this the batch wedges permanently the first time the machine is
+# power-cycled mid-chunk -- a worse failure than the one the lock fixes.
+dead=$(bash -c 'echo $$')   # a pid that has certainly exited
+rm -rf "$LK"; mkdir "$LK"; echo "$dead" > "$LK/pid"
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" LOCK_DIR="$LK" \
+  REMAINING_CMD='echo 0' CHUNK_CMD="touch $S/ran; exit 0" \
+  BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1
+check "cleared the stale lock" "$(grep -c 'clearing stale lock' "$S/t.log")" "1"
+check "started" "$(grep -c 'supervisor started' "$S/t.log")" "1"
+check "released it on the way out" "$([ -d "$LK" ] && echo held || echo free)" "free"
 
 echo
 echo "pass=$pass fail=$fail"
