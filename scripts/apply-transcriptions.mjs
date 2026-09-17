@@ -124,12 +124,36 @@ try {
     ? `JOIN bank_subjects s ON s.id = p.subject_id AND s.code = @subject`
     : '';
 
+  // Transcripts that scripts/flag-suspect-transcripts.mjs judged to have lost
+  // content stay behind. Holding one back leaves that question exactly as it is
+  // in production today -- published, read from its original strip images --
+  // whereas shipping it feeds a question with a part missing to search, hints
+  // and the AI marker. The table is absent until the flagger has been run, and
+  // an unflagged push is still a valid thing to want, so this degrades to
+  // "ship everything" rather than refusing.
+  const hasFlags = src.prepare(
+    `SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name='bank_transcript_flags'`,
+  ).get().n > 0;
+  if (!hasFlags) {
+    console.warn(
+      'WARNING: bank_transcript_flags is missing, so every transcript will be pushed,\n' +
+      '         including any that dropped a part. Run scripts/flag-suspect-transcripts.mjs\n' +
+      '         --apply first to hold those back.',
+    );
+  }
+  const flagJoin = (side) => hasFlags
+    ? `AND NOT EXISTS (SELECT 1 FROM bank_transcript_flags f
+                        WHERE f.question_id = ${side === 'question' ? 'q.id' : 'm.question_id'}
+                          AND f.side = '${side}')`
+    : '';
+
   const localQuestions = src.prepare(`
     SELECT p.source_path, q.root_number, q.body_md, q.total_marks, q.difficulty
     FROM bank_questions q
     JOIN bank_papers p ON p.id = q.paper_id
     ${subjectClause}
     WHERE q.body_md IS NOT NULL AND trim(q.body_md) <> ''
+    ${flagJoin('question')}
   `).all(subject ? { subject } : {});
 
   const localSchemes = src.prepare(`
@@ -138,7 +162,14 @@ try {
     JOIN bank_papers p ON p.id = m.paper_id
     ${subjectClause}
     WHERE m.answer_md IS NOT NULL AND trim(m.answer_md) <> ''
+    ${flagJoin('mark_scheme')}
   `).all(subject ? { subject } : {});
+
+  if (hasFlags) {
+    const held = src.prepare(
+      `SELECT side, count(DISTINCT question_id) AS n FROM bank_transcript_flags GROUP BY side`).all();
+    for (const h of held) console.log(`holding back ${h.n.toLocaleString()} ${h.side} transcripts flagged as suspect`);
+  }
 
   // A local paper with no production counterpart is a paper that was never
   // merged. Report it rather than silently dropping the work.
