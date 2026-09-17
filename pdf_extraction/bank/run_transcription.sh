@@ -85,16 +85,66 @@ status() {
   printf '%s\npid=%s\nstate=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" > "$STATUS"
 }
 
+# Prints the row count, or nothing at all if the database could not be read.
+# Deliberately not `|| echo 0`: sqlite fails transiently while the pipeline is
+# writing, and a fallback value is indistinguishable from a real count that
+# happens to have changed. One such blip used to be read as progress, which
+# started the stall clock during phase A -- and since phase A runs ~28 minutes
+# against a 30 minute timeout, the watchdog killed each chunk just as it was
+# about to begin paid work, forever.
 ledger_count() {
-  sqlite3 "file:${DB}?mode=ro" 'select count(*) from bank_run_ledger;' 2>/dev/null || echo 0
+  local n
+  n=$(sqlite3 "file:${DB}?mode=ro" 'select count(*) from bank_run_ledger;' 2>/dev/null) || return 1
+  case "$n" in
+    ''|*[!0-9]*) return 1 ;;
+    *) printf '%s' "$n" ;;
+  esac
 }
 
-# Failure share over the most recent completions. Printed as a percentage so
-# the shell can compare it without needing floating point.
+# Is the *provider* failing? Not: are questions failing.
+#
+# Two things this got wrong, both found on 17 Sep with the provider perfectly
+# healthy and the supervisor refusing to spend a penny:
+#
+#   1. It counted every failure. But 40 of the last 40 failures were the model
+#      returning unparseable JSON or transcribing the wrong question number --
+#      content failures, on a provider answering normally. Those questions are
+#      hard; the right response is to mark them failed and move on, not to stop
+#      the corpus. Only transport failures mean "the provider is down".
+#   2. It had no time bound, just the last 40 rows. So once work stopped the
+#      window froze on whatever killed it, and every later check read the same
+#      stale failures -- backing off forever, never retrying, because the only
+#      thing that could refresh the window was the work it refused to start.
+#
+# Unknown failure text deliberately does not count as transport. A new outage
+# signature will therefore not trigger backoff here, but it is still caught by
+# the chunk-exit retry and the stall watchdog, and that is the safer way to be
+# wrong: this function can only ever stop the run.
+HEALTH_WINDOW_MIN="${HEALTH_WINDOW_MIN:-30}"
+HEALTH_MIN_SAMPLE="${HEALTH_MIN_SAMPLE:-10}"
+
 recent_failure_pct() {
-  sqlite3 "file:${DB}?mode=ro" \
-    "select cast(round(100.0 * sum(case when status='failed' then 1 else 0 end) / count(*)) as int)
-       from (select status from bank_run_ledger order by completed_at desc limit 40);" 2>/dev/null || echo 0
+  sqlite3 "file:${DB}?mode=ro" "
+    select case
+             when count(*) < ${HEALTH_MIN_SAMPLE} then 0
+             else cast(round(100.0 * sum(transport) / count(*)) as int)
+           end
+      from (
+        select case when status = 'failed' and (
+                      detail like '%HTTPSConnectionPool%'
+                   or detail like '%Connection%'
+                   or detail like '%timed out%'
+                   or detail like '%Timeout%'
+                   or detail like '%502%'
+                   or detail like '%503%'
+                   or detail like '%504%'
+                   or detail like '%429%'
+                 ) then 1 else 0 end as transport
+          from bank_run_ledger
+         where completed_at >= datetime('now', '-${HEALTH_WINDOW_MIN} minutes')
+         order by completed_at desc
+         limit 60
+      );" 2>/dev/null || echo 0
 }
 
 papers_remaining() {
@@ -110,7 +160,16 @@ PY
 
 # Run one chunk under a stall watchdog. Returns the chunk's exit status, or
 # 124 if it had to be killed for making no progress.
+# The pipeline announces the start of paid work with a line like
+# "transcribing 1659 items with 10 workers". Reading the marker is honest
+# where inferring it from a counter is not: the counter cannot tell a first
+# transcription apart from a failed read or from another process writing.
+PHASE_B_MARKER="${PHASE_B_MARKER:-transcribing }"
+
 run_chunk() {
+  local log_start_bytes
+  log_start_bytes=$(wc -c < "$LOG" 2>/dev/null || echo 0)
+
   if [ -n "$CHUNK_CMD" ]; then
     eval "$CHUNK_CMD" >> "$LOG" 2>&1 &
   else
@@ -119,18 +178,31 @@ run_chunk() {
       --chunk "$CHUNK" --concurrency "$CONCURRENCY" --max-spend "$SPEND" >> "$LOG" 2>&1 &
   fi
   local pid=$!
+  CHUNK_PID=$pid
   local last_count last_progress now started_phase_b=0
-  last_count=$(ledger_count)
+  last_count=$(ledger_count) || last_count=""
   last_progress=$(date +%s)
 
   while kill -0 "$pid" 2>/dev/null; do
     sleep 30
+
+    # Has paid work begun? Only the part of the log this chunk wrote counts,
+    # or every chunk after the first inherits its predecessor's marker.
+    if [ "$started_phase_b" -eq 0 ] \
+       && tail -c "+$(( log_start_bytes + 1 ))" "$LOG" 2>/dev/null | grep -q "$PHASE_B_MARKER"; then
+      started_phase_b=1
+      last_progress=$(date +%s)
+    fi
+
     local count
-    count=$(ledger_count)
+    if ! count=$(ledger_count); then
+      # Unreadable, not unchanged. Leave the stall clock where it is.
+      status "running pid=$pid ledger=unreadable"
+      continue
+    fi
     if [ "$count" != "$last_count" ]; then
       last_count="$count"
       last_progress=$(date +%s)
-      started_phase_b=1
     elif [ "$started_phase_b" -eq 1 ]; then
       now=$(date +%s)
       if [ $((now - last_progress)) -ge "$STALL_SECS" ]; then
@@ -141,6 +213,7 @@ run_chunk() {
         sleep 20
         kill -KILL "$pid" 2>/dev/null
         wait "$pid" 2>/dev/null
+        CHUNK_PID=""
         return 124
       fi
     fi
@@ -148,10 +221,42 @@ run_chunk() {
   done
 
   wait "$pid"
-  return $?
+  local rc=$?
+  CHUNK_PID=""
+  return $rc
 }
 
-trap 'log "supervisor stopping (signal)"; status stopped; exit 0' INT TERM
+# The pid of the chunk currently in flight, so a signal can take it with us.
+CHUNK_PID=""
+
+# Without this the supervisor exits on TERM and leaves its chunk running,
+# reparented to init. That is worse than not supervising at all: the next
+# supervisor to start has no idea the orphan exists, so it launches a second
+# chunk against the same corpus and both spend money on the same questions.
+# Observed on 17 Sep -- pid 84026, PPID 1, still transcribing hours after the
+# supervisor that started it had gone.
+stop_chunk() {
+  [ -n "$CHUNK_PID" ] || return 0
+  kill -0 "$CHUNK_PID" 2>/dev/null || return 0
+  log "stopping in-flight chunk $CHUNK_PID"
+  # TERM first: the pool unwinds and the ledger keeps every question it has
+  # already paid for. KILL only if it will not go.
+  kill -TERM "$CHUNK_PID" 2>/dev/null
+  local waited=0
+  while kill -0 "$CHUNK_PID" 2>/dev/null && [ "$waited" -lt 20 ]; do
+    sleep 1
+    waited=$(( waited + 1 ))
+  done
+  kill -KILL "$CHUNK_PID" 2>/dev/null
+}
+
+on_signal() {
+  log "supervisor stopping (signal)"
+  stop_chunk
+  status stopped
+  exit 0
+}
+trap on_signal INT TERM
 
 log "=== transcription supervisor started (chunk=$CHUNK concurrency=$CONCURRENCY spend=$SPEND) ==="
 status starting
