@@ -156,10 +156,21 @@ try {
     ${flagJoin('question')}
   `).all(subject ? { subject } : {});
 
+  // Keyed through the question's paper, not the mark scheme's own.
+  //
+  // The UPDATE below finds its target by looking up bank_questions on
+  // (paperId, rootNumber) and then matching bank_mark_schemes.questionId. So
+  // the paper it needs is the question paper. Locally a mark scheme belongs to
+  // the `ms` document while its question belongs to the `qp` document, and
+  // those are different rows in bank_papers -- 37,616 of 37,616, with no
+  // overlap at all. Passing the mark scheme's own paper made the join
+  // unsatisfiable, so this script reported success having written zero mark
+  // schemes on every run it has ever had.
   const localSchemes = src.prepare(`
-    SELECT p.source_path, m.root_number, m.answer_md
+    SELECT p.source_path, q.root_number, m.answer_md
     FROM bank_mark_schemes m
-    JOIN bank_papers p ON p.id = m.paper_id
+    JOIN bank_questions q ON q.id = m.question_id
+    JOIN bank_papers p ON p.id = q.paper_id
     ${subjectClause}
     WHERE m.answer_md IS NOT NULL AND trim(m.answer_md) <> ''
     ${flagJoin('mark_scheme')}
