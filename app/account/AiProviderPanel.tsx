@@ -431,7 +431,7 @@ export default function AiProviderPanel() {
               onClick={testKey}
               disabled={testing || saving || !state?.hasOwnKey}
               title={state?.hasOwnKey ? undefined : 'Save your own API key first'} aria-label={state?.hasOwnKey ? undefined : 'Save your own API key first'}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-secondary bg-white/70 dark:bg-gray-900/60 border border-strong rounded-lg hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-secondary bg-white/70 border border-strong rounded-lg hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
               {testing ? 'Testing…' : 'Test my key'}

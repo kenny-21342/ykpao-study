@@ -832,7 +832,7 @@ export default function SmartEduPlatform() {
                   </div>
                   <div className="space-y-3">
                     {recentActivity.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-12 text-muted dark:bg-gray-950/40">
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-12 text-muted">
                         <BookMarked className="h-10 w-10 opacity-40" />
                         <p className="mt-3 text-sm font-medium">No activity yet</p>
                         <p className="mt-1 text-xs">{bankIsPreview ? 'Open a past paper to get started.' : 'Answer a few questions to fill this in.'}</p>

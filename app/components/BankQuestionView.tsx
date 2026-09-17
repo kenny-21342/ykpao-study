@@ -481,7 +481,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
             )}
           </button>
           {showAnswer && (
-            <div className="border-t border-subtle bg-surface-raised p-2 dark:bg-gray-900/40 sm:p-4">
+            <div className="border-t border-subtle bg-surface-raised p-2 sm:p-4">
               {question.markScheme.strips.length > 0 ? (
                 <StripStack
                   strips={question.markScheme.strips}

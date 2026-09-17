@@ -173,7 +173,7 @@ export default function DailyChallenge() {
         )}
       </div>
 
-      <div className="mt-3 rounded-md border border-line bg-surface-raised p-3 dark:bg-gray-950/40">
+      <div className="mt-3 rounded-md border border-line bg-surface-raised p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-muted">
             Q{data.question.number}
@@ -225,7 +225,7 @@ export default function DailyChallenge() {
           )}
           <AiNotice notices={[notice]} />
           {feedback && (
-            <div className="rounded-md bg-surface-raised p-3 text-xs text-secondary dark:bg-gray-950/40">
+            <div className="rounded-md bg-surface-raised p-3 text-xs text-secondary">
               <span className="font-semibold text-secondary">Feedback: </span>
               {feedback}
             </div>

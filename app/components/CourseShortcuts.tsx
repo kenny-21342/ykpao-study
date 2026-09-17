@@ -116,7 +116,7 @@ export default function CourseShortcuts({
       {courses.length === 0 ? (
         <Link
           href="/account"
-          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-10 text-muted transition-colors hover:border-accent-border hover:text-accent-text dark:bg-gray-950/40"
+          className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-raised py-10 text-muted transition-colors hover:border-accent-border hover:text-accent-text"
         >
           <Plus className="h-8 w-8 opacity-40" />
           <p className="mt-3 text-sm font-medium">No subjects yet</p>

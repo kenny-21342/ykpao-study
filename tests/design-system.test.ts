@@ -449,3 +449,37 @@ test('anything wider than 390px sits in a horizontal scroll container', async ()
   assert.deepEqual(offenders, [],
     `wider than a phone with nowhere to scroll:\n${offenders.join('\n')}`);
 });
+
+test('a themed token is never overpainted by a raw dark variant', async () => {
+  // `bg-surface-raised` already swaps with the theme. Pairing it with
+  // `dark:bg-gray-800/50` paints a second, untokenised colour over it in dark
+  // mode, so the element leaves the palette exactly where the palette was the
+  // point. Six survived the sweep -- two admin table headers, the landing page
+  // and three question surfaces -- because the existing guards hunt for
+  // unpaired light classes, and these were paired, just wrongly.
+  const offenders: string[] = [];
+  // Per className string, not per adjacent pair: the raw override is often
+  // several utilities away from the token it cancels, which is how three of
+  // these survived a first pass that only looked at neighbours. Only a clash
+  // on the *same* property counts -- `text-secondary dark:bg-...` sets two
+  // different things and is not a conflict.
+  const CLASSNAME = /className=(?:"([^"]*)"|\{`([^`]*)`\})/g;
+  const SAME_PROPERTY: Array<[RegExp, RegExp, string]> = [
+    [/\bbg-(?:surface|canvas)[a-z-]*\b/, /\bdark:bg-(?:gray|slate|zinc|neutral|stone)-\d{2,3}/, 'background'],
+    [/\btext-(?:primary|secondary|muted|inverse)\b/, /\bdark:text-(?:gray|slate|zinc|neutral|stone)-\d{2,3}/, 'text colour'],
+    [/\bborder-(?:line|subtle)\b/, /\bdark:border-(?:gray|slate|zinc|neutral|stone)-\d{2,3}/, 'border'],
+  ];
+  for (const file of await appSources()) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(CLASSNAME)) {
+      const classes = m[1] ?? m[2] ?? '';
+      for (const [token, raw, what] of SAME_PROPERTY) {
+        if (token.test(classes) && raw.test(classes)) {
+          offenders.push(`${path.relative(ROOT, file)}: ${what} -- ${classes.trim().slice(0, 90)}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `themed tokens overpainted in dark mode:\n${offenders.join('\n')}`);
+});

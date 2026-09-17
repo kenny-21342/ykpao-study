@@ -210,7 +210,7 @@ export default function AiAccessManager() {
           <div className="bg-surface rounded-lg border border-line overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-surface-raised dark:bg-gray-800/50 text-muted text-xs uppercase">
+                <thead className="bg-surface-raised text-muted text-xs uppercase">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">User</th>
                     <th className="text-left px-4 py-3 font-medium">Pays for AI with</th>

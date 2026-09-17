@@ -369,7 +369,7 @@ function ExternalNoteReader({ note, onClose, loadingContent }: { note: ExternalN
 
           {/* Comment notice */}
           {note.commentCount == null && (
-            <div className="mt-6 p-3 bg-surface-raised dark:bg-gray-700/50 border border-line rounded-lg text-xs text-muted flex items-center gap-2">
+            <div className="mt-6 p-3 bg-surface-raised border border-line rounded-lg text-xs text-muted flex items-center gap-2">
               <MessageCircle className="w-4 h-4 flex-shrink-0" />
               <span>
                 Comments are loaded on the original site (require its own login).
@@ -1007,7 +1007,7 @@ function ResourceBrowserView({
                   key={folder.id}
                   type="button"
                   onClick={() => onChangeFolder(folder.id)}
-                  className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left transition-colors hover:border-accent-border hover:bg-accent-subtle dark:bg-gray-900/40"
+                  className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left transition-colors hover:border-accent-border hover:bg-accent-subtle"
                   title={folder.name} aria-label={folder.name}
                 >
                   <Folder className="h-5 w-5 flex-shrink-0 text-warning" />

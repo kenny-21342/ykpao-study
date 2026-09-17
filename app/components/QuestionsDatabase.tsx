@@ -1095,7 +1095,7 @@ export default function QuestionsDatabase({
                   )}
 
                   {uploadedImageUrl && (
-                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-md border border-line bg-surface-raised dark:bg-gray-800/50">
+                    <div className="mb-3 flex items-center gap-3 p-2.5 rounded-md border border-line bg-surface-raised">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={uploadedImageUrl} alt="Uploaded answer" className="w-16 h-16 object-cover rounded-md border border-line" />
                       <div className="flex-1 min-w-0 text-xs text-secondary">

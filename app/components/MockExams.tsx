@@ -1458,7 +1458,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   </div>
                 </div>
                 {images[item.id] && (
-                  <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-line bg-surface-raised dark:bg-gray-800/50">
+                  <div className="mb-2 flex items-center gap-2 p-2 rounded-md border border-line bg-surface-raised">
                     <img src={images[item.id]} alt="Uploaded answer" className="w-12 h-12 object-cover rounded-sm border border-line" />
                     <span className="text-xs text-muted flex-1">Photo attached — transcribe or submit as-is.</span>
                     <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-danger hover:text-danger">Remove</button>

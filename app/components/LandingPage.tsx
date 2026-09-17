@@ -173,7 +173,7 @@ export default async function LandingPage() {
             ].map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-lg border border-line bg-surface-raised dark:bg-gray-900/50 px-6 py-5"
+                className="rounded-lg border border-line bg-surface-raised px-6 py-5"
               >
                 <Icon className="w-5 h-5 text-accent-text" />
                 <dd className="mt-3 text-3xl font-bold tabular-nums">{value}</dd>
