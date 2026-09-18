@@ -94,6 +94,13 @@ export async function upsertIndexedDocument(input: IndexedDocumentInput) {
   const contentHash = hash(textChunks.join('\n'));
   const now = new Date();
 
+  // Prisma's interactive-transaction defaults (maxWait 2s, timeout 5s) are set
+  // for a database on the same machine. This one is Neon, over the network, and
+  // a bank question with many chunks spends most of its budget in the round
+  // trips below. Reindexing the corpus at concurrency 8 failed 74 documents on
+  // `timeout was 5000 ms, however 6633 ms passed`, then another 8 on "unable to
+  // start a transaction in the given time" -- pool contention, not slow work.
+  // Both numbers are ceilings, not waits: a fast transaction still returns fast.
   return prisma.$transaction(async (tx) => {
     const existing = await tx.ragDocument.findUnique({ where: { documentKey: input.documentKey } });
     const data = {
@@ -136,7 +143,7 @@ export async function upsertIndexedDocument(input: IndexedDocumentInput) {
       });
     }
     return document;
-  });
+  }, { maxWait: 15_000, timeout: 30_000 });
 }
 
 export async function indexNote(noteId: string) {
