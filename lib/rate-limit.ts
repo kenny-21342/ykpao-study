@@ -175,6 +175,22 @@ export const loginIpLimiter = rateLimit({ intervalMs: 5 * 60_000, max: 60 });
  */
 export const signupIpLimiter = rateLimit({ intervalMs: 15 * 60_000, max: 40 });
 
+/**
+ * Competition-vault unlock attempts, keyed to one account.
+ *
+ * The vault holds 1,398 STEP questions behind either the Konami sequence or a
+ * pass-phrase in `COMPETITION_PASSPHRASE`. The Konami path is an easter egg and
+ * guards nothing -- anyone can post it -- but the pass-phrase is a shared
+ * secret, and the endpoint answered an unlimited number of guesses per second.
+ * Ten a minute leaves the intended path (type it, get in) untouched while
+ * making an online guessing attack pointless.
+ *
+ * Keyed per account rather than per IP for the reason set out above: a year
+ * group shares one egress address, and an IP limit here would let one curious
+ * student lock out the class.
+ */
+export const unlockLimiter = rateLimit({ intervalMs: 60_000, max: 10 });
+
 type AiAllowance =
   | { allowed: true }
   | { allowed: false; reason: 'rate' | 'budget' | 'unavailable'; message: string };

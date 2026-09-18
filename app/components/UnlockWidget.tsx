@@ -55,7 +55,27 @@ export default function UnlockWidget({ onUnlocked }: { onUnlocked: () => void })
   // Listen for the Konami sequence globally.
   useEffect(() => {
     const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+
+    /**
+     * Never read keystrokes meant for a field. This widget is mounted on the
+     * practice workspace, which is full of answer boxes, and the sequence ends
+     * in two ordinary letters -- so a student arrowing back through their own
+     * answer and typing "ba" could unlock the vault without ever knowing the
+     * code existed. Buffering what someone types into a textarea is also just
+     * not something a decoration should do.
+     */
+    const isEditable = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    };
+
     const onKey = (e: KeyboardEvent) => {
+      if (isEditable(e.target)) {
+        konamiBuffer.current = [];
+        return;
+      }
       konamiBuffer.current.push(e.key === 'B' ? 'b' : e.key === 'A' ? 'a' : e.key);
       if (konamiBuffer.current.length > KONAMI.length) konamiBuffer.current.shift();
       if (konamiBuffer.current.join(',') === KONAMI.join(',')) {

@@ -1,7 +1,9 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { unlockLimiter } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +21,28 @@ export const dynamic = 'force-dynamic';
  *
  * On success the user's `unlocks` array gains "competition", which the STEP
  * API checks before serving questions. The unlock persists across sessions.
+ *
+ * What this is and is not: the Konami path is an easter egg, posted in the
+ * clear by anyone who reads the client bundle, and it guards 1,398 STEP
+ * questions already published at stepdatabase.maths.org. It is a discovery
+ * mechanic, not an access control, and nothing sensitive may ever be put
+ * behind it. The pass-phrase is a genuine shared secret, so that path is rate
+ * limited and compared without leaking its length or contents through timing.
  */
 
 const KONAMI = 'konami';
 const COMPETITION_KEY = 'competition';
+
+/**
+ * Compare without a timing side channel. `timingSafeEqual` throws on unequal
+ * lengths, which would itself be an oracle, so both sides are hashed to a
+ * fixed width first.
+ */
+function secretEquals(a: string, b: string): boolean {
+  const ha = createHash('sha256').update(a, 'utf8').digest();
+  const hb = createHash('sha256').update(b, 'utf8').digest();
+  return timingSafeEqual(ha, hb);
+}
 
 const Body = z.object({
   code: z.string().max(50).optional(),
@@ -34,6 +54,15 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Ten attempts a minute per account. The Konami path never needs more than
+  // one, and a pass-phrase typed by hand never needs ten.
+  if (!(await unlockLimiter.check(`unlock:${user.id}`))) {
+    return NextResponse.json(
+      { unlocked: false, error: 'Too many attempts. Wait a minute and try again.' },
+      { status: 429 },
+    );
+  }
+
   let parsed;
   try {
     parsed = Body.parse(await req.json());
@@ -44,11 +73,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const configured = process.env.COMPETITION_PASSPHRASE;
   const ok =
     parsed.code === KONAMI ||
-    (parsed.passphrase &&
-      process.env.COMPETITION_PASSPHRASE &&
-      parsed.passphrase === process.env.COMPETITION_PASSPHRASE);
+    Boolean(parsed.passphrase && configured && secretEquals(parsed.passphrase, configured));
 
   if (!ok) {
     return NextResponse.json({ unlocked: false }, { status: 200 });
