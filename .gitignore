@@ -146,3 +146,6 @@ prisma/manual/*.sql
 # Supervisor runtime state, not source.
 pdf_extraction/bank/transcription-status.txt
 pdf_extraction/bank/transcription-launchd.log
+
+# runtime artefact of pdf_extraction/bank/run_transcription.sh
+pdf_extraction/bank/.transcription.lock/
