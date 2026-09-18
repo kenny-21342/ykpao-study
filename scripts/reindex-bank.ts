@@ -130,7 +130,27 @@ async function main() {
   const documents = await prisma.ragDocument.count({
     where: { documentKey: { startsWith: 'bank-question:' } },
   });
-  console.log(`\nIndexed ${(done - failed).toLocaleString()} questions${failed ? `, ${failed.toLocaleString()} failed` : ''}.`);
+
+  // Not every question with text ends up with a document, and that is correct.
+  // `indexBankQuestion` drops anything `isRetrievableText` rejects -- a one-word
+  // transcript is ranking noise, not a passage -- and it does so by deleting the
+  // document and returning, without throwing. So those questions are neither
+  // `done` nor `failed`: the run reported them as indexed, the document count
+  // did not move, and the next run picked the same ones up again. Counting them
+  // here is what stops this script looking like it never converges. The floor is
+  // real: most of it is 0400 Art & Design, whose questions are one-word prompts.
+  const [{ count: unindexed }] = await prisma.$queryRaw<{ count: number }[]>`
+    SELECT count(*)::int AS count
+      FROM bank_questions q
+      LEFT JOIN rag_documents d ON d."documentKey" = 'bank-question:' || q.id
+     WHERE q.status = 'published'
+       AND coalesce(q."bodyMd", '') <> ''
+       AND d.id IS NULL`;
+
+  console.log(`\nIndexed ${(done - failed - unindexed).toLocaleString()} questions${failed ? `, ${failed.toLocaleString()} failed` : ''}.`);
+  if (unindexed > 0) {
+    console.log(`${unindexed.toLocaleString()} carry text too short to retrieve and are deliberately not indexed.`);
+  }
   console.log(`${documents.toLocaleString()} bank questions are now in the RAG corpus.`);
 }
 
