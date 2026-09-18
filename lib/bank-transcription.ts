@@ -24,7 +24,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import { recordUsage } from '@/lib/rate-limit';
+import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { indexBankQuestion, refreshRagIndex } from '@/lib/rag-index';
 import { transcribeBankMarkScheme, transcribeBankQuestion } from '@/lib/vision';
 import type { VisionCredential } from '@/lib/ai-credentials';
@@ -107,6 +107,23 @@ export async function ensureBankQuestionText(params: {
   if (!TRANSCRIBE_ENABLED) return null;
   if (!params.credential) return null;
   if (params.strips.length === 0) return null;
+
+  // Its own allowance check, not the caller's.
+  //
+  // A submission already reserved for the grading calls it expects to make.
+  // Transcription is one or two *further* paid vision calls that the caller
+  // never counted, on the most expensive path there is -- a question with
+  // strips attached -- and a mock exam can hit this once per unseen item. So a
+  // student could pass the monthly cap and still run up a bill behind it.
+  //
+  // Denying here is free: returning null is the documented "no text could be
+  // produced" outcome, and every caller already handles it by routing to the
+  // ungraded branch rather than failing the submission.
+  const allowance = await checkAiAllowance(params.userId, {
+    requests: params.markschemeStrips?.length ? 2 : 1,
+    source: params.credential.source,
+  });
+  if (!allowance.allowed) return null;
 
   const deadline = Date.now() + TRANSCRIBE_BUDGET_MS;
   const credential = params.credential;
