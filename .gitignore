@@ -90,6 +90,11 @@ public/uploads/
 # every CI run fail in seventeen seconds, on every push, at the cache step --
 # so the gate was red for reasons that had nothing to do with the commit.
 !/pdf_extraction/requirements.txt
+# `catalogue/parser.py` puts `pdf_extraction/` on sys.path and imports
+# `lib.boards` from here, so the catalogue suite cannot even load without it.
+# 252 KB of source across 13 files -- the same "source, not assets" case as
+# the packages above.
+!/pdf_extraction/lib/
 /pdf_extraction/**/__pycache__/
 __pycache__/
 *.pyc
