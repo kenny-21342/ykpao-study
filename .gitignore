@@ -85,6 +85,11 @@ public/uploads/
 # imports it; leaving it untracked meant tests/catalogue tested a file no
 # checkout contained.
 !/pdf_extraction/catalogue/
+# CI installs this before running the Python suites, and `setup-python`'s pip
+# cache resolves `**/requirements.txt` before any step runs. Ignoring it made
+# every CI run fail in seventeen seconds, on every push, at the cache step --
+# so the gate was red for reasons that had nothing to do with the commit.
+!/pdf_extraction/requirements.txt
 /pdf_extraction/**/__pycache__/
 __pycache__/
 *.pyc

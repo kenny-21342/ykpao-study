@@ -1,0 +1,14 @@
+# Python dependencies for the PDF extraction pipeline.
+#
+#   python3 -m venv .venv-bank
+#   .venv-bank/bin/pip install -r pdf_extraction/requirements.txt
+#
+# Tesseract is an external binary used only as an OCR fallback for scanned
+# pages, and is not installable from here:  brew install tesseract
+
+pymupdf==1.28.2          # PDF parsing, rendering, table detection
+pillow==12.3.0           # image composition for question strips
+opencv-python-headless==5.0.0.93   # visual evidence detection
+numpy==2.5.2
+json_repair==0.63.0      # salvages almost-valid JSON from model responses
+pytest==9.1.1
