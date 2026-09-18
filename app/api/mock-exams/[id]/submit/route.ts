@@ -5,7 +5,7 @@ import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE, type ProviderUsage } from '@/lib/vision';
-import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
+import { decideGradingMode, hasGradableText, runVisionGrading } from '@/lib/grading-router';
 import { ensureBankQuestionText } from '@/lib/bank-transcription';
 import type { GradeResult } from '@/types/ai';
 import { upsertBankMistakeReview, upsertMistakeReview } from '@/lib/learning';
@@ -444,7 +444,7 @@ export async function POST(
           decideGradingMode({
             requiresDiagram,
             answerImageUrl,
-            hasQuestionText: Boolean(questionContent.trim()),
+            hasQuestionText: hasGradableText(questionContent),
           }) === 'vision' &&
           Boolean(answerImageUrl) &&
           visionAccess.ok;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { decideGradingMode } from '../lib/grading-router.ts';
+import { decideGradingMode, hasGradableText } from '../lib/grading-router.ts';
 
 /**
  * Which grader an attempt is routed to.
@@ -71,5 +71,56 @@ test('a question that has since been transcribed routes to vision again', () => 
   assert.equal(
     decideGradingMode({ requiresDiagram: false, answerImageUrl: null, hasQuestionText: true }),
     'text',
+  );
+});
+
+/**
+ * Regression for a crop failure reaching the grader, found 18 Sep by sampling
+ * gpt-5.6-sol's first transcripts: four 9608 questions came back as exactly
+ * `![](asset:fig1)` and nothing else, because segmentation had handed the model
+ * a 307x93 sliver of a table instead of a question. The model behaved well --
+ * it did not invent a question -- but the body was truthy, so the
+ * `hasQuestionText` gate opened and vision grading ran against a question with
+ * no words in it. That is F16 again: a confident zero on an unreadable
+ * question, which is worse than no mark at all.
+ */
+test('a body that is only a figure reference is not gradable', () => {
+  assert.equal(hasGradableText('![](asset:fig1)'), false);
+  assert.equal(
+    hasGradableText('![](asset:fig1)\n\n![](asset:fig2)\n\n![](asset:fig3)'),
+    false,
+    'three references clear 40 characters on length alone, so length is not the test',
+  );
+});
+
+test('markup alone is not prose', () => {
+  assert.equal(
+    hasGradableText('<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>'),
+    false,
+  );
+});
+
+test('a real question is gradable, figures and all', () => {
+  const body =
+    'A stack is created using a high-level language. Memory locations 200 to 207 ' +
+    'are to be used to store the stack.\n\n![](asset:fig1)\n\nDescribe the algorithm.';
+  assert.equal(hasGradableText(body), true);
+});
+
+test('empty and missing bodies are not gradable', () => {
+  assert.equal(hasGradableText(''), false);
+  assert.equal(hasGradableText(null), false);
+  assert.equal(hasGradableText(undefined), false);
+});
+
+test('an unreadable question routes to text, never to a confident vision zero', () => {
+  assert.equal(
+    decideGradingMode({
+      requiresDiagram: true,
+      answerImageUrl: '/uploads/answer.png',
+      hasQuestionText: hasGradableText('![](asset:fig1)'),
+    }),
+    'text',
+    'vision here is exactly the F16 failure',
   );
 });

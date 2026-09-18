@@ -1,6 +1,7 @@
 import { gradeWithVision, type ProviderUsage } from './vision.ts';
 import type { VisionCredential } from './ai-credentials';
 import type { GradeResult } from '@/types/ai';
+import { isRetrievableText } from './rag-file-text.ts';
 
 export type GradingMode = 'text' | 'vision';
 
@@ -24,6 +25,31 @@ export type GradingMode = 'text' | 'vision';
  * let the caller's existing untranscribed branch record the attempt honestly
  * as ungraded.
  */
+/**
+ * Whether a question body carries enough *prose* to reason over.
+ *
+ * `Boolean(body.trim())` is not that test. A crop failure hands the
+ * transcriber a sliver of a page -- 9608 s16 q7 is a 307x93 fragment showing
+ * a row of a table and a dot -- and the model honestly answers with a figure
+ * reference and nothing else. That body is 15 characters of markup and zero
+ * words, but it is truthy, so the gate below opened and vision grading ran
+ * against a question it could not read. That is the F16 failure the gate was
+ * added to prevent, arriving through a different door.
+ *
+ * So strip the image references first and apply the same bar the RAG index
+ * uses. The two now agree: a body the index refuses to make a document from is
+ * a body the grader refuses to reason over, which is the rule
+ * `lib/bank-questions.ts` states for the crop-first corpus.
+ */
+export function hasGradableText(body: string | null | undefined): boolean {
+  const prose = (body ?? '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')   // markdown images, incl. asset: refs
+    .replace(/<[^>]+>/g, ' ')                  // table and formatting markup
+    .replace(/\s+/g, ' ')
+    .trim();
+  return isRetrievableText(prose);
+}
+
 export function decideGradingMode(params: {
   requiresDiagram: boolean;
   answerImageUrl: string | null;

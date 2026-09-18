@@ -5,7 +5,7 @@ import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE } from '@/lib/vision';
-import { decideGradingMode, runVisionGrading } from '@/lib/grading-router';
+import { decideGradingMode, hasGradableText, runVisionGrading } from '@/lib/grading-router';
 import type { GradeResult } from '@/types/ai';
 import { upsertMistakeReview } from '@/lib/learning';
 import { parsePositiveInt } from '@/lib/query-params';
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     const gradingMode = decideGradingMode({
       requiresDiagram: Boolean(question.hasDiagram),
       answerImageUrl,
-      hasQuestionText: Boolean(question.content?.trim()),
+      hasQuestionText: hasGradableText(question.content),
     });
     const useVisionGrading = gradingMode === 'vision' && Boolean(answerImageUrl) && visionAccess?.ok;
 
