@@ -11,4 +11,5 @@ pillow==12.3.0           # image composition for question strips
 opencv-python-headless==5.0.0.93   # visual evidence detection
 numpy==2.5.2
 json_repair==0.63.0      # salvages almost-valid JSON from model responses
+requests==2.34.2         # every HTTP call in the pipeline: bank/client.py, lib/llm.py, the downloaders
 pytest==9.1.1
