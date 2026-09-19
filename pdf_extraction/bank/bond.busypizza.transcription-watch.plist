@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Runs watch_quality.py for as long as the batch does.
+
+  It was a scratch file first and a background shell job second, and both died
+  with the session that started them -- three times, each time silently, which
+  is the worst way for a monitor to fail. The supervisor solved this same
+  problem with launchd and has survived a hibernation and two session
+  restarts since, so the watcher gets the same treatment.
+
+  Alerts append to transcription-alerts.log. Nothing reads that file
+  automatically: it exists so an alert raised at 04:00 is still there in the
+  morning instead of being lost with whatever process happened to be watching.
+
+    cp pdf_extraction/bank/bond.busypizza.transcription-watch.plist \
+       ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/bond.busypizza.transcription-watch.plist
+    tail -f pdf_extraction/bank/transcription-alerts.log
+    launchctl unload ~/Library/LaunchAgents/bond.busypizza.transcription-watch.plist
+
+  PATH is pinned for the same reason as the supervisor's: launchd gives a
+  minimal PATH, and /usr/bin/python3 is not the interpreter this pipeline's
+  dependencies are installed against.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>bond.busypizza.transcription-watch</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Library/Frameworks/Python.framework/Versions/3.14/bin/python3</string>
+        <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/watch_quality.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/kenny_lhs/smart-edu</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Library/Frameworks/Python.framework/Versions/3.14/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>120</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/transcription-alerts.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/kenny_lhs/smart-edu/pdf_extraction/bank/transcription-alerts.log</string>
+</dict>
+</plist>

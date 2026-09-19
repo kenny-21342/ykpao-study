@@ -65,7 +65,7 @@ class Reporter:
         if now - self._last.get(key, 0.0) < QUIET_SECONDS:
             return
         self._last[key] = now
-        print(message, flush=True)
+        print(f"[{stamp()}] {message}", flush=True)
 
     def clear(self, key: str) -> None:
         self._last.pop(key, None)
@@ -131,6 +131,10 @@ def check(conn: sqlite3.Connection, model: str, out: Reporter) -> None:
         out.clear("dead")
     else:
         out.say("dead", "BATCH NOT RUNNING: no corpus_run process")
+
+
+def stamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 def main() -> int:
