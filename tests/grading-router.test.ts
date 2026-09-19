@@ -98,6 +98,28 @@ test('markup alone is not prose', () => {
     hasGradableText('<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>'),
     false,
   );
+  assert.equal(hasGradableText('**(a)** [3]'), false, 'a part label with no question');
+  assert.equal(hasGradableText('D8'), false, 'a cell lifted out of a table by a bad crop');
+});
+
+/**
+ * The gate first reused the RAG index's `isRetrievableText`, which is a length
+ * bar, and that silently excluded a whole subject: 0509 Chinese composition
+ * prompts are complete questions in under forty characters. Grading is not
+ * retrieval -- for a composition paper the title *is* the question, and it is
+ * exactly the kind of paper answered with a photograph of handwriting, so
+ * losing vision grading there is the opposite of what the gate is for.
+ */
+test('a short prompt in a dense script is a question', () => {
+  assert.equal(hasGradableText('叙述你一次坐船的经历。'), true, 'Describe a boat journey');
+  assert.equal(hasGradableText('晨露'), true, '"Morning dew" -- a complete essay title');
+  assert.equal(hasGradableText('一个珍惜时间的人'), true);
+});
+
+test('a short prompt in Latin script is a question too', () => {
+  // 0400 Art & Design prompts really are one word.
+  assert.equal(hasGradableText('Shoppers'), true);
+  assert.equal(hasGradableText('Worn out'), true);
 });
 
 test('a real question is gradable, figures and all', () => {

@@ -1,7 +1,6 @@
 import { gradeWithVision, type ProviderUsage } from './vision.ts';
 import type { VisionCredential } from './ai-credentials';
 import type { GradeResult } from '@/types/ai';
-import { isRetrievableText } from './rag-file-text.ts';
 
 export type GradingMode = 'text' | 'vision';
 
@@ -26,28 +25,39 @@ export type GradingMode = 'text' | 'vision';
  * as ungraded.
  */
 /**
- * Whether a question body carries enough *prose* to reason over.
+ * Whether a question body carries a question at all.
  *
  * `Boolean(body.trim())` is not that test. A crop failure hands the
  * transcriber a sliver of a page -- 9608 s16 q7 is a 307x93 fragment showing
- * a row of a table and a dot -- and the model honestly answers with a figure
- * reference and nothing else. That body is 15 characters of markup and zero
- * words, but it is truthy, so the gate below opened and vision grading ran
- * against a question it could not read. That is the F16 failure the gate was
- * added to prevent, arriving through a different door.
+ * one row of a table and a dot -- and the model honestly answers with a figure
+ * reference and nothing else. That body is fifteen characters of markup and
+ * zero words, but it is truthy, so the gate below opened and vision grading ran
+ * against a question it could not read: the F16 confident zero, which is worse
+ * than no mark at all.
  *
- * So strip the image references first and apply the same bar the RAG index
- * uses. The two now agree: a body the index refuses to make a document from is
- * a body the grader refuses to reason over, which is the rule
- * `lib/bank-questions.ts` states for the crop-first corpus.
+ * Nor is the RAG index's `isRetrievableText`, which this first used and which
+ * was wrong for a different reason. That bar asks "is there enough here to
+ * retrieve?", and a two-character essay title is correctly noise to a search
+ * index. Grading asks something else -- "is there a question to mark against?"
+ * -- and for 0509 Chinese composition and 0400 Art the title *is* the whole
+ * question. `晨露` ("Morning dew") is a complete prompt in two characters, and
+ * excluding it costs vision grading on exactly the papers most likely to be
+ * answered with a photograph of handwriting.
+ *
+ * So the test is for a word, not a length: strip the markup and ask whether
+ * anything word-like survives. A run of three Latin letters or two CJK
+ * characters is a word; `![](asset:fig1)`, `D8` and `**(a)** [3]` are not.
  */
+const WORD_LIKE = /[A-Za-z]{3,}|[\u3400-\u4dbf\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]{2,}/u;
+
 export function hasGradableText(body: string | null | undefined): boolean {
   const prose = (body ?? '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')   // markdown images, incl. asset: refs
     .replace(/<[^>]+>/g, ' ')                  // table and formatting markup
+    .replace(/[*_`#>\-]+/g, ' ')                // markdown emphasis and list marks
     .replace(/\s+/g, ' ')
     .trim();
-  return isRetrievableText(prose);
+  return WORD_LIKE.test(prose);
 }
 
 export function decideGradingMode(params: {

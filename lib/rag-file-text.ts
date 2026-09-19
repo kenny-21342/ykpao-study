@@ -39,9 +39,38 @@ const MAX_CHARS = 120_000;
  */
 export const RETRIEVABLE_CHARS = 40;
 
+/**
+ * How much text one CJK character is worth against that threshold.
+ *
+ * Counting raw characters is an English assumption, and it silently excluded a
+ * whole subject. 0509 Chinese composition prompts are complete questions in
+ * under forty characters -- `叙述你一次坐船的经历。` is "Describe an experience you
+ * had on a boat", a finished essay题 in eleven -- so the bar rejected 144 of
+ * them as though they were page furniture. A Han character carries roughly a
+ * short English word, and 2.5 is the conservative end of the usual range: high
+ * enough to admit a real prompt, low enough that a stray character or two of
+ * furniture still fails.
+ */
+const CJK_WEIGHT = 2.5;
+
+/**
+ * Han, kana, Hangul and the CJK punctuation that travels with them. Deliberately
+ * not a full Unicode script test: this only has to separate "dense script" from
+ * "Latin", and every subject in the corpus that needs it is covered.
+ */
+const CJK = /[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/gu;
+
+/** The threshold-relative weight of `value`, in English-character equivalents. */
+export function retrievableWeight(value: string | null | undefined): number {
+  const text = (value ?? '').trim();
+  if (!text) return 0;
+  const cjk = (text.match(CJK) ?? []).length;
+  return text.length - cjk + cjk * CJK_WEIGHT;
+}
+
 /** Whether `value` carries enough prose to be worth a document. */
 export function isRetrievableText(value: string | null | undefined): boolean {
-  return (value ?? '').trim().length >= RETRIEVABLE_CHARS;
+  return retrievableWeight(value) >= RETRIEVABLE_CHARS;
 }
 
 const TEXT_MIME = /^text\/|^application\/(json|xml|x-yaml|yaml)$/i;

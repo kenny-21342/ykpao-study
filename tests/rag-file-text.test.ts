@@ -110,3 +110,29 @@ test('a passage has to be long enough to retrieve', async () => {
   assert.equal(isRetrievableText('x'.repeat(RETRIEVABLE_CHARS - 1)), false);
   assert.equal(isRetrievableText('x'.repeat(RETRIEVABLE_CHARS)), true);
 });
+
+/**
+ * Counting raw characters is an English assumption, and it excluded a whole
+ * subject from search: 0509 Chinese composition prompts are complete questions
+ * in well under forty characters, and 144 of them were being rejected as though
+ * they were page furniture. A Han character carries roughly a short English
+ * word, so it is weighted accordingly against the same threshold.
+ */
+test('a dense script clears the bar on meaning, not character count', async () => {
+  const { isRetrievableText, retrievableWeight } = await import('../lib/rag-file-text.ts');
+
+  const prompt = '叙述你一次坐船的经历。请把选题字母写在这里并作答';
+  assert.ok(prompt.length < 40, 'this really is under the raw-character bar');
+  assert.equal(isRetrievableText(prompt), true, 'but it is a complete question');
+
+  // Still rejects what the bar exists to reject, in any script.
+  assert.equal(isRetrievableText('D8'), false);
+  assert.equal(isRetrievableText('B'), false);
+
+  // Mixed text is scored on both halves, not on whichever script came first.
+  const mixed = 'Figure 2 蒸发';
+  assert.equal(
+    Math.round(retrievableWeight(mixed)),
+    Math.round(mixed.length - 2 + 2 * 2.5),
+  );
+});
