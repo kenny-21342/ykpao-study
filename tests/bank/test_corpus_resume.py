@@ -99,9 +99,48 @@ class TranscribedResumeTests(unittest.TestCase):
             "answer_letter, status) VALUES (?, 1, '', NULL, 'published')", (paper,))
         self.assertNotIn("/corpus/prose_ms.pdf", self._finished())
 
-    def test_a_paper_with_nothing_recorded_is_not_finished(self) -> None:
+    def test_a_rendered_paper_with_nothing_in_it_is_finished(self) -> None:
+        """An insert booklet has no questions and no mark scheme.
+
+        Neither existing branch admitted this shape, so 482 papers -- insert
+        and resource booklets, and mark schemes whose layout defeated the
+        segmenter -- stayed `remaining` permanently. Every chunk re-selected
+        and re-rendered them, and on 19 Sep that stalled the run: chunks spent
+        eight minutes of phase A to queue four items, and papers completed per
+        hour fell from 115 to 20 with 81,586 real items still waiting.
+        """
+        self._paper("0509_s15_in_11.pdf", "insert-sha", doc_type="in")
+        self.assertIn("/corpus/0509_s15_in_11.pdf", self._finished())
+
+    def test_an_unrendered_paper_is_never_skipped(self) -> None:
+        """The safety property behind the branch above.
+
+        It admits a paper because rendering is deterministic: the renderer has
+        already looked and found nothing, so a second pass finds the same
+        nothing. A paper the renderer has *not* seen has page_count 0 and must
+        stay pending, or it is skipped for the life of the corpus.
+        """
+        paper_id = self._paper("0610_s15_qp_11.pdf", "unrendered-sha")
+        self.connection.execute(
+            "UPDATE bank_papers SET page_count = 0 WHERE id = ?", (paper_id,))
+        self.assertNotIn("/corpus/0610_s15_qp_11.pdf", self._finished())
+
+    def test_a_paper_with_nothing_recorded_is_finished_once_rendered(self) -> None:
+        """This assertion was inverted on 19 Sep, deliberately.
+
+        It used to require that a paper with nothing recorded stay pending, but
+        the fixture gives every paper a page count, so what it actually
+        described was a paper the renderer had already been through and found
+        nothing in. Holding those open is what stalled the run: 482 of them
+        returned at the front of every chunk to be re-rendered, and nothing
+        they could ever do would close them.
+
+        The two cases are now separated. A paper with no page count is still
+        pending -- test_an_unrendered_paper_is_never_skipped -- and that is the
+        assertion this one was reaching for.
+        """
         self._paper("empty.pdf", "f" * 64)
-        self.assertNotIn("/corpus/empty.pdf", self._finished())
+        self.assertIn("/corpus/empty.pdf", self._finished())
 
 
 if __name__ == "__main__":

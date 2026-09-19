@@ -138,6 +138,7 @@ def transcribed() -> set[str]:
                         AND COALESCE(m.answer_letter, '') = '')       AS needed,
                    (SELECT COUNT(*) FROM bank_mark_schemes m WHERE m.paper_id = p.id)
                                                                        AS schemes,
+                   p.page_count                                        AS pages,
                    (SELECT COUNT(*) FROM bank_run_ledger l
                       WHERE l.source_sha256 = p.source_sha256
                         AND l.stage = 'transcribe'
@@ -151,9 +152,25 @@ def transcribed() -> set[str]:
         connection.close()
 
     finished = set()
-    for source_path, needed, schemes, done in rows:
+    for source_path, needed, schemes, pages, done in rows:
         if needed == 0 and schemes > 0:
             finished.add(source_path)        # an answer key: nothing to bill
+        elif needed == 0 and pages > 0:
+            # Rendered, and it yielded nothing to transcribe: an insert or
+            # resource booklet, or a mark scheme whose layout defeated the
+            # segmenter. Neither branch above admitted these, so all 482 of
+            # them stayed "remaining" forever and were re-rendered by every
+            # chunk. That is what stalled the run on 19 Sep: chunks kept paying
+            # eight minutes of phase A to prepare 300 documents and queue four
+            # items, and papers completed per hour fell from 115 to 20 while
+            # 81,586 real items waited behind them.
+            #
+            # `pages > 0` is what makes this safe. It means the paper has been
+            # through the renderer, and rendering is deterministic, so a second
+            # pass finds the same nothing -- the same reasoning `already_done`
+            # uses. A paper that has never been rendered has pages = 0 and is
+            # still correctly pending.
+            finished.add(source_path)
         elif needed > 0 and done >= needed:
             finished.add(source_path)
     return finished
