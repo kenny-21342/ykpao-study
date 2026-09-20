@@ -94,13 +94,37 @@ jobs:
           if [[ "$name" == "latest" ]]; then
             # Keys carry an ISO-8601 stamp, so lexical order is chronological.
             name="$(echo "$keys" | awk '/\.dump/ {print $1}' | sort | tail -1)"
+            if [[ -z "$name" ]]; then
+              echo "Could not list the bucket, so 'latest' cannot be resolved." >&2
+              echo "Re-run with an explicit key, e.g. $prefix/<name>.dump." >&2
+              echo "The backup workflow's own log carries the filename it" >&2
+              echo "uploaded: gh run view <backup-run-id> --log | grep 's3://'" >&2
+              exit 1
+            fi
+          elif [[ "$name" != */* ]]; then
+            # A bare filename: assume the configured prefix. An explicit key
+            # containing a slash is taken exactly as given.
+            name="$prefix/$name"
           fi
-          if [[ -z "$name" || "$name" == "latest" ]]; then
-            echo "No dump found. Re-run with an explicit key from the listing above." >&2
+
+          # Listing is a convenience; existence is the thing that matters, and
+          # head-object answers it with one call even where list-objects-v2
+          # does not work. It also gives the compressed size, which is what
+          # decides whether the restore fits the target's storage limit.
+          if ! aws s3api head-object --bucket "$BACKUP_S3_BUCKET" --key "$name" \
+                 "${endpoint_args[@]}" --output text > "$RUNNER_TEMP/head.txt" 2>&1; then
+            echo "No object at key: $name" >&2
+            cat "$RUNNER_TEMP/head.txt" >&2
             exit 1
           fi
+          {
+            echo "## Selected dump"
+            echo '```'
+            cat "$RUNNER_TEMP/head.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
           echo "selected=$name" >> "$GITHUB_OUTPUT"
-          echo "Selected: \`$name\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download and inspect the dump
         shell: bash
