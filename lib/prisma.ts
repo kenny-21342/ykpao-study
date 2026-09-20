@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import { getDatabaseUrl } from './env'
+import { databaseSsl } from './db-ssl'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -35,9 +36,13 @@ function poolMax(name: string, fallback: number): number {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback
 }
 
+const connectionString = getDatabaseUrl()
+const ssl = databaseSsl(connectionString)
+
 const pool = new Pool({
-  connectionString: getDatabaseUrl(),
+  connectionString,
   max: poolMax('DB_POOL_MAX', 5),
+  ...(ssl === undefined ? {} : { ssl }),
 })
 
 const adapter = new PrismaPg(pool)

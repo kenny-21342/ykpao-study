@@ -14,6 +14,8 @@
 
 import { Pool, type PoolClient } from 'pg';
 
+import { databaseSsl } from './db-ssl';
+
 /**
  * LISTEN requires a session that stays pinned to one backend for the life of
  * the subscription. A transaction-mode connection pooler (pgbouncer, Neon's
@@ -62,10 +64,16 @@ function pubsubPoolMax(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 5;
 }
 
+const pubsubConnectionString = resolvePubsubConnectionString();
+const pubsubSsl = pubsubConnectionString
+  ? databaseSsl(pubsubConnectionString)
+  : undefined;
+
 const pool = new Pool({
-  connectionString: resolvePubsubConnectionString(),
+  connectionString: pubsubConnectionString,
   max: pubsubPoolMax(),
   idleTimeoutMillis: 30_000,
+  ...(pubsubSsl === undefined ? {} : { ssl: pubsubSsl }),
 });
 
 export type AwarenessPayload = {
