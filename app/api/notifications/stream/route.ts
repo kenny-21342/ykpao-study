@@ -20,9 +20,23 @@ export const maxDuration = 300;
  * count whenever it changes. This lets the NotificationBell badge update in
  * real time without full polling.
  *
- * We use a lightweight DB poll on the server (every 15s) rather than a
- * separate pubsub infra — sufficient for an education app's traffic and keeps
- * the deployment story simple (works with SQLite or Postgres, no Redis).
+ * We use a lightweight DB poll on the server rather than a separate pubsub
+ * infra — sufficient for an education app's traffic and keeps the deployment
+ * story simple (works with SQLite or Postgres, no Redis).
+ *
+ * The poll *backs off* while nothing is happening: 15s, then doubling to a
+ * 2-minute ceiling, resetting to 15s the moment the count changes. A student
+ * who is actually receiving notifications still sees the badge move within
+ * 15s; a stream with nothing to say costs one query every two minutes
+ * instead of four a minute.
+ *
+ * That is not a micro-optimisation. A serverless Postgres suspends its
+ * compute after ~5 minutes of inactivity, so a fixed 15s poll means the
+ * database can never reach idle for as long as one tab is open anywhere.
+ * That is exactly what happened on 19 Sep 2026: the compute stayed awake for
+ * ten days, exhausted the month's allowance with eleven days to go, and
+ * production went down. The client half of the fix is `useTabActive`, which
+ * drops this connection entirely once a tab is hidden or abandoned.
  *
  * The connection auto-closes after ~10 minutes so clients reconnect and pick
  * up fresh session cookies.
@@ -53,6 +67,13 @@ export async function GET(req: Request) {
       // Initial hello so the client knows the stream is alive.
       send('hello', { ts: Date.now() });
 
+      // Backoff bounds. `MIN` is what an active conversation gets; `MAX` is
+      // what an open-but-silent tab settles at.
+      const POLL_MIN_MS = 15_000;
+      const POLL_MAX_MS = 120_000;
+      let pollMs = POLL_MIN_MS;
+      let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
       const poll = async () => {
         if (closed) return;
         try {
@@ -62,14 +83,19 @@ export async function GET(req: Request) {
           if (unreadCount !== lastUnread) {
             lastUnread = unreadCount;
             send('unread', { unreadCount });
+            // Something is happening — go back to being responsive.
+            pollMs = POLL_MIN_MS;
+          } else {
+            pollMs = Math.min(pollMs * 2, POLL_MAX_MS);
           }
         } catch {
-          // best-effort; next tick will retry
+          // best-effort; next tick will retry. A failed query says nothing
+          // about how busy the user is, so the interval is left alone.
         }
+        if (!closed) pollTimer = setTimeout(poll, pollMs);
       };
 
       void poll();
-      const interval = setInterval(poll, 15_000);
 
       // Heartbeat every 25s to keep proxies from closing idle connections.
       const heartbeat = setInterval(() => {
@@ -91,7 +117,7 @@ export async function GET(req: Request) {
       const cleanup = () => {
         if (closed) return;
         closed = true;
-        clearInterval(interval);
+        if (pollTimer) clearTimeout(pollTimer);
         clearInterval(heartbeat);
         clearTimeout(maxLifetime);
         try {

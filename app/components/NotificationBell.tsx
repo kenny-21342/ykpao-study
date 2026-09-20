@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTabActive } from './useTabActive';
 import { useSession } from 'next-auth/react';
 import { Bell, MessageSquare, Reply, AtSign, Loader2, X } from 'lucide-react';
 
@@ -71,6 +72,8 @@ function normalizeNotificationUrl(url: string | null): string | null {
 export default function NotificationBell() {
   const { status } = useSession();
   const isAuthenticated = status === 'authenticated';
+  // Hidden or abandoned tabs stop talking to the server entirely.
+  const tabActive = useTabActive();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -98,8 +101,14 @@ export default function NotificationBell() {
   // Gated on an authenticated session: signed-out visitors have no
   // notifications to fetch, and this was polling /api/notifications every 30
   // seconds and holding an SSE connection open for them regardless.
+  //
+  // Also gated on `tabActive`. A hidden or abandoned tab has nobody to show a
+  // badge to, and this poll plus the SSE stream below were between them
+  // keeping the database awake around the clock -- see `useTabActive` for
+  // what that cost. Coming back re-runs the effect, so the first thing a
+  // returning tab does is a fresh load.
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !tabActive) return;
     const initialTimer = window.setTimeout(() => {
       void load();
     }, 0);
@@ -110,13 +119,13 @@ export default function NotificationBell() {
       window.clearTimeout(initialTimer);
       window.clearInterval(interval);
     };
-  }, [load, isAuthenticated]);
+  }, [load, isAuthenticated, tabActive]);
 
   // Real-time updates via Server-Sent Events. The endpoint pushes an `unread`
   // event whenever the unread count changes. We trigger a light reload of the
   // list when the badge count changes so the dropdown stays fresh.
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !tabActive) return;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let lastUnread: number | null = null;
@@ -152,7 +161,7 @@ export default function NotificationBell() {
       try { es?.close(); } catch { /* noop */ }
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, [load, isAuthenticated]);
+  }, [load, isAuthenticated, tabActive]);
 
   // Close on outside click / Escape.
   useEffect(() => {

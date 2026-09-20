@@ -948,6 +948,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   // Keep a ref to the latest answers so the auto-save interval + beforeunload
   // handlers can read current state without re-subscribing on every keystroke.
   const latestAnswers = useRef<Record<string, string>>({});
+  /** Last payload the server acknowledged, so autosave can skip no-ops. */
+  const lastSavedPayload = useRef<string | null>(null);
   latestAnswers.current = answers;
 
   // Load exam detail, re-polling while the paper is still being built.
@@ -1046,15 +1048,29 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   // Persist in-progress answers to the server so a dropped tab/device can
   // resume. Debounced — fires 5s after the last keystroke, then every 60s.
   const saveProgress = useCallback(async (signal?: AbortSignal) => {
+    const payload = JSON.stringify({ answers: latestAnswers.current });
+
+    // Writing an identical answer sheet again protects nothing, and the 60s
+    // timer below runs for as long as the exam is open -- so a student who
+    // opens a paper and steps away used to write to the database once a
+    // minute, indefinitely. That is enough to stop a serverless Postgres ever
+    // reaching its idle timeout; it is how production lost its compute
+    // allowance on 19 Sep 2026. Skipping the no-op write costs no safety:
+    // a failed save leaves the marker unset, so the next tick retries it.
+    if (payload === lastSavedPayload.current) return;
+
     try {
       setSaving(true);
       const res = await fetch(`/api/mock-exams/${examId}/progress`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: latestAnswers.current }),
+        body: payload,
         signal,
       });
-      if (res.ok) setLastSavedAt(Date.now());
+      if (res.ok) {
+        lastSavedPayload.current = payload;
+        setLastSavedAt(Date.now());
+      }
     } catch {
       // best-effort
     } finally {
