@@ -158,6 +158,13 @@ jobs:
           docker run --rm -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
             pg_restore --list /backup/restore.dump > "$RUNNER_TEMP/toc.txt"
           echo "OBJECTS IN DUMP: $(wc -l < "$RUNNER_TEMP/toc.txt")"
+          # Broken out by kind, so the preflight's counts on the target have
+          # something to be compared against. A restore that ran out of room
+          # mid-way is only detectable as a shortfall against these.
+          for kind in INDEX 'CONSTRAINT' 'FK CONSTRAINT' TABLE SEQUENCE; do
+            printf 'DUMP %-14s %s\n' "$kind" \
+              "$(grep -c "; [0-9]* [0-9]* $kind " "$RUNNER_TEMP/toc.txt" || true)"
+          done
           echo "Objects in dump: $(wc -l < "$RUNNER_TEMP/toc.txt")" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Preflight the target
