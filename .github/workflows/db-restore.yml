@@ -141,13 +141,19 @@ jobs:
             "${endpoint_args[@]}" "$RUNNER_TEMP/restore.dump" >/dev/null
 
           size="$(du -h "$RUNNER_TEMP/restore.dump" | cut -f1)"
-          echo "## Dump contents" >> "$GITHUB_STEP_SUMMARY"
-          echo "Compressed size on disk: **$size**" >> "$GITHUB_STEP_SUMMARY"
+          # To stdout as well as the summary: the summary is only readable in
+          # the web UI, and these numbers are the whole reason for a dry run.
+          echo "DUMP SIZE (compressed): $size"
+          {
+            echo "## Dump contents"
+            echo "Compressed size on disk: **$size**"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           # The table list doubles as the integrity check the backup job runs,
           # and tells us whether the restore will fit a 0.5 GB free tier.
           docker run --rm -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
             pg_restore --list /backup/restore.dump > "$RUNNER_TEMP/toc.txt"
+          echo "OBJECTS IN DUMP: $(wc -l < "$RUNNER_TEMP/toc.txt")"
           echo "Objects in dump: $(wc -l < "$RUNNER_TEMP/toc.txt")" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Preflight the target
@@ -156,28 +162,37 @@ jobs:
         run: |
           set -euo pipefail
           # Runs before any write, including on a list-only run, because the
-          # three things below decide whether a restore will work at all and
-          # are far cheaper to learn now than halfway through one.
+          # things below decide whether a restore will work at all and are
+          # far cheaper to learn now than halfway through one.
           #
           #  - server_version: pg_restore reads a custom-format dump written
           #    by pg_dump 18. An older server rejects it outright.
           #  - max_connections: a small managed plan can sit near 20. The app
           #    opens a Prisma pool AND a separate LISTEN/NOTIFY pool per
-          #    instance, so this is the number that decides how they must be
-          #    sized -- see DB_POOL_MAX / PUBSUB_POOL_MAX.
+          #    instance, so this is the number that sizes DB_POOL_MAX and
+          #    PUBSUB_POOL_MAX.
           #  - a non-empty target means something is already there, and
           #    --clean --if-exists is about to drop it.
-          docker run --rm -e RESTORE_TARGET_DATABASE_URL postgres:18-alpine sh -ec '
-            psql "$RESTORE_TARGET_DATABASE_URL" -At -F" | " -c "
-              select current_setting(\'server_version\'),
-                     current_setting(\'max_connections\'),
-                     pg_size_pretty(pg_database_size(current_database())),
-                     (select count(*) from pg_tables where schemaname = \'public\')"
-          ' | tee "$RUNNER_TEMP/preflight.txt"
+          #
+          # The query lives in a file rather than inline: it has to survive
+          # YAML, then bash, then `sh -ec`, then psql, and an earlier inline
+          # version died on its own escaped quotes before running once.
+          cat > "$RUNNER_TEMP/preflight.sql" <<'SQL'
+          select current_setting('server_version') as server_version,
+                 current_setting('max_connections') as max_connections,
+                 pg_size_pretty(pg_database_size(current_database())) as size,
+                 (select count(*) from pg_tables
+                   where schemaname = 'public') as public_tables;
+          SQL
+          sed -i 's/^          //' "$RUNNER_TEMP/preflight.sql"
+
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL \
+            -v "$RUNNER_TEMP:/work" postgres:18-alpine \
+            psql "$RESTORE_TARGET_DATABASE_URL" -f /work/preflight.sql \
+            | tee "$RUNNER_TEMP/preflight.txt"
           {
             echo "## Target preflight"
             echo '```'
-            echo "server_version | max_connections | size | public tables"
             cat "$RUNNER_TEMP/preflight.txt"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -218,7 +233,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -e RESTORE_TARGET_DATABASE_URL postgres:18-alpine \
-            sh -ec 'psql "$RESTORE_TARGET_DATABASE_URL" -At -c
-              "select pg_size_pretty(pg_database_size(current_database()))"' \
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL \
+            -v "$RUNNER_TEMP:/work" postgres:18-alpine \
+            psql "$RESTORE_TARGET_DATABASE_URL" -f /work/preflight.sql \
             | tee -a "$GITHUB_STEP_SUMMARY"
