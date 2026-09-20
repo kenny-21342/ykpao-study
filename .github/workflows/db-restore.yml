@@ -21,6 +21,10 @@ on:
         description: 'Type RESTORE to actually write. Anything else lists only.'
         required: true
         default: 'list-only'
+      section:
+        description: 'Which part of the dump: all, pre-data, data, post-data'
+        required: false
+        default: 'all'
 
 permissions:
   contents: read
@@ -232,11 +236,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -e RESTORE_TARGET_DATABASE_URL \
+          # A bulk restore needs room for the data AND the write-ahead log it
+          # generates, which is roughly the same size again and is only
+          # reclaimed at the next checkpoint. On a small plan that peak can
+          # exceed the disk even when the finished database would fit
+          # comfortably: this one loaded 362 MB of data into a 1 GB plan and
+          # then went read-only during CREATE INDEX.
+          #
+          # `--section` is the way out. Restore the data, let the WAL be
+          # reclaimed, then come back for `post-data` to build the indexes
+          # and constraints against a disk that has recovered. Slower, and it
+          # fits where one pass does not.
+          #
+          # `--clean` only belongs to a full restore. Passing it on a resumed
+          # section would drop the data the earlier pass just loaded.
+          args="--no-owner --no-privileges"
+          case '${{ inputs.section }}' in
+            all|'') args="$args --clean --if-exists" ;;
+            *)      args="$args --section=${{ inputs.section }}" ;;
+          esac
+          echo "pg_restore $args"
+
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL -e args \
             -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
-            sh -ec 'pg_restore --no-owner --no-privileges --clean --if-exists \
-              --dbname="$RESTORE_TARGET_DATABASE_URL" /backup/restore.dump'
-          echo "Restored ${{ steps.list.outputs.selected }}" >> "$GITHUB_STEP_SUMMARY"
+            sh -ec 'pg_restore $args --dbname="$RESTORE_TARGET_DATABASE_URL" \
+              /backup/restore.dump'
+          echo "Restored ${{ steps.list.outputs.selected }} (section: ${{ inputs.section }})" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report target size
         if: ${{ inputs.confirm == 'RESTORE' }}
