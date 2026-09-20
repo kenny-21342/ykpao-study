@@ -176,6 +176,37 @@ try {
     ${flagJoin('mark_scheme')}
   `).all(subject ? { subject } : {});
 
+  // A model that refuses is not a model that failed, and that is the problem.
+  //
+  // Asked to transcribe a copyrighted poem off a Literature paper, the vision
+  // model answers "Sorry, I can't provide a verbatim transcription ..." with a
+  // 200 OK. The pipeline stored that sentence as `body_md` and logged the work
+  // `ok`, so it never retried: 138 Literature and History rows carried a
+  // refusal notice where their question should be. Most were recovered from
+  // the PDF's own text layer (pdf_extraction/bank/recover_text_layer.py), but
+  // the pipeline can produce a fresh one at any time, on any paper that quotes
+  // something.
+  //
+  // It has to be stopped here rather than trusted upstream, because a refusal
+  // is fluent English prose: hasGradableText() returns true for it, so a
+  // student answering that question would be vision-graded against an apology.
+  // An untranscribed question is safe -- it falls back to its strip images. A
+  // question whose text is a refusal is not.
+  const REFUSAL = /^\s*(sorry, i can|i can[’']?t provide|i cannot provide|i[’']?m unable to)/i;
+  const dropRefusals = (rows, field, label) => {
+    const kept = rows.filter((r) => !REFUSAL.test(r[field] ?? ''));
+    const dropped = rows.length - kept.length;
+    if (dropped > 0) {
+      console.warn(
+        `  ! holding back ${dropped.toLocaleString()} ${label} whose text is a model refusal.\n` +
+        `    Run: python3 -m pdf_extraction.bank.recover_text_layer --apply`,
+      );
+    }
+    return kept;
+  };
+  const questionsToPush = dropRefusals(localQuestions, 'body_md', 'questions');
+  const schemesToPush = dropRefusals(localSchemes, 'answer_md', 'mark schemes');
+
   if (hasFlags) {
     const held = src.prepare(
       `SELECT side, count(DISTINCT question_id) AS n FROM bank_transcript_flags GROUP BY side`).all();
@@ -199,8 +230,8 @@ try {
   };
 
   console.log(`\nlocal rows with text:`);
-  const questions = resolve(localQuestions, 'questions');
-  const schemes = resolve(localSchemes, 'mark schemes');
+  const questions = resolve(questionsToPush, 'questions');
+  const schemes = resolve(schemesToPush, 'mark schemes');
   console.log(`  ${questions.length.toLocaleString()} questions`);
   console.log(`  ${schemes.length.toLocaleString()} mark schemes`);
 
