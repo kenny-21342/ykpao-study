@@ -32,6 +32,11 @@ WINDOW_MIN = 20
 MIN_SAMPLE = 20
 FAIL_PCT = 25          # below the supervisor's 40, so this speaks first
 LEN_FLOOR = 150        # against a ~500-character corpus average
+#: How far below its own peer group a batch of transcripts has to fall before
+#: it counts as collapsing. Half is deliberately generous: real degradation
+#: takes the average to a fraction of normal, while legitimate variation
+#: between papers of the same kind is nowhere near 2x.
+COLLAPSE_RATIO = 0.5
 QUIET_SECONDS = 1800
 
 # Anchored to the start. "unable to" and "cannot" are ordinary exam prose --
@@ -71,6 +76,76 @@ class Reporter:
         self._last.pop(key, None)
 
 
+def collapsing_groups(conn: sqlite3.Connection, model: str, recent_ids: list[int]) -> list[dict]:
+    """Recent transcripts that are short *for the kind of paper they are on*.
+
+    The first version of this compared a flat average of the last 400
+    transcripts against a fixed 150-character floor, and it cried wolf four
+    times in one day. Nothing was wrong with the model: the run had simply
+    reached the multiple-choice papers. A paper 1 question is "How many
+    protons are in one nucleus?" and runs about 130 characters; a paper 5
+    practical question runs 1,600. Whenever a chunk happened to be
+    MCQ-heavy the flat average fell through the floor, and an alert that
+    fires on healthy data is worse than no alert -- by the fourth one it is
+    being skimmed past, which is precisely when the real one arrives.
+
+    So each group is judged against its own peers: the same subject and the
+    same paper number, from transcripts already in the store. Paper 1 of 0625
+    is compared with the thousands of other 0625 paper 1 questions, not with
+    a practical paper. A group with no peers yet falls back to the absolute
+    floor, which is the old behaviour and the right default for a subject
+    being transcribed for the first time.
+    """
+    if not recent_ids:
+        return []
+
+    placeholders = ",".join("?" * len(recent_ids))
+    rows = conn.execute(
+        f"""select s.code, p.paper_number, q.id, length(q.body_md)
+              from bank_questions q
+              join bank_papers p on p.id = q.paper_id
+              join bank_subjects s on s.id = p.subject_id
+             where q.id in ({placeholders})""",
+        recent_ids,
+    ).fetchall()
+
+    groups: dict[tuple, list[int]] = {}
+    for code, paper_number, _id, length in rows:
+        groups.setdefault((code, paper_number), []).append(length)
+
+    out = []
+    for (code, paper_number), lengths in groups.items():
+        if len(lengths) < MIN_SAMPLE:
+            continue
+        recent = sum(lengths) / len(lengths)
+
+        # The peer baseline deliberately excludes the rows being judged --
+        # otherwise a large enough collapse drags its own baseline down with
+        # it and the ratio never trips.
+        baseline = conn.execute(
+            f"""select avg(length(q.body_md))
+                  from bank_questions q
+                  join bank_papers p on p.id = q.paper_id
+                  join bank_subjects s on s.id = p.subject_id
+                 where s.code = ? and p.paper_number = ? and q.model = ?
+                   and coalesce(q.body_md,'') <> ''
+                   and q.id not in ({placeholders})""",
+            (code, paper_number, model, *recent_ids),
+        ).fetchone()[0]
+
+        label = f"{code} paper {paper_number}"
+        if baseline is None:
+            if recent < LEN_FLOOR:
+                out.append({"label": f"{label} (no peers yet)", "recent": recent,
+                            "baseline": LEN_FLOOR, "n": len(lengths)})
+        elif recent < baseline * COLLAPSE_RATIO:
+            out.append({"label": label, "recent": recent,
+                        "baseline": baseline, "n": len(lengths)})
+
+    out.sort(key=lambda g: g["recent"] / max(g["baseline"], 1))
+    return out
+
+
 def check(conn: sqlite3.Connection, model: str, out: Reporter) -> None:
     failed, total = conn.execute(
         f"""select sum(status='failed'), count(*) from bank_run_ledger
@@ -93,9 +168,15 @@ def check(conn: sqlite3.Connection, model: str, out: Reporter) -> None:
 
     if len(rows) >= MIN_SAMPLE:
         texts = [r[1] for r in rows]
-        avg = sum(len(t) for t in texts) / len(texts)
-        if avg < LEN_FLOOR:
-            out.say("short", f"TRANSCRIPTS COLLAPSING: avg {avg:.0f} chars over {len(texts)}")
+
+        collapse = collapsing_groups(conn, model, [r[0] for r in rows])
+        if collapse:
+            worst = collapse[0]
+            out.say("short", f"TRANSCRIPTS COLLAPSING: {worst['label']} averaging "
+                             f"{worst['recent']:.0f} chars against {worst['baseline']:.0f} "
+                             f"for the same papers ({worst['n']} transcripts)")
+        else:
+            out.clear("short")
 
         refusals = [(r[0], r[1]) for r in rows if REFUSAL.match(r[1].strip())]
         if len(refusals) >= 2:
