@@ -1,0 +1,132 @@
+name: Restore database from backup
+
+# Manual only. This is the other half of neon-backup.yml: that job proves a
+# dump can be produced, this one proves it can be used. A backup nobody has
+# ever restored is a hope, not a backup.
+#
+# Written on 20 Sep 2026, when the production Neon project exhausted its free
+# monthly compute allowance and refused every connection, reads included, with
+# eleven days left in the month. The data was fine and completely unreachable.
+# The most recent verified dump was from 07:25 that morning, less than two
+# hours before the outage -- and the only way to it ran through repository
+# secrets, so it needed a job like this one.
+on:
+  workflow_dispatch:
+    inputs:
+      dump:
+        description: 'Dump file name, or "latest"'
+        required: true
+        default: 'latest'
+      confirm:
+        description: 'Type RESTORE to actually write. Anything else lists only.'
+        required: true
+        default: 'list-only'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-restore
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
+      RESTORE_TARGET_DATABASE_URL: ${{ secrets.RESTORE_TARGET_DATABASE_URL }}
+      NEON_DIRECT_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
+    steps:
+      - name: List available dumps
+        id: list
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          endpoint_args=()
+          [[ -n "${BACKUP_S3_ENDPOINT:-}" ]] && endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          aws configure set aws_access_key_id "$BACKUP_S3_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
+          aws configure set region "$BACKUP_S3_REGION"
+
+          echo "## Available dumps" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" "${endpoint_args[@]}" \
+            --human-readable | tail -20 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          name='${{ inputs.dump }}'
+          if [[ "$name" == "latest" ]]; then
+            name="$(aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" "${endpoint_args[@]}" \
+                     | sort | tail -1 | awk '{print $4}')"
+          fi
+          [[ -n "$name" ]] || { echo "No dump found in s3://$BACKUP_S3_BUCKET/$prefix/" >&2; exit 1; }
+          echo "selected=$name" >> "$GITHUB_OUTPUT"
+          echo "Selected: $name" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download and inspect the dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          endpoint_args=()
+          [[ -n "${BACKUP_S3_ENDPOINT:-}" ]] && endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${{ steps.list.outputs.selected }}" \
+            "$RUNNER_TEMP/restore.dump" "${endpoint_args[@]}" --only-show-errors
+
+          size="$(du -h "$RUNNER_TEMP/restore.dump" | cut -f1)"
+          echo "## Dump contents" >> "$GITHUB_STEP_SUMMARY"
+          echo "Compressed size on disk: **$size**" >> "$GITHUB_STEP_SUMMARY"
+
+          # The table list doubles as the integrity check the backup job runs,
+          # and tells us whether the restore will fit a 0.5 GB free tier.
+          docker run --rm -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
+            pg_restore --list /backup/restore.dump > "$RUNNER_TEMP/toc.txt"
+          echo "Objects in dump: $(wc -l < "$RUNNER_TEMP/toc.txt")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse to overwrite the live database
+        if: ${{ inputs.confirm == 'RESTORE' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${RESTORE_TARGET_DATABASE_URL:-}" ]]; then
+            echo "RESTORE_TARGET_DATABASE_URL is not set. Add it as a repository" >&2
+            echo "secret pointing at the NEW database before restoring." >&2
+            exit 1
+          fi
+          # A restore is destructive and a paste is easy to get wrong. The
+          # target must not be the database the backup was taken from.
+          host_of() { sed -E 's#^[^@]*@##; s#[:/?].*$##' <<< "$1"; }
+          if [[ "$(host_of "$RESTORE_TARGET_DATABASE_URL")" \
+             == "$(host_of "${NEON_DIRECT_DATABASE_URL:-none}")" ]]; then
+            echo "Refusing: the restore target is the same host as the backup source." >&2
+            exit 1
+          fi
+          echo "Target host differs from the backup source. Proceeding."
+
+      - name: Restore
+        if: ${{ inputs.confirm == 'RESTORE' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL \
+            -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
+            sh -ec 'pg_restore --no-owner --no-privileges --clean --if-exists \
+              --dbname="$RESTORE_TARGET_DATABASE_URL" /backup/restore.dump'
+          echo "Restored ${{ steps.list.outputs.selected }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report target size
+        if: ${{ inputs.confirm == 'RESTORE' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL postgres:18-alpine \
+            sh -ec 'psql "$RESTORE_TARGET_DATABASE_URL" -At -c
+              "select pg_size_pretty(pg_database_size(current_database()))"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
