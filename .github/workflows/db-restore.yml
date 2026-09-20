@@ -183,6 +183,16 @@ jobs:
                  pg_size_pretty(pg_database_size(current_database())) as size,
                  (select count(*) from pg_tables
                    where schemaname = 'public') as public_tables;
+          -- The ten largest relations, because when a restore runs out of
+          -- room the only useful question is what is taking it up -- and
+          -- some of this data is regenerable rather than precious.
+          select relname,
+          pg_size_pretty(pg_total_relation_size(c.oid)) as total,
+          pg_size_pretty(pg_relation_size(c.oid)) as heap
+          from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind = 'r'
+          order by pg_total_relation_size(c.oid) desc
+          limit 10;
           SQL
           sed -i 's/^          //' "$RUNNER_TEMP/preflight.sql"
 
