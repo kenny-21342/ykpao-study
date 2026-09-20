@@ -54,6 +54,25 @@ test('escaped newlines in the CA are restored', () => {
   assert.equal(ssl.ca.split('\n').length, 3);
 });
 
+test('base64 of the certificate file is accepted', () => {
+  // The shape to reach for when the other two have gone wrong: no newlines
+  // to lose, nothing to escape.
+  const pem = '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----';
+  process.env.DATABASE_SSL_CA = Buffer.from(pem, 'utf8').toString('base64');
+  const ssl = databaseSsl(URL_PLAIN) as { ca: string; rejectUnauthorized: boolean };
+  assert.equal(ssl.ca, pem);
+  assert.equal(ssl.rejectUnauthorized, true);
+});
+
+test('a truncated paste fails loudly rather than as a TLS error later', () => {
+  // `vercel env add` reads one line from the terminal, so pasting a PEM at
+  // the prompt keeps only "-----BEGIN CERTIFICATE-----". The variable looks
+  // set and the certificate is unusable; without this the first symptom is a
+  // TLS handshake failure that says nothing about the value.
+  process.env.DATABASE_SSL_CA = '-----BEGIN CERTIFICATE-----';
+  assert.throws(() => databaseSsl(URL_PLAIN), /base64/);
+});
+
 test('verification is only skipped when explicitly asked for', () => {
   for (const [label, setup] of [
     ['sslmode=no-verify in the URL', () => undefined],

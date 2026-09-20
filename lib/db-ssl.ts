@@ -29,12 +29,46 @@ import type { ConnectionOptions } from 'node:tls';
  * The dishonest option -- `rejectUnauthorized: false` hard-coded, with no
  * way to tell from the outside -- is the one this module exists to prevent.
  */
+/**
+ * A PEM certificate, however the environment mangled it on the way in.
+ *
+ * A CA certificate is multi-line and environment variables frequently are
+ * not. `vercel env add` reads a single line from the terminal, so pasting a
+ * PEM at the prompt silently keeps only its first line; other panels flatten
+ * the value to one line with literal backslash-n. Both produce a variable
+ * that looks set and a certificate that cannot be parsed, and the error
+ * surfaces later as a TLS failure rather than as a bad value here.
+ *
+ * So all three shapes are accepted: a real PEM, a flattened one with escaped
+ * newlines, and base64 of the whole file -- which has no newlines to lose
+ * and nothing to escape, and is the one to reach for when the other two have
+ * already gone wrong.
+ */
+function decodeCa(raw: string): string {
+  // Both markers, not just the opening one: a value truncated to its first
+  // line still contains "BEGIN CERTIFICATE" and is useless, which is exactly
+  // the failure this function exists to name.
+  const complete = (value: string) =>
+    value.includes('BEGIN CERTIFICATE') && value.includes('END CERTIFICATE');
+
+  const unescaped = raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw;
+  if (complete(unescaped)) return unescaped;
+
+  const decoded = Buffer.from(raw, 'base64').toString('utf8');
+  if (complete(decoded)) return decoded;
+
+  throw new Error(
+    'DATABASE_SSL_CA is set but is neither a PEM certificate nor base64 of ' +
+      'one. If it was pasted at a prompt, the value was probably truncated ' +
+      'to its first line: pipe the file in instead (vercel env add NAME ' +
+      'production < ca.pem) or set it to `base64 -i ca.pem`.',
+  );
+}
+
 export function databaseSsl(url: string): ConnectionOptions | boolean | undefined {
   const ca = process.env.DATABASE_SSL_CA?.trim();
   if (ca) {
-    // Escaped newlines survive environment panels that flatten multi-line
-    // values; a real PEM works unchanged.
-    return { ca: ca.replace(/\\n/g, '\n'), rejectUnauthorized: true };
+    return { ca: decodeCa(ca), rejectUnauthorized: true };
   }
 
   const noVerify =
