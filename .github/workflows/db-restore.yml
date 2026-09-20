@@ -47,6 +47,13 @@ jobs:
         id: list
         shell: bash
         run: |
+          # GitHub runs step scripts under `bash -e`, so the first non-zero
+          # command aborts the step. That is the wrong behaviour for a step
+          # whose job is to find out what is in the bucket: the listing
+          # failing is the thing we need to see and recover from, not a
+          # reason to stop. Turned off explicitly -- `set -uo pipefail` does
+          # not clear an `-e` that was set on the interpreter's command line.
+          set +e
           set -uo pipefail
           prefix="${BACKUP_S3_PREFIX:-postgres}"
           endpoint_args=()
