@@ -197,6 +197,22 @@ jobs:
           where n.nspname = 'public' and c.relkind = 'r'
           order by pg_total_relation_size(c.oid) desc
           limit 10;
+          -- Completeness. A restore that ran out of room leaves the data
+          -- present and the indexes and constraints missing, which looks
+          -- fine in a size check and is not fine in production.
+          select (select count(*) from pg_indexes where schemaname='public') as indexes,
+          (select count(*) from pg_constraint c join pg_namespace n
+          on n.oid=c.connamespace where n.nspname='public'
+          and c.contype='p') as primary_keys,
+          (select count(*) from pg_constraint c join pg_namespace n
+          on n.oid=c.connamespace where n.nspname='public'
+          and c.contype='f') as foreign_keys;
+          -- Row counts for the tables that would show a duplicated load.
+          select relname, to_char(n_live_tup, 'FM999,999,999') as live_rows
+          from pg_stat_user_tables
+          where relname in ('bank_questions','bank_mark_schemes','bank_papers',
+          'bank_assets','users','rag_chunks')
+          order by relname;
           SQL
           sed -i 's/^          //' "$RUNNER_TEMP/preflight.sql"
 
