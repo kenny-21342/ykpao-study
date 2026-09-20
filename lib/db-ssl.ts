@@ -65,7 +65,7 @@ function decodeCa(raw: string): string {
   );
 }
 
-export function databaseSsl(url: string): ConnectionOptions | boolean | undefined {
+function databaseSsl(url: string): ConnectionOptions | boolean | undefined {
   const ca = process.env.DATABASE_SSL_CA?.trim();
   if (ca) {
     return { ca: decodeCa(ca), rejectUnauthorized: true };
@@ -88,4 +88,34 @@ export function databaseSsl(url: string): ConnectionOptions | boolean | undefine
   // Nothing configured: let `pg` derive TLS from the connection string, which
   // is what a provider with a publicly-trusted certificate needs.
   return undefined;
+}
+
+/**
+ * A `pg` pool config that actually applies the TLS settings above.
+ *
+ * `pg` builds its parameters as `Object.assign({}, config, parse(
+ * connectionString))` -- the parsed URL wins. So an `sslmode` in the URL
+ * does not merge with an explicit `ssl` option, it **replaces** it:
+ *
+ *     new Client({ connectionString: '...?sslmode=require',
+ *                  ssl: { ca, rejectUnauthorized: true } })
+ *     // .connectionParameters.ssl === {}
+ *
+ * The CA is silently dropped and verification falls back to the system trust
+ * store, which is the exact failure it was added to fix. This cost a deploy
+ * to find, because everything about the configuration looks right: the
+ * variable is set, the certificate is valid, and the error is unchanged.
+ *
+ * So when we supply TLS options, `sslmode` comes out of the URL. Postgres
+ * still gets TLS -- it comes from the `ssl` option instead, which is now the
+ * only thing describing it.
+ */
+export function pgConfig(url: string): { connectionString: string; ssl?: ConnectionOptions | boolean } {
+  const ssl = databaseSsl(url);
+  if (ssl === undefined) return { connectionString: url };
+
+  const stripped = url.replace(/([?&])sslmode=[^&]*(&|$)/, (_m, lead: string, tail: string) =>
+    tail === '&' ? lead : (lead === '?' ? '' : ''),
+  );
+  return { connectionString: stripped, ssl };
 }

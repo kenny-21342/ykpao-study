@@ -14,7 +14,7 @@
 
 import { Pool, type PoolClient } from 'pg';
 
-import { databaseSsl } from './db-ssl';
+import { pgConfig } from './db-ssl';
 
 /**
  * LISTEN requires a session that stays pinned to one backend for the life of
@@ -65,15 +65,11 @@ function pubsubPoolMax(): number {
 }
 
 const pubsubConnectionString = resolvePubsubConnectionString();
-const pubsubSsl = pubsubConnectionString
-  ? databaseSsl(pubsubConnectionString)
-  : undefined;
 
 const pool = new Pool({
-  connectionString: pubsubConnectionString,
+  ...(pubsubConnectionString ? pgConfig(pubsubConnectionString) : {}),
   max: pubsubPoolMax(),
   idleTimeoutMillis: 30_000,
-  ...(pubsubSsl === undefined ? {} : { ssl: pubsubSsl }),
 });
 
 export type AwarenessPayload = {
