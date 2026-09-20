@@ -257,7 +257,13 @@ jobs:
           esac
           echo "pg_restore $args"
 
-          docker run --rm -e RESTORE_TARGET_DATABASE_URL -e args \
+          # `-e args` (no value) forwards the variable from the runner's
+          # environment, and a plain shell assignment is not in it. The first
+          # attempt at this arrived in the container empty, so pg_restore ran
+          # with no flags at all: a full restore instead of post-data, with
+          # ownership commands that failed against a role Neon had and Aiven
+          # does not. Pass the value explicitly.
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL -e args="$args" \
             -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
             sh -ec 'pg_restore $args --dbname="$RESTORE_TARGET_DATABASE_URL" \
               /backup/restore.dump'
