@@ -339,10 +339,32 @@ jobs:
           # with no flags at all: a full restore instead of post-data, with
           # ownership commands that failed against a role Neon had and Aiven
           # does not. Pass the value explicitly.
+          # A resumed section re-applies everything in it, so objects the
+          # previous pass created come back as "already exists". pg_restore
+          # counts those as ignored errors and exits 1, which is right for a
+          # first restore and wrong for a resume -- and it stops the steps
+          # after this one, including the report that says whether the
+          # restore actually worked. So separate the two kinds: anything that
+          # is not an already-exists is a real failure and still fails.
+          set +e
           docker run --rm -e RESTORE_TARGET_DATABASE_URL -e args="$args" \
             -v "$RUNNER_TEMP:/backup" postgres:18-alpine \
             sh -ec 'pg_restore $args --dbname="$RESTORE_TARGET_DATABASE_URL" \
-              /backup/restore.dump'
+              /backup/restore.dump' 2>&1 | tee "$RUNNER_TEMP/restore.log"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          real=$(grep -c 'ERROR:' "$RUNNER_TEMP/restore.log" \
+                 | head -1 || true)
+          benign=$(grep -cE 'ERROR:.*(already exists|multiple primary keys)' \
+                   "$RUNNER_TEMP/restore.log" || true)
+          echo "pg_restore exit $status; ${real:-0} errors, ${benign:-0} of them already-exists"
+          if [[ "${real:-0}" -ne "${benign:-0}" ]]; then
+            echo "Errors that are not already-exists:" >&2
+            grep 'ERROR:' "$RUNNER_TEMP/restore.log" \
+              | grep -vE 'already exists|multiple primary keys' | head -20 >&2
+            exit 1
+          fi
           echo "Restored ${{ steps.list.outputs.selected }} (section: ${{ inputs.section }})" \
             >> "$GITHUB_STEP_SUMMARY"
 
