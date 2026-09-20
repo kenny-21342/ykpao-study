@@ -47,7 +47,7 @@ jobs:
         id: list
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           prefix="${BACKUP_S3_PREFIX:-postgres}"
           endpoint_args=()
           [[ -n "${BACKUP_S3_ENDPOINT:-}" ]] && endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
@@ -55,20 +55,45 @@ jobs:
           aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
           aws configure set region "$BACKUP_S3_REGION"
 
-          echo "## Available dumps" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" "${endpoint_args[@]}" \
-            --human-readable | tail -20 | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          # `aws s3 ls` failed here against Cloudflare R2 with
+          # "(NoSuchKey) ... ListObjectsV2", which is not what an empty or
+          # missing prefix returns -- that is an empty list. The high-level
+          # `s3` commands wrap several calls; `s3api list-objects-v2` is the
+          # single call we actually want, and R2 answers it.
+          list_keys() {  # $1 = prefix, empty for the whole bucket
+            local prefix_args=()
+            [[ -n "${1:-}" ]] && prefix_args=(--prefix "$1")
+            aws s3api list-objects-v2 \
+              --bucket "$BACKUP_S3_BUCKET" \
+              "${prefix_args[@]}" "${endpoint_args[@]}" \
+              --query 'Contents[].[Key,Size]' --output text 2>&1
+          }
+
+          keys="$(list_keys "$prefix/")"
+          if [[ $? -ne 0 || -z "$keys" || "$keys" == "None" ]]; then
+            echo "::warning::No objects under '$prefix/'. Listing the whole bucket."
+            echo "  (response was: ${keys:0:200})"
+            keys="$(list_keys "")"
+          fi
+
+          {
+            echo "## Objects in the backup bucket"
+            echo '```'
+            echo "${keys:-(nothing returned)}" | tail -25
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
           name='${{ inputs.dump }}'
           if [[ "$name" == "latest" ]]; then
-            name="$(aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" "${endpoint_args[@]}" \
-                     | sort | tail -1 | awk '{print $4}')"
+            # Keys carry an ISO-8601 stamp, so lexical order is chronological.
+            name="$(echo "$keys" | awk '/\.dump/ {print $1}' | sort | tail -1)"
           fi
-          [[ -n "$name" ]] || { echo "No dump found in s3://$BACKUP_S3_BUCKET/$prefix/" >&2; exit 1; }
+          if [[ -z "$name" || "$name" == "latest" ]]; then
+            echo "No dump found. Re-run with an explicit key from the listing above." >&2
+            exit 1
+          fi
           echo "selected=$name" >> "$GITHUB_OUTPUT"
-          echo "Selected: $name" >> "$GITHUB_STEP_SUMMARY"
+          echo "Selected: \`$name\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download and inspect the dump
         shell: bash
@@ -77,8 +102,12 @@ jobs:
           prefix="${BACKUP_S3_PREFIX:-postgres}"
           endpoint_args=()
           [[ -n "${BACKUP_S3_ENDPOINT:-}" ]] && endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
-          aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${{ steps.list.outputs.selected }}" \
-            "$RUNNER_TEMP/restore.dump" "${endpoint_args[@]}" --only-show-errors
+          # `selected` is a full key from the listing, so it already
+          # carries whatever prefix the object really lives under -- which is
+          # the point, given the prefix is what went wrong above.
+          aws s3api get-object --bucket "$BACKUP_S3_BUCKET" \
+            --key "${{ steps.list.outputs.selected }}" \
+            "${endpoint_args[@]}" "$RUNNER_TEMP/restore.dump" >/dev/null
 
           size="$(du -h "$RUNNER_TEMP/restore.dump" | cut -f1)"
           echo "## Dump contents" >> "$GITHUB_STEP_SUMMARY"
