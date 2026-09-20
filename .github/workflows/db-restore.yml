@@ -90,6 +90,38 @@ jobs:
             pg_restore --list /backup/restore.dump > "$RUNNER_TEMP/toc.txt"
           echo "Objects in dump: $(wc -l < "$RUNNER_TEMP/toc.txt")" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Preflight the target
+        if: ${{ env.RESTORE_TARGET_DATABASE_URL != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Runs before any write, including on a list-only run, because the
+          # three things below decide whether a restore will work at all and
+          # are far cheaper to learn now than halfway through one.
+          #
+          #  - server_version: pg_restore reads a custom-format dump written
+          #    by pg_dump 18. An older server rejects it outright.
+          #  - max_connections: a small managed plan can sit near 20. The app
+          #    opens a Prisma pool AND a separate LISTEN/NOTIFY pool per
+          #    instance, so this is the number that decides how they must be
+          #    sized -- see DB_POOL_MAX / PUBSUB_POOL_MAX.
+          #  - a non-empty target means something is already there, and
+          #    --clean --if-exists is about to drop it.
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL postgres:18-alpine sh -ec '
+            psql "$RESTORE_TARGET_DATABASE_URL" -At -F" | " -c "
+              select current_setting(\'server_version\'),
+                     current_setting(\'max_connections\'),
+                     pg_size_pretty(pg_database_size(current_database())),
+                     (select count(*) from pg_tables where schemaname = \'public\')"
+          ' | tee "$RUNNER_TEMP/preflight.txt"
+          {
+            echo "## Target preflight"
+            echo '```'
+            echo "server_version | max_connections | size | public tables"
+            cat "$RUNNER_TEMP/preflight.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Refuse to overwrite the live database
         if: ${{ inputs.confirm == 'RESTORE' }}
         shell: bash

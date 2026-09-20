@@ -48,10 +48,23 @@ function resolvePubsubConnectionString(): string | undefined {
   return url;
 }
 
+/**
+ * Every LISTEN holds a connection for the life of its SSE stream, so this is
+ * a cap on concurrent collaborators per instance, not a throughput knob.
+ *
+ * It was 20, chosen against a database that allows hundreds. A small managed
+ * plan can sit near 20 in total, and this pool is not the only claimant --
+ * `lib/prisma.ts` opens its own for every query the app makes. Five leaves
+ * room for both; raise `PUBSUB_POOL_MAX` where the server allows it.
+ */
+function pubsubPoolMax(): number {
+  const raw = Number.parseInt(process.env.PUBSUB_POOL_MAX ?? '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 5;
+}
+
 const pool = new Pool({
   connectionString: resolvePubsubConnectionString(),
-  // Collab is SSE-based; cap concurrent listeners so we never starve the pool.
-  max: 20,
+  max: pubsubPoolMax(),
   idleTimeoutMillis: 30_000,
 });
 
