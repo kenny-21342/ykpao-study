@@ -34,12 +34,19 @@ afterEach(() => {
 const PEM = '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----';
 const URL_PLAIN = 'postgres://u:p@db.example.com:5432/defaultdb?sslmode=require';
 
-/** What `pg` will actually hand to the TLS socket. */
+/**
+ * What `pg` will actually hand to the TLS socket.
+ *
+ * `connectionParameters` is real and load-bearing -- it is where the bug
+ * showed -- but it is not in pg's published types, hence the cast.
+ */
 function effectiveSsl(url: string) {
-  return new Client(pgConfig(url)).connectionParameters.ssl as
-    | { ca?: string; rejectUnauthorized?: boolean }
-    | boolean
-    | undefined;
+  const client = new Client(pgConfig(url)) as unknown as {
+    connectionParameters: {
+      ssl?: { ca?: string; rejectUnauthorized?: boolean } | boolean;
+    };
+  };
+  return client.connectionParameters.ssl;
 }
 
 test('the CA survives an sslmode in the connection string', () => {
