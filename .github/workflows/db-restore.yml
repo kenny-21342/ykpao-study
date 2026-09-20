@@ -25,6 +25,10 @@ on:
         description: 'Which part of the dump: all, pre-data, data, post-data'
         required: false
         default: 'all'
+      repair:
+        description: 'Named repair to run first: none | dedupe-verification-tokens'
+        required: false
+        default: 'none'
 
 permissions:
   contents: read
@@ -233,6 +237,55 @@ jobs:
             cat "$RUNNER_TEMP/preflight.txt"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Repair
+        if: ${{ inputs.repair != 'none' && inputs.repair != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Named repairs only, never free-form SQL. A workflow that will run
+          # whatever is typed into a text box against the production database
+          # is a worse hazard than whatever it was added to fix.
+          case '${{ inputs.repair }}' in
+            dedupe-verification-tokens)
+              # verification_tokens is the one table of 83 with no primary
+              # key, so it is the only one that could accept a second copy of
+              # its rows when a restore ran twice -- every other table
+              # rejected the duplicate load on its key. The leftovers block
+              # the two unique indexes the dump wants to create.
+              #
+              # Deleting them is safe: these are short-lived email
+              # verification tokens, and the worst case for a student holding
+              # one is requesting a fresh link. Keeping one row per
+              # (identifier, token) rather than emptying the table means a
+              # verification already in flight still works.
+              cat > "$RUNNER_TEMP/repair.sql" <<'SQL'
+          \echo 'before:'
+          select count(*) as rows,
+          count(distinct (identifier, token)) as distinct_rows
+          from verification_tokens;
+          delete from verification_tokens a
+          using verification_tokens b
+          where a.ctid < b.ctid
+          and a.identifier = b.identifier
+          and a.token = b.token;
+          \echo 'after:'
+          select count(*) as rows,
+          count(distinct (identifier, token)) as distinct_rows
+          from verification_tokens;
+          SQL
+              sed -i 's/^          //' "$RUNNER_TEMP/repair.sql"
+              ;;
+            *)
+              echo "Unknown repair: ${{ inputs.repair }}" >&2
+              exit 1
+              ;;
+          esac
+
+          docker run --rm -e RESTORE_TARGET_DATABASE_URL \
+            -v "$RUNNER_TEMP:/work" postgres:18-alpine \
+            psql "$RESTORE_TARGET_DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -f /work/repair.sql | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Refuse to overwrite the live database
         if: ${{ inputs.confirm == 'RESTORE' }}
