@@ -1,6 +1,6 @@
 name: Restore database from backup
 
-# Manual only. This is the other half of neon-backup.yml: that job proves a
+# Manual only. This is the other half of db-backup.yml: that job proves a
 # dump can be produced, this one proves it can be used. A backup nobody has
 # ever restored is a hope, not a backup.
 #
@@ -18,7 +18,7 @@ on:
         required: true
         default: 'latest'
       confirm:
-        description: 'Type RESTORE to actually write. Anything else lists only.'
+        description: 'RESTORE to write to a fresh target; RESTORE-OVER-LIVE to write over the backup source. Anything else lists only.'
         required: true
         default: 'list-only'
       section:
@@ -49,6 +49,7 @@ jobs:
       BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
       BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
       RESTORE_TARGET_DATABASE_URL: ${{ secrets.RESTORE_TARGET_DATABASE_URL }}
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
       NEON_DIRECT_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
     steps:
       - name: List available dumps
@@ -288,7 +289,7 @@ jobs:
             -f /work/repair.sql | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Refuse to overwrite the live database
-        if: ${{ inputs.confirm == 'RESTORE' }}
+        if: ${{ startsWith(inputs.confirm, 'RESTORE') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -297,18 +298,32 @@ jobs:
             echo "secret pointing at the NEW database before restoring." >&2
             exit 1
           fi
-          # A restore is destructive and a paste is easy to get wrong. The
-          # target must not be the database the backup was taken from.
+          # A restore is destructive and a pasted connection string is easy to
+          # get wrong in the one direction that destroys what you were trying
+          # to save. So writing over the database the backup came from is not
+          # something `RESTORE` can do by accident.
+          #
+          # It does have to be possible: restoring the live database from its
+          # own backup is the entire point of a backup on the day you need it.
+          # That is what RESTORE-OVER-LIVE is for -- a value nobody types
+          # while meaning something else.
           host_of() { sed -E 's#^[^@]*@##; s#[:/?].*$##' <<< "$1"; }
-          if [[ "$(host_of "$RESTORE_TARGET_DATABASE_URL")" \
-             == "$(host_of "${NEON_DIRECT_DATABASE_URL:-none}")" ]]; then
-            echo "Refusing: the restore target is the same host as the backup source." >&2
+          target="$(host_of "$RESTORE_TARGET_DATABASE_URL")"
+          source_host="$(host_of "${BACKUP_DATABASE_URL:-${NEON_DIRECT_DATABASE_URL:-none}}")"
+
+          if [[ "$target" != "$source_host" ]]; then
+            echo "Target ($target) differs from the backup source. Proceeding."
+          elif [[ '${{ inputs.confirm }}' == 'RESTORE-OVER-LIVE' ]]; then
+            echo "::warning::Restoring over the live database at $target, as asked."
+          else
+            echo "Refusing: the target is the database the backup came from ($target)." >&2
+            echo "If that is deliberate -- restoring production from its own" >&2
+            echo "backup -- re-run with confirm=RESTORE-OVER-LIVE." >&2
             exit 1
           fi
-          echo "Target host differs from the backup source. Proceeding."
 
       - name: Restore
-        if: ${{ inputs.confirm == 'RESTORE' }}
+        if: ${{ startsWith(inputs.confirm, 'RESTORE') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -369,7 +384,7 @@ jobs:
             >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report target size
-        if: ${{ inputs.confirm == 'RESTORE' }}
+        if: ${{ startsWith(inputs.confirm, 'RESTORE') }}
         shell: bash
         run: |
           set -euo pipefail

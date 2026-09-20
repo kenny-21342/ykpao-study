@@ -1,4 +1,4 @@
-name: Neon database backup
+name: Database backup
 
 on:
   # Keep an independent copy outside Neon's point-in-time history window.
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: neon-database-backup
+  group: database-backup
   cancel-in-progress: false
 
 jobs:
@@ -18,7 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      NEON_DIRECT_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
+      # BACKUP_DATABASE_URL is the live database, whoever is hosting it this
+      # month. NEON_DIRECT_DATABASE_URL is the old name, kept as a fallback so
+      # this job does not break in the gap between a migration and someone
+      # setting the new secret -- which is the exact window in which a backup
+      # matters most.
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
       BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
       BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
       BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
@@ -31,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           for name in \
-            NEON_DIRECT_DATABASE_URL \
+            BACKUP_DATABASE_URL \
             BACKUP_S3_BUCKET \
             BACKUP_S3_ACCESS_KEY_ID \
             BACKUP_S3_SECRET_ACCESS_KEY \
@@ -49,19 +54,26 @@ jobs:
           set -euo pipefail
           stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
           file="ykpao-study-${stamp}.dump"
-          # Neon currently runs PostgreSQL 18; use the matching client so
-          # pg_dump can read the server without a major-version mismatch.
+          # The server runs PostgreSQL 18 (Neon did, Aiven does); use the
+          # matching client so pg_dump can read it without a version mismatch.
           docker run --rm \
-            -e NEON_DIRECT_DATABASE_URL \
+            -e BACKUP_DATABASE_URL \
             -v "$RUNNER_TEMP:/backup" \
             postgres:18-alpine \
             sh -ec 'pg_dump --format=custom --no-owner --no-privileges \
-              --dbname="$NEON_DIRECT_DATABASE_URL" --file="/backup/'"$file"'"'
+              --dbname="$BACKUP_DATABASE_URL" --file="/backup/'"$file"'"'
           docker run --rm \
             -v "$RUNNER_TEMP:/backup" \
             postgres:18-alpine \
             pg_restore --list "/backup/$file" >/dev/null
           echo "file=$file" >> "$GITHUB_OUTPUT"
+          # Name the host and size in the summary. The 19 Sep dump was the
+          # only reason the platform survived the Neon outage, and the runs
+          # after it failed for a day without anyone noticing -- a backup job
+          # that says nothing when it works says nothing when it stops, too.
+          host="$(sed -E 's#^[^@]*@##; s#[:/?].*$##' <<< "$BACKUP_DATABASE_URL")"
+          echo "Dumped **$host** -> \`$file\` ($(du -h "$RUNNER_TEMP/$file" | cut -f1))" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload verified dump
         shell: bash

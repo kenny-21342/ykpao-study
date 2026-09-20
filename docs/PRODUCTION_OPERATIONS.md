@@ -12,12 +12,13 @@ branch (the Neon Console's **Backup & restore** page, or the equivalent Neon
 CLI/API command) and confirm the retention period with the project owner.
 
 For an independent, longer-lived copy, the repository includes a nightly
-GitHub Actions workflow at `.github/workflows/neon-backup.yml`. Add these
+GitHub Actions workflow at `.github/workflows/db-backup.yml`. Add these
 repository secrets before enabling it:
 
 | Secret | Value |
 | --- | --- |
-| `NEON_DIRECT_DATABASE_URL` | The unpooled production connection string (never the `-pooler` host) |
+| `BACKUP_DATABASE_URL` | The unpooled production connection string (never a `-pooler` host). Set this when the database moves provider; `NEON_DIRECT_DATABASE_URL` is the old name and still works as a fallback |
+| `RESTORE_TARGET_DATABASE_URL` | Where `db-restore.yml` writes. Must not be the backup source unless `confirm=RESTORE-OVER-LIVE` |
 | `BACKUP_S3_BUCKET` | A private S3-compatible backup bucket |
 | `BACKUP_S3_ACCESS_KEY_ID` | Write credential for that bucket |
 | `BACKUP_S3_SECRET_ACCESS_KEY` | Matching secret key |

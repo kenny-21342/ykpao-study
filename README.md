@@ -209,11 +209,21 @@ and Web Vitals are collected after the first deployment. `GET /api/health` is
 the unauthenticated uptime probe, and `instrumentation.ts` emits a consistent
 `[request-error]` log record for server-side failures.
 
-An independent nightly PostgreSQL backup workflow is ready at
-`.github/workflows/neon-backup.yml`. It requires the direct production database
-URL and private S3-compatible backup credentials as GitHub secrets. See
-`docs/PRODUCTION_OPERATIONS.md` for the exact secret names, Neon snapshot
-schedule, retention, and restore test required before launch.
+An independent nightly PostgreSQL backup runs from
+`.github/workflows/db-backup.yml`, and `.github/workflows/db-restore.yml` is
+the other half of it: listing, preflighting and restoring a dump into a target
+database. Both need the direct production database URL (`BACKUP_DATABASE_URL`)
+and private S3-compatible backup credentials as GitHub secrets. See
+`docs/PRODUCTION_OPERATIONS.md` for the exact secret names, retention, and the
+restore test required before launch.
+
+These earned their place on 19 September 2026, when the production database
+became unreachable with its data intact and the previous night's dump was the
+only route back in. Two things learned from using them for real, both now
+handled by the restore workflow: a bulk restore needs room for the data *and*
+the write-ahead log it generates, so on a small plan it has to be run
+`--section` by `--section`; and a resumed section reports hundreds of
+`already exists` errors that are expected rather than failures.
 
 ### Realtime collaboration (SSE)
 
