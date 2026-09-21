@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import { getDatabaseUrl } from './env'
-import { pgConfig } from './db-ssl'
+import { pgQueryConfig } from './db-ssl'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -48,8 +48,24 @@ function poolMax(name: string, fallback: number): number {
 }
 
 const pool = new Pool({
-  ...pgConfig(getDatabaseUrl()),
+  ...pgQueryConfig(getDatabaseUrl()),
   max: poolMax('DB_POOL_MAX', 3),
+  // Notice a socket the other end has dropped instead of discovering it on
+  // the next query, which matters now that the server hangs up on idle
+  // sessions itself (see `idleSessionTimeoutMs`).
+  keepAlive: true,
+})
+
+/**
+ * An idle pooled client that the server terminates emits `error` on the
+ * pool. `pg` removes the client either way, but with no listener attached
+ * Node treats it as an unhandled `'error'` event and takes the process down
+ * -- so the mechanism that is supposed to free connection slots would
+ * instead crash the instance holding them. Log and carry on; the next
+ * checkout opens a fresh connection.
+ */
+pool.on('error', (err) => {
+  console.warn('[db] idle pooled connection dropped: %s', err.message)
 })
 
 const adapter = new PrismaPg(pool)

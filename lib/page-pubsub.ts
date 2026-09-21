@@ -76,6 +76,21 @@ const pool = new Pool({
   ...(pubsubConnectionString ? pgConfig(pubsubConnectionString) : {}),
   max: pubsubPoolMax(),
   idleTimeoutMillis: 30_000,
+  keepAlive: true,
+});
+
+/**
+ * Deliberately `pgConfig` and not `pgQueryConfig`: a LISTEN session is
+ * supposed to sit idle, so the server-side `idle_session_timeout` that frees
+ * slots for the query pool would silently kill subscriptions here instead --
+ * collaboration would stay connected and stop receiving updates, which is
+ * the failure mode this file already warns about above.
+ *
+ * Without a listener, a connection the server drops (a restart, a failover,
+ * an idle reap) is an unhandled `'error'` event and takes the instance down.
+ */
+pool.on('error', (err) => {
+  console.warn('[page-pubsub] pooled connection dropped: %s', err.message);
 });
 
 export type AwarenessPayload = {

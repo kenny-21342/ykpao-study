@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test, afterEach } from 'node:test';
 import { Client } from 'pg';
 
-import { pgConfig } from '../lib/db-ssl.ts';
+import { pgConfig, pgQueryConfig, idleSessionTimeoutMs } from '../lib/db-ssl.ts';
 
 /**
  * Moving to a provider with its own CA is the moment TLS verification gets
@@ -25,7 +25,7 @@ import { pgConfig } from '../lib/db-ssl.ts';
 
 const saved = { ...process.env };
 afterEach(() => {
-  for (const key of ['DATABASE_SSL_CA', 'DATABASE_SSL_NO_VERIFY']) {
+  for (const key of ['DATABASE_SSL_CA', 'DATABASE_SSL_NO_VERIFY', 'DB_IDLE_SESSION_TIMEOUT_MS']) {
     delete process.env[key];
     if (saved[key] !== undefined) process.env[key] = saved[key];
   }
@@ -128,4 +128,51 @@ test('a CA beats no-verify', () => {
   process.env.DATABASE_SSL_NO_VERIFY = '1';
   const ssl = effectiveSsl(URL_PLAIN) as { rejectUnauthorized: boolean };
   assert.equal(ssl.rejectUnauthorized, true);
+});
+
+/**
+ * The connection-slot half of the same story.
+ *
+ * On 21 Sep 2026 a 20-connection plan ran out of slots with almost no
+ * traffic: nine sessions sat idle, the oldest for six and a half minutes,
+ * and the app could not open a connection to find out why -- the health
+ * check included. A frozen serverless instance cannot run `pg`'s idle
+ * reaper, so the only party able to free those slots is the server.
+ *
+ * These assert through `pg` for the same reason the TLS cases above do: what
+ * matters is the parameter `pg` actually sends in the startup packet, not
+ * what our function returned.
+ */
+test('pgQueryConfig asks the server to reap idle sessions', () => {
+  const client = new Client(pgQueryConfig('postgres://u:p@h:5432/db'));
+  const params = (client as unknown as { connectionParameters: { options?: string } })
+    .connectionParameters;
+  assert.equal(params.options, '-c idle_session_timeout=120000');
+});
+
+test('pgQueryConfig keeps the CA that pgConfig rescued from sslmode', () => {
+  process.env.DATABASE_SSL_CA = PEM;
+  const client = new Client(pgQueryConfig('postgres://u:p@h:5432/db?sslmode=require'));
+  const params = (client as unknown as {
+    connectionParameters: { options?: string; ssl?: { ca?: string; rejectUnauthorized?: boolean } };
+  }).connectionParameters;
+  // Both mechanisms at once: the idle timeout must not reintroduce the
+  // sslmode-replaces-ssl bug by handing `pg` an unstripped URL.
+  assert.equal(params.options, '-c idle_session_timeout=120000');
+  assert.equal(params.ssl?.rejectUnauthorized, true);
+  assert.ok(params.ssl?.ca?.includes('BEGIN CERTIFICATE'));
+});
+
+test('DB_IDLE_SESSION_TIMEOUT_MS=0 turns the server-side reaper off', () => {
+  process.env.DB_IDLE_SESSION_TIMEOUT_MS = '0';
+  assert.equal(idleSessionTimeoutMs(), 0);
+  const client = new Client(pgQueryConfig('postgres://u:p@h:5432/db'));
+  const params = (client as unknown as { connectionParameters: { options?: string } })
+    .connectionParameters;
+  assert.ok(!params.options);
+});
+
+test('a nonsense DB_IDLE_SESSION_TIMEOUT_MS falls back rather than disabling', () => {
+  process.env.DB_IDLE_SESSION_TIMEOUT_MS = 'soon';
+  assert.equal(idleSessionTimeoutMs(), 120_000);
 });

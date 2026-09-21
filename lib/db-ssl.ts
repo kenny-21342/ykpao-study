@@ -119,3 +119,49 @@ export function pgConfig(url: string): { connectionString: string; ssl?: Connect
   );
   return { connectionString: stripped, ssl };
 }
+
+/**
+ * Ask the *server* to hang up on sessions we have stopped using.
+ *
+ * `pg` reaps its own idle clients on a timer. A frozen serverless instance
+ * cannot run timers, so between requests that reaping simply does not
+ * happen: the instance keeps every socket it ever opened until the platform
+ * recycles it, which can be many minutes later and is not something the
+ * application gets a say in.
+ *
+ * On 21 Sep 2026 that emptied a 20-connection plan. Every slot was held,
+ * nothing was running a query, and the app could not open a connection to
+ * find out why -- including the health check, which is how a database with
+ * no load at all took production down.
+ *
+ * `idle_session_timeout` moves the reaping to the one party that is always
+ * awake. Postgres terminates a session that has sat idle outside a
+ * transaction for this long, so a slot held by a frozen instance comes back
+ * on its own. It does not touch a session that is mid-query or
+ * mid-transaction, so no in-flight work is at risk; the cost is that the
+ * pool occasionally finds a dead client and opens a fresh one, which is a
+ * reconnect, not an error.
+ *
+ * Do NOT apply this to the LISTEN/NOTIFY pool in `lib/page-pubsub.ts`. A
+ * subscription is *supposed* to sit idle -- that is what waiting for a
+ * notification looks like -- and terminating it would silently stop
+ * collaboration updates, the exact failure that file already warns about.
+ */
+export function idleSessionTimeoutMs(): number {
+  const raw = Number.parseInt(process.env.DB_IDLE_SESSION_TIMEOUT_MS ?? '', 10);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return 120_000;
+}
+
+/**
+ * `pgConfig` plus a server-side idle timeout, for pools whose connections are
+ * only ever used to run a query and hand back.
+ */
+export function pgQueryConfig(url: string): ReturnType<typeof pgConfig> & { options?: string } {
+  const base = pgConfig(url);
+  const timeout = idleSessionTimeoutMs();
+  if (timeout === 0) return base;
+  // A startup-packet option, so it is set before the first query and applies
+  // to a connection the pool never gets to touch again.
+  return { ...base, options: `-c idle_session_timeout=${timeout}` };
+}
