@@ -75,6 +75,32 @@ BACKOFF_MIN="${BACKOFF_MIN:-60}"
 BACKOFF_MAX="${BACKOFF_MAX:-1800}"
 MAX_CONSECUTIVE_FAILURES="${MAX_CONSECUTIVE_FAILURES:-8}"
 
+# --- bounded runs ----------------------------------------------------------
+#
+# "Run it for three hours" used to mean starting the supervisor and killing it
+# later from outside. That is the one way of stopping it the script explicitly
+# warns against: a TERM to the supervisor races its own teardown, and a TERM
+# that lands anywhere else leaves the chunk reparented to init, still spending
+# money, invisible to the next supervisor. So the deadline belongs inside,
+# where it goes through the same `stop_chunk` path as a signal.
+#
+# 0 means no deadline, which is the unattended multi-day behaviour.
+RUN_SECS="${RUN_SECS:-0}"
+
+# Do not *begin* a chunk that the deadline cannot let finish phase A.
+#
+# Phase A -- re-segmenting and rendering every paper in the chunk -- writes
+# nothing to the ledger, so a chunk interrupted during it is pure waste: the
+# render is discarded and the next run does it again. Phase B is the opposite;
+# every question it completes is recorded, so being cut off partway through it
+# costs only the questions not yet reached.
+#
+# That asymmetry is the whole scheduling rule. Measured on this stretch of the
+# corpus on 21 Sep, phase A ran ~39s per document -- 11,763s for a chunk of
+# 300, well over three hours before the first model call. Size CHUNK to the
+# window, and refuse to start one there is plainly no room for.
+MIN_START_SECS="${MIN_START_SECS:-1800}"
+
 LOG="${LOG:-pdf_extraction/bank/transcription-run.log}"
 STATUS="${STATUS:-pdf_extraction/bank/transcription-status.txt}"
 DB="${DB:-pdf_extraction/bank/extract.db}"
@@ -234,6 +260,22 @@ run_chunk() {
       last_progress=$(date +%s)
     fi
 
+    if [ "$(secs_left)" -le 0 ]; then
+      log "run deadline reached; stopping in-flight chunk $pid"
+      # Same teardown a signal would get: TERM lets the worker pool unwind so
+      # the ledger keeps every question already paid for.
+      kill -TERM "$pid" 2>/dev/null
+      local waited=0
+      while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 20 ]; do
+        sleep 1
+        waited=$(( waited + 1 ))
+      done
+      kill -KILL "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      CHUNK_PID=""
+      return 125
+    fi
+
     local count
     if ! count=$(ledger_count); then
       # Unreadable, not unchanged. Leave the stall clock where it is.
@@ -342,7 +384,16 @@ if ! acquire_lock; then
   exit 0
 fi
 
-log "=== transcription supervisor started (chunk=$CHUNK concurrency=$CONCURRENCY spend=$SPEND) ==="
+RUN_STARTED=$(date +%s)
+
+# Seconds left before the deadline, or a large number when there is none, so
+# callers can compare without special-casing the unlimited run.
+secs_left() {
+  [ "$RUN_SECS" -gt 0 ] || { printf '%s' 999999999; return; }
+  printf '%s' $(( RUN_SECS - ( $(date +%s) - RUN_STARTED ) ))
+}
+
+log "=== transcription supervisor started (chunk=$CHUNK concurrency=$CONCURRENCY spend=$SPEND${RUN_SECS:+ run_secs=$RUN_SECS}) ==="
 status starting
 
 backoff="$BACKOFF_MIN"
@@ -382,9 +433,24 @@ while true; do
     continue
   fi
 
+  left=$(secs_left)
+  if [ "$left" -le "$MIN_START_SECS" ]; then
+    # Deliberately not "start it anyway and get what we can": what we would
+    # get is phase A, which records nothing and is thrown away.
+    log "=== ${left}s left, under the ${MIN_START_SECS}s a chunk needs to reach paid work; stopping ==="
+    status complete
+    break
+  fi
+
   status "running chunk"
   run_chunk
   chunk_status=$?
+
+  if [ "$chunk_status" -eq 125 ]; then
+    log "=== run deadline reached; stopping ==="
+    status complete
+    break
+  fi
 
   if [ "$chunk_status" -eq 0 ]; then
     consecutive_failures=0
