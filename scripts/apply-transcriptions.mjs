@@ -35,6 +35,8 @@ import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import pg from 'pg';
 
+import { pgConfig } from '../lib/db-ssl.ts';
+
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const flag = (name, fallback) => {
@@ -63,7 +65,11 @@ if (!existsSync(sourcePath)) {
 }
 
 const src = new Database(sourcePath, { readonly: true });
-const client = new pg.Client({ connectionString: url });
+// Aiven issues a per-project CA that Node does not trust out of the box, and
+// `pg` lets an `sslmode` in the URL replace an explicit `ssl` option rather
+// than merge with it -- so the certificate has to be applied here the same
+// way the app applies it, through the one helper that knows both facts.
+const client = new pg.Client(pgConfig(url));
 
 const show = (rows) => {
   if (!rows.length) return console.log('  (no rows)');

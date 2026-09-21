@@ -186,8 +186,13 @@ def main() -> int:
     parser.add_argument("--db", default=str(DB))
     args = parser.parse_args()
 
-    db = sqlite3.connect(args.db)
+    # The transcription run writes to this store continuously, so a repair
+    # that opens it with the default timeout loses the race and exits with
+    # "database is locked" -- after doing all the extraction work. Wait for
+    # the writer instead; its transactions are short.
+    db = sqlite3.connect(args.db, timeout=120)
     db.row_factory = sqlite3.Row
+    db.execute("PRAGMA busy_timeout = 120000")
     pdfs = Pdfs()
 
     questions = recover_questions(db, pdfs)
