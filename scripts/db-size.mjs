@@ -23,7 +23,27 @@ if (!url) {
 }
 
 const client = new pg.Client(pgConfig(url));
-await client.connect();
+
+try {
+  await client.connect();
+} catch (error) {
+  // The one failure this script exists to diagnose is also the one that stops
+  // it connecting, so it has to say something useful rather than throw a
+  // stack trace at exactly the wrong moment.
+  if (error?.code === '53300') {
+    console.error('\nThe database is out of connection slots (53300), which is');
+    console.error('why this could not connect either.\n');
+    console.error('Every warm serverless instance holds up to');
+    console.error('DB_POOL_MAX + PUBSUB_POOL_MAX sockets and cannot release them');
+    console.error('while frozen, so usage tracks instance count rather than');
+    console.error('traffic. Options, in order of how quickly they work:\n');
+    console.error('  - wait: instances are recycled and slots come back');
+    console.error('  - lower DB_POOL_MAX / PUBSUB_POOL_MAX and redeploy');
+    console.error('  - put a connection pooler in front of the database\n');
+    process.exit(2);
+  }
+  throw error;
+}
 
 const { rows: [summary] } = await client.query(`
   select pg_database_size(current_database()) as bytes,
@@ -44,6 +64,32 @@ console.log(`  questions   ${Number(summary.questions_with_text).toLocaleString(
 console.log(`  schemes     ${Number(summary.schemes_with_text).toLocaleString()} with text`);
 console.log(`  rag         ${Number(summary.rag_documents).toLocaleString()} documents, ` +
             `${Number(summary.rag_chunks).toLocaleString()} chunks`);
+
+// Connections, because on this plan they are scarcer than disk. A frozen
+// serverless instance cannot run `pg`'s idle reaper, so it holds its sockets
+// until the platform recycles it: usage tracks warm instances rather than
+// users, and the first symptom of running out is not slowness but
+// `53300: remaining connection slots are reserved` on every route at once.
+const { rows: [conns] } = await client.query(`
+  select current_setting('max_connections')::int as max,
+         current_setting('superuser_reserved_connections')::int as reserved,
+         count(*) filter (where state = 'active') as active,
+         count(*) filter (where state = 'idle') as idle,
+         count(*) as total
+    from pg_stat_activity
+   where datname = current_database()`);
+
+const usable = conns.max - conns.reserved;
+console.log(`  connections ${conns.total} of ${usable} usable ` +
+            `(${conns.active} active, ${conns.idle} idle; ` +
+            `${conns.max} max less ${conns.reserved} superuser-reserved)`);
+
+if (Number(conns.total) >= usable * 0.7) {
+  console.log('\n  WARNING: connection usage is high. Each warm serverless');
+  console.log('  instance holds up to DB_POOL_MAX + PUBSUB_POOL_MAX sockets and');
+  console.log('  cannot release them while frozen, so this grows with instance');
+  console.log('  count, not with traffic.');
+}
 
 if (process.argv.includes('--tables')) {
   const { rows } = await client.query(`

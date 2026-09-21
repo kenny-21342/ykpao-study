@@ -54,14 +54,20 @@ function resolvePubsubConnectionString(): string | undefined {
  * Every LISTEN holds a connection for the life of its SSE stream, so this is
  * a cap on concurrent collaborators per instance, not a throughput knob.
  *
- * It was 20, chosen against a database that allows hundreds. A small managed
- * plan can sit near 20 in total, and this pool is not the only claimant --
- * `lib/prisma.ts` opens its own for every query the app makes. Five leaves
- * room for both; raise `PUBSUB_POOL_MAX` where the server allows it.
+ * It was 20, chosen against a database that allows hundreds. The plan the
+ * platform actually runs on allows 20 in total, across every instance, and
+ * this pool is not the only claimant -- `lib/prisma.ts` opens its own for
+ * every query the app makes.
+ *
+ * Two, because this pool is only ever used by the notebook page editor.
+ * Queries go through Prisma; nothing else subscribes. A student reading a
+ * paper or sitting a mock exam never opens one of these, so spending scarce
+ * connection slots to keep more of them warm buys nothing. Raise
+ * `PUBSUB_POOL_MAX` behind a real connection pooler.
  */
 function pubsubPoolMax(): number {
   const raw = Number.parseInt(process.env.PUBSUB_POOL_MAX ?? '', 10);
-  return Number.isFinite(raw) && raw > 0 ? raw : 5;
+  return Number.isFinite(raw) && raw > 0 ? raw : 2;
 }
 
 const pubsubConnectionString = resolvePubsubConnectionString();
