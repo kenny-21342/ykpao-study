@@ -1,5 +1,27 @@
 import { prisma } from '@/lib/prisma';
 
+export function validResourceFolderName(name: string): boolean {
+  return name.length > 0 && name.length <= 200 && name !== '.' && name !== '..' &&
+    !name.includes('/') && !name.includes('\\') && !/[\x00-\x1f]/.test(name);
+}
+
+/** Serialize creation of a particular sibling name so parallel folder uploads
+ * reuse one row even before a database uniqueness migration can be deployed. */
+export async function findOrCreateResourceFolder(name: string, parentId: string | null): Promise<string> {
+  if (!validResourceFolderName(name)) throw new Error('Invalid resource folder name');
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${parentId ?? ''}), hashtext(${name}))::text`;
+    const existing = await tx.schoolResourceFolder.findFirst({
+      where: { name, parentId }, select: { id: true },
+    });
+    if (existing) return existing.id;
+    const created = await tx.schoolResourceFolder.create({
+      data: { name, parentId }, select: { id: true },
+    });
+    return created.id;
+  });
+}
+
 /**
  * The human-readable "Physics/Unit 3" path for a folder, walking the parent
  * chain up to the root. Used for display (search snippets, breadcrumbs)

@@ -23,6 +23,7 @@ const patchSchema = z.object({
   description: z.string().max(5000).optional(),
   subject: z.string().max(100).nullable().optional(),
   category: z.string().max(100).nullable().optional(),
+  folderId: z.string().nullable().optional(),
   fileName: z.string().trim().min(1).max(200).optional(),
   replacementFile: replacementFileSchema.optional(),
 });
@@ -49,7 +50,7 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
-  const { title, description, subject, category, fileName, replacementFile } = parsed.data;
+  const { title, description, subject, category, folderId, fileName, replacementFile } = parsed.data;
 
   try {
     let resource;
@@ -71,6 +72,13 @@ export async function PATCH(
     if (description !== undefined) data.description = description.trim();
     if (subject !== undefined) data.subject = subject?.trim() || null;
     if (category !== undefined) data.category = category?.trim() || null;
+    if (folderId !== undefined) {
+      if (folderId) {
+        const folder = await prisma.schoolResourceFolder.findUnique({ where: { id: folderId }, select: { id: true } });
+        if (!folder) return NextResponse.json({ error: 'Resource folder not found' }, { status: 404 });
+      }
+      data.folderId = folderId;
+    }
     // A swap already set fileName from the uploaded file. The edit dialog
     // prefills this field with the *previous* file's name and always sends it,
     // so honouring it here relabelled the new file with the old one's name —

@@ -3,6 +3,8 @@ import { getStorage } from '@/lib/storage';
 import { indexSchoolResource, refreshRagIndex } from '@/lib/rag-index';
 import { reportError } from '@/lib/error-reporting';
 import type { Prisma } from '@prisma/client';
+import { resourceUploadFolderId } from '@/lib/school-resource-upload';
+import { findOrCreateResourceFolder, validResourceFolderName } from '@/lib/school-resource-folders';
 
 /**
  * Shared mutation helpers for school resources.
@@ -19,17 +21,15 @@ import type { Prisma } from '@prisma/client';
  */
 
 /**
- * The only URL shape POST /api/school-resources has ever accepted from
- * /api/upload: /uploads/{images|files}/<uuid>.<ext>. Deleting a storage object
- * from a user-controllable URL is only safe behind this exact shape — the key
+ * The URL shapes issued by /api/upload are flat legacy keys and folder keys.
+ * Deleting a storage object from a user-controllable URL is only safe behind
+ * these exact shapes — the key
  * is derived by dropping the leading slash, and anything else (legacy rows,
  * external URLs, malformed paths) is left alone rather than guessed at.
  */
-const UPLOAD_URL_PATTERN = /^\/uploads\/(images|files)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]{1,10}$/i;
-
 function storageKeyForUpload(fileUrl: string): string | null {
   if (!fileUrl || fileUrl.includes('..')) return null;
-  if (!UPLOAD_URL_PATTERN.test(fileUrl)) return null;
+  if (resourceUploadFolderId(fileUrl) === undefined) return null;
   return fileUrl.slice(1); // '/uploads/files/x' -> 'uploads/files/x'
 }
 
@@ -60,33 +60,21 @@ function reindex(id: string): Promise<unknown> {
  * and simple enough that two uploads of "Physics/Unit 3" always land in the
  * same folder rather than minting duplicates.
  *
- * Sequential awaits (not a single batched query): each segment's existence
- * depends on the previous one's id, and a folder path is at most a handful
- * of segments deep, so the latency of doing this one at a time is
- * negligible next to the file upload it accompanies.
+ * Each sibling creation is serialized in the database, so concurrent files
+ * from one directory reuse the same folder rows.
  */
-export async function resolveFolderPath(path: string): Promise<string | null> {
+export async function resolveFolderPath(path: string, baseFolderId: string | null = null): Promise<string | null> {
   const segments = path
     .split('/')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (segments.length === 0) return null;
+    .map((s) => s.trim());
+  if (segments.length > 20 || segments.some((s) => !validResourceFolderName(s))) {
+    throw new Error('Invalid resource folder path');
+  }
+  if (segments.length === 0) return baseFolderId;
 
-  let parentId: string | null = null;
+  let parentId: string | null = baseFolderId;
   for (const name of segments) {
-    const existing: { id: string } | null = await prisma.schoolResourceFolder.findFirst({
-      where: { name, parentId },
-      select: { id: true },
-    });
-    if (existing) {
-      parentId = existing.id;
-      continue;
-    }
-    const created: { id: string } = await prisma.schoolResourceFolder.create({
-      data: { name, parentId },
-      select: { id: true },
-    });
-    parentId = created.id;
+    parentId = await findOrCreateResourceFolder(name, parentId);
   }
   return parentId;
 }

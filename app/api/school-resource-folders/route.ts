@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
+import { findOrCreateResourceFolder, validResourceFolderName } from '@/lib/school-resource-folders';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +34,8 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) ?? {};
     const { name, parentId } = body as { name?: string; parentId?: string | null };
     const trimmed = name?.trim();
-    if (!trimmed) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+    if (!trimmed || !validResourceFolderName(trimmed)) {
+      return NextResponse.json({ error: 'Invalid folder name' }, { status: 400 });
     }
 
     if (parentId) {
@@ -42,8 +43,9 @@ export async function POST(req: NextRequest) {
       if (!parent) return NextResponse.json({ error: 'Parent folder not found' }, { status: 404 });
     }
 
-    const folder = await prisma.schoolResourceFolder.create({
-      data: { name: trimmed, parentId: parentId || null },
+    const id = await findOrCreateResourceFolder(trimmed, parentId || null);
+    const folder = await prisma.schoolResourceFolder.findUniqueOrThrow({
+      where: { id },
       select: { id: true, name: true, parentId: true },
     });
     return NextResponse.json({ folder }, { status: 201 });

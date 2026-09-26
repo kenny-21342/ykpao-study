@@ -8,6 +8,7 @@ import {
 import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
+import ResourceFolderPicker from '../../components/ResourceFolderPicker';
 import {
   ALLOWED_RESOURCE_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
@@ -24,6 +25,7 @@ type Resource = {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  folderId: string | null;
   downloads: number;
   createdAt: string;
   uploader: { name: string | null; email: string };
@@ -44,6 +46,9 @@ export default function ResourceManager() {
   // Debounced so typing a query fires one request, not one per keystroke.
   const debouncedQ = useDebouncedValue(q, 300);
   const [page, setPage] = useState(1);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [breadcrumb, setBreadcrumb] = useState<Array<{ id: string; name: string }>>([]);
+  const [folderRefreshTick, setFolderRefreshTick] = useState(0);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Resource | null>(null);
@@ -55,6 +60,7 @@ export default function ResourceManager() {
     setError(null);
     try {
       const params = new URLSearchParams({ type: 'resources', page: String(page) });
+      params.set('folderId', currentFolderId ?? '');
       if (debouncedQ) params.set('q', debouncedQ);
       const res = await adminFetch<Response>(`/api/admin/content?${params}`);
       setData(res);
@@ -63,7 +69,7 @@ export default function ResourceManager() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ, page]);
+  }, [currentFolderId, debouncedQ, page]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
@@ -103,6 +109,11 @@ export default function ResourceManager() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="e.g. worksheet, 2024, or Ms Lee" className="w-full pl-9 pr-3 py-2 bg-surface border border-strong rounded-md text-sm focus:ring-2 focus:ring-ring/25 outline-none" />
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold">Folders</h2>
+        <ResourceFolderPicker key={folderRefreshTick} value={currentFolderId} initialBreadcrumb={breadcrumb} onChange={(id, crumbs) => { setCurrentFolderId(id); setBreadcrumb(crumbs); setPage(1); }} />
       </div>
 
       {/* Only show the spinner before the first result set arrives. Swapping
@@ -170,14 +181,17 @@ export default function ResourceManager() {
 
       {uploadOpen && (
         <UploadDialog
+          initialFolderId={currentFolderId}
+          initialBreadcrumb={breadcrumb}
           onClose={() => setUploadOpen(false)}
-          onDone={() => { setUploadOpen(false); void load(); }}
+          onDone={() => { setUploadOpen(false); setFolderRefreshTick((tick) => tick + 1); void load(); }}
         />
       )}
 
       {editTarget && (
         <EditDialog
           resource={editTarget}
+          initialBreadcrumb={breadcrumb}
           onClose={() => setEditTarget(null)}
           onDone={() => { setEditTarget(null); void load(); }}
         />
@@ -209,7 +223,12 @@ type FolderFileItem = {
   error?: string;
 };
 
-function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
+  onClose: () => void;
+  onDone: () => void;
+  initialFolderId: string | null;
+  initialBreadcrumb: Array<{ id: string; name: string }>;
+}) {
   const [mode, setMode] = useState<'single' | 'folder'>('single');
   const [error, setError] = useState<string | null>(null);
 
@@ -218,6 +237,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('');
+  const [destinationId, setDestinationId] = useState<string | null>(initialFolderId);
   const [fileMeta, setFileMeta] = useState<{ url: string; name: string; size: number; type: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -247,6 +267,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (destinationId) fd.append('resourceFolderId', destinationId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
@@ -274,6 +295,7 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           description: description.trim() || undefined,
           subject: subject.trim() || undefined,
           category: category.trim() || undefined,
+          folderId: destinationId,
           fileUrl: fileMeta.url,
           fileName: fileMeta.name,
           fileSize: fileMeta.size,
@@ -324,6 +346,11 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       updateItem(idx, { status: 'uploading', error: undefined });
       const fd = new FormData();
       fd.append('file', item.file);
+      const parts = item.relativePath.split('/').filter(Boolean);
+      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+      if (folderPath) fd.append('resourceFolderPath', folderPath);
+      if (destinationId) fd.append('resourceParentFolderId', destinationId);
+      if (!folderPath && destinationId) fd.append('resourceFolderId', destinationId);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
       const upData = await upRes.json();
       if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
@@ -332,13 +359,11 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       // Keep the folder's relative path (minus the file name) so the server
       // can resolve/create the matching SchoolResourceFolder chain — same
       // convention the staff folder upload uses.
-      const parts = item.relativePath.split('/').filter(Boolean);
-      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
       await adminFetch('/api/school-resources', {
         method: 'POST',
         body: JSON.stringify({
           title: item.file.name.replace(/\.[^.]+$/, ''),
-          folderPath: folderPath || undefined,
+          folderId: upData.resourceFolderId,
           subject: subj,
           category: cat,
           fileUrl: upData.fileUrl,
@@ -430,6 +455,10 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Upload into folder</label>
+            <ResourceFolderPicker value={destinationId} onChange={setDestinationId} initialBreadcrumb={initialBreadcrumb} disabled={uploading || submitting || folderBusy || Boolean(fileMeta) || folderDoneCount > 0} />
+          </div>
           {mode === 'single' ? (
             <>
               <div>
@@ -661,11 +690,17 @@ function UploadDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
 // a fresh upload. Swapping deletes the old stored object server-side.
 // ---------------------------------------------------------------------------
 
-function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose: () => void; onDone: () => void }) {
+function EditDialog({ resource, onClose, onDone, initialBreadcrumb }: {
+  resource: Resource;
+  onClose: () => void;
+  onDone: () => void;
+  initialBreadcrumb: Array<{ id: string; name: string }>;
+}) {
   const [title, setTitle] = useState(resource.title);
   const [description, setDescription] = useState(resource.description ?? '');
   const [subject, setSubject] = useState(resource.subject ?? '');
   const [category, setCategory] = useState(resource.category ?? '');
+  const [folderId, setFolderId] = useState<string | null>(resource.folderId);
   const [fileName, setFileName] = useState(resource.fileName);
 
   const [replacement, setReplacement] = useState<{ url: string; name: string; size: number; type: string } | null>(null);
@@ -688,6 +723,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (folderId) fd.append('resourceFolderId', folderId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
@@ -714,6 +750,7 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
           description,
           subject,
           category,
+          folderId,
           fileName: fileName.trim(),
           ...(replacement ? {
             replacementFile: {
@@ -748,6 +785,10 @@ function EditDialog({ resource, onClose, onDone }: { resource: Resource; onClose
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Folder</label>
+            <ResourceFolderPicker value={folderId} onChange={setFolderId} initialBreadcrumb={initialBreadcrumb} disabled={uploading || saving || Boolean(replacement)} />
+          </div>
           <div>
             <label className="block text-sm font-medium text-secondary mb-1.5">Title</label>
             <input

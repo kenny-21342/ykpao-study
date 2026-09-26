@@ -43,7 +43,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === 'resources') {
-    const where = q ? { OR: [{ title: { contains: q, mode: 'insensitive' as const } }, { description: { contains: q, mode: 'insensitive' as const } }] } : {};
+    const folderId = searchParams.get('folderId')?.trim() || null;
+    const where = {
+      ...(searchParams.has('folderId') ? { folderId } : {}),
+      ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' as const } }, { description: { contains: q, mode: 'insensitive' as const } }, { fileName: { contains: q, mode: 'insensitive' as const } }] } : {}),
+    };
     const [items, total] = await Promise.all([
       prisma.schoolResource.findMany({ where, include: { uploader: { select: { name: true, email: true } } }, orderBy, skip, take: pageSize }),
       prisma.schoolResource.count({ where }),

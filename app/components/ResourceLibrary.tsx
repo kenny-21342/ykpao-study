@@ -9,6 +9,7 @@ import {
   Folder, FolderOpen, Home,
 } from 'lucide-react';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import ResourceFolderPicker from './ResourceFolderPicker';
 import {
   ALLOWED_RESOURCE_EXTS as ALLOWED_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
@@ -425,7 +426,7 @@ type ResourcePageResponse = {
 };
 
 type ResourceViewMode = 'list' | 'browser';
-const BROWSER_RESOURCE_LIMIT = 1000;
+const BROWSER_RESOURCE_LIMIT = 100;
 
 function formatResourceDescription(resource: SchoolResource): string {
   const description = resource.description?.trim();
@@ -436,7 +437,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
   const [resources, setResources] = useState<SchoolResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ResourceViewMode>('list');
+  const [viewMode, setViewMode] = useState<ResourceViewMode>('browser');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderEntries, setFolderEntries] = useState<ResourceFolderEntry[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<ResourceBreadcrumbEntry[]>([]);
@@ -461,7 +462,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
     try {
       const isBrowserRequest = viewMode === 'browser';
       const limit = isBrowserRequest ? BROWSER_RESOURCE_LIMIT : pageSize;
-      const pageForRequest = isBrowserRequest ? 1 : page;
+      const pageForRequest = page;
       const params = new URLSearchParams();
       if (query.trim()) params.set('q', query.trim());
       if (subjectFilter) params.set('subject', subjectFilter);
@@ -526,6 +527,11 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
     setCurrentFolderId(null);
   };
 
+  const changeFolder = (id: string | null) => {
+    setCurrentFolderId(id);
+    setPage(1);
+  };
+
   const trackAccess = useCallback((resource: SchoolResource) => {
     void fetch(`/api/school-resources/${resource.id}?download=1`).catch(() => {});
     setResources((current) => current.map((item) => (
@@ -551,7 +557,9 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         <div>
           <h3 className="text-lg font-bold text-primary">School Resources</h3>
           <p className="text-xs text-muted">
-            {total.toLocaleString()} resource{total === 1 ? '' : 's'} • Browse files by name, subject, folder, or upload date.
+            {isBrowserView
+              ? `${total.toLocaleString()} direct file${total === 1 ? '' : 's'} in ${breadcrumb.length ? breadcrumb[breadcrumb.length - 1].name : 'Root'}`
+              : `${total.toLocaleString()} resource${total === 1 ? '' : 's'} across all folders`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -672,7 +680,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
         </div>
       ) : error ? (
         <ErrorBanner message={error} onRetry={load} />
-      ) : resources.length === 0 ? (
+      ) : resources.length === 0 && !isBrowserView ? (
         <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
           <Library className="w-12 h-12 mx-auto text-muted mb-3" />
           <h3 className="text-lg font-bold text-primary">No resources yet</h3>
@@ -693,12 +701,15 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
           folders={folderEntries}
           files={resources}
           breadcrumb={breadcrumb}
-          onChangeFolder={setCurrentFolderId}
+          onChangeFolder={changeFolder}
           onOpenResource={openResource}
           onDownloadResource={trackAccess}
           openingId={openingId}
           total={total}
           loadLimit={BROWSER_RESOURCE_LIMIT}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
         />
       ) : (
         <div className="overflow-hidden rounded-lg border border-line bg-surface">
@@ -785,6 +796,8 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
 
       {showUpload && (
         <UploadResourceDialog
+          initialFolderId={isBrowserView ? currentFolderId : null}
+          initialBreadcrumb={isBrowserView ? breadcrumb : []}
           onClose={() => setShowUpload(false)}
           onUploaded={() => {
             setShowUpload(false);
@@ -879,6 +892,9 @@ function ResourceBrowserView({
   openingId,
   total,
   loadLimit,
+  page,
+  totalPages,
+  onPageChange,
 }: {
   folders: ResourceFolderEntry[];
   files: SchoolResource[];
@@ -889,14 +905,39 @@ function ResourceBrowserView({
   openingId: string | null;
   total: number;
   loadLimit: number;
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }) {
+  const [creating, setCreating] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [createError, setCreateError] = useState('');
   const currentFolderId = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].id : null;
-  const currentLabel = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'All resources';
-  const directFileCount = files.length;
+  const currentLabel = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Root';
+  const directFileCount = total;
 
   const goUp = () => {
     if (breadcrumb.length === 0) return;
     onChangeFolder(breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : null);
+  };
+
+  const createFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    setCreateError('');
+    try {
+      const response = await fetch('/api/school-resource-folders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parentId: currentFolderId }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not create folder');
+      setCreating(false);
+      setNewFolderName('');
+      onChangeFolder(body.folder.id);
+    } catch (cause) {
+      setCreateError(cause instanceof Error ? cause.message : 'Could not create folder');
+    }
   };
 
   return (
@@ -912,10 +953,10 @@ function ResourceBrowserView({
                   ? 'bg-accent-subtle text-accent-text'
                   : 'text-secondary hover:bg-surface-hover'
               }`}
-              title="All resources" aria-label="All resources"
+              title="Root" aria-label="Root"
             >
               <Home className="h-4 w-4" />
-              <span>All resources</span>
+              <span>Root</span>
             </button>
             {breadcrumb.map((crumb, index) => {
               const active = index === breadcrumb.length - 1;
@@ -940,9 +981,11 @@ function ResourceBrowserView({
           </div>
           <p className="mt-1 text-xs text-muted">
             {directFileCount.toLocaleString()} file{directFileCount === 1 ? '' : 's'} in {currentLabel}
-            {total > loadLimit ? ` • showing first ${loadLimit.toLocaleString()} filtered results` : ''}
+            {total > loadLimit ? ` • page ${page.toLocaleString()} of ${totalPages.toLocaleString()}` : ''}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <button type="button" onClick={() => setCreating((current) => !current)} className="inline-flex items-center gap-1.5 rounded-md border border-strong bg-surface px-3 py-2 text-sm font-medium text-secondary hover:bg-surface-hover"><Plus className="h-4 w-4" /> New folder</button>
         <button
           type="button"
           onClick={goUp}
@@ -952,7 +995,15 @@ function ResourceBrowserView({
           <ChevronLeft className="h-4 w-4" />
           Up
         </button>
+        </div>
       </div>
+      {creating && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+          <input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void createFolder(); }} placeholder="Folder name" aria-label="Folder name" className="rounded-md border border-strong bg-surface px-3 py-2 text-sm" />
+          <button type="button" onClick={() => void createFolder()} disabled={!newFolderName.trim()} className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Create</button>
+          {createError && <span className="text-xs text-danger">{createError}</span>}
+        </div>
+      )}
 
       <div className="grid min-h-[32rem] lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="border-b border-line bg-surface-raised/70 lg:border-b-0 lg:border-r">
@@ -996,7 +1047,7 @@ function ResourceBrowserView({
               <span>{currentLabel}</span>
             </div>
             <p className="text-xs text-muted">
-              {folders.length.toLocaleString()} folder{folders.length === 1 ? '' : 's'} • {files.length.toLocaleString()} direct file{files.length === 1 ? '' : 's'}
+              {folders.length.toLocaleString()} folder{folders.length === 1 ? '' : 's'} • {total.toLocaleString()} direct file{total === 1 ? '' : 's'}
             </p>
           </div>
 
@@ -1058,6 +1109,13 @@ function ResourceBrowserView({
               </table>
             </div>
           )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-3 border-t border-line px-4 py-3 text-sm">
+              <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="rounded-md border border-strong px-3 py-1.5 disabled:opacity-50">Previous</button>
+              <span className="text-muted">{page} / {totalPages}</span>
+              <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className="rounded-md border border-strong px-3 py-1.5 disabled:opacity-50">Next</button>
+            </div>
+          )}
         </section>
       </div>
     </div>
@@ -1071,7 +1129,12 @@ type FolderFileItem = {
   error?: string;
 };
 
-function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; onUploaded: () => void }) {
+function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBreadcrumb }: {
+  onClose: () => void;
+  onUploaded: () => void;
+  initialFolderId: string | null;
+  initialBreadcrumb: ResourceBreadcrumbEntry[];
+}) {
   // 'single' = one file (legacy flow), 'folder' = pick a whole directory.
   const [mode, setMode] = useState<'single' | 'folder'>('single');
 
@@ -1080,6 +1143,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('');
+  const [destinationId, setDestinationId] = useState<string | null>(initialFolderId);
   const [fileMeta, setFileMeta] = useState<{ url: string; name: string; size: number; type: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1110,6 +1174,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (destinationId) fd.append('resourceFolderId', destinationId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
@@ -1138,6 +1203,7 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
           description: description.trim() || undefined,
           subject: subject.trim() || undefined,
           category: category.trim() || undefined,
+          folderId: destinationId,
           fileUrl: fileMeta.url,
           fileName: fileMeta.name,
           fileSize: fileMeta.size,
@@ -1191,6 +1257,11 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
       updateItem(idx, { status: 'uploading', error: undefined });
       const fd = new FormData();
       fd.append('file', item.file);
+      const parts = item.relativePath.split('/').filter(Boolean);
+      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+      if (folderPath) fd.append('resourceFolderPath', folderPath);
+      if (destinationId) fd.append('resourceParentFolderId', destinationId);
+      if (!folderPath && destinationId) fd.append('resourceFolderId', destinationId);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
       const upData = await upRes.json();
       if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
@@ -1198,14 +1269,12 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
       updateItem(idx, { status: 'publishing' });
       // Use the folder's relative path (minus the top-level folder name) so
       // the server can resolve/create the matching SchoolResourceFolder chain.
-      const parts = item.relativePath.split('/').filter(Boolean);
-      const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
       const pubRes = await fetch('/api/school-resources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: item.file.name.replace(/\.[^.]+$/, ''),
-          folderPath: folderPath || undefined,
+          folderId: upData.resourceFolderId,
           subject,
           category,
           fileUrl: upData.fileUrl,
@@ -1305,6 +1374,10 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Upload into folder</label>
+            <ResourceFolderPicker value={destinationId} onChange={setDestinationId} initialBreadcrumb={initialBreadcrumb} disabled={uploading || submitting || folderBusy || Boolean(fileMeta) || folderDoneCount > 0} />
+          </div>
           {mode === 'single' ? (
             <>
               {/* File picker */}
@@ -1540,4 +1613,3 @@ function UploadResourceDialog({ onClose, onUploaded }: { onClose: () => void; on
     </div>
   );
 }
-

@@ -4,6 +4,8 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { getStorage, KEY_PREFIX } from '@/lib/storage';
 import { reportError } from '@/lib/error-reporting';
+import { prisma } from '@/lib/prisma';
+import { resolveFolderPath } from '@/lib/school-resources';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,11 +107,41 @@ export async function POST(req: NextRequest) {
     }
 
     const subDir = kind === 'image' ? 'images' : 'files';
+    // Resource uploads may name an existing destination or supply the relative
+    // path from a directory picker. Other uploads retain their original URL.
+    const requestedFolderId = formData.get('resourceFolderId');
+    const requestedFolderPath = formData.get('resourceFolderPath');
+    const requestedParentId = formData.get('resourceParentFolderId');
+    if ((requestedFolderId !== null && typeof requestedFolderId !== 'string') ||
+        (requestedFolderPath !== null && typeof requestedFolderPath !== 'string') ||
+        (requestedParentId !== null && typeof requestedParentId !== 'string') ||
+        (requestedFolderId && requestedFolderPath)) {
+      return NextResponse.json({ error: 'Invalid resource folder' }, { status: 400 });
+    }
+    let folderId: string | null = null;
+    if (typeof requestedFolderId === 'string' && requestedFolderId) {
+      const folder = await prisma.schoolResourceFolder.findUnique({
+        where: { id: requestedFolderId }, select: { id: true },
+      });
+      if (!folder) return NextResponse.json({ error: 'Resource folder not found' }, { status: 404 });
+      folderId = folder.id;
+    } else if (typeof requestedFolderPath === 'string' && requestedFolderPath) {
+      let parentId: string | null = null;
+      if (typeof requestedParentId === 'string' && requestedParentId) {
+        const parent = await prisma.schoolResourceFolder.findUnique({ where: { id: requestedParentId }, select: { id: true } });
+        if (!parent) return NextResponse.json({ error: 'Resource parent folder not found' }, { status: 404 });
+        parentId = parent.id;
+      }
+      folderId = await resolveFolderPath(requestedFolderPath, parentId);
+    }
 
     // Strip the user's original filename and use a UUID + validated ext so
     // we never write an attacker-controlled string to storage.
     const uniqueFilename = `${randomUUID()}${ext}`;
-    const key = `${KEY_PREFIX.uploads}/${subDir}/${uniqueFilename}`;
+    const relativeKey = folderId
+      ? `${subDir}/resources/${folderId}/${uniqueFilename}`
+      : `${subDir}/${uniqueFilename}`;
+    const key = `${KEY_PREFIX.uploads}/${relativeKey}`;
     await getStorage().put(key, buffer, {
       contentType: expectedMime,
       // Content-addressed by UUID, so the object at this key never changes.
@@ -119,7 +151,7 @@ export async function POST(req: NextRequest) {
     // The stored URL keeps its historical shape. `/uploads/**` is served by
     // app/uploads/[...path]/route.ts, which resolves it through the same
     // object store — so existing database rows keep working unchanged.
-    const publicUrl = `/uploads/${subDir}/${uniqueFilename}`;
+    const publicUrl = `/uploads/${relativeKey}`;
 
     return NextResponse.json({
       success: true,
@@ -128,6 +160,7 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       mimeType: expectedMime,
+      resourceFolderId: folderId,
     });
   } catch (error) {
     // Never echo the underlying error: it carries storage keys, bucket names

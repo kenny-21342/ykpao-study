@@ -7,6 +7,7 @@ import { resolveFolderPath } from '@/lib/school-resources';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { reportError } from '@/lib/error-reporting';
+import { resourceUploadFolderId } from '@/lib/school-resource-upload';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
       const counts = children.length > 0
         ? await prisma.schoolResource.groupBy({
             by: ['folderId'],
-            where: { folderId: { in: children.map((c) => c.id) } },
+            where: { ...where, folderId: { in: children.map((c) => c.id) } },
             _count: { _all: true },
           })
         : [];
@@ -185,13 +186,14 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) ?? {};
-    const { title, description, subject, category, folderPath, fileUrl, fileName, fileSize, mimeType } = body as {
+    const { title, description, subject, category, folderId: requestedFolderId, folderPath, fileUrl, fileName, fileSize, mimeType } = body as {
       title?: string;
       description?: string;
       subject?: string;
       category?: string;
       /** A relative path like "Physics/Unit 3", resolved into real folder rows. */
       folderPath?: string;
+      folderId?: string | null;
       fileUrl?: string;
       fileName?: string;
       fileSize?: number;
@@ -207,14 +209,36 @@ export async function POST(req: Request) {
 
     // Only accept files served from our own uploads dir to prevent
     // storing arbitrary external URLs.
-    if (!fileUrl.startsWith('/uploads/') || fileUrl.includes('..')) {
+    const uploadFolderId = resourceUploadFolderId(fileUrl);
+    if (uploadFolderId === undefined) {
       return NextResponse.json(
         { error: 'fileUrl must point to a local /uploads/ path' },
         { status: 400 }
       );
     }
 
-    const folderId = folderPath?.trim() ? await resolveFolderPath(folderPath) : null;
+    if (requestedFolderId && folderPath) {
+      return NextResponse.json({ error: 'Specify folderId or folderPath' }, { status: 400 });
+    }
+    let folderId: string | null = null;
+    if (requestedFolderId) {
+      const folder = await prisma.schoolResourceFolder.findUnique({
+        where: { id: requestedFolderId }, select: { id: true },
+      });
+      if (!folder) return NextResponse.json({ error: 'Resource folder not found' }, { status: 404 });
+      folderId = folder.id;
+    } else if (folderPath?.trim()) {
+      folderId = await resolveFolderPath(folderPath);
+    } else if (uploadFolderId) {
+      const folder = await prisma.schoolResourceFolder.findUnique({
+        where: { id: uploadFolderId }, select: { id: true },
+      });
+      if (!folder) return NextResponse.json({ error: 'Resource folder not found' }, { status: 404 });
+      folderId = folder.id;
+    }
+    if (uploadFolderId && folderId !== uploadFolderId) {
+      return NextResponse.json({ error: 'Resource folder does not match uploaded file' }, { status: 400 });
+    }
 
     const resource = await prisma.schoolResource.create({
       data: {
