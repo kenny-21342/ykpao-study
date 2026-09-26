@@ -2,6 +2,9 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { extractFileText, isRetrievableText } from '@/lib/rag-file-text';
+// `indexedRoute` in the same module resolves this link for the documents
+// already written with a bare `/bank`, so both halves cannot drift.
+import { BANK_QUESTION_ROUTE } from '@/lib/rag-routes';
 import { folderPathFor } from '@/lib/school-resource-folders';
 
 export type IndexedDocumentInput = {
@@ -419,9 +422,16 @@ export async function indexPastPaperQuestion(questionId: number) {
  * asking "how do I answer this" and one asking "what does the mark scheme want"
  * are different queries, and a single blob would return the answer to both.
  *
- * There is no per-question route to link to -- no page reads a question id from
- * the URL -- so citations point at the bank surface and carry the paper and
- * question number in the title.
+ * Both documents deep-link to the question via `?bqid=`, which
+ * `app/components/routing.ts` resolves to the Practice tab with that question
+ * open. This file used to write a bare `/bank` and said so, because when it was
+ * written no page read a question id from the URL; `bqid` was added later and
+ * the comment outlived the limitation. A citation landing at the top of a
+ * 66,756-question bank is indistinguishable from a broken one.
+ *
+ * `lib/rag.ts`'s `indexedRoute` resolves the same link for the 88,209 documents
+ * already written with `/bank`, which are not being backfilled -- an
+ * 88,209-row UPDATE's WAL is what put the database in read-only on 25 Sep.
  */
 export async function indexBankQuestion(questionId: number) {
   const keys = [`bank-question:${questionId}`, `bank-markscheme:${questionId}`];
@@ -474,7 +484,7 @@ export async function indexBankQuestion(questionId: number) {
     sourceRecordId: String(question.id),
     title: stem,
     text: bodyText,
-    route: '/bank',
+    route: `${BANK_QUESTION_ROUTE}${question.id}`,
     documentType: 'question-paper',
     metadata: {
       official: true,
@@ -507,7 +517,9 @@ export async function indexBankQuestion(questionId: number) {
     // The marking points carry what each mark is actually awarded for, which is
     // the part a student asking about a mark scheme wants.
     text: markSchemeBody,
-    route: '/bank',
+    // The question's id, not `markScheme.id`: this document's `sourceRecordId`
+    // is the mark scheme's, and `?bqid=` names a question.
+    route: `${BANK_QUESTION_ROUTE}${question.id}`,
     documentType: 'mark-scheme',
     metadata: {
       official: true,

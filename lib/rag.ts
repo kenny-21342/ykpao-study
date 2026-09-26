@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { corpusCoverageForIntent, planCopilotQuery } from '@/lib/copilot-query';
 import type { CopilotIntent, CorpusCoverage } from '@/lib/copilot-types';
+import { indexedRoute } from '@/lib/rag-routes';
 
 /**
  * RAG (Retrieval-Augmented Generation) context builder.
@@ -138,8 +139,19 @@ export async function retrieveContext(
   };
 }
 
+// Pure URL logic, kept in its own Prisma-free module so it can be tested
+// without a database; re-exported here because this is where callers look.
+export { BANK_QUESTION_ROUTE, bankQuestionIdOf, indexedRoute } from '@/lib/rag-routes';
+
 export type IndexedRow = {
   documentId: string;
+  /**
+   * The indexer's own key (`bank-question:47552`, `past-paper-question:812`,
+   * …). Selected because `sourceType` alone cannot separate the two question
+   * corpora, whose `sourceRecordId`s are different id spaces entirely --
+   * `indexedRoute` needs the key to know which one it is holding.
+   */
+  documentKey: string;
   sourceType: string;
   sourceRecordId: string;
   /**
@@ -211,6 +223,7 @@ export async function scoreRagMatches(
     return await prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
       SELECT
         d."id" AS "documentId",
+        d."documentKey",
         d."sourceType",
         d."sourceRecordId",
         d."documentType",
@@ -378,6 +391,7 @@ async function retrieveIndexedContext(
       if (pair?.chunks[0]) {
         selected.push({
           documentId: pair.id,
+          documentKey: pair.documentKey,
           sourceType: pair.sourceType,
           sourceRecordId: pair.sourceRecordId,
           documentType: pair.documentType,
@@ -395,7 +409,7 @@ async function retrieveIndexedContext(
       type: sourceType(row.sourceType),
       title: row.title,
       content: truncate(row.content, MAX_CHARS_PER_SOURCE),
-      url: row.route ?? undefined,
+      url: indexedRoute(row) ?? undefined,
       relevance: Math.max(0.05, Math.min(1, row.rank / maximum)),
       authority: sourceAuthority(row.sourceType),
       sourceRecordId: row.sourceRecordId,

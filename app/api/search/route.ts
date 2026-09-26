@@ -8,6 +8,7 @@ import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { scoreRagMatches } from '@/lib/rag';
+import { bankQuestionIdOf, indexedRoute } from '@/lib/rag-routes';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -269,12 +270,18 @@ export async function GET(req: NextRequest) {
   // entirely, which is why the exclusion is by document key instead.
   //
   // Since 26 Sep the bank is the larger half (64,995 indexed documents), and it
-  // is still excluded here deliberately: the direct query above returns those
-  // rows already, with a `/?tab=practice&bqid=` deep link that these documents
-  // do not carry -- `rag_documents.route` for a bank question is a bare
-  // `/bank`. Admitting them to this block means fixing the indexed route and
-  // de-duplicating across the two paths first; until then the ranked
-  // full-text match the bank misses out on is a real gap, not a settled one.
+  // is admitted here too. It was excluded wholesale until the deep-link and
+  // de-duplication problems below were solved, which cost the largest corpus on
+  // the platform its only *ranked* search: the direct query above can only match
+  // exact substrings, so it finds a question when every word of the query
+  // appears in it verbatim and never otherwise. This block adds stemming and
+  // relevance ranking on top of that -- measured 26 Sep at 17/20 recall@20 for
+  // a phrase out of a question's own transcript, against 0/20 for anything the
+  // substring match misses.
+  //
+  // `indexedRoute` supplies the `?bqid=` deep link these documents were indexed
+  // without, and `seenBankQuestionIds` below keeps a question that both paths
+  // found from being listed twice.
   //
   // The duplicate the exclusion was reaching for is real but narrower: the
   // indexer writes `bank-question:`/`bank-markscheme:` documents from the same
@@ -285,7 +292,6 @@ export async function GET(req: NextRequest) {
     : [];
   const ragExtraFilters: Prisma.Sql[] = [
     Prisma.sql`d."sourceType" IN ('announcement', 'discussion', 'syllabus', 'question', 'markscheme')`,
-    Prisma.sql`d."documentKey" NOT LIKE 'bank-question:%' AND d."documentKey" NOT LIKE 'bank-markscheme:%'`,
     // A syllabus/past-paper-catalogue document carries a subjectCode; an
     // announcement or discussion thread usually doesn't (they aren't
     // subject-scoped), so only the ones that DO set it get filtered.
@@ -314,23 +320,42 @@ export async function GET(req: NextRequest) {
   // whole RAG block with mark schemes and pushed the questions themselves,
   // and any announcement or discussion, off the end. Cap each type so the
   // block stays a cross-section of what matched.
+  // A bank question can be found by both paths at once -- the substring query
+  // above and the ranked match here -- and listing it twice reads as a bug even
+  // when both hits are correct. Keyed on the question id rather than the
+  // document id, because the two paths return different rows for the same
+  // question: a `bank-markscheme` document's own id is the mark scheme's.
+  const directQuestionIds = new Set(questions.map((question) => String(question.id)));
+  const directMarkSchemeQuestionIds = new Set(markschemes.map((scheme) => String(scheme.questionId)));
   const RAG_PER_TYPE_CAP = 3;
   const ragTypeCounts = new Map<string, number>();
   const ragResults = [...ragByDocument.values()]
     .sort((a, b) => b.rank - a.rank)
     .filter((row) => {
+      const bankQuestionId = bankQuestionIdOf(row);
+      if (bankQuestionId) {
+        const shown = row.sourceType === 'markscheme'
+          ? directMarkSchemeQuestionIds.has(bankQuestionId)
+          : directQuestionIds.has(bankQuestionId);
+        if (shown) return false;
+      }
       const seen = ragTypeCounts.get(row.sourceType) ?? 0;
       if (seen >= RAG_PER_TYPE_CAP) return false;
       ragTypeCounts.set(row.sourceType, seen + 1);
       return true;
     })
-    .slice(0, 6)
+    // Eight rather than six: questions and mark schemes now draw on a corpus
+    // 7x the size of the past-paper one and out-rank the other three types far
+    // more often, so at six their two caps could fill the block outright and an
+    // announcement or discussion would never appear. Eight leaves two slots
+    // behind the 3+3 for exactly the cross-section this cap exists to keep.
+    .slice(0, 8)
     .map((row) => ({
       id: `rag-${row.documentId}`,
       type: ragResultType(row.sourceType, row.documentType),
       title: row.title,
       snippet: plainText(readableChunk(row.content), 240),
-      url: row.route ?? '/?tab=materials',
+      url: indexedRoute(row) ?? '/?tab=materials',
     }));
 
   const results: SearchResult[] = [
