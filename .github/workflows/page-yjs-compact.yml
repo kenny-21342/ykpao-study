@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Validate configuration
         shell: bash

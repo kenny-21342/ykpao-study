@@ -28,7 +28,7 @@ jobs:
     env:
       # The reindexer reads and writes through Prisma, so it wants the pooled
       # URL the app uses, not the direct one pg_dump needs.
-      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
       STORAGE_DRIVER: s3
       STORAGE_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
       STORAGE_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}

@@ -19,11 +19,11 @@ jobs:
     timeout-minutes: 30
     env:
       # BACKUP_DATABASE_URL is the live database, whoever is hosting it this
-      # month. NEON_DIRECT_DATABASE_URL is the old name, kept as a fallback so
-      # this job does not break in the gap between a migration and someone
-      # setting the new secret -- which is the exact window in which a backup
-      # matters most.
-      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL || secrets.NEON_DIRECT_DATABASE_URL }}
+      # month. It used to fall back to NEON_DIRECT_DATABASE_URL, the old name;
+      # that fallback was removed on 26 Sep when both Neon projects were
+      # deleted, because it had stopped being a safety net and become a way for
+      # a missing secret to fail confusingly instead of loudly.
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
       BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
       BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
       BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
