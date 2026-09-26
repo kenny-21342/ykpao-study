@@ -43,3 +43,10 @@ test('plain prose is returned unchanged', () => {
   assert.equal(plainTextPreview('Describe how osmosis moves water.'),
     'Describe how osmosis moves water.');
 });
+
+test('spacing commands vanish rather than leaving their name behind', () => {
+  // `\quad` is horizontal space. The keep-the-word fallback turned it into
+  // "quad", which shipped and read as a typo in the focus queue.
+  assert.equal(plainTextPreview('energy \\uparrow reactants \\quad products'),
+    'energy ↑ reactants products');
+});

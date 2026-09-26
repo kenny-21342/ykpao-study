@@ -311,6 +311,10 @@ function readableLatex(text: string): string {
         '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ', '\\omega': 'ω',
         '\\Delta': 'Δ', '\\Omega': 'Ω',
       })[match] ?? match)
+    // Spacing commands carry no word at all, so the keep-the-word fallback
+    // below would turn `\quad` into "quad" -- which is what shipped in the
+    // first version of this and read as a typo on the Study page.
+    .replace(/\\(?:quad|qquad|,|;|:|!|\s)/g, ' ')
     // Anything still backslashed is a command we do not translate; drop the
     // marker and keep the word, which reads better than `\upharpoonright`.
     .replace(/\\([a-zA-Z]+)/g, '$1')
