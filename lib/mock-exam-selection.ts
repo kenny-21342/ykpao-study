@@ -16,11 +16,13 @@
  * state, the client poll, and the whole timeout failure mode with it.
  *
  * What is lost is topic-aware curation. That was written when `bank_topics`
- * had no rows. As of 25 Sep it has 256 topics and 16,678 tagged questions --
- * a quarter of the published corpus -- so the topic filter below does bite
- * now, for the subjects tagging has reached. Weighting a paper across topics
- * is still not done, and difficulty is filled on 44 published questions, so neither is
- * a selection input yet.
+ * had no rows. Tagging has been running since, so the topic filter below does
+ * bite for the subjects it has reached -- 271 topics over 39% of published
+ * questions on 27 Sep, and rising while the pass continues, so treat any
+ * figure written here as a floor rather than a measurement. Weighting a paper
+ * across topics is still not done. Difficulty is now filled on about 15% of
+ * published questions (it was 44 rows on 25 Sep), which is enough to be worth
+ * revisiting as a selection input and was not before.
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';

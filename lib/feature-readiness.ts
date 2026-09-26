@@ -41,7 +41,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
-      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and only a quarter carry topic tags, so filtering by topic still misses most of the bank.',
+      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and topic tags are still being filled in subject by subject, so filtering by topic misses part of the bank.',
   },
   'mock-exams': {
     state: 'preview',
