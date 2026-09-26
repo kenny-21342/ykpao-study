@@ -29,6 +29,18 @@ import { reportError } from '@/lib/error-reporting';
  * for a *cold* burst: 25 simultaneous requests would all miss and all query,
  * which is the exact failure measured above. Sharing one promise collapses
  * them to a single round-trip.
+ *
+ * But the memo is per *instance*, and that is not enough on its own -- proven
+ * by deploying it and re-running the burst: still 22 of 25 failing, because
+ * the platform spreads 25 concurrent requests across many cold instances, each
+ * with an empty memo and its own pool. Instances times pool size is what
+ * exhausts the slots, not queries per request.
+ *
+ * So the response also carries `s-maxage`, which lets the CDN answer repeats
+ * without invoking the function at all. That is the part that actually fixes
+ * the burst; the memo below then covers the narrower case of one warm instance
+ * serving concurrent requests between CDN revalidations. `force-dynamic`
+ * governs Next's own caching and does not stop a CDN honouring these headers.
  */
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +51,13 @@ type Stats = {
 
 /** Counts move when a transcription or tagging pass lands -- daily at most. */
 const STATS_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Let the CDN serve repeats. `stale-while-revalidate` keeps it answering from
+ * the edge while one request refreshes behind it, so even the revalidation
+ * moment is not a stampede.
+ */
+const CDN_CACHE = 'public, s-maxage=300, stale-while-revalidate=600';
 let cached: { at: number; value: Stats } | null = null;
 let inFlight: Promise<Stats> | null = null;
 
@@ -89,7 +108,7 @@ async function loadStats(): Promise<Stats> {
 export async function GET() {
   const fresh = cached && Date.now() - cached.at < STATS_TTL_MS;
   if (fresh && cached) {
-    return NextResponse.json(cached.value);
+    return NextResponse.json(cached.value, { headers: { 'Cache-Control': CDN_CACHE } });
   }
 
   try {
@@ -99,7 +118,7 @@ export async function GET() {
     inFlight ??= loadStats().finally(() => { inFlight = null; });
     const value = await inFlight;
     cached = { at: Date.now(), value };
-    return NextResponse.json(value);
+    return NextResponse.json(value, { headers: { 'Cache-Control': CDN_CACHE } });
   } catch (error) {
     console.error('[platform-stats] error:', error);
     await reportError(error, { routePath: '/api/platform-stats', source: 'route' });
@@ -107,7 +126,12 @@ export async function GET() {
     // this route fails is that the database is already under pressure --
     // answering from memory is also the kinder thing to do to it.
     if (cached) {
-      return NextResponse.json(cached.value, { headers: { 'X-Stats-Stale': '1' } });
+      return NextResponse.json(cached.value, {
+        // Deliberately a short CDN life on a stale answer: long enough to
+        // shield the database through the incident, short enough that the
+        // figures correct themselves soon after it passes.
+        headers: { 'X-Stats-Stale': '1', 'Cache-Control': 'public, s-maxage=60' },
+      });
     }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch platform stats' },
