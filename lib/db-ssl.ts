@@ -146,11 +146,26 @@ export function pgConfig(url: string): { connectionString: string; ssl?: Connect
  * subscription is *supposed* to sit idle -- that is what waiting for a
  * notification looks like -- and terminating it would silently stop
  * collaboration updates, the exact failure that file already warns about.
+ *
+ * **Thirty seconds, lowered from 120 on 27 Sep 2026.** Two minutes was still
+ * far too generous for the size of the budget. Measured while one signed-in
+ * person browsed the dashboard and nothing else was running: nine of the
+ * seventeen usable slots were held, every one of them idle, the oldest for 75
+ * seconds -- three warm instances times a pool of three. The visible symptom
+ * was `/api/daily-challenge` and `/api/onboarding` answering 503 and the
+ * dashboard reporting that progress could not be loaded, on a platform with a
+ * single user on it.
+ *
+ * A connection idle for thirty seconds on a frozen instance is not a warm
+ * cache, it is a slot nobody can use. Reclaiming it costs a reconnect the next
+ * time that instance wakes; holding it costs somebody else their page. The
+ * timeout does not touch a session that is mid-query or inside a transaction,
+ * so nothing in flight is at risk either way.
  */
 export function idleSessionTimeoutMs(): number {
   const raw = Number.parseInt(process.env.DB_IDLE_SESSION_TIMEOUT_MS ?? '', 10);
   if (Number.isFinite(raw) && raw >= 0) return raw;
-  return 120_000;
+  return 30_000;
 }
 
 /**

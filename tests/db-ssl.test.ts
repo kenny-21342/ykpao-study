@@ -147,7 +147,7 @@ test('pgQueryConfig asks the server to reap idle sessions', () => {
   const client = new Client(pgQueryConfig('postgres://u:p@h:5432/db'));
   const params = (client as unknown as { connectionParameters: { options?: string } })
     .connectionParameters;
-  assert.equal(params.options, '-c idle_session_timeout=120000');
+  assert.equal(params.options, '-c idle_session_timeout=30000');
 });
 
 test('pgQueryConfig keeps the CA that pgConfig rescued from sslmode', () => {
@@ -158,7 +158,7 @@ test('pgQueryConfig keeps the CA that pgConfig rescued from sslmode', () => {
   }).connectionParameters;
   // Both mechanisms at once: the idle timeout must not reintroduce the
   // sslmode-replaces-ssl bug by handing `pg` an unstripped URL.
-  assert.equal(params.options, '-c idle_session_timeout=120000');
+  assert.equal(params.options, '-c idle_session_timeout=30000');
   assert.equal(params.ssl?.rejectUnauthorized, true);
   assert.ok(params.ssl?.ca?.includes('BEGIN CERTIFICATE'));
 });
@@ -174,5 +174,8 @@ test('DB_IDLE_SESSION_TIMEOUT_MS=0 turns the server-side reaper off', () => {
 
 test('a nonsense DB_IDLE_SESSION_TIMEOUT_MS falls back rather than disabling', () => {
   process.env.DB_IDLE_SESSION_TIMEOUT_MS = 'soon';
-  assert.equal(idleSessionTimeoutMs(), 120_000);
+  // 30s since 27 Sep 2026, when 120s was measured holding nine of seventeen
+  // slots idle for a single browsing user. Pinned because the number is a
+  // capacity decision, not a preference: raising it re-creates that.
+  assert.equal(idleSessionTimeoutMs(), 30_000);
 });
