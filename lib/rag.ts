@@ -219,8 +219,42 @@ export async function scoreRagMatches(
   const rankBoost = options.rankBoost ?? Prisma.sql`0`;
   const limit = options.limit ?? 60;
 
-  try {
-    return await prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
+  /**
+   * The fuzzy matcher is a fallback, not part of the normal path.
+   *
+   * `similarity(c."content", ...)` cannot use an index the way this query is
+   * written -- the OR spans two tables, so the planner turns the whole
+   * condition into a join filter and evaluates trigram similarity over every
+   * one of the ~124,000 chunks. Measured on 27 Sep 2026 that was **14.0s of a
+   * 14.05s query**; the seq scan underneath it took 362ms. Rewriting it to the
+   * `%` operator against the existing `gin_trgm_ops` index did not help
+   * (13.4s on its own): trigram matching over long text is simply expensive
+   * here.
+   *
+   * Dropping it was tempting and wrong. For `osmosis`, `hydrogen bonding`,
+   * `photosynthesis` and `newton second law` the top 60 rows are **identical**
+   * with and without it -- a chunk matching only on trigrams scores
+   * `ts_rank_cd = 0` and never outranks a lexical match -- so it costs 12s to
+   * change nothing. But on a misspelling it is the only thing that returns
+   * anything at all: `osmossis`, `photosynthsis` and `electrolyis` each match
+   * **zero** rows lexically and 190, 570 and 2,731 rows fuzzily.
+   *
+   * So: run the indexed query first, and pay for trigrams only when the cheap
+   * pass came back with almost nothing -- which is exactly the query that was
+   * about to show an empty result set, and the only one where the wait buys
+   * the student something.
+   */
+  const matcher = (fuzzy: boolean) => Prisma.sql`(
+    c."searchVector" @@ to_tsquery('english', ${tsQuery})
+    OR similarity(d."title", ${query}) > 0.08
+    ${fuzzy ? Prisma.sql`OR similarity(c."content", ${query}) > 0.045` : Prisma.empty}
+  )`;
+
+  /** Below this, the lexical pass has effectively failed and fuzzy is worth 12s. */
+  const FUZZY_FALLBACK_BELOW = 5;
+
+  const search = (fuzzy: boolean) =>
+    prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
       SELECT
         d."id" AS "documentId",
         d."documentKey",
@@ -240,14 +274,15 @@ export async function scoreRagMatches(
       FROM "rag_chunks" c
       JOIN "rag_documents" d ON d."id" = c."documentId"
       WHERE (${Prisma.join(filters, ' AND ')})
-        AND (
-          c."searchVector" @@ to_tsquery('english', ${tsQuery})
-          OR similarity(c."content", ${query}) > 0.045
-          OR similarity(d."title", ${query}) > 0.08
-        )
+        AND ${matcher(fuzzy)}
       ORDER BY "rank" DESC, d."indexedAt" DESC
       LIMIT ${limit}
     `);
+
+  try {
+    const lexical = await search(false);
+    if (lexical.length >= FUZZY_FALLBACK_BELOW) return lexical;
+    return await search(true);
   } catch (error) {
     console.warn('scoreRagMatches: rag index query failed', error instanceof Error ? error.message : error);
     return [];
