@@ -108,8 +108,10 @@ export async function GET(req: NextRequest) {
   const terms = words.length > 0 ? words : [query];
 
   // --- Bank questions (the crop-first corpus students actually browse) ---
-  // bodyMd is empty for most questions (crop-only run), so match on metadata
-  // and on bodyMd so results appear for free as transcription lands.
+  // Transcription has landed: 65,572 of the 66,756 published questions carry
+  // `bodyMd` as of 26 Sep, against zero when this route was written. The
+  // metadata clauses are no longer carrying the query on their own, which is
+  // why the text clause below now has to be all-terms rather than any-term.
   const bankSubjectScope = courseScope.effectiveScope === 'enrolled'
     ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
     : {};
@@ -125,11 +127,25 @@ export async function GET(req: NextRequest) {
   const syllabusCode = fourDigit.find((value) => !isExamYear(value));
   const questionNumber = query.match(/(?:^|\W)q(?:uestion)?\s*(\d+)/i)?.[1];
 
+  // Every term must appear, not any one of them. Matching any single term was
+  // harmless while `bodyMd` was empty corpus-wide -- it contributed almost
+  // nothing, and the metadata clauses below did the work. Once the
+  // transcription run filled 64,995 questions (25 Sep) the same clause started
+  // matching thousands of rows per query, and because this query orders by
+  // `id desc` with no relevance scoring at all, it answered with the eight
+  // newest questions containing *one* of the words. Measured on 26 Sep: for
+  // twelve queries taken verbatim out of a question's own transcript, the
+  // question itself came back 0/12 times, while the query matched 153-13,626
+  // rows. Requiring every term cuts those match sets to 1-12 rows and the
+  // question comes back 12/12, which is what makes `id desc` acceptable here.
+  //
+  // The cost is that a query with one absent word returns no bank questions
+  // from this path rather than eight wrong ones. That is the better failure:
+  // `scoreRagMatches` below still ranks partial and stemmed matches across the
+  // rest of the corpus, and notes/resources/papers match independently.
   const bankQuestionOr: Prisma.BankQuestionWhereInput[] = [
-    ...terms.flatMap((term) => [
-      { bodyMd: { contains: term, mode: 'insensitive' as const } },
-    ]),
-    // Paper and subject metadata — what actually has text today.
+    { AND: terms.map((term) => ({ bodyMd: { contains: term, mode: 'insensitive' as const } })) },
+    // Paper and subject metadata — what a code/year/question-number lookup hits.
     { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
     { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
   ];
@@ -142,11 +158,10 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Mark scheme text (answerMd) — 26,531 mark schemes carry real text.
+  // Mark scheme text (answerMd) — 52,004 of 52,925 mark schemes carry real text.
+  // Same all-terms rule as `bankQuestionOr` above, for the same reason.
   const bankMsOr: Prisma.BankMarkSchemeWhereInput[] = [
-    ...terms.flatMap((term) => [
-      { answerMd: { contains: term, mode: 'insensitive' as const } },
-    ]),
+    { AND: terms.map((term) => ({ answerMd: { contains: term, mode: 'insensitive' as const } })) },
     { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
     { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
   ];
@@ -246,11 +261,20 @@ export async function GET(req: NextRequest) {
   // `contains`-filter query above, so this is the only path that surfaces
   // them.
   //
-  // The past-paper half is the bulk of it: 12,398 rows carrying real text,
-  // against a `bank_questions.bodyMd` that is empty corpus-wide because the
-  // bank was ingested crop-first. Excluding `question`/`markscheme` here
-  // therefore did not "avoid a duplicate" -- it made the largest searchable
-  // body of text on the platform unreachable from global search entirely.
+  // The past-paper half was once the bulk of it: 12,398 rows carrying real
+  // text, against a `bank_questions.bodyMd` that was then empty corpus-wide
+  // because the bank was ingested crop-first. Excluding `question`/`markscheme`
+  // wholesale therefore did not "avoid a duplicate" -- it made the largest
+  // searchable body of text on the platform unreachable from global search
+  // entirely, which is why the exclusion is by document key instead.
+  //
+  // Since 26 Sep the bank is the larger half (64,995 indexed documents), and it
+  // is still excluded here deliberately: the direct query above returns those
+  // rows already, with a `/?tab=practice&bqid=` deep link that these documents
+  // do not carry -- `rag_documents.route` for a bank question is a bare
+  // `/bank`. Admitting them to this block means fixing the indexed route and
+  // de-duplicating across the two paths first; until then the ranked
+  // full-text match the bank misses out on is a real gap, not a settled one.
   //
   // The duplicate the exclusion was reaching for is real but narrower: the
   // indexer writes `bank-question:`/`bank-markscheme:` documents from the same
