@@ -264,6 +264,61 @@ export function renderMathTextNodes(root: HTMLElement) {
  * `\frac{a}{b}` beats `$$\frac{a}{b}$$`) and markdown emphasis, code and
  * heading markers are dropped.
  */
+/**
+ * Turn LaTeX into something readable in a one-line preview.
+ *
+ * A preview is line-clamped text in a card; KaTeX never runs on it, so
+ * whatever is left here is what the student reads. Leaving the source intact
+ * put `\begin{array}{c} \text{energy} \\ \uparrow` on the Study page's focus
+ * queue, and `CuCO3(s) + H2SO4(aq) \rightarrow CuSO4(aq)` on the one beside
+ * it -- the most-used revision surface in the app, showing markup.
+ *
+ * Unicode is the right answer *here* even though `SYSTEM_PROMPTS` forbids it
+ * when generating content: that rule exists so KaTeX gets LaTeX to render, and
+ * in a preview there is nothing to render with.
+ *
+ * Applied to bare commands as well as delimited spans, because the content
+ * that exposed this had `\rightarrow` sitting in ordinary prose with no `$`
+ * around it at all.
+ */
+function readableLatex(text: string): string {
+  return text
+    // Structure that carries no words.
+    .replace(/\\(?:begin|end)\{[^}]*\}(?:\{[^}]*\})?/g, ' ')
+    .replace(/\\\\/g, ' ')
+    // Wrappers whose argument is the content.
+    .replace(/\\(?:text|mathrm|mathbf|textbf|textit|mathit|operatorname)\s*\{([^{}]*)\}/g, '$1')
+    .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)')
+    // The symbols this corpus actually uses.
+    .replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→')
+    .replace(/\\(?:leftarrow|longleftarrow)\b/g, '←')
+    .replace(/\\(?:leftrightarrow|rightleftharpoons)\b/g, '⇌')
+    .replace(/\\uparrow\b/g, '↑')
+    .replace(/\\downarrow\b/g, '↓')
+    .replace(/\\times\b/g, '×')
+    .replace(/\\div\b/g, '÷')
+    .replace(/\\pm\b/g, '±')
+    .replace(/\\(?:le|leq)\b/g, '≤')
+    .replace(/\\(?:ge|geq)\b/g, '≥')
+    .replace(/\\(?:ne|neq)\b/g, '≠')
+    .replace(/\\approx\b/g, '≈')
+    .replace(/\\cdot\b/g, '·')
+    .replace(/\\degree\b|\\circ\b/g, '°')
+    .replace(/\\(?:alpha|beta|gamma|delta|theta|lambda|mu|pi|sigma|omega|Delta|Omega)\b/g,
+      (match) => ({
+        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\theta': 'θ',
+        '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ', '\\omega': 'ω',
+        '\\Delta': 'Δ', '\\Omega': 'Ω',
+      })[match] ?? match)
+    // Anything still backslashed is a command we do not translate; drop the
+    // marker and keep the word, which reads better than `\upharpoonright`.
+    .replace(/\\([a-zA-Z]+)/g, '$1')
+    // Alignment and grouping leftovers.
+    .replace(/[{}&]/g, ' ')
+    .replace(/\s*\$\s*/g, ' ');
+}
+
 export function plainTextPreview(src: string): string {
   const spans = findMathSpans(src);
   let out = '';
@@ -274,7 +329,7 @@ export function plainTextPreview(src: string): string {
   }
   out += src.slice(last);
 
-  return out
+  return readableLatex(out)
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/(\*\*\*|\*\*|\*|__|_|`)/g, '')
     .replace(/\s+/g, ' ')
