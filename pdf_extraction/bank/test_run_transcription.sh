@@ -95,6 +95,19 @@ check "waited instead of running a chunk" "$(grep -c 'SHOULD_NOT_RUN' "$S/t.log"
 check "said why it was waiting" "$([ "$(grep -c 'provider unhealthy' "$S/t.log")" -ge 1 ] && echo yes || echo no)" "yes"
 
 echo
+echo "4b. an unreadable health ledger cannot start a paid chunk"
+fresh
+rm -f "$S/t.db"
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
+  REMAINING_CMD='echo 5' CHUNK_CMD='echo SHOULD_NOT_RUN' \
+  BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1 &
+sup=$!
+sleep 3; kill -TERM $sup 2>/dev/null; wait $sup 2>/dev/null
+check "did not start on an unreadable health ledger" "$(grep -c 'SHOULD_NOT_RUN' "$S/t.log")" "0"
+check "reported the read failure" "$([ "$(grep -c 'could not read provider health' "$S/t.log")" -ge 1 ] && echo yes || echo no)" "yes"
+
+echo
 echo "5. a phase-A chunk is not killed, even if the ledger read blips"
 fresh
 # The 15 Sep regression, exactly. Phase A writes no ledger rows for ~28
@@ -158,6 +171,43 @@ sup=$!
 sleep 6; kill -TERM $sup 2>/dev/null; wait $sup 2>/dev/null
 check "spent nothing at 60% unusable" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "0"
 check "named the reason" "$([ "$(grep -c 'unusable responses' "$S/t.log")" -ge 1 ] && echo yes || echo no)" "yes"
+
+echo
+echo "7c. five consecutive unusable responses stop the next chunk"
+fresh
+seed 0 0 5
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
+  REMAINING_CMD='echo 5' CHUNK_CMD='echo CHUNK_RAN; exit 0' \
+  BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1 &
+sup=$!
+sleep 3; kill -TERM $sup 2>/dev/null; wait $sup 2>/dev/null
+check "held a fully failing small sample" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "0"
+check "reported the small-sample outage" "$([ "$(grep -c 'provider unhealthy' "$S/t.log")" -ge 1 ] && echo yes || echo no)" "yes"
+
+echo
+echo "7d. an outage that begins mid-chunk stops further requests"
+fresh
+CMD="echo 'transcribing 5 items with 10 workers'; sqlite3 $S/t.db \"with recursive n(x) as (values(1) union all select x+1 from n where x<5) insert into bank_run_ledger select 'failed', datetime('now'), '$CONTENT_ERR' from n;\"; exec sleep 120"
+start=$(date +%s)
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
+  REMAINING_CMD='echo 5' CHUNK_CMD="$CMD" \
+  MAX_CONSECUTIVE_FAILURES=1 BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1
+elapsed=$(( $(date +%s) - start ))
+check "stopped the unhealthy in-flight chunk" "$(grep -c 'provider became unhealthy during chunk' "$S/t.log")" "1"
+check "stopped before the fake chunk could finish" "$([ "$elapsed" -lt 90 ] && echo yes || echo no)" "yes"
+
+echo
+echo "7e. old provider failures do not block a new route"
+fresh
+seed 0 0 5 10
+cutover=$(sqlite3 "$S/t.db" "select datetime('now', '-5 minutes')")
+LOG="$S/t.log" STATUS="$S/t.status" DB="$S/t.db" \
+  REMAINING_CMD='echo 5' CHUNK_CMD='echo CHUNK_RAN' ONCE=1 \
+  HEALTH_IGNORE_BEFORE="$cutover" BACKOFF_MIN=1 BACKOFF_MAX=1 \
+  bash "$RUN" >/dev/null 2>&1
+check "started after the provider cutover" "$(grep -c 'CHUNK_RAN' "$S/t.log")" "1"
 
 echo
 echo "8. a stale outage does not wedge the run forever"

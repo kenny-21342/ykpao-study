@@ -13,6 +13,7 @@ from pdf_extraction.bank.renderer import (
     MIN_FIGURE_AREA,
     MIN_FIGURE_SIDE,
     _content_bounds,
+    _find_figures,
     render_strips_and_assets,
 )
 from pdf_extraction.bank.spans import (
@@ -21,6 +22,40 @@ from pdf_extraction.bank.spans import (
     RootSpan,
     detect_root_spans,
 )
+
+
+class EmbeddedImageTests(unittest.TestCase):
+    def test_image_positions_are_scanned_once_per_page(self) -> None:
+        class Page:
+            number = 0
+            rect = fitz.Rect(0, 0, 595, 842)
+            rotation_matrix = fitz.Matrix(1, 1)
+            scans = 0
+
+            def get_image_info(self, *, xrefs):
+                self.scans += 1
+                self.assert_no_xrefs = not xrefs
+                return [{"bbox": (10, 10, 60, 60)}] * 1000
+
+            def get_images(self, *args, **kwargs):
+                raise AssertionError("per-image resource scans are too slow")
+
+            def get_text(self, kind):
+                return []
+
+            def get_drawings(self):
+                return []
+
+        page = Page()
+        images: dict[int, tuple[fitz.Rect, ...]] = {}
+        bounds = _content_bounds(page, page_images=images)
+        figures = _find_figures(
+            page, (0, 0, 100, 100), page_tables={0: ()}, page_images=images,
+        )
+        self.assertEqual(page.scans, 1)
+        self.assertTrue(page.assert_no_xrefs)
+        self.assertIsNotNone(bounds)
+        self.assertTrue(figures)
 
 
 class RotatedPageTests(unittest.TestCase):
@@ -448,4 +483,3 @@ class EraseGuardTests(unittest.TestCase):
                 self._differs(plain, painted),
                 "the copyright line should have been erased",
             )
-

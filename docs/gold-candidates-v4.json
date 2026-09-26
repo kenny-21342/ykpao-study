@@ -1,0 +1,549 @@
+{
+  "description": "Unverified candidate pool for a hand-checked v4 gold set. These are not expected answers or benchmark-ready annotations.",
+  "candidates": [
+    {
+      "subject": "CAIE:9709",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m24_qp_12.pdf",
+      "source_sha256": "fd0d6c0bf4a3cf15fc87728f4a9a025488b0559822e84551150944d839b7d2b9",
+      "root_number": 1,
+      "source_pages": [
+        2,
+        2
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m24_ms_12.pdf",
+      "local_question_id": 7392,
+      "human_verified": false,
+      "mark_scheme_sha256": "7687fb6170b2a28d0fc8593883aa170867a2c11ee30e38f60904c9d187c47907"
+    },
+    {
+      "subject": "CAIE:9709",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_qp_12.pdf",
+      "source_sha256": "214d9431965124ced9c937fbfd99a6b09bef871cbbf17e75510bc1082acd03a3",
+      "root_number": 1,
+      "source_pages": [
+        2,
+        3
+      ],
+      "question_status": "published",
+      "features": [
+        "multi_page",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_ms_12.pdf",
+      "local_question_id": 7440,
+      "human_verified": false,
+      "mark_scheme_sha256": "aa7ae8a2716abf51c8de7ac7b826a585e453668389e7d61c5c332abc1fb69e3b"
+    },
+    {
+      "subject": "CAIE:9709",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_qp_22.pdf",
+      "source_sha256": "41db4890b5b78eebc8139e4e1766d9b09ceadc7a6087bdfc2b0f16e414a847e6",
+      "root_number": 3,
+      "source_pages": [
+        4,
+        5
+      ],
+      "question_status": "published",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_ms_22.pdf",
+      "local_question_id": 7453,
+      "human_verified": false,
+      "mark_scheme_sha256": "9fc2ba888b481ac8e030cd7a53d3bd21a3b80cb8fe5330cc317aba3f92ad7c27"
+    },
+    {
+      "subject": "CAIE:9709",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_qp_32.pdf",
+      "source_sha256": "78ca3629251a51285ec4529240a74b41ec32bd6a01d68b5370e03161c527db7d",
+      "root_number": 11,
+      "source_pages": [
+        18,
+        20
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/mathematics-9709/9709_m25_ms_32.pdf",
+      "local_question_id": 7468,
+      "human_verified": false,
+      "mark_scheme_sha256": "ba321cafbe20d09e145123e472a56721961d179d09bce52315e146d41f3feec6"
+    },
+    {
+      "subject": "CAIE:9702",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_qp_12.pdf",
+      "source_sha256": "2529336f5bb68a962b7f2dd89f885e48f561e12e9d51fb7ca5b8471a0883d6a1",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        3
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_ms_12.pdf",
+      "local_question_id": 12745,
+      "human_verified": false,
+      "mark_scheme_sha256": "0a5c0fe40b75792eae8359ca9ef1b48674ca751a0560f2840e18240577530f64"
+    },
+    {
+      "subject": "CAIE:9702",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_qp_22.pdf",
+      "source_sha256": "40ede0b5e101bcf616be3d9fed0dbfc5554e08d0e968ac154cc2f2e88a6de80b",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        4
+      ],
+      "question_status": "published",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_ms_22.pdf",
+      "local_question_id": 12785,
+      "human_verified": false,
+      "mark_scheme_sha256": "9dafd369259b6fd91744880b4740d7aae2e33ced3deab70705d6e33d359b6586"
+    },
+    {
+      "subject": "CAIE:9702",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_qp_33.pdf",
+      "source_sha256": "7bcf277c793fa54f99051faf46cfbce747257a85a313f77b9b8e7bfe41eefef6",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        8
+      ],
+      "question_status": "published",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_ms_33.pdf",
+      "local_question_id": 12792,
+      "human_verified": false,
+      "mark_scheme_sha256": "b9fbfffd1f4bfbe0cb60364cd3b48f7eba6843e7b3e54cb6da8aa8348bc9bb09"
+    },
+    {
+      "subject": "CAIE:9702",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_qp_42.pdf",
+      "source_sha256": "a367c15863332c053b007c2c1920e556e61145b6f57501bc9053e104d32dfc0b",
+      "root_number": 2,
+      "source_pages": [
+        6,
+        9
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/a-level/physics-9702/9702_m25_ms_42.pdf",
+      "local_question_id": 12795,
+      "human_verified": false,
+      "mark_scheme_sha256": "0e7ee88e4fb754866174591824e2941a370769d998688e3ea6140243116248f4"
+    },
+    {
+      "subject": "CAIE:0610",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_qp_12.pdf",
+      "source_sha256": "701efcde86bda10afc38a1200380a5938406afc9d8f7af716a85a85a239f4694",
+      "root_number": 5,
+      "source_pages": [
+        4,
+        4
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_ms_12.pdf",
+      "local_question_id": 19506,
+      "human_verified": false,
+      "mark_scheme_sha256": "791dea60bd4ad5d94be25a641a02ca5624791dbb4475e4e0e47d5cf2bed9ac6e"
+    },
+    {
+      "subject": "CAIE:0610",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_qp_32.pdf",
+      "source_sha256": "b734b94898292e91a48a8dbc23a55d2a38a4abad7b6da87fbe7d398a5e448a12",
+      "root_number": 1,
+      "source_pages": [
+        2,
+        6
+      ],
+      "question_status": "published",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "table_transcription",
+        "paired_mark_scheme"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_ms_32.pdf",
+      "local_question_id": 19582,
+      "human_verified": false,
+      "mark_scheme_sha256": "850a6a64d8e1abc5d92b2d5d3c60b0e1ede9e0838ad77c3882f1d4671e848d10"
+    },
+    {
+      "subject": "CAIE:0610",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_qp_22.pdf",
+      "source_sha256": "b360f76ced72230eb133ec2469570a459b677e39c8d49f4ae591489c224a91eb",
+      "root_number": 2,
+      "source_pages": [
+        2,
+        2
+      ],
+      "question_status": "published",
+      "features": [
+        "figure_or_table_asset",
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_ms_22.pdf",
+      "local_question_id": 19543,
+      "human_verified": false,
+      "mark_scheme_sha256": "de4c5a849904076fe5463653f39e6e4c0eaa621e6752b7e50f6488a8dd1d681a"
+    },
+    {
+      "subject": "CAIE:0610",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_qp_42.pdf",
+      "source_sha256": "f1eb997203510f1f7183958923a2d2d0fab655a34fa2be3b317eec38bbaf35ec",
+      "root_number": 2,
+      "source_pages": [
+        6,
+        9
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/my_raw_pdfs/igcse/biology-0610/0610_m25_ms_42.pdf",
+      "local_question_id": 19589,
+      "human_verified": false,
+      "mark_scheme_sha256": "c40538a1b916e05f1571e491e01566e0c1397b2c0a037e1c3505b834165b700f"
+    },
+    {
+      "subject": "IB:mathematics",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_1__SL.pdf",
+      "source_sha256": "e4db038bed93b2a80ef5d4d81a509a3c1d41a4ddda65520a04321a0042e2a734",
+      "root_number": 9,
+      "source_pages": [
+        15,
+        15
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_1__SL_markscheme.pdf",
+      "local_question_id": 70730,
+      "human_verified": false,
+      "mark_scheme_sha256": "f24a58a82716e2112e2d79b1acba37a90448f5381af517d681788edd52ee8668"
+    },
+    {
+      "subject": "IB:mathematics",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_1__HL.pdf",
+      "source_sha256": "d8482b0d1f71054052f44146e9f5d543bb713972afc76a73da9a0472a165db46",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        4
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "table_transcription",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_1__HL_markscheme.pdf",
+      "local_question_id": 70710,
+      "human_verified": false,
+      "mark_scheme_sha256": "3673abdeedcb305ecb331097dcad626efe6cd5dd958ee11c11868fd354f57b2d"
+    },
+    {
+      "subject": "IB:mathematics",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_2__HL.pdf",
+      "source_sha256": "800eeab35dc2992328774d870448068b76e6b6e3c1fec42dd6853af457c27f86",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        4
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_2__HL_markscheme.pdf",
+      "local_question_id": 70732,
+      "human_verified": false,
+      "mark_scheme_sha256": "16a66c7fbde149a5432289c70e488fbb414c939ed21b85a543ea976eecacdaf7"
+    },
+    {
+      "subject": "IB:mathematics",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_2__SL.pdf",
+      "source_sha256": "c933e6950707cbae065131777c66d6f2fa8f6b74571b227c4a015cb45052b27a",
+      "root_number": 1,
+      "source_pages": [
+        4,
+        5
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Mathematics/Mathematics_paper_2__SL_markscheme.pdf",
+      "local_question_id": 70743,
+      "human_verified": false,
+      "mark_scheme_sha256": "4d636e2628677969117a1bd5aa6852c3bd292898e61d6c11bd6b89b4a4f04690"
+    },
+    {
+      "subject": "IB:physics",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_1__HL.pdf",
+      "source_sha256": "a07b71443dd8e7379adba05ea901a7cfe28140dbce54ace97bf63fc672c0c042",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        3
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_1__HL_markscheme.pdf",
+      "local_question_id": 70032,
+      "human_verified": false,
+      "mark_scheme_sha256": "5fcf228a472ed98cff49780137f20d4227f5d5282950143cbf5e20ef19874a35"
+    },
+    {
+      "subject": "IB:physics",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_2__HL.pdf",
+      "source_sha256": "2633adeff778945a424266f603d9927891f6658a7fee2656975b3283eeabb400",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        5
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_2__HL_markscheme.pdf",
+      "local_question_id": 70102,
+      "human_verified": false,
+      "mark_scheme_sha256": "3a5f62e385a339b7cd6cf2f225a50384d5fde9d86fd40f34281c7228e1a918d3"
+    },
+    {
+      "subject": "IB:physics",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_1__SL.pdf",
+      "source_sha256": "25b1f7225c97a20f676512b4689ac1e5291a37c971f34d67af1fe0017d0643ad",
+      "root_number": 3,
+      "source_pages": [
+        3,
+        3
+      ],
+      "question_status": "published",
+      "features": [
+        "figure_or_table_asset",
+        "table_transcription",
+        "paired_mark_scheme",
+        "multiple_choice_key",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_1__SL_markscheme.pdf",
+      "local_question_id": 70074,
+      "human_verified": false,
+      "mark_scheme_sha256": "d4948e99cec9919e65d2ccef9a9cbf9b3b94483e7d5f036199161c1593993c81"
+    },
+    {
+      "subject": "IB:physics",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_2__SL.pdf",
+      "source_sha256": "6bd88934c63696f19e11e017e8e13c6adcdcf4accebddb9e3a26dddbc9a6f43f",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        5
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme",
+        "math_notation"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Physics_paper_2__SL_markscheme.pdf",
+      "local_question_id": 70112,
+      "human_verified": false,
+      "mark_scheme_sha256": "12aa1809d12bf206b3f9725a3b681070bddd4eb2ee72a9f1e126aad0bbf3507b"
+    },
+    {
+      "subject": "IB:biology",
+      "selection_reason": "simple_baseline",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_1__HL.pdf",
+      "source_sha256": "f504b0e1235a72be71cb316647d39703cd31bab8dc492258eb47711fc1877288",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        3
+      ],
+      "question_status": "published",
+      "features": [
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_1__HL_markscheme.pdf",
+      "local_question_id": 69719,
+      "human_verified": false,
+      "mark_scheme_sha256": "727b8eacc24428a0cde0868447ece5af256cc715b867dbf204dbbefbbb4688a8"
+    },
+    {
+      "subject": "IB:biology",
+      "selection_reason": "multi_page",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_2__HL.pdf",
+      "source_sha256": "40edc6a77c35ba60129ab42d5de76a33f71978c021dbd8fdf27cfe53470de0bc",
+      "root_number": 2,
+      "source_pages": [
+        9,
+        11
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "held_for_review",
+        "paired_mark_scheme"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_2__HL_markscheme.pdf",
+      "local_question_id": 69790,
+      "human_verified": false,
+      "mark_scheme_sha256": "b38cb6d26356a12c6eb27d4bd2c41f2bbb7e61b5e9f83fe5da960bebd8d3b1e2"
+    },
+    {
+      "subject": "IB:biology",
+      "selection_reason": "figure_or_table",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_1__SL.pdf",
+      "source_sha256": "d8080be587cf47a7eb2d40fcf7df62dcf1538a1cd861121b4317a054e635724a",
+      "root_number": 4,
+      "source_pages": [
+        4,
+        4
+      ],
+      "question_status": "published",
+      "features": [
+        "figure_or_table_asset",
+        "table_transcription",
+        "paired_mark_scheme",
+        "multiple_choice_key"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_1__SL_markscheme.pdf",
+      "local_question_id": 69762,
+      "human_verified": false,
+      "mark_scheme_sha256": "86b7f9f18ef972ff7caf8ebf9db06d6ecdd7b242e127f15330ccf0f188b20b91"
+    },
+    {
+      "subject": "IB:biology",
+      "selection_reason": "held_for_review",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_2__SL.pdf",
+      "source_sha256": "57c291f36f9b00af10ec3d877b08e1f97d4562b09adf0f8e8a3da00ef2fddcd0",
+      "root_number": 1,
+      "source_pages": [
+        3,
+        7
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "multi_page",
+        "figure_or_table_asset",
+        "table_transcription",
+        "held_for_review",
+        "paired_mark_scheme"
+      ],
+      "mark_scheme_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2020 Examination Session/November 2020 Examination Session/Experimental sciences/Biology_paper_2__SL_markscheme.pdf",
+      "local_question_id": 69797,
+      "human_verified": false,
+      "mark_scheme_sha256": "bd0beddb1b09b7203c0efd26268616bf003775dd11db63666068bc6ee347d169"
+    },
+    {
+      "subject": "IB:economics",
+      "selection_reason": "ocr_fallback",
+      "source_pdf": "pdf_extraction/IB PAST PAPERS - YEAR/2018 Examination Session/May 2018 Examination Session/Individuals and societies/Economics_paper_2__HL.pdf",
+      "source_sha256": "eaaee5ad662893c64bc648d79fbc80b05071f69b67b625c94f2d65faf42f16f6",
+      "root_number": 2,
+      "source_pages": [
+        4,
+        6
+      ],
+      "question_status": "needs_review",
+      "features": [
+        "ocr_fallback",
+        "multi_page",
+        "held_for_review"
+      ],
+      "mark_scheme_pdf": null,
+      "local_question_id": 65101,
+      "human_verified": false,
+      "mark_scheme_sha256": null
+    }
+  ]
+}

@@ -74,13 +74,23 @@ def _first_env(*names: str, default: str = "") -> str:
 def vision_settings() -> dict[str, Any]:
     """Resolve the vision (Qwen3-VL via SiliconFlow) provider settings."""
     ensure_loaded()
-    endpoint = _first_env(
-        "V4_VISION_URL",
-        "V3_OPENAI_CHAT_COMPLETIONS_URL",
-        "SILICONFLOW_CHAT_COMPLETIONS_URL",
-    )
-    api_key = _first_env("V4_VISION_API_KEY", "V3_OPENAI_API_KEY", "SILICONFLOW_API_KEY")
-    model = _first_env("V4_VISION_MODEL", "V3_OPENAI_MODEL", default="Qwen/Qwen3-VL-32B-Instruct")
+    profile = os.environ.get("V4_VISION_PROFILE", "").strip().lower()
+    if profile == "v3":
+        # Use the independently configured SiliconFlow route when the V4
+        # proxy rejects image uploads. No credential is copied into the plist.
+        endpoint = _first_env("V3_OPENAI_CHAT_COMPLETIONS_URL", "SILICONFLOW_CHAT_COMPLETIONS_URL")
+        api_key = _first_env("V3_OPENAI_API_KEY", "SILICONFLOW_API_KEY")
+        model = _first_env("V3_OPENAI_MODEL", default="Qwen/Qwen3-VL-32B-Instruct")
+    elif not profile or profile == "v4":
+        endpoint = _first_env(
+            "V4_VISION_URL",
+            "V3_OPENAI_CHAT_COMPLETIONS_URL",
+            "SILICONFLOW_CHAT_COMPLETIONS_URL",
+        )
+        api_key = _first_env("V4_VISION_API_KEY", "V3_OPENAI_API_KEY", "SILICONFLOW_API_KEY")
+        model = _first_env("V4_VISION_MODEL", "V3_OPENAI_MODEL", default="Qwen/Qwen3-VL-32B-Instruct")
+    else:
+        raise ValueError(f"unknown V4_VISION_PROFILE: {profile}")
     if not endpoint:
         raise ValueError(
             "No vision endpoint configured. Set V3_OPENAI_CHAT_COMPLETIONS_URL "
@@ -97,12 +107,9 @@ def vision_settings() -> dict[str, Any]:
         "model": model,
         "max_attempts": _int_env("V3_OPENAI_MAX_ATTEMPTS", 3),
         "timeout_seconds": _int_env("V3_OPENAI_TIMEOUT_SECONDS", 300),
-        # How many images one call may carry. A provider property, not a
-        # corpus one: SiliconFlow accepted any number, while the Anthropic
-        # route rejects more than eight outright with
-        # "a request may contain at most 8 images". Raise it for a provider
-        # that allows more; the corpus reaches 29 strips at its worst.
-        "max_images": _int_env("V4_VISION_MAX_IMAGES", 8),
+        # Per-request image limit. Long roots are split into consecutive calls.
+        # Raise it for providers that allow more images per request.
+        "max_images": _int_env("V4_VISION_MAX_IMAGES", 4),
     }
 
 

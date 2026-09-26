@@ -1,4 +1,4 @@
-"""Stage 3 — VLM transcription, one call per root question.
+"""Stage 3 — VLM transcription, one stored record per root question.
 
 The contract is deliberately flat:
 
@@ -17,21 +17,23 @@ v3 asked for a recursive block tree and a cheap VLM could not emit it
 reliably. Sub-parts here live inside ``body_md`` as ordinary formatted text;
 ``parts`` exists only for marks accounting and part-level filtering.
 
-One call per root question bounds the token count absolutely, so v3's
-1.4M-token overflow is structurally impossible.
+Each call sees at most the provider's image limit. Long roots are transcribed
+in consecutive batches and their markdown is joined in reading order.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from .client import CallResult, ProviderError, call_json
 from .env import vision_settings
 
+# Keep successful ledger keys stable: the new batching and recovery paths only
+# need to revisit failed/skipped work, not bill the completed corpus again.
 PROMPT_VERSION = "v4-transcribe-1"
 
 # Marks the reviewer should see rather than silently accept.
@@ -100,6 +102,25 @@ Return exactly this shape and nothing else:
  "marking_points":[{"mark_code":"M1","marks":1,"text":"...","alternatives":[]}],
  "total_marks":9,"answer_letter":null,"confidence":0.9,"notes":""}
 """
+
+_INSERT_SYSTEM_PROMPT = """\
+You transcribe source and text booklets from images. Return one JSON object.
+Copy every visible word, table, and heading in reading order into body_md as
+markdown. The images may contain source numbers rather than question numbers;
+root_number is the supplied record identifier, not a number to infer from the
+page. Do not answer or summarize the content. Set parts and figures_used to
+empty lists unless the visible content clearly needs them. Use null for
+total_marks when none is printed. Return the same JSON shape as a question:
+{"root_number":"<supplied number>","body_md":"<markdown>","parts":[],
+"total_marks":null,"figures_used":[],"has_table":false,
+"confidence":0.9,"notes":""}
+"""
+
+_CHUNK_SYSTEM_NOTE = (
+    "These images are one consecutive portion of a longer root. Transcribe only "
+    "the visible portion, even if it begins or ends mid-sentence. Do not infer "
+    "missing text from other portions. Preserve its reading order. "
+)
 
 
 @dataclass(frozen=True)
@@ -175,15 +196,6 @@ def normalize_asset_citations(body: str) -> str:
     return _BARE_CITATION.sub(replace, body)
 
 
-class TooManyStrips(RuntimeError):
-    """More strips than the provider will accept in one call.
-
-    Terminal for this provider: retrying cannot help, and truncating the strip
-    list would silently drop part of the question. Recorded as `skipped` so the
-    paper can still be counted finished -- see RunLedger.record_failure.
-    """
-
-
 def transcribe_question(
     rendered_span,
     doc_type: str = "qp",
@@ -203,49 +215,67 @@ def transcribe_question(
 
     settings = settings or vision_settings()
 
-    # Refuse here rather than let the provider refuse three times. Sending the
-    # first `max_images` strips instead would be worse than failing: a question
-    # missing its last page still parses, still validates, and still reads as a
-    # complete question -- there is nothing downstream that could tell it was
-    # truncated.
-    max_images = int(settings.get("max_images") or 0)
-    if max_images and len(image_paths) > max_images:
-        raise TooManyStrips(
-            f"root {rendered_span.root_number} has {len(image_paths)} strips; "
-            f"this provider accepts at most {max_images} images per call"
-        )
+    max_images = int(settings.get("max_images", 8))
+    if max_images < 1:
+        raise ValueError("max_images must be at least 1")
     root_number = rendered_span.root_number
     is_mark_scheme = doc_type == "ms"
 
-    system_prompt = _MARK_SCHEME_SYSTEM_PROMPT if is_mark_scheme else _QUESTION_SYSTEM_PROMPT
-    user_text = _build_user_text(rendered_span, doc_type)
-
-    result = call_json(
-        endpoint=settings["endpoint"],
-        api_key=settings["api_key"],
-        model=settings["model"],
-        system_prompt=system_prompt,
-        user_text=user_text,
-        image_paths=image_paths,
-        validator=lambda payload: _validate(payload, root_number, is_mark_scheme),
-        max_attempts=settings.get("max_attempts", 3),
-        timeout_seconds=settings.get("timeout_seconds", 300),
-        # Bounded so an unbounded generation cannot run past the read timeout.
-        # The question ceiling was 1600, sized against Qwen3-VL. Sonnet writes
-        # noticeably more for the same question: the longest body transcribed
-        # in the first hour came to ~1,454 tokens and 37 successes landed at
-        # 1,550 or above, so the longest questions were being cut off
-        # mid-object. A truncated reply is not recoverable JSON, so it
-        # surfaced as "assistant content was not a JSON object" -- which reads
-        # as the model misbehaving rather than as a ceiling we chose.
-        max_tokens=settings.get("max_tokens") or (3000 if is_mark_scheme else 4000),
-        artifact_dir=artifact_dir,
-    )
+    system_prompt = (_MARK_SCHEME_SYSTEM_PROMPT if is_mark_scheme else
+                     _INSERT_SYSTEM_PROMPT if doc_type == "in" else
+                     _QUESTION_SYSTEM_PROMPT)
+    figure_ordinals = {
+        figure["id"]: ordinal
+        for figure, ordinal in zip(rendered_span.figures,
+                                   _ordinals_by_page(rendered_span.figures))
+    }
+    chunks = [image_paths[i:i + max_images] for i in range(0, len(image_paths), max_images)]
+    results: list[CallResult] = []
+    for index, paths in enumerate(chunks):
+        # Every strip is sent once, in order. A long root is one stored record,
+        # but no request may exceed the provider's image limit.
+        chunk_strips = rendered_span.strips[index * max_images:index * max_images + len(paths)]
+        visible_pages = {strip.page for strip in chunk_strips}
+        chunk_span = replace(
+            rendered_span,
+            strips=chunk_strips,
+            figures=tuple(figure for figure in rendered_span.figures
+                          if figure["page"] in visible_pages),
+            page_start=chunk_strips[0].page,
+            page_end=chunk_strips[-1].page,
+        )
+        chunk_dir = artifact_dir / f"chunk-{index + 1:02d}" if artifact_dir else None
+        result = call_json(
+            endpoint=settings["endpoint"],
+            api_key=settings["api_key"],
+            model=settings["model"],
+            system_prompt=(_CHUNK_SYSTEM_NOTE + system_prompt
+                           if len(chunks) > 1 else system_prompt),
+            user_text=_build_user_text(chunk_span, doc_type,
+                                       chunk_index=index, chunk_count=len(chunks),
+                                       figure_ordinals=figure_ordinals),
+            image_paths=paths,
+            validator=lambda payload: _validate(payload, root_number, is_mark_scheme),
+            max_attempts=settings.get("max_attempts", 3),
+            timeout_seconds=settings.get("timeout_seconds", 300),
+            max_tokens=settings.get("max_tokens") or 4000,
+            artifact_dir=chunk_dir,
+        )
+        results.append(result)
 
     if is_mark_scheme:
-        transcription = _parse_mark_scheme_response(result.content, root_number)
+        pieces = [_parse_mark_scheme_response(item.content, root_number) for item in results]
     else:
-        transcription = _parse_question_response(result.content, root_number)
+        pieces = [_parse_question_response(item.content, root_number) for item in results]
+    transcription = _join_pieces(pieces)
+    result = CallResult(
+        content=transcription.to_dict(), model=results[-1].model,
+        response_id=results[-1].response_id,
+        attempts=sum(item.attempts for item in results),
+        input_tokens=sum(item.input_tokens for item in results),
+        output_tokens=sum(item.output_tokens for item in results),
+        errors=tuple(error for item in results for error in item.errors),
+    )
 
     known_ids = {figure["id"] for figure in rendered_span.figures}
     return _post_process_transcription(transcription, known_figure_ids=known_ids), result
@@ -262,7 +292,9 @@ def _ordinals_by_page(figures) -> list[int]:
     return ordinals
 
 
-def _build_user_text(rendered_span, doc_type: str) -> str:
+def _build_user_text(rendered_span, doc_type: str, *, chunk_index: int = 0,
+                     chunk_count: int = 1,
+                     figure_ordinals: dict[str, int] | None = None) -> str:
     """Describe the job in JSON alongside the images.
 
     The inventory carries each figure's *position*, not just its id. The model
@@ -278,7 +310,7 @@ def _build_user_text(rendered_span, doc_type: str) -> str:
             "kind": figure.get("kind", "figure"),
             # 1 = first down the page, matching the order they appear in the
             # strips the model is looking at.
-            "order_on_page": ordinal,
+            "order_on_page": (figure_ordinals or {}).get(figure["id"], ordinal),
         }
         for figure, ordinal in zip(rendered_span.figures, _ordinals_by_page(rendered_span.figures))
     ]
@@ -290,8 +322,14 @@ def _build_user_text(rendered_span, doc_type: str) -> str:
         "image_count": len(rendered_span.strips),
         "figure_inventory": inventory,
         "instructions": (
-            "The images are the strips of this one question in reading order. "
-            "Transcribe the whole question as a single record. "
+            "The images are strips in reading order. "
+            "Use root_number as the supplied record identifier; never infer it "
+            "from a nearby printed label. "
+            + ("Transcribe only the visible portion of this question or mark "
+               "scheme. It may start or end mid-sentence; do not fill in unseen "
+               "text. Keep the partial text in the normal markdown field. "
+               if chunk_count > 1 else
+               "Transcribe the whole visible question as a single record. ")
             + (
                 "Figure ids run in reading order down each page: on any page, "
                 "order_on_page 1 is the topmost figure, 2 the next below it, "
@@ -305,7 +343,48 @@ def _build_user_text(rendered_span, doc_type: str) -> str:
             )
         ),
     }
+    if chunk_count > 1:
+        payload["chunk"] = chunk_index + 1
+        payload["chunk_count"] = chunk_count
     return json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+
+
+def _join_pieces(pieces):
+    """Join consecutive image batches without dropping content or inventing marks."""
+    if len(pieces) == 1:
+        return pieces[0]
+    first = pieces[0]
+    marks = [piece.total_marks for piece in pieces if piece.total_marks is not None]
+    # A printed overall total may appear on more than one crop. A conflicting
+    # total is ambiguous, so leave it unset for review rather than adding it.
+    total_marks = marks[0] if marks and len(set(marks)) == 1 else None
+    confidence = min(piece.confidence for piece in pieces)
+    if marks and total_marks is None:
+        confidence = min(confidence, 0.69)
+    notes = "; ".join(piece.notes for piece in pieces if piece.notes)
+    notes = (notes + "; " if notes else "") + "Assembled from consecutive image batches"
+    if marks and total_marks is None:
+        notes = (notes + "; " if notes else "") + "Conflicting totals across image batches"
+    if isinstance(first, QuestionTranscription):
+        return QuestionTranscription(
+            root_number=first.root_number,
+            body_md="\n\n".join(piece.body_md.strip() for piece in pieces),
+            parts=[part for piece in pieces for part in piece.parts],
+            total_marks=total_marks,
+            figures_used=list(dict.fromkeys(fig for piece in pieces for fig in piece.figures_used)),
+            has_table=any(piece.has_table for piece in pieces),
+            confidence=confidence,
+            notes=notes,
+        )
+    return MarkSchemeTranscription(
+        root_number=first.root_number,
+        answer_md="\n\n".join(piece.answer_md.strip() for piece in pieces),
+        marking_points=[point for piece in pieces for point in piece.marking_points],
+        total_marks=total_marks,
+        answer_letter=next((piece.answer_letter for piece in pieces if piece.answer_letter), None),
+        confidence=confidence,
+        notes=notes,
+    )
 
 
 def _validate(payload: dict[str, Any], root_number: int, is_mark_scheme: bool) -> None:
@@ -315,7 +394,9 @@ def _validate(payload: dict[str, Any], root_number: int, is_mark_scheme: bool) -
 
     body_field = "answer_md" if is_mark_scheme else "body_md"
     body = payload.get(body_field)
-    if not isinstance(body, str) or not body.strip():
+    if (not isinstance(body, str) or not body.strip()) and not (
+        is_mark_scheme and _structured_answer(payload)
+    ):
         raise ProviderError(f"{body_field} is missing or empty")
 
     reported = str(payload.get("root_number", "")).strip()
@@ -365,6 +446,9 @@ def _parse_mark_scheme_response(
         raise ProviderError("Response is not a JSON object")
 
     answer_md = str(content.get("answer_md", "") or "")
+    recovered = not answer_md.strip()
+    if not answer_md.strip():
+        answer_md = _structured_answer(content)
     if not answer_md.strip():
         raise ProviderError("answer_md is empty")
 
@@ -382,9 +466,29 @@ def _parse_mark_scheme_response(
         marking_points=marking_points,
         total_marks=_optional_int(content.get("total_marks")),
         answer_letter=answer_letter,
-        confidence=_clamp_confidence(content.get("confidence")),
-        notes=str(content.get("notes", "") or ""),
+        confidence=min(0.5, _clamp_confidence(content.get("confidence"))) if recovered
+                   else _clamp_confidence(content.get("confidence")),
+        notes=(str(content.get("notes", "") or "") +
+               ("; answer_md recovered from structured fields" if recovered else "")).strip("; "),
     )
+
+
+def _structured_answer(payload: dict[str, Any]) -> str:
+    """Recover printed answer content when only structured fields were filled."""
+    points = payload.get("marking_points")
+    if isinstance(points, list):
+        lines = []
+        for point in points:
+            if not isinstance(point, dict):
+                continue
+            code = str(point.get("mark_code") or "").strip()
+            wording = str(point.get("text") or "").strip()
+            if code or wording:
+                lines.append(f"{code} {wording}".strip())
+        if lines:
+            return "\n".join(lines)
+    letter = payload.get("answer_letter")
+    return str(letter).strip() if letter is not None else ""
 
 
 def _post_process_transcription(

@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from pdf_extraction.bank.client import CallResult, _parse_assistant_json
+from pdf_extraction.bank.renderer import RenderedSpan, StripRecord
 from pdf_extraction.bank.transcribe import (
     MarkSchemeTranscription,
     QuestionTranscription,
@@ -11,6 +15,7 @@ from pdf_extraction.bank.transcribe import (
     _parse_mark_scheme_response,
     _parse_question_response,
     _post_process_transcription,
+    transcribe_question,
 )
 
 
@@ -185,6 +190,52 @@ class MarkSchemeParsingTests(unittest.TestCase):
         self.assertEqual(len(result.marking_points), 1)
         self.assertEqual(result.marking_points[0]["mark_code"], "M1")
         self.assertEqual(result.marking_points[0]["marks"], 2)
+
+    def test_recovers_answer_from_structured_marking_points(self) -> None:
+        result = _parse_mark_scheme_response({
+            "root_number": "3", "answer_md": "",
+            "marking_points": [{"mark_code": "M1", "text": "Correct method", "marks": 1}],
+        }, 3)
+        self.assertEqual(result.answer_md, "M1 Correct method")
+
+
+class ChunkedTranscriptionTests(unittest.TestCase):
+    def test_sends_all_strips_in_bounded_order_and_joins_mark_scheme(self) -> None:
+        strips = tuple(StripRecord(
+            page=i + 1, bbox=(0, 0, 100, 100), sha256=str(i),
+            relative_path=f"{i}.png", absolute_path=f"/tmp/{i}.png",
+        ) for i in range(19))
+        span = RenderedSpan(root_number=13, strips=strips, page_start=1, page_end=19)
+        calls = []
+
+        def fake_call(**kwargs):
+            calls.append(kwargs)
+            index = len(calls)
+            return CallResult(
+                content={"root_number": "13", "answer_md": f"batch {index}",
+                         "marking_points": [], "confidence": 0.8},
+                model="test", response_id=None, attempts=1,
+                input_tokens=10, output_tokens=5,
+            )
+
+        with patch("pdf_extraction.bank.transcribe.call_json", side_effect=fake_call):
+            transcription, result = transcribe_question(
+                span, "ms", settings={"endpoint": "test", "api_key": "test",
+                                      "model": "test", "max_images": 8},
+            )
+        self.assertEqual([len(call["image_paths"]) for call in calls], [8, 8, 3])
+        self.assertEqual(
+            [path for call in calls for path in call["image_paths"]],
+            [Path(strip.absolute_path) for strip in strips],
+        )
+        self.assertEqual(transcription.answer_md, "batch 1\n\nbatch 2\n\nbatch 3")
+        self.assertEqual((result.input_tokens, result.output_tokens), (30, 15))
+
+    def test_accepts_single_record_array_reply(self) -> None:
+        parsed = _parse_assistant_json({"choices": [{"message": {
+            "content": '[{"root_number":"2","body_md":"Question"}]'
+        }, "finish_reason": "stop"}]})
+        self.assertEqual(parsed["body_md"], "Question")
 
 
 if __name__ == "__main__":

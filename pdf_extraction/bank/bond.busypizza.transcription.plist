@@ -40,11 +40,54 @@
     pipeline is actually installed against. The provider credential needs no
     entry here: pdf_extraction/bank/env.py reads the repository .env itself,
     from a path derived from __file__.
+
+    /opt/homebrew/bin is on that list because the root detector reaches
+    question_images/evidence.py, which shells out to `tesseract` by bare name
+    for papers with no usable text layer. Homebrew installs it outside every
+    directory launchd hands a job, so under the agent it failed with
+    "[Errno 2] No such file or directory: 'tesseract'" -- once per scanned
+    paper, while the same run worked from a shell.
   -->
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
-    <string>/Library/Frameworks/Python.framework/Versions/3.14/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <string>/Library/Frameworks/Python.framework/Versions/3.14/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>STREAM_MODEL_WORK</key>
+    <string>1</string>
+    <key>CHUNK</key>
+    <string>300</string>
+    <!--
+      Back on the V4 route (runanytime / gpt-5.6-sol). It was moved to v3
+      because the V4 proxy rejected image uploads; re-tested on 24 Sep and it
+      now answers 200 for a single image and for a 4-image call, returning one
+      JSON object rather than the per-image list that produced the
+      "assistant content was not a JSON object (list of N items)" failures at
+      11:38. Set to v3 to go back to SiliconFlow.
+    -->
+    <key>V4_VISION_PROFILE</key>
+    <string>v4</string>
+    <!--
+      Moved past the 13:30-13:43 SiliconFlow outage (read timeouts and
+      Cloudflare 502s). The provider recovered: text and image calls both
+      answered 200 on three consecutive probes at 14:05. Without this the
+      health gate judges a working provider on a finished outage and kills
+      every chunk within minutes of starting. Self-expiring -- the ordinary
+      30-minute window takes over once this timestamp passes.
+    -->
+    <key>HEALTH_IGNORE_BEFORE</key>
+    <string>2026-09-24 15:26:34</string>
+
+    <!--
+      The unhealthy threshold is a *rate* (40%), so the sample floor is what
+      decides whether that rate means anything. At 5, two failures condemn the
+      provider -- and on this tail of the corpus, where a chunk completes three
+      items in three minutes, two stale failures are the whole sample. Hard
+      questions do genuinely fail; the base rate this guard was calibrated
+      against was zero failures per hour over ~17,000 calls, so it can afford
+      to wait for twenty samples before believing a 40% rate.
+    -->
+    <key>HEALTH_MIN_SAMPLE</key>
+    <string>20</string>
   </dict>
 
   <key>KeepAlive</key>

@@ -18,14 +18,14 @@ need to know which was used. Nothing here calls a model or a network.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 import re
 from typing import Any, Literal
 
 import fitz
 
-from ..question_images.detector import detect_roots
+from ..question_images.detector import DetectionResult, DetectedRoot, detect_roots
 from ..question_images.evidence import (
     DocumentEvidence,
     extract_document_evidence,
@@ -153,6 +153,11 @@ class DocumentSpans:
     # grids rather than prose. These are fully recovered here, so no model
     # call is ever made for them.
     answer_key: tuple[tuple[int, str], ...] = ()
+    # Geometry already found while locating mark-scheme question rows. Kept
+    # in memory for rendering; it is derived data, not part of the stored span.
+    table_bboxes: dict[int, tuple[tuple[float, float, float, float], ...]] = field(
+        default_factory=dict, repr=False, compare=False,
+    )
 
     @property
     def root_numbers(self) -> tuple[int, ...]:
@@ -214,7 +219,10 @@ def detect_root_spans(
         # Older mark schemes predate the tabular layout; the prose detector
         # is the better fallback for those.
         prose = _detect_prose_spans(path, doc_type, evidence)
-        return _with_diagnostic(prose, {"reason": "ms_table_detection_empty"})
+        return _with_diagnostic(
+            replace(prose, table_bboxes=spans.table_bboxes),
+            {"reason": "ms_table_detection_empty"},
+        )
     return _detect_prose_spans(path, doc_type, evidence)
 
 
@@ -276,6 +284,26 @@ def _detect_prose_spans(
 ) -> DocumentSpans:
     evidence = evidence or extract_document_evidence(path)
     detection = detect_roots(evidence)
+    if doc_type == "ms" and "IB PAST PAPERS - YEAR" in path.parts:
+        # IB markbands print score levels 0, 1, 2, ... as bare numbers. The
+        # question detector accepts those as roots and chops a real answer into
+        # rubric rows. Actual question headings in these prose mark schemes
+        # are punctuated ("1.", "2."). Build regions from those headings so
+        # the intervening markband remains with its question.
+        numbered = sorted(
+            (candidate for candidate in detection.candidates
+             if re.fullmatch(r"\s*\d{1,2}[.)]\s*", candidate.text)),
+            key=lambda candidate: candidate.position,
+        )
+        if numbered:
+            selected = []
+            last_number = 0
+            for candidate in numbered:
+                if candidate.number > last_number:
+                    selected.append(DetectedRoot(candidate))
+                    last_number = candidate.number
+            detection = DetectionResult(tuple(selected), detection.candidates,
+                                        detection.diagnostics)
     root_regions = build_source_regions(evidence, detection, dpi=RENDER_DPI)
 
     spans: list[RootSpan] = []
@@ -300,7 +328,7 @@ def _detect_prose_spans(
         source_sha256=evidence.source_sha256,
         doc_type=doc_type,
         page_count=len(evidence.pages),
-        strategy="prose",
+        strategy="prose_ms_numbered" if doc_type == "ms" and "IB PAST PAPERS - YEAR" in path.parts and numbered else "prose",
         spans=tuple(spans),
         used_ocr=evidence.used_ocr,
         diagnostics=tuple(detection.diagnostics),
@@ -337,6 +365,7 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
     digest = file_sha256(path)
 
     furniture: dict[int, tuple[tuple[float, float, float, float], ...]] = {}
+    table_bboxes: dict[int, tuple[tuple[float, float, float, float], ...]] = {}
 
     with fitz.open(path) as document:
         page_count = document.page_count
@@ -345,7 +374,12 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
             page_sizes[page_number] = (page.rect.width, page.rect.height)
             if len(page.get_text().strip()) >= _MIN_CONTENT_CHARS:
                 pages_with_content.add(page_number)
-            tables = _question_tables(page)
+            try:
+                found_tables = tuple(page.find_tables().tables)
+            except Exception:
+                found_tables = ()
+            table_bboxes[page_index] = tuple(tuple(table.bbox) for table in found_tables)
+            tables = _question_tables(page, found_tables)
             for table, question_column in tables:
                 rows.extend(_label_rows(table, question_column, page_number))
             furniture[page_number] = _ms_furniture(page, [t for t, _ in tables])
@@ -357,6 +391,7 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
             doc_type="ms",
             page_count=page_count,
             strategy="ms_table",
+            table_bboxes=table_bboxes,
         )
 
     rows.sort(key=lambda row: (row[0], row[2]))
@@ -368,10 +403,12 @@ def _detect_ms_spans(path: Path) -> DocumentSpans:
         page_count=page_count,
         strategy="ms_table",
         spans=spans,
+        table_bboxes=table_bboxes,
     )
 
 
-def _question_tables(page: fitz.Page) -> list[tuple[Any, int]]:
+def _question_tables(page: fitz.Page,
+                     found_tables: tuple[Any, ...] | None = None) -> list[tuple[Any, int]]:
     """Yield ``(table, question_column)`` for each mark-scheme grid on a page.
 
     The question column is located from the header row rather than assumed
@@ -379,13 +416,14 @@ def _question_tables(page: fitz.Page) -> list[tuple[Any, int]]:
     the whole row instead would pick up answer text — a bare ``4`` inside a
     formula is indistinguishable from a question label out of context.
     """
-    try:
-        found = page.find_tables()
-    except Exception:
-        return []
+    if found_tables is None:
+        try:
+            found_tables = tuple(page.find_tables().tables)
+        except Exception:
+            return []
 
     result: list[tuple[Any, int]] = []
-    for table in found.tables:
+    for table in found_tables:
         extracted = table.extract()
         if not extracted:
             continue
@@ -634,13 +672,4 @@ def _merge_regions(regions: list[PageRegion]) -> list[PageRegion]:
 
 
 def _with_diagnostic(spans: DocumentSpans, diagnostic: dict[str, Any]) -> DocumentSpans:
-    return DocumentSpans(
-        source_path=spans.source_path,
-        source_sha256=spans.source_sha256,
-        doc_type=spans.doc_type,
-        page_count=spans.page_count,
-        strategy=spans.strategy,
-        spans=spans.spans,
-        used_ocr=spans.used_ocr,
-        diagnostics=spans.diagnostics + (diagnostic,),
-    )
+    return replace(spans, diagnostics=spans.diagnostics + (diagnostic,))

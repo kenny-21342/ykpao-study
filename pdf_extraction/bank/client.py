@@ -15,6 +15,7 @@ recovery) and drops the contract coupling. Callers supply their own validator.
 from __future__ import annotations
 
 import base64
+import io
 import json
 import mimetypes
 import re
@@ -56,6 +57,14 @@ class Unpayable(ProviderError):
     a stopped run into hours of guaranteed failures. Callers should abandon the
     run rather than skip the question.
     """
+
+
+class RequestTooLarge(ProviderError):
+    """The submitted images exceed a fixed request-size limit."""
+
+
+class ImageUploadRejected(ProviderError):
+    """The upstream explicitly rejected an image before model inference."""
 
 
 class RateLimited(ProviderError):
@@ -156,7 +165,7 @@ def call_json(
                 output_tokens=int(usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0),
                 errors=tuple(diagnostics),
             )
-        except Unpayable:
+        except (Unpayable, RequestTooLarge, ImageUploadRejected):
             raise
         except (HTTPError, URLError, TimeoutError, OSError, ValueError,
                 requests.RequestException, ProviderError) as error:
@@ -169,6 +178,20 @@ def call_json(
             diagnostics.append(diagnostic)
             _write_artifact(artifact_dir, attempt, "error", diagnostic, api_key)
             if attempt < max_attempts:
+                if isinstance(error, ProviderError):
+                    message = str(error)
+                    if "truncated at max_tokens" in message and "max_tokens" in body:
+                        body["max_tokens"] = min(body["max_tokens"] * 2, 8000)
+                    elif ("assistant content" in message or
+                          "body_md is missing" in message or
+                          "answer_md is missing" in message):
+                        body["messages"].append({
+                            "role": "user",
+                            "content": "The previous response was invalid. Return exactly one JSON "
+                                       "object with nonempty transcription markdown and the "
+                                       "requested root_number. Do not return an array, prose, "
+                                       "or a wrapper object.",
+                        })
                 if isinstance(error, RateLimited):
                     sleep(min(error.retry_after, MAX_RATE_LIMIT_WAIT))
                 else:
@@ -243,6 +266,18 @@ def _post_json(
                 f"HTTP 429: {detail[:300]}",
                 _retry_after(response.headers, default=RATE_LIMIT_BACKOFF_SECONDS),
                 raw_response={"httpStatus": 429, "body": detail},
+            )
+        if response.status_code == 413:
+            # The same payload cannot fit on a second or third attempt.
+            raise RequestTooLarge(
+                f"HTTP 413: {detail[:300]}",
+                raw_response={"httpStatus": 413, "body": detail},
+            )
+        if (response.status_code == 502 and "image upload" in detail.lower()
+                and "417" in detail):
+            raise ImageUploadRejected(
+                f"HTTP 502: {detail[:300]}",
+                raw_response={"httpStatus": 502, "body": detail},
             )
         # 402 is the provider's "out of credit". 401/403 are a bad or revoked
         # key. None of the three can come good on a second attempt.
@@ -336,8 +371,22 @@ def _parse_assistant_json(response: dict[str, Any]) -> dict[str, Any]:
     except json.JSONDecodeError:
         parsed = _repair_json(cleaned)
 
+    # Some compatible endpoints ignore json_object mode and wrap a single
+    # record in an array (or under a single `question`/`mark_scheme` key).
+    if isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], dict):
+        parsed = parsed[0]
+    if isinstance(parsed, dict) and len(parsed) == 1:
+        wrapped = next(iter(parsed.values()))
+        if isinstance(wrapped, dict) and (
+            "body_md" in wrapped or "answer_md" in wrapped
+        ):
+            parsed = wrapped
     if not isinstance(parsed, dict):
-        raise ProviderError("assistant content was not a JSON object", raw_response=cleaned[:2000])
+        shape = f"{type(parsed).__name__} of {len(parsed)} items" if isinstance(parsed, list) else type(parsed).__name__
+        raise ProviderError(
+            f"assistant content was not a JSON object ({shape})",
+            raw_response=cleaned[:2000],
+        )
     return parsed
 
 
@@ -369,7 +418,33 @@ def _image_data_url(path: Path) -> str:
     mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     if mime_type not in _SUPPORTED_IMAGE_TYPES:
         raise ValueError(f"unsupported image type {mime_type} for {path}")
-    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    data = path.read_bytes()
+    # Rendered strips remain lossless PNGs on disk. Dense scans can produce
+    # megabyte-sized PNGs, though, and base64 expands each by a third. Send a
+    # compact JPEG copy of a large strip so the proxy accepts the upload.
+    if mime_type == "image/png" and len(data) > 500_000:
+        from PIL import Image
+
+        with Image.open(io.BytesIO(data)) as source:
+            image = source.convert("RGB") if source.mode != "L" else source.copy()
+        for edge in (1600, 1400, 1200, 1000):
+            if max(image.size) > edge:
+                image.thumbnail((edge, edge), Image.Resampling.LANCZOS)
+            for quality in (90, 80, 70):
+                buffer = io.BytesIO()
+                image.save(buffer, format="JPEG", quality=quality, optimize=True)
+                candidate = buffer.getvalue()
+                if len(candidate) <= 500_000:
+                    data = candidate
+                    mime_type = "image/jpeg"
+                    break
+            if mime_type == "image/jpeg":
+                break
+        else:
+            # Even a highly detailed scan is smaller than its PNG original.
+            data = candidate
+            mime_type = "image/jpeg"
+    encoded = base64.b64encode(data).decode("ascii")
     return f"data:{mime_type};base64,{encoded}"
 
 

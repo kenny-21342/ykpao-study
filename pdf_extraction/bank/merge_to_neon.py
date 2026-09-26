@@ -14,6 +14,10 @@ Usage:
   python3 pdf_extraction/bank/merge_to_neon.py                    # default: extract.db → Neon
   python3 pdf_extraction/bank/merge_to_neon.py --source other.db  # custom SQLite path
   python3 pdf_extraction/bank/merge_to_neon.py --dry-run          # show counts without writing
+
+Apply the bank review flag identity migration before merging. Held questions
+and mark schemes are copied for admin review, but remain hidden from students
+until a reviewer publishes them.
 """
 from __future__ import annotations
 
@@ -83,14 +87,12 @@ def main():
         ),
     )
     parser.add_argument(
-        "--include-flagged",
-        action="store_true",
-        help=(
-            "Also merge questions and mark schemes still marked needs_review. "
-            "By default only published rows go to production: a needs_review "
-            "row is one whose crop QA found the image itself wrong — a cut-off "
-            "question number, a missing Marks column, an erased stem."
-        ),
+        "--include-flagged", action="store_true",
+        help="Retained for older commands; held rows are now included by default for admin review",
+    )
+    parser.add_argument(
+        "--published-only", action="store_true",
+        help="Skip held questions and mark schemes (admin review will be incomplete)",
     )
     args = parser.parse_args()
 
@@ -146,6 +148,13 @@ def main():
         return conn
 
     dst = connect_dst()
+    with dst.cursor() as cur:
+        cur.execute("SELECT to_regclass('bank_review_flags_identity_idx')")
+        if cur.fetchone()[0] is None:
+            raise RuntimeError(
+                "Apply migration 20260923150000_deduplicate_bank_review_flags "
+                "before merging review data"
+            )
 
     def ensure_connection():
         """Reconnect if the session died while we were not looking.
@@ -478,13 +487,13 @@ def main():
         FROM bank_questions
     """).fetchall()
 
-    if not args.include_flagged:
+    if args.published_only:
         before = len(rows)
         rows = [row for row in rows if row["status"] == "published"]
         held = before - len(rows)
         if held:
             print(f"  holding back {held} questions still marked needs_review "
-                  f"(--include-flagged to merge them anyway)")
+                  f"(--published-only was requested)")
 
     question_id_map: dict[int, int] = {}
     skipped_q = 0
@@ -552,7 +561,7 @@ def main():
         FROM bank_mark_schemes
     """).fetchall()
 
-    if not args.include_flagged:
+    if args.published_only:
         before = len(rows)
         rows = [row for row in rows if row["status"] == "published"]
         held = before - len(rows)
@@ -933,6 +942,61 @@ def main():
                    row["message"], row["evidence"], row["status"], row["created_at"]))
     written, failed_flags = batch.finish()
     print(f"  ✓ {written} of {len(rows)} review flags ({failed_flags} failed)")
+
+    if not args.published_only:
+        # Older merges omitted held question rows, so their flags were stored
+        # as paper-only flags. Once the question arrives, attach the decision
+        # to its question-level copy and remove the orphaned duplicate.
+        with dst.cursor() as cur:
+            match = '''
+                paper."questionId" IS NULL
+                AND question."questionId" IS NOT NULL
+                AND paper."paperId" = question."paperId"
+                AND paper."issueType" = question."issueType"
+                AND paper.severity = question.severity
+                AND paper.message = question.message
+                AND paper.evidence IS NOT DISTINCT FROM question.evidence
+            '''
+            cur.execute(f'''
+                UPDATE bank_review_flags AS question
+                SET status = paper.status,
+                    "reviewedBy" = paper."reviewedBy",
+                    "reviewedAt" = paper."reviewedAt",
+                    "reviewNote" = paper."reviewNote"
+                FROM bank_review_flags AS paper
+                WHERE {match} AND paper.status IN ('resolved', 'dismissed')
+                  AND question.status = 'open'
+            ''')
+            cur.execute(f'''
+                DELETE FROM bank_review_flags AS paper
+                USING bank_review_flags AS question
+                WHERE {match}
+            ''')
+            removed = cur.rowcount
+        dst.commit()
+        if removed:
+            print(f"  ✓ removed {removed} paper-only copies of question flags")
+
+        # A later extraction may discover a new serious crop issue on a row
+        # already published in Postgres. The question insert above is
+        # intentionally DO NOTHING to preserve manual reviews, so new open
+        # blocking flags must hold that row explicitly.
+        with dst.cursor() as cur:
+            cur.execute('''
+                UPDATE bank_questions AS q
+                SET status = 'needs_review', "reviewedBy" = NULL, "reviewedAt" = NULL
+                WHERE q.status = 'published'
+                  AND EXISTS (
+                    SELECT 1 FROM bank_review_flags AS flag
+                    WHERE flag.status = 'open' AND flag.severity IN ('high', 'medium')
+                      AND (flag."questionId" = q.id OR
+                           (flag."questionId" IS NULL AND flag."paperId" = q."paperId"))
+                  )
+            ''')
+            held_again = cur.rowcount
+        dst.commit()
+        if held_again:
+            print(f"  ! held {held_again} previously published questions with open blocking flags")
 
     # ---- Merge run ledger ----
     ensure_connection()

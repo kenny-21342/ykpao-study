@@ -50,11 +50,21 @@ class TranscribedResumeTests(unittest.TestCase):
             "INSERT INTO bank_questions (paper_id, root_number, body_md, status) "
             "VALUES (?, ?, '', 'published')", (paper_id, root))
 
-    def _ledger(self, sha: str, root: int, status: str = "ok") -> None:
-        self.connection.execute(
-            "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, "
-            "root_number, status) VALUES (?, 'transcribe', ?, ?, ?)",
-            (f"{sha}-{root}", sha, root, status))
+    def _ledger(self, sha: str, root: int, status: str = "ok",
+                completed_at: str | None = None) -> None:
+        # `completed_at` matters only for the IB rubric rule, which uses the
+        # date to tell a pre-fix success from a post-fix one. Everything else
+        # is happy with the column default.
+        if completed_at is None:
+            self.connection.execute(
+                "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, "
+                "root_number, status) VALUES (?, 'transcribe', ?, ?, ?)",
+                (f"{sha}-{root}", sha, root, status))
+        else:
+            self.connection.execute(
+                "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, "
+                "root_number, status, completed_at) VALUES (?, 'transcribe', ?, ?, ?, ?)",
+                (f"{sha}-{root}", sha, root, status, completed_at))
 
     def _finished(self) -> set[str]:
         self.connection.commit()
@@ -76,11 +86,66 @@ class TranscribedResumeTests(unittest.TestCase):
         self._ledger("b" * 64, 1)
         self.assertNotIn("/corpus/partial.pdf", self._finished())
 
+    def test_duplicate_successes_across_models_do_not_finish_a_paper(self) -> None:
+        paper = self._paper("duplicate.pdf", "z" * 64)
+        self._question(paper, 1)
+        self._question(paper, 2)
+        self._ledger("z" * 64, 1)
+        self.connection.execute(
+            "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, "
+            "root_number, status) VALUES (?, 'transcribe', ?, 1, 'ok')",
+            ("another-model-root-1", "z" * 64),
+        )
+        self.assertNotIn("/corpus/duplicate.pdf", self._finished())
+
     def test_a_failed_entry_does_not_count_as_transcribed(self) -> None:
         paper = self._paper("failed.pdf", "c" * 64)
         self._question(paper, 1)
         self._ledger("c" * 64, 1, status="failed")
         self.assertNotIn("/corpus/failed.pdf", self._finished())
+
+    def test_an_oversized_root_is_retried_after_chunking(self) -> None:
+        paper = self._paper("large.pdf", "g" * 64)
+        self._question(paper, 1)
+        self._ledger("g" * 64, 1, status="skipped")
+        self.assertNotIn("/corpus/large.pdf", self._finished())
+
+    def test_ib_rubric_root_zero_is_reprocessed(self) -> None:
+        """A success from *before* the detector fix does not count.
+
+        The ledger date is what separates this from the test below: this
+        paper's root 0 was marked ok by the old prose detector, so it still
+        needs one revisit.
+        """
+        name = "IB PAST PAPERS - YEAR/economics_ms.pdf"
+        paper = self._paper(name, "h" * 64, doc_type="ms")
+        self.connection.execute(
+            "INSERT INTO bank_mark_schemes (paper_id, root_number, answer_md, status) "
+            "VALUES (?, 0, 'rubric level', 'published')", (paper,))
+        self._ledger("h" * 64, 0, completed_at="2026-09-01 00:00:00")
+        self.assertNotIn(f"/corpus/{name}", self._finished())
+
+    def test_an_ib_rubric_paper_is_not_revisited_forever(self) -> None:
+        """The bound on the rule above.
+
+        Re-running one of these papers does not clear its root 0, so without a
+        stopping condition the same predicate matches on every pass. On 25 Sep
+        that held the corpus at 99.85%: 16 consecutive chunks over the same 22
+        papers, each "finished cleanly" while the ledger never moved. A
+        root-0 success recorded after the detector was fixed means the
+        revisit has happened, and the paper is done.
+        """
+        name = "IB PAST PAPERS - YEAR/philosophy_ms.pdf"
+        paper = self._paper(name, "i" * 64, doc_type="ms")
+        self.connection.execute(
+            "INSERT INTO bank_mark_schemes (paper_id, root_number, answer_md, status) "
+            "VALUES (?, 0, 'rubric level', 'published')", (paper,))
+        self.connection.execute(
+            "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, root_number, "
+            "status, completed_at) VALUES (?, 'transcribe', ?, 0, 'ok', ?)",
+            ("revisited-key", "i" * 64, "2026-09-25 08:54:27"))
+        self.connection.commit()
+        self.assertIn(f"/corpus/{name}", self._finished())
 
     def test_an_answer_key_mark_scheme_needs_no_model_call(self) -> None:
         """Stage 1 recovers the whole key, so there is nothing left to bill."""
@@ -111,6 +176,11 @@ class TranscribedResumeTests(unittest.TestCase):
         """
         self._paper("0509_s15_in_11.pdf", "insert-sha", doc_type="in")
         self.assertIn("/corpus/0509_s15_in_11.pdf", self._finished())
+
+    def test_numbered_text_in_an_insert_is_not_a_billable_question(self) -> None:
+        paper = self._paper("0500_s24_in_11.pdf", "numbered-insert", doc_type="in")
+        self._question(paper, 1)
+        self.assertIn("/corpus/0500_s24_in_11.pdf", self._finished())
 
     def test_an_unrendered_paper_is_never_skipped(self) -> None:
         """The safety property behind the branch above.

@@ -98,6 +98,14 @@ def collect(subject: str | None = None) -> list[Path]:
     return papers
 
 
+# The day the prose detector stopped turning a rubric's "score 0" into a
+# question. A root-0 transcription recorded on or after this date was produced
+# by the corrected detector, so the paper does not need revisiting again.
+# Moving this date forward re-opens the revisit for one more pass; it is the
+# only knob that can cause those papers to be transcribed again.
+PROSE_DETECTOR_FIXED_AT = "2026-09-23"
+
+
 def transcribed() -> set[str]:
     """Source paths whose every billable item is already transcribed.
 
@@ -105,7 +113,8 @@ def transcribed() -> set[str]:
     *cropped* -- every paper has, so it would skip the corpus. The ledger does
     the resuming instead, but only for the model calls: phase A still
     re-segments and re-renders every paper it is given before phase B makes its
-    first call. For the whole corpus that is about nine hours of work, and a
+    first call unless --stream-model-work is enabled. For the whole corpus that
+    is about nine hours of work, and a
     hundred and forty thousand rendered spans held in memory, before a single
     question is transcribed.
 
@@ -114,16 +123,11 @@ def transcribed() -> set[str]:
     could never reach paper N+1. So a long transcription run had to be one
     process or nothing.
 
-    A paper is finished when the ledger holds a terminal row -- `ok`, or
-    `skipped` for work no provider here can attempt -- for each of its roots.
-    Counting only `ok` meant one unattemptable item kept its whole paper
-    pending: it returned at the front of every later chunk, was re-rendered
-    each time, and the `while true` loop in run_transcription.sh could never
-    reach zero. 944 papers hold a question with more strips than the Anthropic
-    route accepts, so this is the difference between a run that ends and one
-    that spins. A multiple-choice mark scheme has none to hold -- stage 1
-    recovers the whole answer key for free -- so it counts as finished on its
-    own terms.
+    A paper is finished when every billable root has an `ok` ledger row.
+    Earlier runs marked roots above the provider's image limit as `skipped`;
+    chunked transcription can now process them, so those rows must remain
+    eligible on resume. A multiple-choice mark scheme has no model work: stage
+    1 recovers its answer key, so it counts as finished on its own terms.
     """
     if not DB.exists():
         return set()
@@ -131,6 +135,21 @@ def transcribed() -> set[str]:
     try:
         rows = connection.execute(
             """
+            WITH successful AS (
+                SELECT source_sha256, COUNT(DISTINCT root_number) AS done
+                FROM bank_run_ledger
+                WHERE stage = 'transcribe' AND status = 'ok'
+                GROUP BY source_sha256
+            ),
+            -- A root-0 transcription recorded after the prose detector was
+            -- fixed: proof the revisit below has already been carried out.
+            revisited AS (
+                SELECT DISTINCT source_sha256
+                FROM bank_run_ledger
+                WHERE stage = 'transcribe' AND status = 'ok'
+                  AND root_number = 0
+                  AND completed_at >= 'PROSE_DETECTOR_FIXED_AT'
+            )
             SELECT p.source_path,
                    (SELECT COUNT(*) FROM bank_questions q WHERE q.paper_id = p.id)
                  + (SELECT COUNT(*) FROM bank_mark_schemes m
@@ -138,21 +157,52 @@ def transcribed() -> set[str]:
                         AND COALESCE(m.answer_letter, '') = '')       AS needed,
                    (SELECT COUNT(*) FROM bank_mark_schemes m WHERE m.paper_id = p.id)
                                                                        AS schemes,
+                   p.doc_type                                          AS doc_type,
+                   p.span_strategy                                     AS span_strategy,
+                   (SELECT COUNT(*) FROM bank_mark_schemes m
+                      WHERE m.paper_id = p.id AND m.root_number = 0)   AS zero_roots,
                    p.page_count                                        AS pages,
-                   (SELECT COUNT(*) FROM bank_run_ledger l
-                      WHERE l.source_sha256 = p.source_sha256
-                        AND l.stage = 'transcribe'
-                        AND l.status IN ('ok', 'skipped'))             AS done
+                   COALESCE(s.done, 0)                                AS done,
+                   (r.source_sha256 IS NOT NULL)                       AS revisited
             FROM bank_papers p
-            """
+            LEFT JOIN successful s ON s.source_sha256 = p.source_sha256
+            LEFT JOIN revisited  r ON r.source_sha256 = p.source_sha256
+            """.replace("PROSE_DETECTOR_FIXED_AT", PROSE_DETECTOR_FIXED_AT)
         ).fetchall()
     except sqlite3.OperationalError:
         return set()
     finally:
         connection.close()
 
+    reprocessed = {row[0]: bool(row[-1]) for row in rows}
     finished = set()
-    for source_path, needed, schemes, pages, done in rows:
+    for source_path, needed, schemes, doc_type, strategy, zero_roots, pages, done, _rev in rows:
+        if doc_type == "in" and pages > 0:
+            finished.add(source_path)
+            continue
+        if (doc_type == "ms" and strategy == "prose" and zero_roots
+                and "IB PAST PAPERS - YEAR" in source_path
+                and not reprocessed.get(source_path)):
+            # The old prose detector made rubric score 0 into a question.
+            # Revisit even papers whose wrong roots were marked successful --
+            # but only until they have actually been revisited.
+            #
+            # Without that second condition this never terminates. Re-running
+            # a paper does not clear its root 0, so the same predicate matches
+            # again on the next pass, `discard` fires again, and the chunk
+            # loop rebuilds the identical set forever. On 25 Sep that is what
+            # the corpus run did at 99.85%: 16 consecutive chunks over the
+            # same 22 papers, each logging "chunk finished cleanly" while the
+            # ledger stayed frozen, re-rendering them every three minutes.
+            #
+            # `reprocessed` is the bound: a root-0 success recorded after the
+            # detector was fixed is the evidence that the revisit has already
+            # happened. A paper whose only root-0 success predates the fix is
+            # still revisited exactly once, and its new ledger row then ends
+            # the revisit. Nothing is re-transcribed that the old rule would
+            # have left alone, so this cannot increase spend.
+            finished.discard(source_path)
+            continue
         if needed == 0 and schemes > 0:
             finished.add(source_path)        # an answer key: nothing to bill
         elif needed == 0 and pages > 0:
@@ -269,7 +319,11 @@ def main() -> int:
     parser.add_argument("--max-spend", type=float, default=100.0,
                         help="stop once a run has cost this much (default 100)")
     parser.add_argument("--concurrency", type=int, default=None,
-                        help="parallel model calls (default 4; 6 queues, 8 wedges)")
+                        help="parallel model calls (default 10; higher can be slower)")
+    parser.add_argument("--stream-model-work", action="store_true",
+                        help="submit and save each paper's model work while preparing the next")
+    parser.add_argument("--resume-across-models", action="store_true",
+                        help="keep successful transcriptions when changing vision model")
     parser.add_argument("--no-tagging", action="store_true",
                         help="transcribe only; skip the topic/difficulty pass")
     parser.add_argument("--allow-untagged-topics", action="store_true",
@@ -362,6 +416,8 @@ def main() -> int:
             do_tagging=do_tagging,
             subject_topics=subject_topics,
             subject_context=subject_context,
+            stream_model_work=args.stream_model_work,
+            resume_across_models=args.resume_across_models,
             progress_every=25,
             log=log,
             **({"concurrency": args.concurrency} if args.concurrency else {}),

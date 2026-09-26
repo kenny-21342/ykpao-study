@@ -13,12 +13,13 @@ Design points that matter operationally:
 *   Multiple-choice mark schemes never reach the model: stage 1 recovers the
     whole answer key deterministically.
 
-The run is organised in two phases because a model call takes ~10-100s and is
-almost entirely network wait, while SQLite permits exactly one writer:
+By default the run is organised in two phases. Streaming mode overlaps them.
+A model call takes ~10-100s and is almost entirely network wait, while SQLite
+permits exactly one writer:
 
-    phase A (main thread)   segment, render, store papers and assets
-    phase B (worker pool)   transcribe and tag — no database access
-    write   (main thread)   persist each result as it arrives
+    prepare (main thread)   segment, render, store papers and assets
+    model   (worker pool)   transcribe and tag — no database access
+    write   (main thread)   persist completed results between documents
 
 Run sequentially this corpus needs over a thousand hours, essentially all of it
 spent idle on sockets. The pool collapses that to the provider's rate limit
@@ -30,7 +31,8 @@ from __future__ import annotations
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import deque
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -50,7 +52,7 @@ from .transcribe import PROMPT_VERSION as TRANSCRIBE_PROMPT_VERSION
 # Recorded on rows written without a model, so a later text pass can find the
 # questions that still need one.
 CROP_ONLY_VERSION = "crop-only-v1"
-from .transcribe import TooManyStrips, transcribe_question
+from .transcribe import transcribe_question
 
 # SiliconFlow Qwen3-VL and DeepSeek list prices, USD per million tokens.
 VISION_INPUT_PER_MTOK = 0.28
@@ -88,6 +90,8 @@ class RunStats:
     skipped_cached: int = 0
     vision_input_tokens: int = 0
     vision_output_tokens: int = 0
+    vision_input_per_mtok: float = VISION_INPUT_PER_MTOK
+    vision_output_per_mtok: float = VISION_OUTPUT_PER_MTOK
     text_input_tokens: int = 0
     text_output_tokens: int = 0
     errors: list[dict[str, Any]] = field(default_factory=list)
@@ -96,8 +100,8 @@ class RunStats:
     @property
     def cost_usd(self) -> float:
         return (
-            self.vision_input_tokens / 1e6 * VISION_INPUT_PER_MTOK
-            + self.vision_output_tokens / 1e6 * VISION_OUTPUT_PER_MTOK
+            self.vision_input_tokens / 1e6 * self.vision_input_per_mtok
+            + self.vision_output_tokens / 1e6 * self.vision_output_per_mtok
             + self.text_input_tokens / 1e6 * TEXT_INPUT_PER_MTOK
             + self.text_output_tokens / 1e6 * TEXT_OUTPUT_PER_MTOK
         )
@@ -177,9 +181,6 @@ class WorkResult:
     text_out: int = 0
     error: str | None = None
     stage: str = "transcribe"
-    # True when this item can never be transcribed by this provider, so the
-    # ledger should close it rather than leave it to be retried for ever.
-    skipped: bool = False
 
 
 def prepare_document(
@@ -192,6 +193,7 @@ def prepare_document(
     ledger: RunLedger | None,
     use_model: bool,
     model_name: str,
+    resume_across_models: bool = False,
     text_model_name: str = "none",
     do_tagging: bool = False,
     max_questions: int | None = None,
@@ -211,7 +213,14 @@ def prepare_document(
         raise ValueError(f"unsupported document type {doc_type!r} in {pdf_path.name}")
 
     # --- Stage 1: spans (free) --------------------------------------------
+    prepare_started = time.perf_counter()
     spans = detect_root_spans(pdf_path, doc_type)
+    detect_seconds = time.perf_counter() - prepare_started
+
+    previous = connection.execute(
+        "SELECT id, span_strategy FROM bank_papers WHERE source_path = ?",
+        (str(pdf_path),),
+    ).fetchone()
 
     subject_id = store.upsert_subject(
         connection,
@@ -230,6 +239,28 @@ def prepare_document(
         span_strategy=spans.strategy,
         used_ocr=spans.used_ocr,
     )
+    if use_model and doc_type == "in":
+        # Insert and resource booklets can contain numbered tables that look
+        # like questions. They are context for a question paper, not billable
+        # questions; rendering their pages also creates oversized API calls.
+        connection.commit()
+        return []
+    if (use_model and spans.strategy == "prose_ms_numbered" and previous is not None
+            and previous["span_strategy"] != spans.strategy):
+        # The old prose detector stored rubric levels as separate roots. Its
+        # ledger successes refer to wrong crops, and its extra rows would keep
+        # the paper's needed count above the number of genuine questions.
+        valid_roots = {span.root_number for span in spans.spans}
+        for (row_id, root) in connection.execute(
+            "SELECT id, root_number FROM bank_mark_schemes WHERE paper_id = ?",
+            (paper_id,),
+        ).fetchall():
+            if root not in valid_roots:
+                connection.execute("DELETE FROM bank_mark_schemes WHERE id = ?", (row_id,))
+        connection.execute(
+            "DELETE FROM bank_run_ledger WHERE source_sha256 = ? AND stage = 'transcribe'",
+            (spans.source_sha256,),
+        )
 
     # A multiple-choice key is fully recovered by stage 1; no model needed.
     if spans.answer_key:
@@ -255,7 +286,12 @@ def prepare_document(
         return []
 
     # --- Stage 2: strips and assets (free) --------------------------------
+    render_started = time.perf_counter()
     render = render_strips_and_assets(spans, pdf_path, asset_root)
+    render_seconds = time.perf_counter() - render_started
+    if detect_seconds >= 30 or render_seconds >= 30:
+        log(f"  slow prepare {pdf_path.name}: detect {detect_seconds:.1f}s, "
+            f"render {render_seconds:.1f}s, {len(spans.spans)} roots")
     asset_ids = {asset.sha256: store.upsert_asset(connection, asset) for asset in render.assets}
     stats.assets += len(render.assets)
 
@@ -269,7 +305,8 @@ def prepare_document(
         if rendered_span is None:
             continue
         crop_flags[span.root_number] = run_crop_checks(
-            pdf_path, span, rendered_span, spans.doc_type, paper_id)
+            pdf_path, span, rendered_span, spans.doc_type, paper_id,
+            table_bboxes=spans.table_bboxes if spans.doc_type == "ms" else None)
     _drop_paper_wide_marks_flag(crop_flags)
 
     if spans.numbering_gaps:
@@ -322,7 +359,10 @@ def prepare_document(
             text_model_name, TAG_PROMPT_VERSION, "tag",
         ) if (do_tagging and doc_type == "qp") else None
 
-        transcribed = ledger is not None and ledger.is_completed(work_key)
+        transcribed = ledger is not None and (
+            ledger.is_completed(work_key) or
+            (resume_across_models and ledger.is_root_completed(spans.source_sha256, root))
+        )
         tagged = tag_key is None or (ledger is not None and ledger.is_completed(tag_key))
         if transcribed and tagged:
             stats.skipped_cached += 1
@@ -379,10 +419,6 @@ def _execute(
         try:
             transcription, call = transcribe_question(
                 item.rendered_span, item.doc_type, settings=vision_settings
-            )
-        except TooManyStrips as error:
-            return WorkResult(
-                item=item, error=str(error)[:400], stage="transcribe", skipped=True,
             )
         except Exception as error:  # noqa: BLE001 - one bad question must not stop the run
             return WorkResult(item=item, error=str(error)[:400], stage="transcribe")
@@ -468,7 +504,7 @@ def _persist(
             ledger.record_failure(
                 item.work_key, "transcribe", item.source_sha256,
                 item.rendered_span.root_number, result.error or "unknown",
-                status="skipped" if result.skipped else "failed",
+                status="failed",
             )
             connection.commit()
         return
@@ -728,6 +764,8 @@ def run_corpus(
     subject_context: str | None = None,
     max_questions_per_doc: int | None = None,
     concurrency: int = DEFAULT_CONCURRENCY,
+    stream_model_work: bool = False,
+    resume_across_models: bool = False,
     progress_every: int = 25,
     log: Callable[[str], None] = print,
 ) -> RunStats:
@@ -747,6 +785,12 @@ def run_corpus(
 
         vision_conf = load_vision()
         model_name = vision_conf["model"]
+        if model_name == "gpt-5.5":
+            stats.vision_input_per_mtok = 5.0
+            stats.vision_output_per_mtok = 30.0
+        elif model_name == "gpt-6-astra":
+            stats.vision_input_per_mtok = 10.0
+            stats.vision_output_per_mtok = 50.0
         log(f"vision: {model_name} @ {vision_conf['endpoint']}")
         if do_tagging:
             try:
@@ -768,80 +812,48 @@ def run_corpus(
     ledger = RunLedger(connection=connection)
 
     try:
-        # --- Phase A: free stages, and collect the billed work -------------
-        pending: list[WorkItem] = []
-        for index, pdf_path in enumerate(paths, start=1):
-            try:
-                pending.extend(prepare_document(
-                    pdf_path, connection, stats,
-                    asset_root=asset_root, run_id=run_id, ledger=ledger,
-                    use_model=use_model, model_name=model_name,
-                    text_model_name=(text_conf or {}).get("model", "none"),
-                    do_tagging=do_tagging,
-                    max_questions=max_questions_per_doc, log=log,
-                ))
-                stats.documents += 1
-            except Exception as error:  # noqa: BLE001 - a bad document must not stop the corpus
-                stats.documents_failed += 1
-                stats.errors.append({
-                    "file": Path(pdf_path).name,
-                    "stage": "prepare",
-                    "error": str(error)[:400],
-                    "traceback": traceback.format_exc(limit=3)[:800],
-                })
-            if index % progress_every == 0 or index == len(paths):
-                log(f"  prepared {index}/{len(paths)} documents, {len(pending)} items queued")
-
-        if not pending:
-            return stats
-
-        # --- Phase B: billed stages in parallel, writes on this thread -----
-        log(f"transcribing {len(pending)} items with {concurrency} workers")
+        pending: deque[WorkItem] = deque()
+        futures: dict = {}
         done = 0
-        queue = iter(pending)
+        queued = 0
+        started_model = False
         stopped_on_budget = False
+        inflight_limit = max(1, concurrency) * 2
 
-        def submit_next(pool, futures) -> bool:
-            """Start one more item, unless the budget says stop.
-
-            Work is submitted a few at a time rather than all at once. Every
-            item is billed, so a cap can only mean anything if the decision to
-            spend more is taken after the last result came back -- submitting
-            all 7,600 upfront makes the cap a suggestion. It also keeps phase B
-            from holding a RenderedSpan for every item in the subject before
-            the first call fires.
-
-            The cap is therefore a ceiling on what is *started*, not a
-            guarantee: up to `concurrency * 2` items are already in flight when
-            it trips, so the final total can exceed it by that many items.
-            Sized against the cap it is a rounding error, and stopping mid
-            call would waste the tokens already spent on it.
-            """
-            nonlocal stopped_on_budget
-            if max_spend_usd is not None and stats.cost_usd >= max_spend_usd:
-                stopped_on_budget = True
-                return False
-            item = next(queue, None)
-            if item is None:
-                return False
-            futures[pool.submit(
-                _execute, item,
-                do_tagging=do_tagging,
-                subject_topics=subject_topics,
-                subject_context=subject_context,
-                vision_settings=vision_conf,
-                text_settings=text_conf,
-            )] = item
-            return True
-
+        # Preparation and persistence stay on this thread. Only model calls
+        # use the pool, so SQLite has one writer and PyMuPDF is never shared
+        # between threads. In streaming mode the pool works during the next
+        # paper's preparation; the writer drains completions between papers.
         with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
-            futures: dict = {}
-            for _ in range(max(1, concurrency) * 2):
-                if not submit_next(pool, futures):
-                    break
+            def fill_capacity() -> None:
+                nonlocal started_model, stopped_on_budget
+                while pending and len(futures) < inflight_limit:
+                    if max_spend_usd is not None and stats.cost_usd >= max_spend_usd:
+                        stopped_on_budget = True
+                        return
+                    if not started_model:
+                        log(f"transcribing {queued} prepared items with "
+                            f"{concurrency} workers")
+                        started_model = True
+                    item = pending.popleft()
+                    futures[pool.submit(
+                        _execute, item,
+                        do_tagging=do_tagging,
+                        subject_topics=subject_topics,
+                        subject_context=subject_context,
+                        vision_settings=vision_conf,
+                        text_settings=text_conf,
+                    )] = item
 
-            while futures:
-                for future in as_completed(list(futures)):
+            def drain(*, block: bool) -> None:
+                nonlocal done
+                if not futures:
+                    return
+                completed, _ = wait(
+                    futures, timeout=None if block else 0,
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in completed:
                     item = futures.pop(future)
                     try:
                         result = future.result()
@@ -852,17 +864,64 @@ def run_corpus(
                         run_id=run_id, model_name=model_name,
                     )
                     done += 1
-                    submit_next(pool, futures)
+                    if done % progress_every == 0:
+                        rate = done / max(1e-6, time.time() - started) * 3600
+                        log(f"  transcribed {done}/{queued} items  "
+                            f"${stats.cost_usd:.3f}  {rate:,.0f}/h")
+                fill_capacity()
+
+            # The default still prepares the whole chunk first. Streaming is
+            # opt-in so a running supervisor cannot change behavior mid-run.
+            for index, pdf_path in enumerate(paths, start=1):
+                if stopped_on_budget:
                     break
+                if use_model:
+                    log(f"  preparing {index}/{len(paths)}: {pdf_path}")
+                document_started = time.perf_counter()
+                try:
+                    items = prepare_document(
+                        pdf_path, connection, stats,
+                        asset_root=asset_root, run_id=run_id, ledger=ledger,
+                        use_model=use_model, model_name=model_name,
+                        resume_across_models=resume_across_models,
+                        text_model_name=(text_conf or {}).get("model", "none"),
+                        do_tagging=do_tagging,
+                        max_questions=max_questions_per_doc, log=log,
+                    )
+                    pending.extend(items)
+                    queued += len(items)
+                    stats.documents += 1
+                except Exception as error:  # noqa: BLE001 - a bad document must not stop the corpus
+                    stats.documents_failed += 1
+                    stats.errors.append({
+                        "file": Path(pdf_path).name,
+                        "stage": "prepare",
+                        "error": str(error)[:400],
+                        "traceback": traceback.format_exc(limit=3)[:800],
+                    })
+                elapsed = time.perf_counter() - document_started
+                if elapsed >= 30:
+                    log(f"  slow document {Path(pdf_path).name}: "
+                        f"{elapsed:.1f}s total preparation")
+                if stream_model_work and use_model:
+                    fill_capacity()
+                    drain(block=False)
+                    # Limit memory even when one paper has many question roots.
+                    while pending and not stopped_on_budget:
+                        drain(block=True)
+                if index % progress_every == 0 or index == len(paths):
+                    log(f"  prepared {index}/{len(paths)} documents, "
+                        f"{len(pending) + len(futures)} items queued")
+
+            if not stream_model_work or not use_model:
+                fill_capacity()
+            while futures:
+                drain(block=True)
 
             if stopped_on_budget:
                 log(f"  stopped: spend cap ${max_spend_usd:.2f} reached "
                     f"at ${stats.cost_usd:.2f} after {done} items. "
                     f"The ledger has recorded them, so a re-run resumes here.")
-                if done % progress_every == 0 or done == len(pending):
-                    rate = done / max(1e-6, time.time() - started) * 3600
-                    log(f"  {done}/{len(pending)} items  "
-                        f"${stats.cost_usd:.3f}  {rate:,.0f}/h")
     finally:
         # A question paper and its mark scheme are separate documents, so the
         # pairing can only be made once both have been processed.

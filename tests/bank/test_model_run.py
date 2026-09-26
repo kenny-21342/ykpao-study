@@ -15,6 +15,7 @@ scheme unlinked by the pass that was supposed to enrich it.
 from __future__ import annotations
 
 import sqlite3
+import threading
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -172,6 +173,57 @@ class ModelRunTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_streaming_starts_provider_before_preparing_next_paper(self) -> None:
+        second_pdf = self.root / "0610_s23_qp_42.pdf"
+        _question_paper(second_pdf)
+        request_started = threading.Event()
+        original_prepare = run_module.prepare_document
+
+        def observing_prepare(path, *args, **kwargs):
+            if path == second_pdf:
+                self.assertTrue(request_started.wait(2),
+                                "first paper was not submitted before the second began")
+            return original_prepare(path, *args, **kwargs)
+
+        def provider(*args, **kwargs):
+            request_started.set()
+            return self.provider(*args, **kwargs)
+
+        with mock.patch("pdf_extraction.bank.env.vision_settings", _settings), \
+             mock.patch.object(run_module, "prepare_document", observing_prepare), \
+             mock.patch("pdf_extraction.bank.transcribe.call_json", provider):
+            stats = run_corpus(
+                [self.pdf, second_pdf], db_path=self.db,
+                asset_root=self.root / "assets", use_model=True,
+                stream_model_work=True, concurrency=2, do_tagging=False,
+                log=lambda message: None,
+            )
+
+        self.assertEqual(stats.documents, 2)
+        self.assertGreaterEqual(self.provider.calls, 2)
+        connection = sqlite3.connect(self.db)
+        try:
+            self.assertEqual(connection.execute(
+                "SELECT COUNT(*) FROM bank_run_ledger "
+                "WHERE stage = 'transcribe' AND status = 'ok'"
+            ).fetchone()[0], self.provider.calls)
+        finally:
+            connection.close()
+
+    def test_numbered_insert_is_not_sent_to_the_provider(self) -> None:
+        insert_pdf = self.root / "0500_s24_in_11.pdf"
+        _question_paper(insert_pdf)
+        with mock.patch("pdf_extraction.bank.env.vision_settings", _settings), \
+             mock.patch("pdf_extraction.bank.transcribe.call_json", self.provider):
+            stats = run_corpus(
+                [insert_pdf], db_path=self.db,
+                asset_root=self.root / "assets", use_model=True,
+                stream_model_work=True, concurrency=2, do_tagging=False,
+                log=lambda message: None,
+            )
+        self.assertEqual(stats.documents, 1)
+        self.assertEqual(self.provider.calls, 0)
+
     def test_a_transcription_fills_the_crop_only_row_rather_than_adding_one(self) -> None:
         # The upsert is keyed on (paper_id, root_number). If that ever breaks,
         # a transcription run doubles the bank instead of enriching it.
@@ -197,6 +249,41 @@ class ModelRunTests(unittest.TestCase):
 
         self._run(use_model=True)
         self.assertEqual(self.provider.calls, first_pass)
+
+    def test_model_switch_reuses_successful_roots_in_partial_paper(self) -> None:
+        self._run(use_model=False)
+        self._run(use_model=True)
+        first_calls = self.provider.calls
+        connection = sqlite3.connect(self.db)
+        try:
+            rows = connection.execute(
+                "SELECT work_key, root_number FROM bank_run_ledger "
+                "WHERE stage = 'transcribe' AND status = 'ok' ORDER BY root_number"
+            ).fetchall()
+            self.assertGreaterEqual(len(rows), 2)
+            connection.execute("DELETE FROM bank_run_ledger WHERE work_key = ?", (rows[-1][0],))
+            connection.commit()
+        finally:
+            connection.close()
+
+        changed = {**_settings(), "model": "new-vision-model"}
+        with mock.patch("pdf_extraction.bank.env.vision_settings", return_value=changed), \
+             mock.patch("pdf_extraction.bank.transcribe.call_json", self.provider):
+            run_corpus(
+                [self.pdf], db_path=self.db, asset_root=self.root / "assets",
+                use_model=True, do_tagging=False, concurrency=1,
+                resume_across_models=True, log=lambda message: None,
+            )
+        self.assertEqual(self.provider.calls - first_calls, 1)
+        connection = sqlite3.connect(self.db)
+        try:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM bank_run_ledger "
+                "WHERE stage = 'transcribe' AND status = 'ok'"
+            ).fetchone()[0]
+            self.assertEqual(count, len(rows))
+        finally:
+            connection.close()
 
     def test_the_ledger_records_what_was_paid_for(self) -> None:
         self._run(use_model=False)

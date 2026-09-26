@@ -206,10 +206,18 @@ def render_strips_and_assets(
 
     rendered: list[RenderedSpan] = []
     assets: dict[str, AssetRecord] = {}
+    page_tables: dict[int, tuple[tuple[float, float, float, float], ...]] = dict(
+        spans.table_bboxes
+    )
+    page_bounds: dict[int, fitz.Rect | None] = {}
+    page_images: dict[int, tuple[fitz.Rect, ...]] = {}
 
     with fitz.open(pdf_path) as document:
         for span in spans.spans:
-            rendered.append(_render_span(span, document, asset_root, assets))
+            rendered.append(_render_span(
+                span, document, asset_root, assets, page_tables, page_bounds,
+                page_images,
+            ))
 
     return RenderOutput(
         source_path=str(pdf_path),
@@ -225,6 +233,9 @@ def _render_span(
     document: fitz.Document,
     asset_root: Path,
     assets: dict[str, AssetRecord],
+    page_tables: dict[int, tuple[tuple[float, float, float, float], ...]] | None = None,
+    page_bounds: dict[int, fitz.Rect | None] | None = None,
+    page_images: dict[int, tuple[fitz.Rect, ...]] | None = None,
 ) -> RenderedSpan:
     strips: list[StripRecord] = []
     figures: list[dict[str, Any]] = []
@@ -234,11 +245,14 @@ def _render_span(
             continue
         page = document[region.page - 1]
 
-        strip = _render_strip(page, region, asset_root, assets)
+        strip = _render_strip(page, region, asset_root, assets,
+                              page_bounds=page_bounds, page_images=page_images)
         if strip is not None:
             strips.append(strip)
 
-        for candidate in _find_figures(page, region.bbox):
+        for candidate in _find_figures(page, region.bbox,
+                                       page_tables=page_tables,
+                                       page_images=page_images):
             asset = _crop_figure(
                 page,
                 candidate["bbox"],
@@ -271,6 +285,9 @@ def _render_strip(
     region: PageRegion,
     asset_root: Path,
     assets: dict[str, AssetRecord],
+    *,
+    page_bounds: dict[int, fitz.Rect | None] | None = None,
+    page_images: dict[int, tuple[fitz.Rect, ...]] | None = None,
 ) -> StripRecord | None:
     """Render one span region, with response furniture painted out.
 
@@ -290,7 +307,12 @@ def _render_strip(
     # the last on that page, so the strip trails a large blank margin that
     # costs upload and tokens while carrying nothing. Trim to what is actually
     # printed.
-    content = _content_bounds(page)
+    if page_bounds is not None and page.number in page_bounds:
+        content = page_bounds[page.number]
+    else:
+        content = _content_bounds(page, page_images=page_images)
+        if page_bounds is not None:
+            page_bounds[page.number] = content
     if content is not None:
         trimmed = clip & content
         if not trimmed.is_empty and trimmed.width >= 2 and trimmed.height >= 2:
@@ -301,8 +323,9 @@ def _render_strip(
         return None
 
     # Paint over dotted answer rules, barcodes, and page furniture so the model
-    # never sees them. Redaction needs a writable page, so this is applied to a
-    # scratch copy of the page rather than mutating the open document.
+    # never sees them. Painting the rendered pixels avoids copying the entire
+    # PDF page once per question region. On image-heavy papers that copy took
+    # more than 25 minutes and repeatedly stalled the corpus.
     # Last check before pixels are destroyed. The producers of these boxes have
     # no idea what text they sit on: a line misread as furniture contributes its
     # whole bbox, and a vector rule detected inside a figure contributes its
@@ -311,40 +334,26 @@ def _render_strip(
     # gets painted.
     erase_bboxes, _dropped = erase_guard.filter_erase_boxes(page, region.erase_bboxes)
 
-    scratch: fitz.Document | None = None
-    render_page = page
-    if erase_bboxes:
-        scratch = fitz.open()
-        scratch.insert_pdf(page.parent, from_page=page.number, to_page=page.number)
-        render_page = scratch[0]
-        # draw_rect works in the page's own unrotated coordinates, while every
-        # box reaching here is in the display space page.rect describes. On a
-        # rotated mark scheme the two differ by 90 degrees, so a header band
-        # painted without this conversion came out as a vertical stripe through
-        # the answers. derotation_matrix is the identity on an unrotated page.
-        derotate = render_page.derotation_matrix
-        for box in erase_bboxes:
-            rect = fitz.Rect(*box) & page_rect
-            if rect.is_empty or rect.width < 1 or rect.height < 1:
-                continue
-            render_page.draw_rect(rect * derotate, color=None, fill=(1, 1, 1), overlay=True)
-
-    try:
-        scale = _capped_scale(clip, MAX_STRIP_EDGE)
-        pixmap = render_page.get_pixmap(
-            matrix=fitz.Matrix(scale, scale),
-            clip=clip,
-            alpha=False,
-            # Past papers are printed black on white; even their photographs
-            # are greyscale. Rendering in colour cost roughly twice the bytes
-            # for no information, which across the corpus is tens of GB.
-            colorspace=fitz.csGRAY,
-        )
-        data = pixmap.tobytes("png")
-        width, height = pixmap.width, pixmap.height
-    finally:
-        if scratch is not None:
-            scratch.close()
+    scale = _capped_scale(clip, MAX_STRIP_EDGE)
+    matrix = fitz.Matrix(scale, scale)
+    pixmap = page.get_pixmap(
+        matrix=matrix,
+        clip=clip,
+        alpha=False,
+        # Past papers are printed black on white; even their photographs
+        # are greyscale. Rendering in colour cost roughly twice the bytes
+        # for no information, which across the corpus is tens of GB.
+        colorspace=fitz.csGRAY,
+    )
+    for box in erase_bboxes:
+        rect = fitz.Rect(*box) & page_rect
+        if rect.is_empty or rect.width < 1 or rect.height < 1:
+            continue
+        # Erase boxes and clip use display coordinates, as does the pixmap's
+        # device-space origin. set_rect clips to the rendered image itself.
+        pixmap.set_rect(fitz.IRect(rect * matrix), (255,))
+    data = pixmap.tobytes("png")
+    width, height = pixmap.width, pixmap.height
 
     asset = _store_asset(
         data=data,
@@ -370,6 +379,9 @@ def _render_strip(
 def _find_figures(
     page: fitz.Page,
     span_bbox: tuple[float, float, float, float],
+    *,
+    page_tables: dict[int, tuple[tuple[float, float, float, float], ...]] | None = None,
+    page_images: dict[int, tuple[fitz.Rect, ...]] | None = None,
 ) -> list[dict[str, Any]]:
     """Locate figures and tables intersecting a span region.
 
@@ -381,20 +393,24 @@ def _find_figures(
 
     # Tables first: they are the most specific interpretation of a region, and
     # dedup keeps whichever candidate is seen first.
-    try:
-        for table in page.find_tables().tables:
-            rect = fitz.Rect(table.bbox)
-            if _usable(rect, span_rect):
-                candidates.append({"bbox": tuple(rect), "is_table": True})
-    except Exception:
-        # Table detection is best-effort; a failure must not lose the figures.
-        pass
+    if page_tables is not None and page.number in page_tables:
+        table_boxes = page_tables[page.number]
+    else:
+        try:
+            table_boxes = tuple(tuple(table.bbox) for table in page.find_tables().tables)
+        except Exception:
+            # Table detection is best-effort; a failure must not lose figures.
+            table_boxes = ()
+        if page_tables is not None:
+            page_tables[page.number] = table_boxes
+    for box in table_boxes:
+        rect = fitz.Rect(box)
+        if _usable(rect, span_rect):
+            candidates.append({"bbox": tuple(rect), "is_table": True})
 
-    for image_ref in page.get_images(full=True):
-        for rect in page.get_image_rects(int(image_ref[0])):
-            rect = _display(page, rect)
-            if _usable(rect, span_rect):
-                candidates.append({"bbox": tuple(rect), "is_table": False})
+    for rect in _image_rects(page, page_images):
+        if _usable(rect, span_rect):
+            candidates.append({"bbox": tuple(rect), "is_table": False})
 
     # Vector paths are clustered before filtering, so a diagram assembled from
     # many small strokes survives as one figure instead of vanishing.
@@ -620,7 +636,36 @@ def _bottom_margin(page: fitz.Page, bottom: float) -> float:
     return max(0.0, min(STRIP_MARGIN_BOTTOM, nearest - bottom))
 
 
-def _content_bounds(page: fitz.Page) -> fitz.Rect | None:
+def _image_rects(
+    page: fitz.Page,
+    cache: dict[int, tuple[fitz.Rect, ...]] | None = None,
+) -> tuple[fitz.Rect, ...]:
+    """Get embedded-image positions once per page, including inline images.
+
+    get_images() lists resource references, not placements. Calling
+    get_image_rects() for each reference rescans the page each time: one 2021
+    paper has 36,937 image references on a page and held rendering for over 25
+    minutes. get_image_info() returns every placement in one pass.
+    """
+    if cache is not None and page.number in cache:
+        return cache[page.number]
+    try:
+        rects = tuple(
+            _display(page, info["bbox"])
+            for info in page.get_image_info(xrefs=False)
+        )
+    except Exception:
+        rects = ()
+    if cache is not None:
+        cache[page.number] = rects
+    return rects
+
+
+def _content_bounds(
+    page: fitz.Page,
+    *,
+    page_images: dict[int, tuple[fitz.Rect, ...]] | None = None,
+) -> fitz.Rect | None:
     """Bounding box of everything actually printed on a page.
 
     Used to trim blank margins off a strip. Returns ``None`` when the page has
@@ -651,12 +696,8 @@ def _content_bounds(page: fitz.Page) -> fitz.Rect | None:
     except Exception:
         pass
 
-    try:
-        for image_ref in page.get_images(full=True):
-            for rect in page.get_image_rects(int(image_ref[0])):
-                absorb(_display(page, rect))
-    except Exception:
-        pass
+    for rect in _image_rects(page, page_images):
+        absorb(rect)
 
     if bounds is None:
         return None

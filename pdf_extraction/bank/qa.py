@@ -215,6 +215,8 @@ def run_crop_checks(
     doc_type: str,
     paper_id: int | None,
     question_id: int | None = None,
+    *,
+    table_bboxes: dict[int, tuple[tuple[float, float, float, float], ...]] | None = None,
 ) -> list["ReviewFlag"]:
     """Check the rendered crop against the page it was cut from.
 
@@ -296,7 +298,8 @@ def run_crop_checks(
     # column off every rotated mark scheme.
     if doc_type == "ms":
         flags.extend(_check_marks_column(
-            pdf_path, rendered_span, paper_id, question_id, root))
+            pdf_path, rendered_span, paper_id, question_id, root,
+            table_bboxes=table_bboxes))
     elif not _CROP_MARKS.search(body):
         flags.append(ReviewFlag(
             question_id=question_id, paper_id=paper_id,
@@ -447,6 +450,8 @@ def _check_marks_column(
     paper_id: int | None,
     question_id: int | None,
     root: int,
+    *,
+    table_bboxes: dict[int, tuple[tuple[float, float, float, float], ...]] | None = None,
 ) -> list["ReviewFlag"]:
     """Does a mark-scheme crop reach the right edge of its grid?
 
@@ -454,6 +459,26 @@ def _check_marks_column(
     clipped in, so the two are directly comparable.
     """
     import fitz
+
+    if table_bboxes is not None:
+        for strip in rendered_span.strips:
+            boxes = table_bboxes.get(strip.page - 1, ())
+            if not boxes:
+                continue
+            grid_right = max(float(box[2]) for box in boxes)
+            if strip.bbox[2] < grid_right - _MARKS_COLUMN_SLACK:
+                return [ReviewFlag(
+                    question_id=question_id, paper_id=paper_id,
+                    issue_type=ISSUE_CROP_NO_MARKS, severity=SEVERITY_HIGH,
+                    message=(f"Crop for question {root} stops short of the grid, "
+                             "so the Marks column is cut off"),
+                    evidence={
+                        "root_number": root, "page": strip.page,
+                        "crop_right": round(strip.bbox[2], 1),
+                        "grid_right": round(grid_right, 1),
+                    },
+                )]
+        return []
 
     with fitz.open(pdf_path) as document:
         for strip in rendered_span.strips:
@@ -745,6 +770,16 @@ class RunLedger:
             row = cursor.fetchone()
             return row is not None and row[0] == "ok"
 
+    def is_root_completed(self, source_sha256: str, root_number: int,
+                          stage: str = "transcribe") -> bool:
+        """Reuse a successful root when a corpus run changes model."""
+        with self._connect() as conn:
+            return conn.execute(
+                "SELECT 1 FROM bank_run_ledger WHERE source_sha256 = ? "
+                "AND root_number = ? AND stage = ? AND status = 'ok' LIMIT 1",
+                (source_sha256, root_number, stage),
+            ).fetchone() is not None
+
     def record_success(
         self,
         work_key: str,
@@ -774,14 +809,9 @@ class RunLedger:
     ) -> None:
         """Record an attempt that produced no transcription.
 
-        ``status`` is ``failed`` for anything that might come good on a later
-        run, and ``skipped`` for work this pipeline has decided never to
-        attempt. The distinction is not cosmetic: ``corpus_run.transcribed()``
-        counts a paper finished only once every billable item has a terminal
-        ledger row, so a permanently-unattemptable item left as ``failed``
-        keeps its paper pending for ever -- it returns at the front of every
-        subsequent chunk, is re-rendered, and is retried until someone
-        notices.
+        ``status`` is ``failed`` for retriable work. ``skipped`` remains in the
+        schema for historical records, but corpus resumption now treats those
+        rows as pending: oversized roots can be transcribed in image batches.
         """
         if status not in ("failed", "skipped"):
             raise ValueError(f"unknown ledger status: {status}")
