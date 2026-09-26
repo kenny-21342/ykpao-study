@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { getBankPaper } from '@/lib/bank-questions';
 import BankQuestionCard from '@/app/components/BankQuestionView';
 import PreviewNotice from '@/app/components/PreviewNotice';
+import ScreenContextReporter from '@/app/components/ScreenContextReporter';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,15 @@ export default async function BankPaperPage({
 
   return (
     <main className="min-h-full bg-surface-raised">
+      {/* The tutor is mounted in this route's layout, so tell it which paper is
+          open. Not a single question: this page lists the whole paper, and
+          claiming one of them is on screen would be worse than saying none is. */}
+      <ScreenContextReporter
+        tab="practice"
+        description={`Reading question bank paper ${paper.subject} Paper ${variant}, `
+          + `${paper.board} ${paper.year} ${session}`}
+        data={{ subjectCode: paper.subject, questionSubject: paper.subject }}
+      />
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
         <div>
           <Link
