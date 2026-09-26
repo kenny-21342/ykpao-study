@@ -46,12 +46,13 @@ there. Follow the adoption steps in `prisma/migrations-legacy/README.md`.
 
 #### Known, intentional schema drift
 
-`prisma migrate diff` reports four differences against any correctly-built
+`prisma migrate diff` reports differences against a correctly-built
 database:
 
 ```
 [*] rag_chunks    [-] column `searchVector`, [-] 2 GIN indexes
 [*] rag_documents [-] 1 GIN index
+[*] bank_review_flags [-] 1 expression index
 ```
 
 These are **not** drift to fix. `rag_chunks."searchVector"` is a
@@ -60,7 +61,9 @@ These are **not** drift to fix. `rag_chunks."searchVector"` is a
 as surplus and proposes dropping them. `lib/rag.ts` queries that column
 directly, so dropping it breaks AI study search entirely.
 
-They are created by hand at the bottom of the baseline migration. **Never run
+The RAG objects are created by hand at the bottom of the baseline migration;
+the review flag identity index is created by the 20260923150000 migration so
+repeated corpus imports cannot duplicate review work. **Never run
 `prisma migrate dev` or `prisma db push --accept-data-loss` without checking
 what it plans to drop**, and re-append that block if the baseline is ever
 regenerated.

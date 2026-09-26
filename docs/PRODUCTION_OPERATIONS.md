@@ -50,6 +50,25 @@ restore result in the project runbook before launch.
 - Check the health probe, recent error rate, database latency, and backup
   workflow status during the first week of the closed beta.
 
+## Question bank review
+
+The admin console has a **Bank Review** queue. It shows QA flags, question and
+mark scheme crops, transcription text, and the source PDF. Reviewers can resolve
+or dismiss a flag, or inspect held questions without blocking flags, then
+explicitly publish a question. Publishing requires a
+source crop and no open high or medium flags on that question or its paper.
+The reviewer and time are recorded in Postgres. Mark schemes remain separate:
+publishing a question does not publish its mark scheme.
+
+Apply `20260923150000_deduplicate_bank_review_flags` before the next
+`merge_to_neon.py` run. The migration preserves an existing review decision
+when it removes duplicate flags, and its unique index makes later imports
+idempotent. Merges now include held questions and mark schemes for the admin
+queue; student-facing queries still require `status='published'`. Use
+`--published-only` only when an intentionally incomplete review queue is
+acceptable. Admin decisions live in Postgres; the ongoing SQLite extraction
+store is not modified by review actions.
+
 ## Launch gate
 
 The deployment is not ready to be public until object storage credentials,
