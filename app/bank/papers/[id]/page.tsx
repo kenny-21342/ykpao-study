@@ -54,7 +54,7 @@ export default async function BankPaperPage({
         tab="practice"
         description={`Reading question bank paper ${paper.subject} Paper ${variant}, `
           + `${paper.board} ${paper.year} ${session}`}
-        data={{ subjectCode: paper.subject, questionSubject: paper.subject }}
+        data={{ subjectCode: paper.subjectCode, questionSubject: paper.subject }}
       />
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
         <div>

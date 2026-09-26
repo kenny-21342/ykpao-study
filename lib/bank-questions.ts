@@ -59,7 +59,11 @@ export type BankQuestionView = {
 
 export type BankPaperView = {
   id: number;
+  /** Display name, e.g. "Biology (IGCSE)". */
   subject: string;
+  /** Syllabus code, e.g. "0610". Distinct from `subject`: anything that
+   *  scopes a query -- RAG retrieval, course matching -- wants this one. */
+  subjectCode: string;
   board: string;
   year: number;
   session: string;
@@ -170,6 +174,7 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
   return {
     id: paper.id,
     subject: bankSubjectName(paper.subject),
+    subjectCode: paper.subject.code,
     board: paper.board,
     year: paper.year,
     session: paper.session,

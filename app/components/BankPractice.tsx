@@ -43,7 +43,13 @@ type Summary = {
   thumbnail: BankStrip | null;
   paper: {
     id: number;
+    /** Display name, e.g. "Biology (IGCSE)". */
     subject: string;
+    /** Syllabus code, e.g. "0610" -- what scoping wants. The server has always
+     *  sent it; this type simply did not declare it, so the screen context
+     *  reached for `subject` and told the tutor the course was "Biology
+     *  (IGCSE)". */
+    subjectCode: string;
     year: number;
     session: string;
     paperNumber: number;
@@ -362,11 +368,16 @@ export default function BankPractice({
     const paper = selected.paper;
     updateData({
       bankQuestionId: selected.id,
+      // `subject` is the display name ("Biology (IGCSE)"); `subjectCode` is the
+      // syllabus code ("0610"). The reference wants the readable one and
+      // `subjectCode` wants the code -- passing the name for both is what made
+      // the tutor ask "which course?" while looking at a Biology question,
+      // because `pageSubjectCode` then matched no enrolled course at all.
       bankPaperReference: `${paper.subject} ${paper.year} ${paper.session} `
         + `Paper ${paper.paperNumber} Variant ${paper.variant} Q${selected.rootNumber}`,
       bankCommandTerms: selected.commandTerms?.length ? selected.commandTerms : undefined,
       bankHasText: selected.hasText,
-      subjectCode: paper.subject,
+      subjectCode: paper.subjectCode,
     });
   }, [selected, updateData]);
 
