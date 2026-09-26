@@ -10,6 +10,7 @@
  * one, which for 89% of questions is the top fragment of the image.
  */
 import { subjectNameForCode } from '@/lib/course-catalog';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
 
@@ -305,9 +306,28 @@ export function toBankSubjectCodes(catalogCodes: string[]): string[] {
   return [...codes];
 }
 
-/** The filter options that actually have published questions behind them. */
-export async function listBankFilters(subjectCodes: string[] | null): Promise<BankFilters> {
+/**
+ * The filter options that actually have published questions behind them.
+ *
+ * `subject` is the one the student has selected in the UI, as distinct from
+ * `subjectCodes`, which is their course scope. Topics are the reason it exists:
+ * `BankTopic` is keyed `@@unique([subjectId, name])`, so "Mechanics" is a
+ * different row for every syllabus that has one, and a flat list of every topic
+ * in the corpus is both enormous and mostly irrelevant to whatever subject is
+ * on screen. Narrowing to the selected subject is what makes the control
+ * usable; with none selected the list still respects the course scope.
+ */
+export async function listBankFilters(
+  subjectCodes: string[] | null,
+  subject?: string | null,
+): Promise<BankFilters> {
   const where = publishedQuestionPaperWhere(subjectCodes);
+  const selected = subject?.trim() || null;
+  // Same shape the question query uses for its own subject filter, so the
+  // options offered and the results returned cannot disagree.
+  const subjectScope: Prisma.BankSubjectWhereInput | null = selected
+    ? { code: { equals: selected, mode: 'insensitive' } }
+    : null;
 
   const [subjects, years, sessions, paperNumbers, topics, commandTerms] = await Promise.all([
     prisma.bankSubject.findMany({
@@ -325,13 +345,32 @@ export async function listBankFilters(subjectCodes: string[] | null): Promise<Ba
       where, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
       select: { paperNumber: true },
     }),
+    // This was the one filter with no scope on it at all -- not the course
+    // scope the others use, and not the selected subject -- so it answered with
+    // every topic in the corpus regardless of what was being browsed. It became
+    // obvious only once tagging filled the table: with 256 topics across 20
+    // subjects the control lists topics that cannot match a single question in
+    // the subject on screen.
     prisma.bankTopic.findMany({
-      where: { questions: { some: { question: { status: 'published' } } } },
+      where: {
+        questions: { some: { question: { status: 'published', paper: where } } },
+        ...(subjectScope ? { subject: subjectScope } : {}),
+      },
       orderBy: { name: 'asc' },
       select: { name: true },
+      distinct: ['name'],
     }),
     prisma.bankSkill.findMany({
-      where: { questions: { some: { question: { status: 'published', paper: where } } } },
+      where: {
+        questions: {
+          some: {
+            question: {
+              status: 'published',
+              paper: subjectScope ? { ...where, subject: subjectScope } : where,
+            },
+          },
+        },
+      },
       orderBy: { slug: 'asc' },
       select: { slug: true },
     }),

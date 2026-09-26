@@ -215,3 +215,56 @@ class TranscribedResumeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TaggedResumeTests(TranscribedResumeTests):
+    """The resume filter for a *tagging* pass.
+
+    `transcribed()` was the right question while transcription was running and
+    the wrong one the moment it finished: with 14,172 of 14,194 papers done, a
+    tagging run filtered by it alone selects nothing and reports success having
+    tagged nothing. The same shape as the `already_done` trap that preceded it.
+    """
+
+    def _tag_ledger(self, sha: str, root: int, status: str = "ok") -> None:
+        self.connection.execute(
+            "INSERT INTO bank_run_ledger (work_key, stage, source_sha256, "
+            "root_number, status) VALUES (?, 'tag', ?, ?, ?)",
+            (f"tag-{sha}-{root}", sha, root, status))
+
+    def _tagged(self) -> set[str]:
+        self.connection.commit()
+        with mock.patch.object(corpus_run, "DB", self.db):
+            return corpus_run.tagged()
+
+    def test_a_transcribed_paper_with_no_tags_is_not_finished(self) -> None:
+        paper = self._paper("untagged.pdf", "t" * 64)
+        self._question(paper, 1)
+        self._ledger("t" * 64, 1)
+        # Transcription says done; tagging says not, and the run needs both.
+        self.assertIn("/corpus/untagged.pdf", self._finished())
+        self.assertNotIn("/corpus/untagged.pdf", self._tagged())
+
+    def test_a_paper_is_tagged_once_every_question_has_a_row(self) -> None:
+        paper = self._paper("tagged.pdf", "u" * 64)
+        self._question(paper, 1)
+        self._question(paper, 2)
+        self._tag_ledger("u" * 64, 1)
+        self.assertNotIn("/corpus/tagged.pdf", self._tagged())
+        self._tag_ledger("u" * 64, 2)
+        self.assertIn("/corpus/tagged.pdf", self._tagged())
+
+    def test_a_mark_scheme_needs_no_tagging(self) -> None:
+        """Only question papers carry topics, so a scheme is done on its own terms."""
+        self._paper("scheme.pdf", "v" * 64, doc_type="ms")
+        self.assertIn("/corpus/scheme.pdf", self._tagged())
+
+    def test_a_question_paper_with_no_questions_needs_no_tagging(self) -> None:
+        self._paper("empty_qp.pdf", "w" * 64)
+        self.assertIn("/corpus/empty_qp.pdf", self._tagged())
+
+    def test_a_failed_tag_does_not_count(self) -> None:
+        paper = self._paper("failed_tag.pdf", "x" * 64)
+        self._question(paper, 1)
+        self._tag_ledger("x" * 64, 1, status="failed")
+        self.assertNotIn("/corpus/failed_tag.pdf", self._tagged())

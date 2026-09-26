@@ -204,11 +204,23 @@ export default function BankPractice({
   }, []);
 
   useEffect(() => {
-    fetch(`/api/bank/questions?action=filters&scope=${scope}`)
+    // Refetched when the subject changes, not only the scope: topics are
+    // per-subject, so the list has to follow the selection. Without this the
+    // control offered all 256 topics in the corpus whatever was on screen.
+    const params = new URLSearchParams({ scope });
+    if (subject) params.set('subject', subject);
+    fetch(`/api/bank/questions?action=filters&${params}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setFilters({ ...EMPTY_FILTERS, ...data }))
+      .then((data) => {
+        if (!data) return;
+        setFilters({ ...EMPTY_FILTERS, ...data });
+        // A topic chosen under the previous subject usually does not exist
+        // under the new one, and leaving it set filters the list down to
+        // nothing while the control still displays a plausible-looking choice.
+        setTopic((current) => (current && !(data.topics ?? []).includes(current) ? '' : current));
+      })
       .catch(() => setFilters(EMPTY_FILTERS));
-  }, [scope]);
+  }, [scope, subject]);
 
   useEffect(() => {
     // The bank needs a session, so there is nothing to ask for until we have

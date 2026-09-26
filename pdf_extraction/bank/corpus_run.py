@@ -106,6 +106,59 @@ def collect(subject: str | None = None) -> list[Path]:
 PROSE_DETECTOR_FIXED_AT = "2026-09-23"
 
 
+def tagged() -> set[str]:
+    """Source paths whose every question already has an `ok` tag ledger row.
+
+    The resume filter for a model run asks whether a paper is *transcribed*.
+    Once transcription finished that became the wrong question for a second
+    time -- the same shape as the `already_done` trap described below, where a
+    filter that was right for the previous stage silently skips the whole
+    corpus for the next one. With 14,172 of 14,194 papers transcribed, a
+    tagging pass filtered by `transcribed()` alone selects nothing at all and
+    reports success having done no work.
+
+    Intersecting this with `transcribed()` is what makes a paper "done": both
+    stages have their own ledger key precisely so tagging can run later over
+    what is already transcribed, and `run.py` then queues those questions with
+    `needs_transcribe=False`, reusing the stored text so no vision call is
+    repeated.
+
+    Only question papers are tagged -- a mark scheme has no topics -- so any
+    other `doc_type` is tagged on its own terms, as is a question paper the
+    segmenter found no questions in.
+    """
+    if not DB.exists():
+        return set()
+    connection = sqlite3.connect(DB)
+    try:
+        rows = connection.execute(
+            """
+            WITH tag_ok AS (
+                SELECT source_sha256, COUNT(DISTINCT root_number) AS done
+                FROM bank_run_ledger
+                WHERE stage = 'tag' AND status = 'ok'
+                GROUP BY source_sha256
+            )
+            SELECT p.source_path,
+                   p.doc_type,
+                   (SELECT COUNT(*) FROM bank_questions q WHERE q.paper_id = p.id) AS questions,
+                   COALESCE(t.done, 0) AS done
+            FROM bank_papers p
+            LEFT JOIN tag_ok t ON t.source_sha256 = p.source_sha256
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return set()
+    finally:
+        connection.close()
+
+    finished = set()
+    for source_path, doc_type, questions, done in rows:
+        if doc_type != "qp" or questions == 0 or done >= questions:
+            finished.add(source_path)
+    return finished
+
+
 def transcribed() -> set[str]:
     """Source paths whose every billable item is already transcribed.
 
@@ -378,6 +431,10 @@ def main() -> int:
         done = set()
     elif args.use_model:
         done = transcribed()
+        if do_tagging:
+            # Both stages must be done for the paper to be. Without this a
+            # tagging pass over an already-transcribed corpus selects nothing.
+            done &= tagged()
     else:
         done = already_done()
     if done:

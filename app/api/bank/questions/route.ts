@@ -69,8 +69,11 @@ export async function GET(request: NextRequest) {
     const subjectCodes = scopedSubjectCodes(courseScope);
 
     if (action === 'filters') {
+      // The selected subject narrows the topic and command-term lists. It is
+      // separate from `subjectCodes`, which is the student's course scope:
+      // scope says what they may see, this says what they are looking at.
       return NextResponse.json({
-        ...(await listBankFilters(subjectCodes)),
+        ...(await listBankFilters(subjectCodes, searchParams.get('subject'))),
         scope: courseScope,
       });
     }
