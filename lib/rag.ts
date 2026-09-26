@@ -220,40 +220,57 @@ export async function scoreRagMatches(
   const limit = options.limit ?? 60;
 
   /**
-   * The fuzzy matcher is a fallback, not part of the normal path.
+   * Three matchers, and a separate query for each. Never one query with an
+   * `OR` across them.
    *
-   * `similarity(c."content", ...)` cannot use an index the way this query is
-   * written -- the OR spans two tables, so the planner turns the whole
-   * condition into a join filter and evaluates trigram similarity over every
-   * one of the ~124,000 chunks. Measured on 27 Sep 2026 that was **14.0s of a
-   * 14.05s query**; the seq scan underneath it took 362ms. Rewriting it to the
-   * `%` operator against the existing `gin_trgm_ops` index did not help
-   * (13.4s on its own): trigram matching over long text is simply expensive
-   * here.
+   * An `OR` spanning `rag_chunks` and `rag_documents` can only be evaluated
+   * after the join, so the planner turns the whole condition into a Join
+   * Filter and no index on either table applies. Demoting the content-trigram
+   * arm to a fallback took the query from 14.05s to ~1.3s, but left the title
+   * arm still OR'd across the join -- so the tsvector GIN index was still
+   * unreachable and the query had crept back to 2.0-4.7s by 27 Sep. Splitting
+   * the arms is what actually reaches the indexes: 0.3-0.7s wall, of which
+   * 0.29s is the round trip to the database.
    *
-   * Dropping it was tempting and wrong. For `osmosis`, `hydrogen bonding`,
-   * `photosynthesis` and `newton second law` the top 60 rows are **identical**
-   * with and without it -- a chunk matching only on trigrams scores
-   * `ts_rank_cd = 0` and never outranks a lexical match -- so it costs 12s to
-   * change nothing. But on a misspelling it is the only thing that returns
-   * anything at all: `osmossis`, `photosynthsis` and `electrolyis` each match
-   * **zero** rows lexically and 190, 570 and 2,731 rows fuzzily.
+   * The merge is by rank across the branch results, which returned the same
+   * top 60 as the single `OR` query for five of six test queries (`osmosis`,
+   * `0625 2022`, `newton second law`, `photosynthesis`, `cell membrane`), and
+   * 53 of 60 for `biology` -- the difference being tie order among rows
+   * sharing a rank, not different matches.
    *
-   * So: run the indexed query first, and pay for trigrams only when the cheap
-   * pass came back with almost nothing -- which is exactly the query that was
-   * about to show an empty result set, and the only one where the wait buys
-   * the student something.
+   * **Title matching changed operator, and that is an improvement rather than
+   * a cost.** `similarity(d."title", query) > 0.08` cannot use an index, and
+   * at that threshold it is not a filter: for `0625 2022` it matched 60,909 of
+   * the 100,609 documents, and for `photosynthesis` 337 titles that contain no
+   * such word. `query <% d."title"` is `word_similarity`, which asks whether
+   * the query matches some run of words *within* the title -- served by the
+   * existing `gin_trgm_ops` index on `title`, and far more selective: 9,604
+   * documents for `0625 2022`, 4,306 for `biology`, and zero for `osmosis`,
+   * `photosynthesis`, `cell membrane` and `newton second law`, which is
+   * correct because no title contains them and the lexical branch is what
+   * finds those.
+   *
+   * The content-trigram branch stays a fallback, for the reason it was made
+   * one: `similarity(c."content", ...)` over ~124,000 chunks is expensive
+   * however it is written (the `%` operator against the `gin_trgm_ops` index
+   * measured 13.4s on its own). For `osmosis`, `hydrogen bonding`,
+   * `photosynthesis` and `newton second law` the top 60 are identical with and
+   * without it -- a chunk matching only on trigrams scores `ts_rank_cd = 0`
+   * and never outranks a lexical match -- so it costs seconds to change
+   * nothing. But on a misspelling it is the only thing that returns anything
+   * at all: `osmossis`, `photosynthsis` and `electrolyis` each match zero rows
+   * lexically and 190, 570 and 2,731 rows fuzzily. So it runs only when the
+   * cheap branches came back with almost nothing, which is exactly the query
+   * that was about to show an empty result set.
    */
-  const matcher = (fuzzy: boolean) => Prisma.sql`(
-    c."searchVector" @@ to_tsquery('english', ${tsQuery})
-    OR similarity(d."title", ${query}) > 0.08
-    ${fuzzy ? Prisma.sql`OR similarity(c."content", ${query}) > 0.045` : Prisma.empty}
-  )`;
+  const lexicalMatcher = Prisma.sql`c."searchVector" @@ to_tsquery('english', ${tsQuery})`;
+  const titleMatcher = Prisma.sql`${query} <% d."title"`;
+  const contentMatcher = Prisma.sql`similarity(c."content", ${query}) > 0.045`;
 
-  /** Below this, the lexical pass has effectively failed and fuzzy is worth 12s. */
+  /** Below this, the cheap branches have effectively failed and fuzzy is worth the wait. */
   const FUZZY_FALLBACK_BELOW = 5;
 
-  const search = (fuzzy: boolean) =>
+  const search = (matcher: Prisma.Sql) =>
     prisma.$queryRaw<IndexedRow[]>(Prisma.sql`
       SELECT
         d."id" AS "documentId",
@@ -274,15 +291,32 @@ export async function scoreRagMatches(
       FROM "rag_chunks" c
       JOIN "rag_documents" d ON d."id" = c."documentId"
       WHERE (${Prisma.join(filters, ' AND ')})
-        AND ${matcher(fuzzy)}
+        AND ${matcher}
       ORDER BY "rank" DESC, d."indexedAt" DESC
       LIMIT ${limit}
     `);
 
+  /**
+   * Top `limit` of the union, keyed by chunk identity.
+   *
+   * `documentId` is not that key -- a document is chunked, so two rows from
+   * different branches can share it and still be different passages. The pair
+   * with the chunk's own text is what identifies a row here.
+   */
+  const mergeBranches = (branches: IndexedRow[][]): IndexedRow[] => {
+    const byChunk = new Map<string, IndexedRow>();
+    for (const row of branches.flat()) {
+      const key = `${row.documentId}\u0000${row.content}`;
+      const seen = byChunk.get(key);
+      if (!seen || row.rank > seen.rank) byChunk.set(key, row);
+    }
+    return [...byChunk.values()].sort((a, b) => b.rank - a.rank).slice(0, limit);
+  };
+
   try {
-    const lexical = await search(false);
-    if (lexical.length >= FUZZY_FALLBACK_BELOW) return lexical;
-    return await search(true);
+    const cheap = mergeBranches(await Promise.all([search(lexicalMatcher), search(titleMatcher)]));
+    if (cheap.length >= FUZZY_FALLBACK_BELOW) return cheap;
+    return mergeBranches([cheap, await search(contentMatcher)]);
   } catch (error) {
     console.warn('scoreRagMatches: rag index query failed', error instanceof Error ? error.message : error);
     return [];
