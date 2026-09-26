@@ -128,77 +128,113 @@ export async function GET(req: NextRequest) {
   const syllabusCode = fourDigit.find((value) => !isExamYear(value));
   const questionNumber = query.match(/(?:^|\W)q(?:uestion)?\s*(\d+)/i)?.[1];
 
+  // --- Bank matching: one query per branch, not one query with an `OR` ------
+  //
+  // The text clause and the subject-metadata clauses used to share a single
+  // `OR`. Because the metadata clauses read the joined `bank_subjects` row,
+  // that `OR` could only be evaluated *after* the join, so Postgres ran it as
+  // a Filter over every published question and no index on `bodyMd` could
+  // serve it. Measured on production 27 Sep: 1.67s, a sequential scan of all
+  // 66,756 published rows with 66,537 removed by the filter. The identical
+  // cross-table `OR` is what made `lib/rag.ts` slow, for the identical reason.
+  //
+  // Split apart, every branch is a predicate one index can answer: the text
+  // branch is single-table, so the `gin_trgm_ops` index on `bodyMd` serves it,
+  // and the subject branch resolves the 83 subject rows first so the question
+  // query filters on `paperId` alone.
+  //
+  // The merge is exact rather than approximate. Every branch orders `id desc`
+  // and takes the full limit, so the top N of the union of the branch results
+  // is the same N rows the single `OR` query returned.
+  const bankMsSubjectScope = courseScope.effectiveScope === 'enrolled'
+    ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
+    : {};
+  const yearScope = year ? [{ paper: { year: Number(year) } }] : [];
+  const bankQuestionScope: Prisma.BankQuestionWhereInput[] = [
+    ...(Object.keys(bankSubjectScope).length > 0 ? [bankSubjectScope] : []),
+    ...yearScope,
+  ];
+  const bankMsScope: Prisma.BankMarkSchemeWhereInput[] = [
+    ...(Object.keys(bankMsSubjectScope).length > 0 ? [bankMsSubjectScope] : []),
+    ...yearScope,
+  ];
+
+  const BANK_QUESTION_TAKE = 8;
+  const BANK_MS_TAKE = 5;
+  // `AND` rather than a spread in both: the scope and the year both constrain
+  // `paper`, and two `paper` keys in one object would silently drop one.
+  const bankQuestionBranch = (branch: Prisma.BankQuestionWhereInput) =>
+    prisma.bankQuestion.findMany({
+      where: { status: 'published', AND: [...bankQuestionScope, branch] },
+      include: { paper: { include: { subject: true } } },
+      take: BANK_QUESTION_TAKE,
+      orderBy: { id: 'desc' },
+    });
+  const bankMsBranch = (branch: Prisma.BankMarkSchemeWhereInput) =>
+    prisma.bankMarkScheme.findMany({
+      where: { status: 'published', AND: [...bankMsScope, branch] },
+      include: { paper: { include: { subject: true } }, question: { select: { rootNumber: true } } },
+      take: BANK_MS_TAKE,
+      orderBy: { id: 'desc' },
+    });
+
   // Every term must appear, not any one of them. Matching any single term was
   // harmless while `bodyMd` was empty corpus-wide -- it contributed almost
-  // nothing, and the metadata clauses below did the work. Once the
-  // transcription run filled 64,995 questions (25 Sep) the same clause started
-  // matching thousands of rows per query, and because this query orders by
-  // `id desc` with no relevance scoring at all, it answered with the eight
-  // newest questions containing *one* of the words. Measured on 26 Sep: for
-  // twelve queries taken verbatim out of a question's own transcript, the
-  // question itself came back 0/12 times, while the query matched 153-13,626
-  // rows. Requiring every term cuts those match sets to 1-12 rows and the
-  // question comes back 12/12, which is what makes `id desc` acceptable here.
+  // nothing, and the metadata clauses did the work. Once the transcription run
+  // filled 64,995 questions (25 Sep) the same clause started matching
+  // thousands of rows per query, and because these queries order by `id desc`
+  // with no relevance scoring at all, they answered with the eight newest
+  // questions containing *one* of the words. Measured on 26 Sep: for twelve
+  // queries taken verbatim out of a question's own transcript, the question
+  // itself came back 0/12 times, while the query matched 153-13,626 rows.
+  // Requiring every term cuts those match sets to 1-12 rows and the question
+  // comes back 12/12, which is what makes `id desc` acceptable here.
   //
   // The cost is that a query with one absent word returns no bank questions
   // from this path rather than eight wrong ones. That is the better failure:
   // `scoreRagMatches` below still ranks partial and stemmed matches across the
   // rest of the corpus, and notes/resources/papers match independently.
-  const bankQuestionOr: Prisma.BankQuestionWhereInput[] = [
-    { AND: terms.map((term) => ({ bodyMd: { contains: term, mode: 'insensitive' as const } })) },
-    // Paper and subject metadata — what a code/year/question-number lookup hits.
-    { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
-    { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
-  ];
-  if (syllabusCode || questionNumber) {
-    bankQuestionOr.push({
+  const questionTextBranch: Prisma.BankQuestionWhereInput = {
+    AND: terms.map((term) => ({ bodyMd: { contains: term, mode: 'insensitive' as const } })),
+  };
+  const markSchemeTextBranch: Prisma.BankMarkSchemeWhereInput = {
+    AND: terms.map((term) => ({ answerMd: { contains: term, mode: 'insensitive' as const } })),
+  };
+  // A code or question-number lookup. Its own branch for the same reason as
+  // the subject branch: it reads the joined paper and subject rows.
+  const questionCodeBranch: Prisma.BankQuestionWhereInput | null = (syllabusCode || questionNumber)
+    ? {
       AND: [
         ...(syllabusCode ? [{ paper: { subject: { code: syllabusCode } } }] : []),
         ...(questionNumber ? [{ rootNumber: Number(questionNumber) }] : []),
       ],
-    });
-  }
+    }
+    : null;
 
-  // Mark scheme text (answerMd) — 52,004 of 52,925 mark schemes carry real text.
-  // Same all-terms rule as `bankQuestionOr` above, for the same reason.
-  const bankMsOr: Prisma.BankMarkSchemeWhereInput[] = [
-    { AND: terms.map((term) => ({ answerMd: { contains: term, mode: 'insensitive' as const } })) },
-    { paper: { subject: { code: { contains: query, mode: 'insensitive' } } } },
-    { paper: { subject: { name: { contains: query, mode: 'insensitive' } } } },
-  ];
-
-  const bankMsSubjectScope = courseScope.effectiveScope === 'enrolled'
-    ? { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } }
-    : {};
-
-  const [questions, markschemes, notes, pages, documents, resources] = await Promise.all([
-    prisma.bankQuestion.findMany({
+  const [
+    questionTextRows,
+    questionCodeRows,
+    markSchemeTextRows,
+    matchedSubjects,
+    notes,
+    pages,
+    documents,
+    resources,
+  ] = await Promise.all([
+    bankQuestionBranch(questionTextBranch),
+    questionCodeBranch ? bankQuestionBranch(questionCodeBranch) : Promise.resolve([]),
+    bankMsBranch(markSchemeTextBranch),
+    // 83 rows. Cheap enough to resolve on every search, and resolving it here
+    // rather than inside the question query is the whole point: it keeps the
+    // text predicate single-table and therefore indexable.
+    prisma.bankSubject.findMany({
       where: {
-        status: 'published',
-        OR: bankQuestionOr,
-        // AND rather than a spread: the scope and the year both constrain
-        // `paper`, and two `paper` keys in one object would silently drop one.
-        AND: [
-          ...(Object.keys(bankSubjectScope).length > 0 ? [bankSubjectScope] : []),
-          ...(year ? [{ paper: { year: Number(year) } }] : []),
+        OR: [
+          { code: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' } },
         ],
       },
-      include: { paper: { include: { subject: true } } },
-      take: 8,
-      orderBy: { id: 'desc' },
-    }),
-    prisma.bankMarkScheme.findMany({
-      where: {
-        status: 'published',
-        OR: bankMsOr,
-        AND: [
-          ...(Object.keys(bankMsSubjectScope).length > 0 ? [bankMsSubjectScope] : []),
-          ...(year ? [{ paper: { year: Number(year) } }] : []),
-        ],
-      },
-      include: { paper: { include: { subject: true } }, question: { select: { rootNumber: true } } },
-      take: 5,
-      orderBy: { id: 'desc' },
+      select: { id: true },
     }),
     user ? prisma.note.findMany({
       where: {
@@ -256,6 +292,33 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     }),
   ]);
+
+  // The subject branch is the one branch that cannot be built before the
+  // queries run, because it needs the matched subject ids. It is also the rare
+  // one -- a query that names a subject by syllabus code or by name -- so in
+  // the common case this second phase issues no queries at all.
+  const subjectIds = matchedSubjects.map((subject) => subject.id);
+  const [subjectQuestionRows, subjectMarkSchemeRows] = subjectIds.length > 0
+    ? await Promise.all([
+      bankQuestionBranch({ paper: { subjectId: { in: subjectIds } } }),
+      bankMsBranch({ paper: { subjectId: { in: subjectIds } } }),
+    ])
+    : [[], []];
+
+  /** The top `take` rows of the union of the branches, newest id first. */
+  const mergeBranches = <T extends { id: number }>(branches: T[][], take: number): T[] =>
+    [...new Map(branches.flat().map((row) => [row.id, row])).values()]
+      .sort((a, b) => b.id - a.id)
+      .slice(0, take);
+
+  const questions = mergeBranches(
+    [questionTextRows, questionCodeRows, subjectQuestionRows],
+    BANK_QUESTION_TAKE,
+  );
+  const markschemes = mergeBranches(
+    [markSchemeTextRows, subjectMarkSchemeRows],
+    BANK_MS_TAKE,
+  );
 
   // RAG-backed results: announcements, discussion threads, the syllabus
   // catalogue, and the legacy `past_paper_questions` corpus have no direct
