@@ -1,10 +1,18 @@
 /**
  * Which shipped-but-unfinished features get a "not ready yet" treatment.
  *
- * The question bank is at ~5% extraction coverage and the mock-exam generator
+ * The question bank was at ~5% extraction coverage and the mock-exam generator
  * still fails on some attempts, so both would read as broken rather than as
  * unfinished if we launched them silently on 14 Sep. Rather than scatter
  * conditionals through the UI, every entrance reads this one table.
+ *
+ * Re-checked 25 Sep, after the bulk transcription run finished: 65,572 of
+ * 66,756 published questions (98%) now carry a transcript, so the bank's
+ * headline limitation -- that a student marks their own written answers --
+ * stopped being true. `decideGradingMode` gates AI marking on
+ * `hasQuestionText`, and that gate now opens for almost the whole corpus.
+ * Copy that undersells a feature is as misleading as copy that oversells it,
+ * so the numbers below are re-measured rather than inherited.
  *
  * 'ready'   — no treatment at all; the feature stands on its own.
  * 'preview' — reachable, but every entrance carries a banner and a badge.
@@ -33,7 +41,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
-      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Two gaps remain: multiple-choice questions can be marked automatically but written answers are marked by you against the mark scheme, and about 5% of questions are held back because their crop was cut wrongly.',
+      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and only a quarter carry topic tags, so filtering by topic still misses most of the bank.',
   },
   'mock-exams': {
     state: 'preview',

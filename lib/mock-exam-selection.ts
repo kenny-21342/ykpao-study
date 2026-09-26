@@ -15,9 +15,12 @@
  * That makes generation synchronous and free, and removes the `generating`
  * state, the client poll, and the whole timeout failure mode with it.
  *
- * What is lost is topic-aware curation. `bank_topics` has no rows yet, so
- * there was nothing to curate against in any case; when tagging lands, the
- * topic filter below starts biting and this can grow a weighting pass.
+ * What is lost is topic-aware curation. That was written when `bank_topics`
+ * had no rows. As of 25 Sep it has 256 topics and 16,678 tagged questions --
+ * a quarter of the published corpus -- so the topic filter below does bite
+ * now, for the subjects tagging has reached. Weighting a paper across topics
+ * is still not done, and difficulty is filled on 44 published questions, so neither is
+ * a selection input yet.
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';

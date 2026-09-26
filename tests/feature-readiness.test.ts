@@ -62,11 +62,21 @@ test('the syllabus count is stated once and counted the same way everywhere', as
   }
 });
 
-test('the bank copy does not promise text the corpus has not got', () => {
+test('the bank copy tracks what the corpus actually has', () => {
   const body = FEATURE_READINESS['question-bank'].body;
-  // Every published question is a crop; `bodyMd` is empty corpus-wide until
-  // the transcription waves land. The copy must keep saying so rather than
-  // implying the questions are searchable prose.
+  // This test used to require the phrase "marked by you", because `bodyMd`
+  // was empty corpus-wide and the copy had to say so rather than imply the
+  // questions were searchable prose. Its own comment said "until the
+  // transcription waves land". They landed on 25 Sep: 65,572 of 66,756
+  // published questions carry a transcript, `decideGradingMode`'s
+  // `hasQuestionText` gate opens for them, and the AI marks written answers.
+  //
+  // So the guard is inverted rather than deleted. Understating a feature
+  // misleads a student as surely as overstating it -- being told to mark your
+  // own work by a platform that would have marked it costs real effort.
   assert.match(body, /crop/i);
-  assert.match(body, /marked by you/i);
+  assert.doesNotMatch(body, /marked by you/i);
+  assert.match(body, /transcript/i);
+  // The crop failures are still real and must stay disclosed.
+  assert.match(body, /held back/i);
 });
