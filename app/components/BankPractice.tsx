@@ -21,6 +21,7 @@ import PreviewNotice from './PreviewNotice';
 import { useSession } from 'next-auth/react';
 import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
+import { useScreenContext } from './ScreenContext';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
 import { commandTermLabel } from '@/lib/command-terms';
 
@@ -337,6 +338,37 @@ export default function BankPractice({
     onQuestionOpened?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- openQuestion is recreated each render
   }, [initialQuestionId, sessionStatus]);
+
+  // Tell the AI tutor which question is on screen.
+  //
+  // The tutor is mounted in `HomeShell` and reads `ScreenContext`, so without
+  // this it knew only "Practice" -- the tab label -- while a student stared at
+  // a specific past-paper question and asked "how do I do this one?". Three of
+  // eight surfaces reported anything at all, and the bank, which is the corpus
+  // students actually open, was not one of them.
+  //
+  // The id goes over rather than the wording: `BankQuestionView` carries
+  // `hasText` and no `bodyMd`, so the client has never had the text to send.
+  // `/api/ai/rag-chat` resolves it from the database instead.
+  const { updateData } = useScreenContext();
+  useEffect(() => {
+    if (!selected) {
+      updateData({
+        bankQuestionId: undefined, bankPaperReference: undefined,
+        bankCommandTerms: undefined, bankHasText: undefined,
+      });
+      return;
+    }
+    const paper = selected.paper;
+    updateData({
+      bankQuestionId: selected.id,
+      bankPaperReference: `${paper.subject} ${paper.year} ${paper.session} `
+        + `Paper ${paper.paperNumber} Variant ${paper.variant} Q${selected.rootNumber}`,
+      bankCommandTerms: selected.commandTerms?.length ? selected.commandTerms : undefined,
+      bankHasText: selected.hasText,
+      subjectCode: paper.subject,
+    });
+  }, [selected, updateData]);
 
   const lastPage = Math.max(1, Math.ceil(total / 20));
 

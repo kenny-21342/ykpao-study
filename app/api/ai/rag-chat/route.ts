@@ -22,6 +22,21 @@ import { reportError } from '@/lib/error-reporting';
 export const dynamic = 'force-dynamic';
 
 /**
+ * How much of the serialised screen context reaches the model.
+ *
+ * The schema accepts 6,000 characters and this used to pass on 1,000 of them,
+ * which was invisible while three surfaces reported a single line each. Now
+ * that the bank, mock exams, study views, threads and the resource tree all
+ * report, 1,000 characters silently cut the end off -- and the end is where
+ * `toPromptString` puts the subject and the do-not-answer instruction for a
+ * live exam. Matched to the schema so nothing is accepted and then dropped.
+ */
+const SCREEN_CONTEXT_CHARS = 6000;
+
+/** Cap on the question wording pulled from the database, in characters. */
+const ON_SCREEN_QUESTION_CHARS = 2000;
+
+/**
  * POST /api/ai/rag-chat
  *
  * Retrieval-Augmented Generation chat endpoint.
@@ -72,6 +87,14 @@ const Body = z.object({
   pageCourseId: z.string().min(1).max(100).optional(),
   pageSubjectCode: z.string().max(20).optional(),
   screenContext: z.string().max(6000).optional(), // current page content for context
+  // The bank question on screen, resolved to its wording server-side.
+  //
+  // The client cannot send the text: `BankQuestionView` carries `hasText` and
+  // never `bodyMd`, deliberately, so the practice UI cannot leak a transcript
+  // it has no use for. That left the tutor knowing a student was on "a past
+  // paper question" and nothing about which one, which is the difference
+  // between answering "how do I do this?" and guessing.
+  bankQuestionId: z.number().int().positive().max(100_000_000).optional(),
   mode: z.enum(['explain', 'hint', 'socratic', 'check', 'worked-example']).default('explain'),
   conversationId: z.string().min(1).max(100).optional(),
 });
@@ -247,9 +270,29 @@ export async function POST(req: NextRequest) {
     rejectedCandidates: [],
     personalizationFeatures: personalizationApplied ? ['course-scope', 'mastery-priority', ...(learnerContext.queryRewrite ? ['deterministic-query-rewrite'] : [])] : ['course-scope'],
   } : undefined;
-  const [profile] = await Promise.all([
+  // Resolved in parallel with the profile read, since neither depends on the
+  // other and this sits on the latency path of every message.
+  //
+  // `status: 'published'` is the access control: the same rule the practice UI
+  // enforces, so the tutor cannot be used to read a question that is still
+  // held in review. An empty `bodyMd` resolves to null rather than an empty
+  // string, which is what lets `toPromptString` tell the model to ask the
+  // student instead of inventing the wording.
+  const [profile, onScreenQuestionRow] = await Promise.all([
     prisma.learningProfile.findUnique({ where: { userId: user.id } }),
+    parsed.bankQuestionId
+      ? prisma.bankQuestion.findFirst({
+          where: { id: parsed.bankQuestionId, status: 'published' },
+          select: { bodyMd: true },
+        })
+      : Promise.resolve(null),
   ]);
+  // Only the question, never `answerMd`. The tutor is meant to teach the
+  // student through it, and a mark scheme in the prompt is an answer key one
+  // "just tell me" away.
+  const onScreenQuestion = onScreenQuestionRow?.bodyMd?.trim()
+    ? onScreenQuestionRow.bodyMd.trim().slice(0, ON_SCREEN_QUESTION_CHARS)
+    : null;
   const needsInput = intakeQuestions({ message: parsed.message, intent: rag.intent, profile, courseCount: learnerContext.enrolledCourses.length });
   const todoContextLines = !personalizationApplied
     ? 'Activity-based adaptation is disabled for this course.'
@@ -303,7 +346,7 @@ ${rag.context}
 ${todoContextLines}
 --- END STUDY TASKS ---
 
-${parsed.screenContext ? `\nCurrent screen context (what the student is looking at):\n${parsed.screenContext.slice(0, 1000)}` : ''}
+${parsed.screenContext ? `\nCurrent screen context (what the student is looking at):\n${parsed.screenContext.slice(0, SCREEN_CONTEXT_CHARS)}` : ''}${onScreenQuestion ? `\nThe full wording of the question they are looking at:\n${onScreenQuestion}` : ''}
 
 FORMATTING RULES:
 1. For mathematical formulas, ALWAYS use LaTeX: $x^2$, $$\\frac{a}{b}$$

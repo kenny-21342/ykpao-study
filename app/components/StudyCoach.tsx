@@ -38,6 +38,7 @@ import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import WeaknessHeatmap from './WeaknessHeatmap';
 import { plainTextPreview } from '@/lib/latex';
+import { useScreenContext } from './ScreenContext';
 
 type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery' | 'search';
 
@@ -230,6 +231,13 @@ export default function StudyCoach({
   const { confirm, confirmDialog } = useConfirm();
   const { status } = useSession();
   const [view, setView] = useState<CoachView>(initialView);
+  // Which of the six study views is open. Without it the tutor saw only
+  // "Study", so a student on the mistakes list and a student on the mastery
+  // chart produced identical context.
+  const { updateData } = useScreenContext();
+  useEffect(() => {
+    updateData({ studyView: view });
+  }, [view, updateData]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);

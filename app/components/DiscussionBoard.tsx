@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import NoticeDialog from './NoticeDialog';
 import { useConfirm } from './useConfirm';
+import { useScreenContext } from './ScreenContext';
 import {
   MessageSquare, ArrowLeft, Loader2, AlertCircle,
   Search, Plus, Eye, Reply, Pin, Lock, Trash2, ChevronRight,
@@ -560,6 +561,17 @@ function ThreadView({ threadId, onBack }: { threadId: string; onBack: () => void
   // strings hid moderation from someone the server lets moderate.
   const canModerate = session?.user?.canModerate ?? false;
   const [thread, setThread] = useState<ThreadDetail | null>(null);
+  // The open thread, so "what do you think of this?" has a referent.
+  const { updateData } = useScreenContext();
+  useEffect(() => {
+    updateData({
+      threadTitle: thread?.title,
+      threadSubject: thread?.subject?.code ?? undefined,
+    });
+  }, [thread, updateData]);
+  useEffect(() => () => {
+    updateData({ threadTitle: undefined, threadSubject: undefined });
+  }, [updateData]);
   const [labels, setLabels] = useState<LabelMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

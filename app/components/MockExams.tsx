@@ -7,6 +7,7 @@ import NoticeDialog from './NoticeDialog';
 import { useConfirm } from './useConfirm';
 import PreviewNotice from './PreviewNotice';
 import QuestionScratchpadPanel from './QuestionScratchpadPanel';
+import { useScreenContext } from './ScreenContext';
 import toast from 'react-hot-toast';
 import { normalizeOptionLetter } from '@/lib/bank-grading';
 import {
@@ -1144,6 +1145,41 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
       submittedRef.current = false;
     }
   }
+
+  // Tell the AI tutor which exam question is in front of the student.
+  //
+  // Above the early returns because a hook cannot sit after one, hence the
+  // optional chaining rather than the `item` binding defined further down.
+  //
+  // `content` is sent and `markschemeContent` is not. The item carries both,
+  // and putting the mark scheme into a prompt during a live paper would hand
+  // over the answer through the tutor -- the exact thing the server already
+  // refuses to do by sending option letters without the key.
+  const { updateData } = useScreenContext();
+  const liveItem = exam?.items[activeIdx];
+  useEffect(() => {
+    if (!exam) return;
+    updateData({
+      examTitle: exam.title,
+      examItemPosition: liveItem
+        ? `question ${activeIdx + 1} of ${exam.items.length}`
+          + (liveItem.part ? ` (part ${liveItem.part})` : '')
+        : undefined,
+      examItemMarks: liveItem?.marks ?? null,
+      examSubmitted: Boolean(exam.submittedAt),
+      subjectCode: exam.subjectCode ?? undefined,
+      questionText: liveItem?.content ? liveItem.content.slice(0, 500) : undefined,
+    });
+  }, [exam, liveItem, activeIdx, updateData]);
+
+  useEffect(() => () => {
+    // Leaving the paper must clear it, or the tutor keeps telling a student on
+    // the dashboard that they are mid-exam and refusing to answer.
+    updateData({
+      examTitle: undefined, examItemPosition: undefined, examItemMarks: undefined,
+      examSubmitted: undefined, questionText: undefined,
+    });
+  }, [updateData]);
 
   if (loading) {
     return (

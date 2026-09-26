@@ -368,6 +368,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           courseId: courseId || undefined,
           pageCourseId: screenCtx.context.data.courseId,
           pageSubjectCode: screenCtx.context.data.subjectCode,
+          bankQuestionId: screenCtx.context.data.bankQuestionId,
           conversationId: conversationId || undefined,
           history: conversationId ? undefined : previous.slice(-12).map((item) => ({ role: item.role, content: item.text })),
           screenContext: screenCtx.toPromptString() || undefined,

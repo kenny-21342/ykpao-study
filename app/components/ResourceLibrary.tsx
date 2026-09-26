@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import ResourceFolderPicker from './ResourceFolderPicker';
+import { useScreenContext } from './ScreenContext';
 import {
   ALLOWED_RESOURCE_EXTS as ALLOWED_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
@@ -441,6 +442,16 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderEntries, setFolderEntries] = useState<ResourceFolderEntry[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<ResourceBreadcrumbEntry[]>([]);
+  // Where in the folder tree the student is, so "is there anything here on
+  // electrolysis?" can be answered about the folder they are actually in.
+  const { updateData } = useScreenContext();
+  useEffect(() => {
+    updateData({
+      resourceFolderPath: breadcrumb.length
+        ? ['Root', ...breadcrumb.map((entry) => entry.name)].join(' / ')
+        : undefined,
+    });
+  }, [breadcrumb, updateData]);
   const [query, setQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
