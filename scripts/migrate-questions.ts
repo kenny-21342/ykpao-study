@@ -1,15 +1,22 @@
 import "dotenv/config";
 import Database from "better-sqlite3";
 import pg from "pg";
+
+import { pgConfig } from "../lib/db-ssl";
 import path from "node:path";
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Read and checked in one step. The previous two-step form -- a `string |
+// undefined` const plus a module-level `if` that throws -- left the type
+// unnarrowed at the use site inside `main`, which only started mattering once
+// the URL was passed to `pgConfig(url: string)` rather than to a
+// `connectionString` field that accepted undefined.
+const DATABASE_URL = (() => {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set");
+  return url;
+})();
 const SQLITE_PATH = path.join(process.cwd(), "papers.db");
 const BATCH_SIZE = 2000;
-
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set");
-}
 
 type QuestionRow = {
   id: number;
@@ -38,7 +45,7 @@ async function migrate() {
   console.log(`Source questions: ${total.n.toLocaleString()}`);
 
   const pool = new pg.Pool({
-    connectionString: DATABASE_URL,
+    ...pgConfig(DATABASE_URL),
     connectionTimeoutMillis: 15000,
     max: 4,
   });

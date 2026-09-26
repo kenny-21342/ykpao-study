@@ -33,6 +33,8 @@ import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import pg from 'pg';
 
+import { pgConfig } from '../lib/db-ssl.ts';
+
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const sourceIdx = args.indexOf('--source');
@@ -55,7 +57,7 @@ if (!existsSync(sourcePath)) {
 }
 
 const src = new Database(sourcePath, { readonly: true });
-const client = new pg.Client({ connectionString: url });
+const client = new pg.Client(pgConfig(url));
 
 const counts = async () => {
   const { rows } = await client.query(`

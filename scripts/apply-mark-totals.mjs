@@ -19,6 +19,8 @@
 import { readFileSync } from 'node:fs';
 import pg from 'pg';
 
+import { pgConfig } from '../lib/db-ssl.ts';
+
 const url = process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL;
 if (!url) {
   console.error('Set DIRECT_DATABASE_URL (or DATABASE_URL) first.');
@@ -30,7 +32,7 @@ if (url.includes('-pooler')) {
 }
 
 const apply = process.argv.includes('--apply');
-const client = new pg.Client({ connectionString: url });
+const client = new pg.Client(pgConfig(url));
 
 const show = (rows) => {
   if (!rows.length) return console.log('  (no rows)');

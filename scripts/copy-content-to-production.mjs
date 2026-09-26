@@ -15,6 +15,8 @@
  * target, so a partial run cannot double-insert.
  */
 import pg from 'pg';
+
+import { pgConfig } from '../lib/db-ssl.ts';
 import 'dotenv/config';
 
 const BATCH = 500;
@@ -127,8 +129,8 @@ async function copyTable(source, target, table) {
 }
 
 async function main() {
-  const source = new pg.Client({ connectionString: SOURCE_URL });
-  const target = new pg.Client({ connectionString: TARGET_URL });
+  const source = new pg.Client(pgConfig(SOURCE_URL));
+  const target = new pg.Client(pgConfig(TARGET_URL));
   await source.connect();
   await target.connect();
 

@@ -54,6 +54,8 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import pg from 'pg';
 
+import { pgConfig } from '../lib/db-ssl.ts';
+
 const args = process.argv.slice(2);
 const assumeYes = args.includes('--yes');
 const inspect = args.includes('--inspect');
@@ -171,7 +173,7 @@ if (!assumeYes && !inspect) {
   }
 }
 
-const client = new pg.Client({ connectionString });
+const client = new pg.Client(pgConfig(connectionString));
 await client.connect();
 
 try {
