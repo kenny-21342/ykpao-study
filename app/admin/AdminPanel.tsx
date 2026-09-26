@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, ShieldCheck, Megaphone,
-  FolderOpen, Activity, ArrowLeft, Menu, X, Wallet,
+  FolderOpen, Activity, ArrowLeft, Menu, X, Wallet, ListChecks,
 } from 'lucide-react';
 import AdminDashboard from './sections/AdminDashboard';
 import UserManagement from './sections/UserManagement';
@@ -13,12 +13,14 @@ import AnnouncementManager from './sections/AnnouncementManager';
 import ResourceManager from './sections/ResourceManager';
 import SystemMonitor from './sections/SystemMonitor';
 import AiAccessManager from './sections/AiAccessManager';
+import BankReview from './sections/BankReview';
 
 type Section =
   | 'dashboard'
   | 'users'
   | 'ai-access'
   | 'moderation'
+  | 'bank-review'
   | 'announcements'
   | 'resources'
   | 'system';
@@ -28,6 +30,7 @@ const NAV: { key: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { key: 'users', label: 'Users', icon: Users },
   { key: 'ai-access', label: 'AI Access', icon: Wallet },
   { key: 'moderation', label: 'Moderation', icon: ShieldCheck },
+  { key: 'bank-review', label: 'Bank Review', icon: ListChecks },
   { key: 'announcements', label: 'Announcements', icon: Megaphone },
   { key: 'resources', label: 'Resources', icon: FolderOpen },
   { key: 'system', label: 'System', icon: Activity },
@@ -120,6 +123,7 @@ export default function AdminPanel() {
           {section === 'users' && <UserManagement />}
           {section === 'ai-access' && <AiAccessManager />}
           {section === 'moderation' && <ContentModeration />}
+          {section === 'bank-review' && <BankReview />}
           {section === 'announcements' && <AnnouncementManager />}
           {section === 'resources' && <ResourceManager />}
           {section === 'system' && <SystemMonitor />}

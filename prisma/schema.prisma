@@ -1501,6 +1501,8 @@ model BankQuestion {
   pageEnd             Int?
   confidence          Float    @default(0)
   status              String   @default("needs_review") // published | needs_review
+  reviewedBy          String?
+  reviewedAt          DateTime?
   difficulty          Int? // 1-5
   difficultySource    String? // llm | empirical | manual
   difficultyRationale String?
@@ -1804,6 +1806,9 @@ model BankReviewFlag {
   message    String
   evidence   String? // JSON
   status     String   @default("open") // open | resolved | dismissed
+  reviewedBy String?
+  reviewedAt DateTime?
+  reviewNote String?
   createdAt  DateTime @default(now())
 
   question BankQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -1811,6 +1816,7 @@ model BankReviewFlag {
 
   @@index([questionId])
   @@index([status, issueType])
+  @@index([paperId, status, severity])
   @@map("bank_review_flags")
 }
 
