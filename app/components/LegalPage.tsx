@@ -14,13 +14,20 @@ import { GraduationCap, AlertTriangle } from 'lucide-react';
  *
  * These pages were drafted from what the code actually does, which is the half
  * that can be checked against the repository. The half that cannot -- how long
- * data is kept, who to contact, whose law governs a dispute -- is marked
- * REVIEW in the copy and is the site owner's to decide.
+ * data is kept, who to contact, whose law governs a dispute, whether the school
+ * stands behind any of it -- was drafted too, conservatively, but is the site
+ * owner's to confirm or correct.
  *
- * **Flip this to `false` once that copy is settled**, and search both pages for
- * "REVIEW" first: shipping a policy that promises something untrue is worse
- * than shipping no policy, and worse still when the readers are students at
- * one school who can all be identified.
+ * **Flip this to `false` only once he has read both pages end to end.** Four
+ * claims are the ones to check, because each is a promise the platform then has
+ * to keep: the 30-day deletion window and the 90-day backup window in
+ * /privacy (the backup window needs an object-storage lifecycle rule to be
+ * true -- `docs/PRODUCTION_OPERATIONS.md` says the backup workflow deletes
+ * nothing by itself), the 30-day shutdown notice in /terms, and the statement
+ * that this is a student project the school does not operate or endorse.
+ * Shipping a policy that promises something untrue is worse than shipping no
+ * policy, and worse still when the readers are students at one school who can
+ * all be identified.
  */
 export const LEGAL_COPY_IS_DRAFT = true;
 
@@ -61,12 +68,9 @@ export function LegalPage({
             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
             <p className="text-sm text-warning leading-relaxed">
               <span className="font-semibold">Draft.</span> This text describes how the
-              platform currently works, but it has not been reviewed and is not yet a
-              binding agreement. Points still to be settled are marked{' '}
-              <span className="font-mono text-xs px-1 py-0.5 rounded-sm bg-warning-subtle">
-                REVIEW
-              </span>
-              .
+              platform currently works, and every commitment in it is one the operator
+              intends to keep, but it has not yet been confirmed by him and is not yet a
+              binding agreement.
             </p>
           </div>
         )}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LegalPage, Section, Review } from '@/app/components/LegalPage';
+import { LegalPage, Section } from '@/app/components/LegalPage';
 
 export const metadata: Metadata = {
   title: 'Terms — YKPao Study',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  */
 export default function TermsOfService() {
   return (
-    <LegalPage title="Terms of use" updated="13 September 2026">
+    <LegalPage title="Terms of use" updated="26 September 2026">
       <Section heading="The short version">
         <p>
           Use it to study. Do not use it to cheat, to harass anyone, or to scrape the
@@ -28,11 +28,14 @@ export default function TermsOfService() {
 
       <Section heading="1. Who can use it">
         <p>
-          Accounts are for students and staff{' '}
-          <Review>
-            name exactly who is eligible — one school, one year group, anyone with a
-            school address — and what happens to an account when that person leaves
-          </Review>
+          Accounts are for students and staff at YKPao School. You do not need a school
+          email address to register — a personal one works — but the platform is built for
+          that one school, and accounts that clearly belong to nobody there may be removed.
+        </p>
+        <p>
+          Leaving the school does not close your account automatically. You keep it, and
+          your work, until you ask for it to be deleted; the operator may also close an
+          account that has gone unused for a long time, after warning the address on it.
         </p>
         <p>
           You must confirm your email address before you can sign in, and you must give
@@ -118,20 +121,35 @@ export default function TermsOfService() {
 
       <Section heading="7. Availability">
         <p>
-          The platform may be unavailable, may change, and may be withdrawn.{' '}
-          <Review>
-            say what notice students get before it is shut down, and whether their work is
-            exported for them first
-          </Review>
+          The platform may be unavailable, may change, and may be withdrawn. It is run by
+          one student, on paid infrastructure, with no service guarantee: expect occasional
+          downtime, and expect features to appear and disappear.
+        </p>
+        <p>
+          If it is going to be shut down for good, a notice will appear on the site and be
+          sent to the address on your account at least 30 days beforehand. There is no
+          one-click export, so within that window ask at the address below and you will be
+          sent a copy of your own notes, attempts and uploads. Unplanned outages get no
+          notice, because nobody has any.
         </p>
       </Section>
 
       <Section heading="8. Questions and disputes">
         <p>
-          <Review>
-            a contact address for complaints, and whether disputes are handled through
-            the school or under a named jurisdiction
-          </Review>
+          Questions, complaints and requests about your data all go to{' '}
+          <a className="underline" href="mailto:linhongsheng07@gmail.com">
+            linhongsheng07@gmail.com
+          </a>
+          , which reaches Kenny Lin, who built and runs the platform. Raise a problem there
+          first — most of them are bugs, and a bug gets fixed faster than it gets argued
+          about.
+        </p>
+        <p>
+          This is not a school system, so the school&apos;s complaints procedures do not
+          cover it, and there is no appeals body above the operator. These terms are
+          governed by the laws of the People&apos;s Republic of China, and anything that
+          cannot be settled directly belongs to the courts of Shanghai. Nothing here limits
+          a right you hold under law that cannot be waived by agreement.
         </p>
       </Section>
     </LegalPage>

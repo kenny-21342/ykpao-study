@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LegalPage, Section, Review } from '@/app/components/LegalPage';
+import { LegalPage, Section } from '@/app/components/LegalPage';
 
 export const metadata: Metadata = {
   title: 'Privacy — YKPao Study',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  */
 export default function PrivacyPolicy() {
   return (
-    <LegalPage title="Privacy" updated="13 September 2026">
+    <LegalPage title="Privacy" updated="26 September 2026">
       <Section heading="The short version">
         <p>
           This is a study tool run by a student, not a company. It stores your account,
@@ -127,11 +127,22 @@ export default function PrivacyPolicy() {
 
       <Section heading="6. How long it is kept">
         <p>
-          Your account and work are kept while the account exists.{' '}
-          <Review>
-            decide a retention period for attempts, usage records and deleted accounts,
-            and whether anything is kept after a student leaves the school
-          </Review>
+          Your account and work are kept for as long as the account exists. If you ask
+          for your account to be deleted, it is removed along with everything attached
+          to it — your attempts, notes, uploads, scratchpads and posts — within 30 days
+          of the request.
+        </p>
+        <p>
+          Two things outlive that. Encrypted database backups are kept for up to 90 days
+          before being deleted, so a deleted account can survive in a backup for that
+          long; backups are never used for anything but restoring the service. And usage
+          records, which hold the size and cost of an AI request but none of its content,
+          may be kept after deletion with the account identifier removed, so running
+          costs can still be accounted for.
+        </p>
+        <p>
+          Leaving the school does not delete anything by itself. If you want your account
+          removed when you leave, ask.
         </p>
       </Section>
 
@@ -139,18 +150,27 @@ export default function PrivacyPolicy() {
         <p>
           You can edit or delete your notes, uploads and posts yourself from inside the
           app at any time. For a copy of everything held about you, or for the account
-          itself to be deleted, contact{' '}
-          <Review>a contact address for data requests, and who answers them</Review>
+          itself to be deleted, email{' '}
+          <a className="underline" href="mailto:linhongsheng07@gmail.com">
+            linhongsheng07@gmail.com
+          </a>
+          . That address reaches Kenny Lin, who built and runs the platform and is the
+          only person with administrative access to it. Expect a reply within 30 days.
         </p>
       </Section>
 
       <Section heading="8. Age and school involvement">
         <p>
-          <Review>
-            state whether this is an official school system or a student project used
-            with permission, whether the school has approved it for under-18 students,
-            and whether parental consent is needed
-          </Review>
+          This is a student project, not an official school system. It is built and run
+          by a student at YKPao School, it is not operated, endorsed or supervised by the
+          school, and the school holds no responsibility for it. Your schoolwork, grades
+          and school records are not connected to it in any way.
+        </p>
+        <p>
+          It is intended for students at the school, most of whom are under 18. If you are
+          under 18, read this page with a parent or guardian before you register, and do
+          not register if they object. A parent or guardian may ask for their child&apos;s
+          account and data to be deleted using the address above, and it will be.
         </p>
       </Section>
 
