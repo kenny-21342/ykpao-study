@@ -1042,7 +1042,7 @@ export default function QuestionsDatabase({
                     {hints.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {hints.map((hint) => (
-                          <div key={hint.level} className="p-3 bg-white/80 dark:bg-gray-900/70 border border-warning-border rounded-md">
+                          <div key={hint.level} className="p-3 bg-surface border border-warning-border rounded-md">
                             <p className="text-[10px] font-bold uppercase text-warning mb-1">Level {hint.level}</p>
                             <FormattedMessage content={hint.text} />
                           </div>

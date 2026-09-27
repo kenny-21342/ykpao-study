@@ -114,7 +114,7 @@ function ZoomOverlay({
       <button
         type="button"
         onClick={onClose}
-        className="sticky top-2 left-full z-10 mr-2 rounded-full bg-white/90 p-2 text-primary shadow-overlay"
+        className="sticky top-2 left-full z-10 mr-2 rounded-full bg-surface/90 p-2 text-primary shadow-overlay"
         aria-label="Close"
       >
         <X className="h-5 w-5" aria-hidden="true" />

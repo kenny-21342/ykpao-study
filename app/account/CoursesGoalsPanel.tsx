@@ -85,14 +85,14 @@ export default function CoursesGoalsPanel() {
   if (loading) return <div className="flex items-center gap-2 text-sm text-muted"><Loader2 className="w-4 h-4 animate-spin" /> Loading courses…</div>;
 
   return (
-    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-5">
+    <section className="border border-line bg-surface rounded-lg p-6 space-y-5">
       <div className="flex items-center gap-2">
         <BookOpen className="w-5 h-5 text-accent-text" />
         <h2 className="text-lg font-bold text-primary">Courses &amp; goals</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {catalog.map((course) => (
-          <button key={course.id} type="button" onClick={() => toggle(course.id)} className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${selected.has(course.id) ? 'border-accent bg-accent-subtle' : 'border-line bg-white/50 dark:bg-gray-900/30'}`}>
+          <button key={course.id} type="button" onClick={() => toggle(course.id)} className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${selected.has(course.id) ? 'border-accent bg-accent-subtle' : 'border-line bg-surface'}`}>
             <span className="block text-sm font-medium text-primary">{course.name}</span>
             <span className="text-xs text-muted">{course.level} · Syllabus {course.curriculumScopes[0]?.subjectCode ?? 'mapping needed'}</span>
           </button>

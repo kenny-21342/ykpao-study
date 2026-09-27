@@ -1652,7 +1652,7 @@ export default function NotesTextbookPage({
               />
               )}
               {drawingUploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm font-medium text-secondary backdrop-blur-sm dark:bg-gray-900/70">
+                <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm font-medium text-secondary backdrop-blur-sm">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading drawing
                 </div>
               )}

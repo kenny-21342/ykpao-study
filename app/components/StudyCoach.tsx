@@ -403,8 +403,8 @@ export default function StudyCoach({
   }
 
   return (
-    <div className="h-full flex flex-col bg-white/50 dark:bg-gray-950/30">
-      <div className="border-b border-line bg-white/80 dark:bg-gray-900/80 px-4 md:px-6">
+    <div className="h-full flex flex-col bg-surface-raised">
+      <div className="border-b border-line bg-surface px-4 md:px-6">
         <div className="flex items-center justify-between gap-4 min-h-16">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight text-primary">Study</h1>
@@ -522,7 +522,7 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
               {busy === 'generate' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Build week
             </button>
           </div>
-          <div className="border-y border-line divide-y divide-line bg-white/70 dark:bg-gray-900/50">
+          <div className="border-y border-line divide-y divide-line bg-surface">
             {tasks.length === 0 ? <EmptyState icon={CheckCircle2} title="Nothing is due" body="Generate a weekly plan or add a task from the Plan view." /> : tasks.map((task) => (
               <div key={task.id} className="flex items-center gap-3 py-3 px-2">
                 <button onClick={() => onComplete(task.id, 'completed')} disabled={busy === task.id} title="Complete task" aria-label="Complete task" className="w-8 h-8 grid place-items-center flex-none text-muted hover:text-accent-text">

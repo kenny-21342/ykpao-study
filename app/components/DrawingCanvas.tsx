@@ -647,7 +647,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               onChange={(e) => updateTextBox(tb.id, e.target.value)}
               onBlur={() => commitTextBox(tb.id, tb.text)}
               placeholder="e.g. Force, angle, or x = 3"
-              className="absolute bg-transparent border border-dashed border-strong rounded-sm p-1 resize-none outline-none focus:border-accent focus:bg-white/50"
+              className="absolute bg-transparent border border-dashed border-strong rounded-sm p-1 resize-none outline-none focus:border-accent focus:bg-surface"
               style={{
                 left: `${tb.x}px`,
                 top: `${tb.y}px`,

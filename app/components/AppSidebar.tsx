@@ -240,7 +240,7 @@ export default function AppSidebar({
     <>
     <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/30 dark:border-white/10 shadow-overlay transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col border-r border-line bg-surface/80 backdrop-blur-xl shadow-overlay lg:shadow-none transition-transform duration-300 lg:static lg:max-w-none lg:translate-x-0 lg:transition-all ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'lg:w-20' : 'lg:w-64'}`}
     >
@@ -254,7 +254,7 @@ export default function AppSidebar({
         <X className="h-5 w-5" />
       </button>
 
-      <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-white/30 dark:border-white/10`}>
+      <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-line`}>
         {/* A button (or link), not a clickable div: as a div it was invisible
             to keyboard and screen-reader users even though it is the app's
             "home" control. */}
@@ -318,7 +318,7 @@ export default function AppSidebar({
         {navItem('discussions', 'Discussion Board', MessagesSquare)}
       </nav>
 
-      <div className={`${collapsed ? 'px-2 py-4' : 'p-4'} border-t border-white/30 dark:border-white/10`}>
+      <div className={`${collapsed ? 'px-2 py-4' : 'p-4'} border-t border-line`}>
         {isSessionLoading ? (
           // A placeholder, not the signed-out buttons: offering "Sign In" to
           // someone who is already signed in is the whole bug.

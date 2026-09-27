@@ -238,7 +238,7 @@ export default function AccountSettingsPage() {
         )}
 
         {/* Profile section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
+        <div className="border border-line bg-surface rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-accent-text" />
             <h2 className="text-lg font-bold text-primary">Profile</h2>
@@ -365,7 +365,7 @@ export default function AccountSettingsPage() {
         <AiProviderPanel />
 
         {/* Password section */}
-        <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
+        <div className="border border-line bg-surface rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-accent-text" />
             <h2 className="text-lg font-bold text-primary">Change Password</h2>

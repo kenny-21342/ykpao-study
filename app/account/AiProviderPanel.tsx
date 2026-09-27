@@ -211,7 +211,7 @@ export default function AiProviderPanel() {
   const chosen = PROVIDERS.find((candidate) => candidate.id === provider) ?? null;
 
   return (
-    <section className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-lg p-6 space-y-4">
+    <section className="border border-line bg-surface rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-accent-text" />
         <h2 className="text-lg font-bold text-primary">AI Provider</h2>
@@ -431,7 +431,7 @@ export default function AiProviderPanel() {
               onClick={testKey}
               disabled={testing || saving || !state?.hasOwnKey}
               title={state?.hasOwnKey ? undefined : 'Save your own API key first'} aria-label={state?.hasOwnKey ? undefined : 'Save your own API key first'}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-secondary bg-white/70 border border-strong rounded-lg hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-secondary bg-surface border border-strong rounded-lg hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
               {testing ? 'Testing…' : 'Test my key'}
