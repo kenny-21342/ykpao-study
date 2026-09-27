@@ -166,3 +166,6 @@ pdf_extraction/bank/.transcription.lock/
 # ops/syllabus/sources.json. The extracted text is committed instead, so a
 # change to the parser can be reviewed without fetching anything.
 /ops/syllabus/pdf/
+
+# Runtime log of scripts/watch-tagging-then-answer-keys.sh, not source.
+pdf_extraction/bank/answer-keys-watch.log
