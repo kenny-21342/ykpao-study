@@ -29,6 +29,7 @@
 import { Prisma } from '@prisma/client';
 import { applyOfficialFormat, type OfficialPaperTemplate } from '@/lib/paper-format-overlay';
 import { officialFormat } from '@/lib/paper-formats';
+import { toBankSubjectCodes } from '@/lib/bank-questions';
 import {
   derivePaperTemplates,
   MIN_PAPERS,
@@ -151,6 +152,31 @@ export async function loadPaperTemplates(subjectCode: string): Promise<OfficialP
   })();
   inFlight.set(subjectCode, pending);
   return pending;
+}
+
+/**
+ * Templates for a catalogue subject code, which is not always the bank's.
+ *
+ * The two vocabularies differ for the IB: the course catalogue says
+ * `ib-physics` and `bank_subjects.code` says `physics`. `toBankSubjectCodes`
+ * exists to bridge that and returns every plausible code, but it returns the
+ * catalogue code *first* -- so both callers took `[0]` and asked the bank for
+ * `ib-physics`, which matches nothing.
+ *
+ * For Cambridge `[0]` is already the bank code, so the bug was invisible on
+ * every CAIE subject and total on every IB one: an IB student was offered no
+ * paper at all, and generation silently fell back to packing against a mark
+ * total. Trying the candidates in turn is order-independent, and the miss
+ * costs one cached lookup.
+ */
+export async function loadPaperTemplatesForCatalogCode(
+  catalogCode: string,
+): Promise<{ bankCode: string; templates: OfficialPaperTemplate[] }> {
+  for (const code of toBankSubjectCodes([catalogCode])) {
+    const templates = await loadPaperTemplates(code);
+    if (templates.length > 0) return { bankCode: code, templates };
+  }
+  return { bankCode: catalogCode, templates: [] };
 }
 
 /** Clears the memo. Tests only. */

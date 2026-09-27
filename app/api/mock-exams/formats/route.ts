@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
-import { toBankSubjectCodes } from '@/lib/bank-questions';
-import { chooseTemplate, loadPaperTemplates } from '@/lib/paper-templates';
+import { chooseTemplate, loadPaperTemplatesForCatalogCode } from '@/lib/paper-templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +29,7 @@ export async function GET(req: NextRequest) {
   const level = searchParams.get('level')?.trim() || null;
   if (!subjectCode) return NextResponse.json({ error: 'subjectCode is required' }, { status: 400 });
 
-  const bankCode = toBankSubjectCodes([subjectCode])[0] ?? subjectCode;
-  const templates = await loadPaperTemplates(bankCode);
+  const { templates } = await loadPaperTemplatesForCatalogCode(subjectCode);
   const preferred = chooseTemplate(templates, { level });
 
   // Filtered to the learner's level where one is given, because an IB student

@@ -7,7 +7,7 @@ import { createPredictedPaper } from '@/lib/predicted-paper';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import { MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
 import { selectBankQuestions, selectByTemplate, totalMarksOf } from '@/lib/mock-exam-selection';
-import { chooseTemplate, loadPaperTemplates } from '@/lib/paper-templates';
+import { chooseTemplate, loadPaperTemplatesForCatalogCode } from '@/lib/paper-templates';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 
 export const dynamic = 'force-dynamic';
@@ -160,7 +160,9 @@ export async function POST(req: Request) {
     const template = paperNumber === undefined || paperNumber === null
       ? null
       : chooseTemplate(
-          await loadPaperTemplates(bankSubjectCodes[0] ?? resolvedSubjectCode),
+          (await loadPaperTemplatesForCatalogCode(
+            bankSubjectCodes[0] ?? resolvedSubjectCode,
+          )).templates,
           { level: learnerContext.activeCourse?.level, paperNumber },
         );
 

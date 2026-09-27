@@ -168,3 +168,37 @@ test('an uncorrected template is judged on its own marks', () => {
   assert.equal(applyOfficialFormat(template({ slots }), null).shapeCredible, false);
   assert.equal(applyOfficialFormat(template(), null).shapeCredible, true);
 });
+
+test('no route asks the bank for a catalogue subject code', async () => {
+  // The two vocabularies differ for the IB: the catalogue says `ib-physics`
+  // and `bank_subjects.code` says `physics`. `toBankSubjectCodes` bridges them
+  // but returns the catalogue code FIRST, so both routes took `[0]` and asked
+  // the bank for `ib-physics`, which matches nothing.
+  //
+  // For Cambridge `[0]` is already the bank code, so this was invisible on
+  // every CAIE subject and total on every IB one -- an IB student was offered
+  // no paper at all, and generation fell back to packing against a mark total
+  // without saying so. It was found in the browser, not by a test, which is
+  // why there is now a test.
+  const { readFile } = await import('node:fs/promises');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+  for (const file of [
+    'app/api/mock-exams/formats/route.ts',
+    'app/api/mock-exams/generate/route.ts',
+  ]) {
+    const src = await readFile(join(root, file), 'utf8');
+    assert.match(
+      src,
+      /loadPaperTemplatesForCatalogCode/,
+      `${file} must resolve the bank code rather than assume one`,
+    );
+    assert.doesNotMatch(
+      src,
+      /toBankSubjectCodes\([^)]*\)\s*\[0\]/,
+      `${file} must not take the first candidate code as the bank's`,
+    );
+  }
+});
