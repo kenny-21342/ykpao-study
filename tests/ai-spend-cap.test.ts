@@ -81,3 +81,37 @@ test("a student's own key is not charged against the owner's budget", async () =
   // that one protects this platform rather than the wallet.
   assert.match(text, /aiLimiter\.check\(`ai-minute:\$\{userId\}`\)/);
 });
+
+test('the monthly cap is off only when someone explicitly asks for it', async () => {
+  /**
+   * Added 27 Sep 2026 at the owner's request, after the $5 default locked his
+   * own account out mid-testing: the reservation is a flat $0.02 per call and
+   * is never refunded, so it is really a 250-calls-a-month quota.
+   *
+   * The invariant that matters is the one above — an unset variable still
+   * falls back to a real ceiling. Off has to be a decision someone typed, not
+   * a state the system can drift into by losing a value.
+   */
+  const { isMonthlyCapDisabled } = await import('../lib/spend-cap.ts');
+  for (const value of [undefined, '', '5', '0.5', '100', 'abc', ' ']) {
+    assert.equal(isMonthlyCapDisabled(value), false, `"${value}" must not disable the cap`);
+  }
+  for (const value of ['off', 'OFF', ' off ', '0', 'none', 'unlimited']) {
+    assert.equal(isMonthlyCapDisabled(value), true, `"${value}" must disable the cap`);
+  }
+});
+
+test('turning the monthly cap off does not touch the per-minute limiter', async () => {
+  // The throttle and the ceiling are different controls doing different jobs.
+  // With the ceiling off, `aiLimiter` is the only thing left, so it must not
+  // be inside the same early return.
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  const gate = text.slice(text.indexOf('export async function checkAiAllowance'));
+  const limiterAt = gate.indexOf('aiLimiter.check');
+  const capOffAt = gate.indexOf('monthlyCapOff()');
+  assert.ok(limiterAt > -1 && capOffAt > -1);
+  assert.ok(
+    limiterAt < capOffAt,
+    'the per-minute check must run before the cap can be short-circuited',
+  );
+});

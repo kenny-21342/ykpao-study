@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { estimateCostUsd } from './ai-pricing.ts';
+import { isMonthlyCapDisabled } from './spend-cap.ts';
 import { sharedModelIsFree } from './ai-credentials.ts';
 
 /**
@@ -232,6 +233,33 @@ const AI_MONTHLY_USER_SPEND_LIMIT_USD = positiveNumber(
   process.env.AI_MONTHLY_USER_SPEND_LIMIT_USD,
   5,
 );
+
+let warnedCapOff = false;
+
+/**
+ * Whether to skip the monthly reservation entirely.
+ *
+ * The predicate itself lives in `lib/spend-cap.ts` so it can be tested; this
+ * reads the environment per call, matching the other env reads here, so a
+ * process that populates its environment late sees what the request path will.
+ *
+ * **What still protects the owner when this is off.** `aiLimiter` is untouched
+ * and caps every account at 20 AI requests a minute, so no single student can
+ * burn credit quickly. What disappears is the *cumulative* bound: nothing then
+ * stops a year group spending steadily over a month, and there is no global
+ * ceiling behind it — this cap has only ever been per user.
+ */
+function monthlyCapOff(): boolean {
+  const off = isMonthlyCapDisabled(process.env.AI_MONTHLY_USER_SPEND_LIMIT_USD);
+  if (off && !warnedCapOff) {
+    warnedCapOff = true;
+    console.warn(
+      '[rate-limit] AI_MONTHLY_USER_SPEND_LIMIT_USD is off: shared-key AI spend '
+      + 'is bounded only by the per-minute limiter, with no monthly ceiling.',
+    );
+  }
+  return off;
+}
 const AI_REQUEST_RESERVE_USD = positiveNumber(
   process.env.AI_REQUEST_RESERVE_USD,
   0.02,
@@ -313,6 +341,10 @@ export async function checkAiAllowance(
 
   // A user's own key never touches the owner's monthly budget.
   if (options.source === 'user') return { allowed: true };
+
+  // Switched off deliberately. The per-minute limiter above still applies, so
+  // this removes the monthly ceiling and not the throttle.
+  if (monthlyCapOff()) return { allowed: true };
 
   // Neither does a shared key with no bill behind it. The reservation below is
   // a flat AI_REQUEST_RESERVE_USD ($0.02) per request against
