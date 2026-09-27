@@ -311,3 +311,37 @@ export function resolveSharedModel(
   // gateway is more useful than a refusal invented here.
   return anyUp?.id ?? configured;
 }
+
+/**
+ * A second model to try after the first one failed.
+ *
+ * The catalogue's `up` flag comes from someone else's uptime page, polled at
+ * best every 60s, and the gateway lists models whose channel it cannot
+ * actually route — `503 No available channel for model X under group Y` is an
+ * ordinary answer here, not a rare one. So a model can be listed, watched, and
+ * shown as up, and still fail the moment a student asks it something. One
+ * retry on a different model turns that from a lost question into a slower
+ * one.
+ *
+ * Order matters, and "the first model that is up" is the wrong answer:
+ * `mergeCatalogue` sorts by vendor, so the first entry is whichever vendor
+ * sorts earliest — Anthropic today — which is exactly the group whose channels
+ * were failing. Prefer the configured model, then the fallback (documented
+ * above as the model least likely to make a student wait), and only then
+ * anything else.
+ *
+ * Returns null when there is nothing else to try, which is the caller's signal
+ * to surface the original error rather than invent a second one.
+ */
+export function nextSharedModel(
+  models: readonly SharedModelChoice[],
+  failed: string,
+  configured: string,
+): string | null {
+  const usable = models.filter((model) => model.up && model.id !== failed);
+  const preferred =
+    usable.find((model) => model.id === configured) ??
+    usable.find((model) => FALLBACK_MODELS.some((fallback) => fallback.id === model.id)) ??
+    usable[0];
+  return preferred?.id ?? null;
+}

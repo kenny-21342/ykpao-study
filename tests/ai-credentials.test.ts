@@ -790,7 +790,7 @@ test('both the primary and the interactive model must be free to skip the cap', 
  * hardcoded, and these pin the two things that would fail quietly — parsing
  * someone else's payload shape, and resolving a model that cannot answer.
  */
-const { watchedFrom, mergeCatalogue, resolveSharedModel, modelLabel, vendorFor, FALLBACK_MODELS } =
+const { watchedFrom, mergeCatalogue, resolveSharedModel, nextSharedModel, modelLabel, vendorFor, FALLBACK_MODELS } =
   await import('../lib/shared-models.ts');
 
 /** A trimmed copy of the real status-page payloads, including the probe group. */
@@ -1079,4 +1079,87 @@ test('the picker’s label must follow the same three steps as the server', () =
   assert.equal(resolveSharedModel(models, 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
   // Only when the configured model is unusable does "anything up" apply.
   assert.equal(resolveSharedModel(models, 'gpt-6-astra', 'gpt-6-astra'), 'gemini-2.5-flash');
+});
+
+
+/**
+ * The retry model.
+ *
+ * `resolveSharedModel` routes around what the status page says is down.
+ * `nextSharedModel` covers what it cannot see: a model the gateway lists and
+ * the page shows as up, which fails at call time anyway. Verified against the
+ * live gateway on 27 Sep 2026, which answered `503 No available channel for
+ * model claude-sonnet-4-6 under group Codex (distributor)` for a model its own
+ * status page had green.
+ */
+test('the retry never re-sends the model that just failed', () => {
+  const models = mergeCatalogue(['gpt-4o-mini', 'gpt-6-astra'], new Map());
+  assert.equal(nextSharedModel(models, 'gpt-4o-mini', 'gpt-4o-mini'), 'gpt-6-astra');
+  assert.equal(nextSharedModel(models, 'gpt-6-astra', 'gpt-6-astra'), 'gpt-4o-mini');
+});
+
+test('the retry prefers the configured model over whichever vendor sorts first', () => {
+  /**
+   * The bug this pins. `mergeCatalogue` sorts by vendor, so "the first model
+   * that is up" means Anthropic — and Anthropic's channels are exactly what
+   * was failing when this was written. Taking `usable[0]` would have retried
+   * into the same outage on every request.
+   */
+  const models = mergeCatalogue(['claude-sonnet-4-6', 'gpt-4o-mini', 'gpt-6-astra'], new Map());
+  assert.equal(models[0].vendor, 'Anthropic', 'fixture no longer exercises the sort order');
+  assert.equal(nextSharedModel(models, 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
+});
+
+test('the retry falls back to the fast model when the configured one is the one that failed', () => {
+  // FALLBACK_MODELS holds the model measured least likely to make a student
+  // wait, which is the right second guess when there is nothing better.
+  const models = mergeCatalogue(['claude-sonnet-4-6', 'gpt-4o-mini', 'gpt-6-astra'], new Map());
+  assert.equal(nextSharedModel(models, 'gpt-6-astra', 'gpt-6-astra'), FALLBACK_MODELS[0].id);
+});
+
+test('the retry skips models the status page reports down', () => {
+  // `openai/gpt-oss-120b` is watched and its last beat failed.
+  const models = mergeCatalogue(['gpt-4o-mini', 'openai/gpt-oss-120b'], watched());
+  assert.equal(nextSharedModel(models, 'gpt-4o-mini', 'gpt-4o-mini'), null);
+});
+
+test('the retry gives up rather than inventing a second failure', () => {
+  // Nothing else to try must be null, not the failed model again: the caller
+  // surfaces the original error, which is the one that actually explains
+  // what went wrong.
+  assert.equal(nextSharedModel([], 'gpt-4o-mini', 'gpt-4o-mini'), null);
+  const only = mergeCatalogue(['gpt-4o-mini'], new Map());
+  assert.equal(nextSharedModel(only, 'gpt-4o-mini', 'gpt-4o-mini'), null);
+});
+
+test('the tutor route retries once, on a different model, and books both attempts', async () => {
+  /**
+   * A source check, not a dataflow proof — the same guardrail shape as the
+   * client-supplied-model scan above, and for the same reason: the unit tests
+   * prove `nextSharedModel` picks correctly and prove nothing about any route
+   * calling it.
+   *
+   * Three properties, each of which was a real design decision:
+   *  - the retry exists at all;
+   *  - the failed attempt is booked as `rag-chat:error`, so a model failing
+   *    every request cannot look healthy on the admin's error counts;
+   *  - the success row names the model that answered, not the one requested.
+   */
+  const { readFile } = await import('node:fs/promises');
+  const path = await import('node:path');
+  const src = await readFile(
+    path.resolve(import.meta.dirname, '..', 'app', 'api', 'ai', 'rag-chat', 'route.ts'),
+    'utf8',
+  );
+  assert.match(src, /nextSharedModel\s*\(/, 'the tutor route no longer retries on a second model');
+  assert.match(
+    src,
+    /feature:\s*'rag-chat:error',\s*model:\s*credential\.model/,
+    'the failed first attempt is no longer recorded against the model that failed',
+  );
+  assert.match(
+    src,
+    /feature:\s*'rag-chat',[\s\S]{0,400}?model:\s*answeredWith/,
+    'the usage row no longer names the model that actually answered',
+  );
 });

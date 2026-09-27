@@ -5,7 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
 import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
-import { loadSharedModels, resolveSharedModel } from '@/lib/shared-models';
+import { loadSharedModels, nextSharedModel, resolveSharedModel } from '@/lib/shared-models';
 import { retrieveContext } from '@/lib/rag';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
@@ -77,6 +77,29 @@ export const maxDuration = 120;
  */
 const TUTOR_BUDGET_MS = 50_000;
 
+/**
+ * The point past which no second attempt is started, measured from the top of
+ * the request.
+ *
+ * `maxDuration` above is 120s and the whole request has to fit inside it —
+ * retrieval, two completions at most, and the conversation writes after them.
+ * 95s leaves 25s for the reply to be assembled and serialised; overrunning
+ * instead of retrying would turn a recoverable failure into a killed
+ * invocation, which is strictly worse for the student.
+ */
+const TUTOR_DEADLINE_MS = 95_000;
+
+/**
+ * Below this, a retry is not worth starting.
+ *
+ * `lib/ai.ts` refuses to begin an attempt with under 1s left, so anything
+ * shorter than a realistic completion just spends the remaining time and
+ * fails with a less useful error than the one already in hand. Measured
+ * medians on this gateway run 5-25s; 10s is enough for the fast models to
+ * land and honest about the rest.
+ */
+const MIN_RETRY_MS = 10_000;
+
 const Body = z.object({
   message: z.string().min(1).max(2000),
   history: z.array(z.object({
@@ -142,6 +165,9 @@ function proposalAction(intent: Awaited<ReturnType<typeof import('@/lib/copilot-
 }
 
 export async function POST(req: NextRequest) {
+  // Everything below is measured against this, so the retry's budget accounts
+  // for the retrieval that already happened rather than assuming a fresh start.
+  const requestStart = Date.now();
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -266,8 +292,9 @@ export async function POST(req: NextRequest) {
    * Applied after `forInteractive`, so an explicit choice outranks the latency
    * swap.
    */
+  const interactive = forInteractive(access.credential);
   const credential = await (async () => {
-    const base = forInteractive(access.credential);
+    const base = interactive;
     if (access.credential.source !== 'shared') return base;
     // Consulted on every shared call, not only when the student picked
     // something. Skipping it when they had not was an optimisation that
@@ -408,24 +435,80 @@ FORMATTING RULES:
   ];
 
   // ---- Step 4: Call the LLM ----
-  try {
-    // The provider's own token counts when it reports them; the char/4
-    // estimates below are only the fallback for endpoints that omit usage.
-    const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
-    const answer = await chat(messages, {
-      credential,
+  // The provider's own token counts when it reports them; the char/4
+  // estimates below are only the fallback for endpoints that omit usage.
+  const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
+  /**
+   * The model that actually answered, which is not always `credential.model`.
+   *
+   * A failed shared call is retried once on a different model below, so both
+   * the usage row and the error row have to name what was really called —
+   * otherwise `/usage` and the admin's error counts attribute a second model's
+   * spend, or a first model's failure, to the wrong one.
+   */
+  let answeredWith = credential.model;
+  const complete = (model: string, budgetMs: number) => {
+    usage.current = null;
+    return chat(messages, {
+      credential: { ...credential, model },
       temperature: 0.4,
       maxTokens: 2000,
-      budgetMs: TUTOR_BUDGET_MS,
+      budgetMs,
       onUsage: (u) => { usage.current = u; },
     });
+  };
+
+  try {
+    let answer: string;
+    try {
+      answer = await complete(credential.model, TUTOR_BUDGET_MS);
+    } catch (firstError) {
+      /**
+       * One retry, on a different model.
+       *
+       * `resolveSharedModel` already routes around a model the status page
+       * says is down. This covers the case it cannot see: a model the gateway
+       * lists and the page shows as up, which fails anyway. That is the
+       * ordinary failure here rather than a rare one — the gateway answers
+       * `503 No available channel for model X under group Y` for models its
+       * own /v1/models advertises, and which models those are moves through
+       * the day.
+       *
+       * Bounded three ways, because a retry that can double a request's cost
+       * or lifetime is worse than the failure it fixes:
+       *  - shared key only. A student who supplied their own key chose their
+       *    own model, and substituting it is not ours to do.
+       *  - one attempt, never a loop.
+       *  - only with real time left against the platform ceiling, and the
+       *    second attempt gets whatever remains rather than a fresh budget.
+       */
+      const remainingMs = TUTOR_DEADLINE_MS - (Date.now() - requestStart);
+      const alternative =
+        access.credential.source === 'shared' && remainingMs >= MIN_RETRY_MS
+          // Served from the 60s cache this request already populated, so the
+          // tight timeout is a backstop rather than the expected path.
+          ? nextSharedModel(await loadSharedModels({ timeoutMs: 1_500 }), credential.model, interactive.model)
+          : null;
+      if (!alternative) throw firstError;
+
+      console.warn(
+        `[rag-chat] ${credential.model} failed, retrying on ${alternative}:`,
+        firstError instanceof Error ? firstError.message : firstError,
+      );
+      // The failed attempt is its own usage event. Without this the retry
+      // hides the first model's failure from the admin's error counts, and a
+      // model that is failing every request looks healthy.
+      await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: credential.model });
+      answeredWith = alternative;
+      answer = await complete(alternative, Math.min(TUTOR_BUDGET_MS, remainingMs));
+    }
 
     await recordUsage({
       userId: user.id,
       feature: 'rag-chat',
       tokensIn: usage.current?.promptTokens ?? Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 4),
       tokensOut: usage.current?.completionTokens ?? Math.ceil(answer.length / 4),
-      model: credential.model,
+      model: answeredWith,
     });
 
     let proposal;
@@ -509,7 +592,7 @@ FORMATTING RULES:
     // it under the :error label is what makes the admin's error counts mean
     // something. The catch also covers the persistence after the model call,
     // so a small number of :error rows are succeeded-then-failed-to-save.
-    await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: credential.model });
+    await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: answeredWith });
     await reportError(err, { routePath: '/api/ai/rag-chat', source: 'route' });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'AI request failed', conversationId: conversation.id },
