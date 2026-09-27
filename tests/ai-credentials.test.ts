@@ -790,7 +790,7 @@ test('both the primary and the interactive model must be free to skip the cap', 
  * hardcoded, and these pin the two things that would fail quietly — parsing
  * someone else's payload shape, and resolving a model that cannot answer.
  */
-const { watchedFrom, mergeCatalogue, resolveSharedModel, modelLabel, FALLBACK_MODELS } =
+const { watchedFrom, mergeCatalogue, resolveSharedModel, modelLabel, vendorFor, FALLBACK_MODELS } =
   await import('../lib/shared-models.ts');
 
 /** A trimmed copy of the real status-page payloads, including the probe group. */
@@ -840,7 +840,7 @@ test('a model the gateway offers but nobody watches is treated as available', ()
   // better evidence than a monitor that does not exist.
   const gpt4 = catalogue().find((m) => m.id === 'gpt-4');
   assert.equal(gpt4?.up, true);
-  assert.equal(gpt4?.vendor, 'Other', 'vendor is never guessed from the name');
+  assert.equal(gpt4?.vendor, 'OpenAI', 'an unwatched model is still filed by family');
 });
 
 test('availability comes from the last heartbeat, not any heartbeat', () => {
@@ -1010,4 +1010,45 @@ test('a configured model the gateway does not carry is corrected, not sent', () 
     resolveSharedModel([...FALLBACK_MODELS], undefined, 'deepseek-chat'),
     'gpt-4o-mini',
   );
+});
+
+test('every model the gateway actually serves is filed under a real vendor', () => {
+  /**
+   * The full list `/v1/models` returned on production, 27 Sep 2026. Recorded
+   * because grouping used to come from the status page's own group names,
+   * which produced a picker a student would find incoherent: `z-ai/glm-5.2`
+   * under "GLM" while `z-ai/glm-5.3-flash` was unwatched and fell to "Other",
+   * and all six Gemini models under "Other" as well — eight of twenty-eight.
+   *
+   * Deriving from the id fixes that, and this pins it against the real
+   * line-up so a future model that lands outside the table is noticed here
+   * rather than by a student.
+   */
+  const LIVE_IDS = [
+    'claude-sonnet-4-6', 'deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro',
+    'z-ai/glm-5.2', 'z-ai/glm-5.3', 'google/gemma-4-31b-it', 'grok-4.6',
+    'moonshotai/kimi-k3', 'minimax/minimax-m2.5', 'minimax/minimax-m2.7',
+    'minimax/minimax-m3', 'gpt-4o', 'gpt-4o-mini', 'gpt-5.5', 'gpt-5.6-sol',
+    'gpt-6-astra', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b',
+    'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.1-flash-lite',
+    'gemini-3.1-pro-preview', 'gemini-3.1-pro-preview-customtools',
+    'gemini-3.5-flash', 'gpt-4', 'gpt-4-32k', 'grok-4.7', 'z-ai/glm-5.3-flash',
+  ];
+  const unfiled = LIVE_IDS.filter((id) => vendorFor(id) === 'Other');
+  assert.deepEqual(unfiled, [], `not filed under a vendor:\n${unfiled.join('\n')}`);
+
+  // The two that used to disagree now agree.
+  assert.equal(vendorFor('z-ai/glm-5.2'), vendorFor('z-ai/glm-5.3-flash'));
+  assert.equal(vendorFor('grok-4.6'), vendorFor('grok-4.7'));
+  assert.equal(vendorFor('gpt-4o'), vendorFor('openai/gpt-oss-120b'));
+
+  // And an id from nowhere is still called "Other" rather than guessed at.
+  assert.equal(vendorFor('something-entirely-new'), 'Other');
+});
+
+test('the vendor label never changes the id sent to the provider', () => {
+  const models = mergeCatalogue(['z-ai/glm-5.3-flash', 'gemini-3.5-flash'], new Map());
+  assert.deepEqual(models.map((m) => m.id), ['gemini-3.5-flash', 'z-ai/glm-5.3-flash']);
+  assert.deepEqual(models.map((m) => m.vendor), ['Google', 'Z.ai']);
+  assert.deepEqual(models.map((m) => m.label), ['gemini-3.5-flash', 'glm-5.3-flash']);
 });

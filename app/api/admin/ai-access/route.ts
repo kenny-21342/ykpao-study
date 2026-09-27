@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin, isAdminUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isSharedAiConfigured } from '@/lib/ai-credentials';
+import { isSharedAiConfigured, isSharedAiOpenToAll } from '@/lib/ai-credentials';
 import { parsePositiveInt } from '@/lib/query-params';
 
 export const dynamic = 'force-dynamic';
@@ -95,6 +95,13 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     sharedKeyConfigured: isSharedAiConfigured(),
+    // Whether the per-account grants below are still the gate at all.
+    // With `SHARED_AI_OPEN_TO_ALL` on, every signed-in account reaches the
+    // shared key regardless of this list, which makes the list read as a
+    // complete picture when it is not. There was no way to tell from inside
+    // the app which mode was live -- an admin looking at a short grants list
+    // could reasonably conclude only those users had AI.
+    sharedKeyOpenToAll: isSharedAiOpenToAll(),
     grants: rows.map((row) => ({
       userId: row.userId,
       name: row.user.name,

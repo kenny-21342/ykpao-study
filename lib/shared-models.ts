@@ -71,13 +71,76 @@ export function modelLabel(id: string): string {
   return slash === -1 ? id : id.slice(slash + 1);
 }
 
+/** Namespaces the gateway uses, in the spelling a student should see. */
+const VENDOR_BY_NAMESPACE: Record<string, string> = {
+  openai: 'OpenAI',
+  google: 'Google',
+  'z-ai': 'Z.ai',
+  moonshotai: 'Moonshot',
+  minimax: 'MiniMax',
+  deepseek: 'DeepSeek',
+  anthropic: 'Anthropic',
+  qwen: 'Qwen',
+  'x-ai': 'xAI',
+  meta: 'Meta',
+  mistralai: 'Mistral',
+};
+
+/** Model families, for the ids the gateway serves without a namespace. */
+const VENDOR_BY_FAMILY: Array<[string, string]> = [
+  ['gpt', 'OpenAI'],
+  ['chatgpt', 'OpenAI'],
+  ['claude', 'Anthropic'],
+  ['gemini', 'Google'],
+  ['gemma', 'Google'],
+  ['grok', 'xAI'],
+  ['glm', 'Z.ai'],
+  ['kimi', 'Moonshot'],
+  ['deepseek', 'DeepSeek'],
+  ['minimax', 'MiniMax'],
+  ['qwen', 'Qwen'],
+  ['llama', 'Meta'],
+  ['mistral', 'Mistral'],
+];
+
+/**
+ * Which vendor to file a model under in the picker.
+ *
+ * Derived from the id rather than taken from the status page's own group
+ * names, because the two disagree and a student sees the disagreement: the
+ * page files `z-ai/glm-5.2` under "GLM" while `z-ai/glm-5.3-flash` is not
+ * watched at all, and six Gemini models are unwatched, so an earlier version
+ * of this put half the catalogue under "Other" and split GLM across two
+ * headings.
+ *
+ * This is a display label and nothing else -- `id` is what is sent to the
+ * provider, always, and an unrecognised family is honestly called "Other"
+ * rather than guessed at.
+ */
+export function vendorFor(id: string): string {
+  const slash = id.indexOf('/');
+  if (slash !== -1) {
+    const namespace = id.slice(0, slash).toLowerCase();
+    return VENDOR_BY_NAMESPACE[namespace] ?? namespace;
+  }
+  const name = id.toLowerCase();
+  for (const [prefix, vendor] of VENDOR_BY_FAMILY) {
+    if (name.startsWith(prefix)) return vendor;
+  }
+  return 'Other';
+}
+
 type StatusPage = {
   publicGroupList?: Array<{ name?: string; monitorList?: Array<{ id?: number; name?: string }> }>;
 };
 type Heartbeats = { heartbeatList?: Record<string, Array<{ status?: number }>> };
 
-/** What the status page knows about one model: its vendor, and whether it is up. */
-type Watched = { vendor: string; up: boolean };
+/**
+ * What the status page is asked for: whether a model is answering.
+ *
+ * Its group names are deliberately not used — see `vendorFor`.
+ */
+type Watched = { up: boolean };
 
 /**
  * Index the status page by model id.
@@ -89,8 +152,10 @@ type Watched = { vendor: string; up: boolean };
 export function watchedFrom(page: StatusPage, beats: Heartbeats): Map<string, Watched> {
   const watched = new Map<string, Watched>();
   for (const group of page.publicGroupList ?? []) {
-    const vendor = (group.name ?? '').trim();
-    if (!vendor || NON_MODEL_GROUPS.includes(vendor)) continue;
+    // The group name is read only to skip the probe group; it is not used as
+    // a vendor label, because `vendorFor` derives that from the id instead.
+    const groupName = (group.name ?? '').trim();
+    if (!groupName || NON_MODEL_GROUPS.includes(groupName)) continue;
     for (const monitor of group.monitorList ?? []) {
       const id = (monitor.name ?? '').trim();
       if (!id || monitor.id === undefined) continue;
@@ -98,7 +163,7 @@ export function watchedFrom(page: StatusPage, beats: Heartbeats): Map<string, Wa
       // The last beat, not any beat: a model that failed its most recent check
       // is down now, whatever it was doing an hour ago.
       const last = history[history.length - 1];
-      watched.set(id, { vendor, up: last?.status === 1 });
+      watched.set(id, { up: last?.status === 1 });
     }
   }
   return watched;
@@ -118,16 +183,7 @@ export function mergeCatalogue(ids: string[], watched: Map<string, Watched>): Sh
   return ids
     .map((id) => {
       const seen = watched.get(id);
-      return {
-        id,
-        label: modelLabel(id),
-        // The status page's grouping when it has one, otherwise the vendor
-        // prefix the id carries, otherwise unknown. Never guessed from the
-        // name: `gpt-4` is almost certainly OpenAI, but "almost certainly" is
-        // not something to print next to a student's choice.
-        vendor: seen?.vendor ?? (id.includes('/') ? id.slice(0, id.indexOf('/')) : 'Other'),
-        up: seen?.up ?? true,
-      };
+      return { id, label: modelLabel(id), vendor: vendorFor(id), up: seen?.up ?? true };
     })
     .sort((a, b) => a.vendor.localeCompare(b.vendor) || a.label.localeCompare(b.label));
 }

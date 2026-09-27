@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { getSessionUser } from '@/lib/auth';
-import { resolveAiCredentials } from '@/lib/ai-credentials';
+import { resolveAiCredentials, sharedTextCredential } from '@/lib/ai-credentials';
 import { loadSharedModels } from '@/lib/shared-models';
 
 /**
@@ -29,7 +29,11 @@ export async function GET() {
 
   const models = await loadSharedModels();
   return NextResponse.json(
-    { shared: true, models, configured: status.textModel },
+    // `status.textModel` is the *user's own* saved model and is null for
+    // everyone on the shared key, so reporting it here said "configured:
+    // null" on every response. The shared credential's model is the one this
+    // field means.
+    { shared: true, models, configured: sharedTextCredential()?.model ?? null },
     {
       // A minute, matching the catalogue's own cache. The status page beats
       // once a minute, so a fresher answer than this would not be fresher.
