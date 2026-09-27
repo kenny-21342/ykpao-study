@@ -1052,3 +1052,31 @@ test('the vendor label never changes the id sent to the provider', () => {
   assert.deepEqual(models.map((m) => m.vendor), ['Google', 'Z.ai']);
   assert.deepEqual(models.map((m) => m.label), ['gemini-3.5-flash', 'glm-5.3-flash']);
 });
+
+test('the picker’s label must follow the same three steps as the server', () => {
+  /**
+   * Pinned because the two drifted and it was visible to the user: the header
+   * read `gemini-2.5-flash` while every message was answered by the configured
+   * `gpt-4o-mini`. The client had skipped the middle step — the configured
+   * model — and gone straight to "the first one that is up", which the
+   * vendor-sorted catalogue makes Google.
+   *
+   * This exercises the server's resolver against the cases the label has to
+   * agree with; `TutorModelPicker` mirrors these branches in the same order.
+   */
+  const models = mergeCatalogue(
+    ['gemini-2.5-flash', 'gpt-4o-mini', 'gpt-6-astra'],
+    new Map([['gpt-6-astra', { up: false }]]),
+  );
+  // Sorted by vendor, Google comes first — so "first up" is NOT the answer.
+  assert.equal(models[0].id, 'gemini-2.5-flash');
+
+  // No pick: the configured model, not the first available one.
+  assert.equal(resolveSharedModel(models, null, 'gpt-4o-mini'), 'gpt-4o-mini');
+  // A pick that is up wins over the configured model.
+  assert.equal(resolveSharedModel(models, 'gemini-2.5-flash', 'gpt-4o-mini'), 'gemini-2.5-flash');
+  // A pick that is down falls to the configured model, still not the first up.
+  assert.equal(resolveSharedModel(models, 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
+  // Only when the configured model is unusable does "anything up" apply.
+  assert.equal(resolveSharedModel(models, 'gpt-6-astra', 'gpt-6-astra'), 'gemini-2.5-flash');
+});

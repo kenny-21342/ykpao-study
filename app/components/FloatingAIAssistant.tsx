@@ -207,6 +207,8 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
    * draw.
    */
   const [sharedModels, setSharedModels] = useState<SharedModelChoice[]>([]);
+  /** The server's own default, so the picker's label matches what answers. */
+  const [configuredModel, setConfiguredModel] = useState<string | null>(null);
   // Read lazily rather than in the effect below: localStorage is not a system
   // to synchronise with, it is just the initial value. The window guard is for
   // SSR, and there is no hydration mismatch to worry about because the picker
@@ -369,7 +371,11 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
     let cancelled = false;
     fetch('/api/ai/models')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && Array.isArray(data?.models)) setSharedModels(data.models); })
+      .then((data) => {
+        if (cancelled || !Array.isArray(data?.models)) return;
+        setSharedModels(data.models);
+        setConfiguredModel(typeof data.configured === 'string' ? data.configured : null);
+      })
       .catch(() => {
         // A failed lookup is not evidence of anything. An empty list hides the
         // picker and changes nothing else: the server resolves the model on
@@ -501,7 +507,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
                 key, for whom it would change nothing. */}
             {!isMinimized && view === 'chat' && (
               sharedModels.length > 0
-                ? <TutorModelPicker models={sharedModels} model={model} onChange={setModel} />
+                ? <TutorModelPicker models={sharedModels} model={model} configured={configuredModel} onChange={setModel} />
                 : <p className="truncate text-[11px] text-accent-text">AI Tutor</p>
             )}
           </div>

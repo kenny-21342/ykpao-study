@@ -42,20 +42,35 @@ export function readSavedTutorModel(): string | null {
 export default function TutorModelPicker({
   models,
   model,
+  configured,
   onChange,
 }: {
   models: SharedModelChoice[];
   model: string | null;
+  /** What the server falls back to when the student has picked nothing. */
+  configured: string | null;
   onChange: (model: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // What the server would pick, mirrored here so the label does not claim a
-  // model that is down. Same order as `resolveSharedModel`: the choice if it
-  // is up, otherwise anything that is.
+  /**
+   * What the server would actually use, mirrored exactly.
+   *
+   * This must follow `resolveSharedModel` step for step, including the middle
+   * one. An earlier version skipped straight from the student's choice to "the
+   * first model that is up", and because the catalogue sorts by vendor that
+   * was `gemini-2.5-flash` — so the header announced Gemini while every
+   * message was answered by the configured `gpt-4o-mini`. A label that names
+   * the wrong model is worse than no label.
+   */
   const chosen = models.find((entry) => entry.id === model);
-  const effective = chosen?.up ? chosen : models.find((entry) => entry.up) ?? chosen ?? null;
+  const fallback = models.find((entry) => entry.id === configured);
+  const effective = chosen?.up
+    ? chosen
+    : fallback?.up
+      ? fallback
+      : models.find((entry) => entry.up) ?? chosen ?? null;
 
   useEffect(() => {
     if (!open) return;
