@@ -790,15 +790,15 @@ test('both the primary and the interactive model must be free to skip the cap', 
  * hardcoded, and these pin the two things that would fail quietly — parsing
  * someone else's payload shape, and resolving a model that cannot answer.
  */
-const { catalogueFrom, resolveSharedModel, modelLabel, FALLBACK_MODELS } =
+const { watchedFrom, mergeCatalogue, resolveSharedModel, modelLabel, FALLBACK_MODELS } =
   await import('../lib/shared-models.ts');
 
-/** A trimmed copy of the real payloads, including the probe group. */
+/** A trimmed copy of the real status-page payloads, including the probe group. */
 const PAGE = {
   publicGroupList: [
     { name: '北京检测节点', monitorList: [{ id: 6, name: 'yang-api' }] },
-    { name: 'OpenAI', monitorList: [{ id: 68, name: 'gpt-6-astra' }, { id: 40, name: 'gpt-4o-mini' }] },
-    { name: 'Kimi', monitorList: [{ id: 71, name: 'moonshotai/kimi-k3' }] },
+    { name: 'OpenAI', monitorList: [{ id: 68, name: 'gpt-6-astra' }, { id: 40, name: 'gpt-4o-mini' }, { id: 70, name: 'openai/gpt-oss-120b' }] },
+    { name: 'Anthropic', monitorList: [{ id: 71, name: 'claude-sonnet-4-6' }] },
     { name: 'Grok', monitorList: [{ id: 80, name: 'grok-4.6' }] },
   ],
 };
@@ -807,69 +807,85 @@ const BEATS = {
     '6': [{ status: 1 }],
     '68': [{ status: 0 }, { status: 1 }],
     '40': [{ status: 1 }],
+    '70': [{ status: 0 }],
     '71': [{ status: 1 }],
     '80': [{ status: 1 }, { status: 0 }],
   },
 };
+/** What `/v1/models` actually returns for this key: OpenAI channels only. */
+const GATEWAY_IDS = ['gpt-4', 'gpt-4o-mini', 'gpt-6-astra', 'openai/gpt-oss-120b'];
+
+const watched = () => watchedFrom(PAGE, BEATS);
+const catalogue = () => mergeCatalogue(GATEWAY_IDS, watched());
 
 test('the gateway’s own health monitor is not offered as a model', () => {
   // `yang-api` is a check on the gateway's reachability. Offering it would
   // send a student's question to something that is not a model at all.
-  const models = catalogueFrom(PAGE, BEATS);
-  assert.equal(models.find((m) => m.id === 'yang-api'), undefined);
-  assert.equal(models.length, 4);
+  assert.equal(watched().has('yang-api'), false);
+});
+
+test('a model the status page shows UP is still hidden if the key cannot call it', () => {
+  // The bug this pairing exists to prevent. `claude-sonnet-4-6` is watched and
+  // up, and answers this key with 503 model_not_found, because the key's token
+  // group carries only OpenAI channels. Verified against the live gateway on
+  // 27 Sep 2026: /v1/models returned 7 ids where the page watched 20.
+  const models = catalogue();
+  assert.equal(models.find((m) => m.id === 'claude-sonnet-4-6'), undefined);
+  assert.equal(models.find((m) => m.id === 'grok-4.6'), undefined);
+  assert.equal(watched().get('claude-sonnet-4-6')?.up, true, 'the page really does show it up');
+});
+
+test('a model the gateway offers but nobody watches is treated as available', () => {
+  // The page's silence is absence of evidence. The gateway listing a model is
+  // better evidence than a monitor that does not exist.
+  const gpt4 = catalogue().find((m) => m.id === 'gpt-4');
+  assert.equal(gpt4?.up, true);
+  assert.equal(gpt4?.vendor, 'Other', 'vendor is never guessed from the name');
 });
 
 test('availability comes from the last heartbeat, not any heartbeat', () => {
-  const models = catalogueFrom(PAGE, BEATS);
-  const byId = Object.fromEntries(models.map((m) => [m.id, m]));
+  const byId = Object.fromEntries(catalogue().map((m) => [m.id, m]));
   // Recovered: failed, then succeeded.
   assert.equal(byId['gpt-6-astra'].up, true);
-  // Just went down: succeeded, then failed. Reading any beat would call it up.
-  assert.equal(byId['grok-4.6'].up, false);
+  // Down now: succeeded, then failed. Reading any beat would call it up.
+  assert.equal(byId['openai/gpt-oss-120b'].up, false);
 });
 
 test('a model with no heartbeats at all is treated as down', () => {
-  const models = catalogueFrom(
-    { publicGroupList: [{ name: 'OpenAI', monitorList: [{ id: 99, name: 'gpt-5.5' }] }] },
-    { heartbeatList: {} },
-  );
-  assert.equal(models[0].up, false, 'unknown is not the same as working');
+  const only = mergeCatalogue(['gpt-4o-mini'], watchedFrom(PAGE, { heartbeatList: {} }));
+  assert.equal(only[0].up, false, 'watched but never beating is not the same as unwatched');
 });
 
-test('a malformed or empty status page yields no models rather than throwing', () => {
+test('a malformed status page yields an empty overlay rather than throwing', () => {
   for (const page of [{}, { publicGroupList: [] }, { publicGroupList: [{ monitorList: [] }] }]) {
-    assert.deepEqual(catalogueFrom(page, {}), []);
+    assert.equal(watchedFrom(page, {}).size, 0);
   }
+  // And with no overlay, every gateway model stays usable.
+  assert.deepEqual(mergeCatalogue(GATEWAY_IDS, new Map()).map((m) => m.up), [true, true, true, true]);
 });
 
 test('the vendor prefix is dropped for display but never from the id', () => {
-  const models = catalogueFrom(PAGE, BEATS);
-  const kimi = models.find((m) => m.id === 'moonshotai/kimi-k3')!;
-  assert.equal(kimi.label, 'kimi-k3');
-  assert.equal(kimi.id, 'moonshotai/kimi-k3', 'the id is what is sent to the provider');
-  assert.equal(kimi.vendor, 'Kimi');
+  const oss = catalogue().find((m) => m.id === 'openai/gpt-oss-120b')!;
+  assert.equal(oss.label, 'gpt-oss-120b');
+  assert.equal(oss.id, 'openai/gpt-oss-120b', 'the id is what is sent to the provider');
   assert.equal(modelLabel('gpt-4o'), 'gpt-4o', 'an unprefixed id is left alone');
 });
 
 test('a student’s choice is honoured when it is up', () => {
-  const models = catalogueFrom(PAGE, BEATS);
-  assert.equal(resolveSharedModel(models, 'moonshotai/kimi-k3', 'gpt-4o-mini'), 'moonshotai/kimi-k3');
+  assert.equal(resolveSharedModel(catalogue(), 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-6-astra');
 });
 
 test('a choice that is down falls through instead of failing the message', () => {
-  // The ordinary case, not a rare one: most of the gateway is down most of the
-  // time, and a student should not have to understand that to get an answer.
-  const models = catalogueFrom(PAGE, BEATS);
-  assert.equal(resolveSharedModel(models, 'grok-4.6', 'gpt-4o-mini'), 'gpt-4o-mini');
+  assert.equal(resolveSharedModel(catalogue(), 'openai/gpt-oss-120b', 'gpt-4o-mini'), 'gpt-4o-mini');
 });
 
-test('a model not on the gateway is refused, whatever it names', () => {
+test('a model outside the catalogue is refused, whatever it names', () => {
   // This is the check that runs on an attacker-controlled body. Accepting an
   // arbitrary id would let a request name the most expensive model the gateway
-  // sells and spend the operator's credit on it.
-  const models = catalogueFrom(PAGE, BEATS);
-  for (const bad of ['gpt-7', 'claude-opus-9', '', null, undefined, 'GPT-4O-MINI']) {
+  // sells and spend the operator's credit on it. `claude-sonnet-4-6` is here
+  // deliberately: it is real, and watched, and still not ours to call.
+  const models = catalogue();
+  for (const bad of ['claude-sonnet-4-6', 'gpt-7', '', null, undefined, 'GPT-4O-MINI']) {
     assert.equal(
       resolveSharedModel(models, bad, 'gpt-4o-mini'),
       'gpt-4o-mini',
@@ -879,36 +895,33 @@ test('a model not on the gateway is refused, whatever it names', () => {
 });
 
 test('when the configured model is also down, anything up is used', () => {
-  const models = catalogueFrom(PAGE, BEATS);
-  const picked = resolveSharedModel(models, 'grok-4.6', 'grok-4.6');
-  assert.notEqual(picked, 'grok-4.6');
+  const models = mergeCatalogue(GATEWAY_IDS, watched());
+  const picked = resolveSharedModel(models, 'openai/gpt-oss-120b', 'openai/gpt-oss-120b');
+  assert.notEqual(picked, 'openai/gpt-oss-120b');
   assert.equal(models.find((m) => m.id === picked)?.up, true);
 });
 
 test('when nothing is up, the configured model is sent anyway', () => {
   // The status page can be wrong or stale. A real error from the gateway is
   // more useful to a student than a refusal invented here.
-  const allDown = catalogueFrom(PAGE, { heartbeatList: {} });
+  const allDown = mergeCatalogue(GATEWAY_IDS, watchedFrom(PAGE, { heartbeatList: {} }))
+    .map((m) => ({ ...m, up: false }));
   assert.equal(resolveSharedModel(allDown, 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
   assert.equal(resolveSharedModel([], 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
 });
 
-test('the fallback list is usable on its own if the status page is unreachable', () => {
-  assert.ok(FALLBACK_MODELS.length > 0);
-  assert.ok(FALLBACK_MODELS.every((m) => m.up && m.id && m.vendor));
-  assert.ok(
-    new Set(FALLBACK_MODELS.map((m) => m.vendor)).size > 1,
-    'one vendor outage must not take out every fallback',
-  );
+test('the fallback holds the fastest model, since it is a guarantee not a menu', () => {
+  // Measured against the live gateway 27 Sep 2026: gpt-4o-mini 2.1s,
+  // gpt-6-astra 29s, for the same three-token reply.
+  assert.deepEqual(FALLBACK_MODELS.map((m) => m.id), ['gpt-4o-mini']);
+  assert.ok(FALLBACK_MODELS.every((m) => m.up));
 });
 
 test('no shared model is treated as free, so the monthly cap still applies', () => {
-  // The free tier is gone; every model on this gateway draws down the
-  // operator's credit. With open access the cap is the only bound on what a
-  // year group can spend, so an entry creeping back into FREE_MODELS would
-  // switch that protection off silently.
-  const models = catalogueFrom(PAGE, BEATS);
-  for (const m of [...models, ...FALLBACK_MODELS]) {
+  // Every model on this gateway draws down the operator's credit. With open
+  // access the cap is the only bound on what a year group can spend, so an
+  // entry creeping into FREE_MODELS would switch that protection off silently.
+  for (const m of [...catalogue(), ...FALLBACK_MODELS]) {
     assert.equal(isFreeModel(m.id), false, m.id);
   }
   withOpenAccess('gpt-4o-mini', () => {
@@ -916,18 +929,17 @@ test('no shared model is treated as free, so the monthly cap still applies', () 
   });
 });
 
-test('no API route uses a client-supplied model without resolving it first', async () => {
+test('no API route assigns a client-supplied model straight to a credential', async () => {
   /**
    * The tests above prove `resolveSharedModel` refuses an unknown id. They do
    * not prove any route calls it — when this was first written against the
    * previous provider, deleting the guard from `rag-chat/route.ts` left every
-   * one of them green.
-   * That is the kind of hole that surfaces as someone else's bill.
+   * one of them green. That is the kind of hole that surfaces as someone
+   * else's bill.
    *
-   * So this reads the sources. A model taken off a request body may only
-   * appear in an expression that also names the resolver; unguarded, a request
-   * could name the most expensive model the gateway sells and spend the
-   * operator's credit on it.
+   * Two rules, both read off the source. Not a dataflow proof and not claimed
+   * as one: it is a guardrail against the regression that actually happened,
+   * which is a body field being dropped into the credential directly.
    */
   const { readFile, readdir } = await import('node:fs/promises');
   const path = await import('node:path');
@@ -941,23 +953,61 @@ test('no API route uses a client-supplied model without resolving it first', asy
     }
   }
 
-  const offenders: string[] = [];
+  const assigned: string[] = [];
+  const unresolved: string[] = [];
   let checked = 0;
+
   for await (const file of walk(root)) {
     const src = await readFile(file, 'utf8');
+    const rel = path.relative(root, file);
+    let readsBodyModel = false;
+
     for (const [index, line] of src.split('\n').entries()) {
       // Comments discuss `parsed.model` by name — including the one explaining
       // why it is never used raw — so only code counts.
       const trimmed = line.trim();
       if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue;
       if (!/\b(?:parsed|body|payload)\.model\b/.test(line)) continue;
+      readsBodyModel = true;
       checked += 1;
-      if (!line.includes('resolveSharedModel')) {
-        offenders.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
+      // 1. It must never be the value of a `model:` property. That is the
+      //    shape that reaches a provider call.
+      if (/\bmodel:\s*(?:parsed|body|payload)\.model\b/.test(line)) {
+        assigned.push(`${rel}:${index + 1}: ${trimmed}`);
       }
+    }
+
+    // 2. A route that reads a model off the body at all must import and use
+    //    the resolver somewhere in the same file.
+    if (readsBodyModel && !/resolveSharedModel\s*\(/.test(src)) {
+      unresolved.push(rel);
     }
   }
 
   assert.ok(checked > 0, 'the scan found no model-bearing routes, so it proves nothing');
-  assert.deepEqual(offenders, [], `unresolved client-supplied model:\n${offenders.join('\n')}`);
+  assert.deepEqual(assigned, [], `client-supplied model assigned directly:\n${assigned.join('\n')}`);
+  assert.deepEqual(unresolved, [], `reads a model off the body but never resolves it:\n${unresolved.join('\n')}`);
+});
+
+test('a configured model the gateway does not carry is corrected, not sent', () => {
+  /**
+   * The regression this pins actually shipped for a few minutes. `.env` had no
+   * SHARED_AI_MODEL, so `sharedTextCredential` fell through to the legacy
+   * DEEPSEEK_MODEL and produced `deepseek-chat` — a model this gateway does
+   * not carry. An optimisation that skipped the catalogue lookup when the
+   * student had not picked anything meant nothing corrected it, and every
+   * tutor message would have come back 503.
+   *
+   * So the resolver has to hold even when the *configuration* is wrong, not
+   * only when the request is.
+   */
+  const models = mergeCatalogue(['gpt-4o-mini', 'gpt-6-astra'], new Map());
+  assert.equal(resolveSharedModel(models, undefined, 'deepseek-chat'), 'gpt-4o-mini');
+  assert.equal(resolveSharedModel(models, null, 'gpt-4'), 'gpt-4o-mini');
+  // And the fallback list alone is enough to rescue it, which is what happens
+  // when the catalogue lookup times out on a cold instance.
+  assert.equal(
+    resolveSharedModel([...FALLBACK_MODELS], undefined, 'deepseek-chat'),
+    'gpt-4o-mini',
+  );
 });

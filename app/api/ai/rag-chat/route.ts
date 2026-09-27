@@ -269,7 +269,17 @@ export async function POST(req: NextRequest) {
   const credential = await (async () => {
     const base = forInteractive(access.credential);
     if (access.credential.source !== 'shared') return base;
-    const models = await loadSharedModels();
+    // Consulted on every shared call, not only when the student picked
+    // something. Skipping it when they had not was an optimisation that
+    // introduced a real bug: with SHARED_AI_MODEL unset the configured value
+    // falls back to `deepseek-chat`, which this gateway does not carry, and
+    // nothing would have corrected it -- every message would have 503'd. The
+    // resolver is what makes a wrong configured model survivable.
+    //
+    // Tight timeout, because a student is watching a spinner. Failure is safe
+    // in both directions: FALLBACK_MODELS still resolves to a model the key
+    // can call, and an unresolvable request is never honoured as given.
+    const models = await loadSharedModels({ timeoutMs: 2_500 });
     return { ...base, model: resolveSharedModel(models, parsed.model, base.model) };
   })();
 

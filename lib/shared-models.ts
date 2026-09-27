@@ -8,11 +8,22 @@
  * changes through the day. A hardcoded list would therefore be wrong most of
  * the time -- offering models that cannot answer, and hiding ones that can.
  *
- * So the catalogue is read from the gateway operator's own Uptime Kuma status
- * page, which publishes one monitor per model, grouped by vendor, with a
- * heartbeat each minute. It needs no credential, which is why the server can
- * poll it and the tutor can show a student what is actually up before they
- * pick.
+ * Two sources, and both are needed — using either alone is wrong:
+ *
+ *  - **The gateway's own `/v1/models`** decides *which* models exist for us.
+ *    That list is scoped to the key's token group, and ours is narrower than
+ *    the gateway as a whole: it returns 7 models where the status page watches
+ *    20. Models the page shows as UP, including `claude-sonnet-4-6` and
+ *    `moonshotai/kimi-k3`, answer this key with `503 model_not_found`. A
+ *    catalogue built from the status page alone would offer students models
+ *    that cannot serve them.
+ *  - **The status page** decides which of those are *answering*, because
+ *    `/v1/models` lists a model whether or not its channel is healthy.
+ *
+ * So the gateway's list is the spine and the status page is an overlay. A
+ * model the gateway offers but nobody watches is assumed available: the
+ * gateway is the authority on its own line-up, and the page's silence is
+ * absence of evidence.
  *
  * None of these are free. They draw down the operator's credit, so they must
  * never appear in `FREE_MODELS` (lib/ai-pricing.ts): the per-user monthly cap
@@ -43,16 +54,15 @@ const STATUS_HEARTBEAT = 'https://stat.hxi.me/api/status-page/heartbeat/ai';
 const NON_MODEL_GROUPS = ['北京检测节点'];
 
 /**
- * What the picker falls back to when the status page cannot be reached.
+ * What the picker falls back to when the gateway's model list cannot be read.
  *
- * Deliberately short and boring: the two models that were up longest during
- * observation, from different vendors, so a single vendor outage does not take
- * both. This exists so that the status page being down degrades the choice
- * rather than the tutor — a student must still be able to ask a question.
+ * One entry, deliberately: the fastest model the key can reach, measured at
+ * 2.1s against 29s for `gpt-6-astra` on the same prompt. This is not a menu,
+ * it is the guarantee that a student can still ask a question when a lookup
+ * fails, so it holds the model least likely to make them wait.
  */
 export const FALLBACK_MODELS: readonly SharedModelChoice[] = [
   { id: 'gpt-4o-mini', label: 'gpt-4o-mini', vendor: 'OpenAI', up: true },
-  { id: 'claude-sonnet-4-6', label: 'claude-sonnet-4-6', vendor: 'Anthropic', up: true },
 ] as const;
 
 /** Strip the `vendor/` prefix an id may carry; `gpt-4o` and `z-ai/glm-5.2` both read well. */
@@ -66,15 +76,18 @@ type StatusPage = {
 };
 type Heartbeats = { heartbeatList?: Record<string, Array<{ status?: number }>> };
 
+/** What the status page knows about one model: its vendor, and whether it is up. */
+type Watched = { vendor: string; up: boolean };
+
 /**
- * Build the catalogue from the status page.
+ * Index the status page by model id.
  *
- * Exported for the test, which feeds it recorded payloads rather than the
- * live page: the shape is a third party's and this must not start returning
- * the probe monitor, or an empty list, without something failing.
+ * Exported for the test, which feeds it recorded payloads: the shape is a
+ * third party's, and this must not start including the probe monitor or
+ * silently returning nothing without something failing.
  */
-export function catalogueFrom(page: StatusPage, beats: Heartbeats): SharedModelChoice[] {
-  const models: SharedModelChoice[] = [];
+export function watchedFrom(page: StatusPage, beats: Heartbeats): Map<string, Watched> {
+  const watched = new Map<string, Watched>();
   for (const group of page.publicGroupList ?? []) {
     const vendor = (group.name ?? '').trim();
     if (!vendor || NON_MODEL_GROUPS.includes(vendor)) continue;
@@ -85,10 +98,45 @@ export function catalogueFrom(page: StatusPage, beats: Heartbeats): SharedModelC
       // The last beat, not any beat: a model that failed its most recent check
       // is down now, whatever it was doing an hour ago.
       const last = history[history.length - 1];
-      models.push({ id, label: modelLabel(id), vendor, up: last?.status === 1 });
+      watched.set(id, { vendor, up: last?.status === 1 });
     }
   }
-  return models;
+  return watched;
+}
+
+/**
+ * Combine the gateway's model list with the status page's view of it.
+ *
+ * `ids` is the spine — only what the key can actually reach appears. A model
+ * nobody watches is treated as up, because the gateway listing it is better
+ * evidence than a monitor that does not exist.
+ *
+ * Exported for the test, which is where the "UP on the page but 503 for this
+ * key" case is pinned.
+ */
+export function mergeCatalogue(ids: string[], watched: Map<string, Watched>): SharedModelChoice[] {
+  return ids
+    .map((id) => {
+      const seen = watched.get(id);
+      return {
+        id,
+        label: modelLabel(id),
+        // The status page's grouping when it has one, otherwise the vendor
+        // prefix the id carries, otherwise unknown. Never guessed from the
+        // name: `gpt-4` is almost certainly OpenAI, but "almost certainly" is
+        // not something to print next to a student's choice.
+        vendor: seen?.vendor ?? (id.includes('/') ? id.slice(0, id.indexOf('/')) : 'Other'),
+        up: seen?.up ?? true,
+      };
+    })
+    .sort((a, b) => a.vendor.localeCompare(b.vendor) || a.label.localeCompare(b.label));
+}
+
+/** The chat-completions base, without the `/chat/completions` suffix if present. */
+function gatewayBase(): string | null {
+  const raw = process.env.SHARED_AI_BASE_URL || process.env.DEEPSEEK_API_URL;
+  if (!raw) return null;
+  return raw.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/i, '');
 }
 
 let cache: { at: number; models: SharedModelChoice[] } | null = null;
@@ -105,33 +153,75 @@ const CACHE_TTL_MS = 60_000;
  * The catalogue, cached per instance.
  *
  * Never throws and never returns empty: a student who opens the tutor while
- * someone else's status page is down still gets a working tutor. Concurrent
+ * one of these lookups is failing still gets a working tutor. Concurrent
  * misses share one request rather than each making their own, the same reason
  * `/api/platform-stats` does.
+ *
+ * The status page failing is survivable — every model is then assumed up, and
+ * the server's resolver falls back on a real provider error if one is not. The
+ * gateway's own list failing is not, because without it we do not know what
+ * the key may call, so that case falls back to `FALLBACK_MODELS`.
  */
-export async function loadSharedModels(): Promise<SharedModelChoice[]> {
+export async function loadSharedModels(
+  options: { timeoutMs?: number } = {},
+): Promise<SharedModelChoice[]> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.models;
+  // Measured from the owner's machine on 27 Sep 2026: both lookups are spiky,
+  // 0.4-1.2s warm and 6.1s cold. The default is generous because the caller is
+  // usually the tutor *opening*, where a second or two costs nothing. The
+  // request path passes something much tighter -- see `/api/ai/rag-chat`.
+  const timeoutMs = options.timeoutMs ?? 12_000;
   inFlight ??= (async () => {
     try {
-      const [pageRes, beatRes] = await Promise.all([
-        fetch(STATUS_PAGE, { signal: AbortSignal.timeout(6_000) }),
-        fetch(STATUS_HEARTBEAT, { signal: AbortSignal.timeout(6_000) }),
+      const base = gatewayBase();
+      const apiKey = process.env.SHARED_AI_API_KEY || process.env.DEEPSEEK_API_KEY;
+      if (!base || !apiKey) return cache?.models ?? [...FALLBACK_MODELS];
+
+      const [gatewayRes, watched] = await Promise.all([
+        fetch(`${base}/models`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(timeoutMs),
+        }),
+        loadWatched(timeoutMs),
       ]);
-      if (!pageRes.ok || !beatRes.ok) throw new Error(`status page ${pageRes.status}/${beatRes.status}`);
-      const models = catalogueFrom(await pageRes.json(), await beatRes.json());
-      if (models.length === 0) throw new Error('status page listed no models');
+      if (!gatewayRes.ok) throw new Error(`gateway /models ${gatewayRes.status}`);
+      const payload = await gatewayRes.json();
+      const ids: string[] = (payload?.data ?? [])
+        .map((entry: { id?: unknown }) => (typeof entry.id === 'string' ? entry.id.trim() : ''))
+        .filter(Boolean);
+      if (ids.length === 0) throw new Error('gateway listed no models');
+
+      const models = mergeCatalogue(ids, watched);
       cache = { at: Date.now(), models };
       return models;
     } catch (error) {
-      console.warn('[shared-models] status page unavailable:', error instanceof Error ? error.message : error);
+      console.warn('[shared-models] catalogue unavailable:', error instanceof Error ? error.message : error);
       // Keep serving the last good catalogue if there is one; the models did
-      // not disappear just because the page monitoring them did.
+      // not disappear just because a lookup did.
       return cache?.models ?? [...FALLBACK_MODELS];
     } finally {
       inFlight = null;
     }
   })();
   return inFlight;
+}
+
+/** The status-page overlay. Its failure is not the catalogue's failure. */
+async function loadWatched(timeoutMs: number): Promise<Map<string, Watched>> {
+  try {
+    const [pageRes, beatRes] = await Promise.all([
+      fetch(STATUS_PAGE, { signal: AbortSignal.timeout(timeoutMs) }),
+      fetch(STATUS_HEARTBEAT, { signal: AbortSignal.timeout(timeoutMs) }),
+    ]);
+    if (!pageRes.ok || !beatRes.ok) throw new Error(`status page ${pageRes.status}/${beatRes.status}`);
+    return watchedFrom(await pageRes.json(), await beatRes.json());
+  } catch (error) {
+    console.warn('[shared-models] status page unavailable:', error instanceof Error ? error.message : error);
+    // Empty overlay: every gateway model is then treated as up, which is the
+    // right way to fail. Hiding models because a monitor is unreachable would
+    // take the tutor down over someone else's uptime page.
+    return new Map();
+  }
 }
 
 /**
