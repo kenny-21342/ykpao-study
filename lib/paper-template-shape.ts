@@ -78,6 +78,11 @@ export function derivePaperTemplates(subjectCode: string, rows: TemplateRow[]): 
   const groups = new Map<string, TemplateRow[]>();
   for (const row of rows) {
     if (row.papersObserved < MIN_PAPERS) continue;
+    // Paper 0 is not a paper. It is what the filename parser produces for a
+    // document that carries no paper number, and the only group it reaches
+    // MIN_PAPERS for is Art & Design 0400 -- a coursework subject with no
+    // written paper at all, offered to students as "Paper 0, 6 marks".
+    if (row.paperNumber < 1) continue;
     const key = `${row.level}\u0000${row.paperNumber}`;
     const bucket = groups.get(key);
     if (bucket) bucket.push(row); else groups.set(key, [row]);

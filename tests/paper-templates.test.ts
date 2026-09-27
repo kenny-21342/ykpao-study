@@ -141,3 +141,17 @@ test('no question is used twice', () => {
   const picked = fillSlots(slots, [candidate(1, 5), candidate(2, 5)]);
   assert.equal(new Set(picked.map((p) => p.id)).size, picked.length);
 });
+
+test('paper 0 is not offered, because it is not a paper', () => {
+  // The filename parser emits paper number 0 for a document that states none.
+  // The only subject it clears MIN_PAPERS for is Art & Design 0400, which sets
+  // no written paper at all, so the blueprint read "Paper 0, 6 marks".
+  const templates = derivePaperTemplates('0400', [
+    row({ paperNumber: 0, position: 1, medianQuestions: 6, medianMarks: 1 }),
+    row({ paperNumber: 0, position: 2, medianQuestions: 6, medianMarks: 1 }),
+  ]);
+  assert.equal(templates.length, 0);
+
+  // A real paper number is untouched by the guard.
+  assert.equal(derivePaperTemplates('0625', [row({ paperNumber: 4 })]).length, 1);
+});
