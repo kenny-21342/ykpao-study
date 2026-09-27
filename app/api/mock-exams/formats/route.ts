@@ -53,6 +53,13 @@ export async function GET(req: NextRequest) {
         totalMarks: t.totalMarks,
         style: t.style,
         papersObserved: t.papersObserved,
+        // The board's own name and duration where we have them. "Paper 4 --
+        // Theory (Extended), 1h15, 80 marks" is a paper a student recognises;
+        // "Paper 4 -- 9 questions, 70 marks" is one nobody has ever sat.
+        name: t.official?.name ?? null,
+        minutes: t.official?.minutes ?? null,
+        marksAreOfficial: t.official != null,
+        officialSource: t.official?.source ?? null,
         recommended: preferred?.paperNumber === t.paperNumber && preferred?.level === t.level,
       })),
     },

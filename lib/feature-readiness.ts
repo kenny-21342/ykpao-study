@@ -16,11 +16,15 @@
  *    limitation. Still open: 4.7% held back for a bad crop, and topic tags on
  *    39.2% of published questions, so filtering by topic still misses part of
  *    the bank.
- *  - Mock exams: papers are packed at random from questions that have a mark
- *    scheme, to hit a mark total. They are not modelled on the structure of a
- *    real paper and are not weighted across topics -- see the note at the top
- *    of `lib/mock-exam-selection.ts`, which is the authority on that and was
- *    still accurate when this was flipped.
+ *  - Mock exams: papers were packed at random from questions that have a mark
+ *    scheme, to hit a mark total -- not modelled on a real paper's structure
+ *    and not weighted across topics. **The first half of that is now fixed**,
+ *    after this was flipped rather than before: a paper named by number is
+ *    built from a blueprint measured over the real sittings, and its mark
+ *    total and duration are the exam board's own. 146 of 165 paper groups have
+ *    a usable blueprint; the rest still pack to a mark total. Topic weighting
+ *    is still not done. See the note at the top of
+ *    `lib/mock-exam-selection.ts`, which remains the authority.
  *
  * Removing the treatment was the owner's decision, taken with those numbers
  * in front of him. If either feature should say something about itself again,

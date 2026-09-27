@@ -583,7 +583,15 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => vo
 // ===================================================================
 // Configure / Generate wizard
 // ===================================================================
-/** One real paper shape, as `/api/mock-exams/formats` measured it. */
+/**
+ * One real paper shape from `/api/mock-exams/formats`.
+ *
+ * Two sources in one object, and the distinction is the point. `questionCount`
+ * is measured from the papers we hold, because no board publishes how its
+ * marks are spread across questions. `name`, `minutes` and `totalMarks` are
+ * the board's own, because our extraction is lossy and got them badly wrong --
+ * IGCSE History Paper 4 measured 520 marks against an official 40.
+ */
 type PaperFormat = {
   paperNumber: number;
   level: string;
@@ -592,7 +600,21 @@ type PaperFormat = {
   style: 'mcq' | 'structured';
   papersObserved: number;
   recommended: boolean;
+  /** The board's name for the paper: "Theory (Extended)". Null for IB papers, which are only numbered. */
+  name: string | null;
+  /** Null where the board prints none -- coursework, and every IB Language A paper. */
+  minutes: number | null;
+  marksAreOfficial: boolean;
+  officialSource: 'cambridge-syllabus' | 'ib-paper-cover' | null;
 };
+
+/** "1 hour 15 minutes" reads better on a card as "1h 15m". */
+function shortDuration(minutes: number | null): string | null {
+  if (!minutes) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
 
 function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGenerated: (id: string) => void }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -869,8 +891,17 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                         }`}
                       >
                         <span className="block text-sm font-semibold">Paper {format.paperNumber}</span>
+                        {/* The board's name where there is one. It is what the
+                            student sees on the real cover, and it tells Core
+                            from Extended -- which the number alone does not. */}
+                        {format.name && (
+                          <span className={`block truncate text-xs font-medium ${paperNumber === format.paperNumber ? 'text-white/90' : 'text-secondary'}`}>
+                            {format.name}
+                          </span>
+                        )}
                         <span className={`block text-xs ${paperNumber === format.paperNumber ? 'text-white/80' : 'text-muted'}`}>
-                          {format.questionCount} {format.style === 'mcq' ? 'MCQs' : 'questions'} · {format.totalMarks} marks
+                          {format.totalMarks} marks
+                          {shortDuration(format.minutes) ? ` · ${shortDuration(format.minutes)}` : ''}
                         </span>
                       </button>
                     ))}
@@ -891,9 +922,22 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                   </div>
                   {selectedFormat && (
                     <p className="mt-2 text-xs text-muted">
-                      Shaped after {selectedFormat.papersObserved} real Paper {selectedFormat.paperNumber} sittings:
-                      {' '}{selectedFormat.questionCount} questions worth {selectedFormat.totalMarks} marks in total,
-                      drawn from different past papers.
+                      {selectedFormat.questionCount} {selectedFormat.style === 'mcq' ? 'multiple-choice questions' : 'questions'}
+                      {' '}worth {selectedFormat.totalMarks} marks
+                      {selectedFormat.minutes ? ` in ${shortDuration(selectedFormat.minutes)}` : ''}, drawn from
+                      different past papers and laid out like the
+                      {' '}{selectedFormat.papersObserved} real sittings this shape was measured from.
+                      {/* Saying where the total comes from matters: it is the
+                          board's figure, so it matches the real cover, while
+                          the question count is ours. */}
+                      {selectedFormat.marksAreOfficial && (
+                        <>
+                          {' '}The mark total and timing are
+                          {selectedFormat.officialSource === 'ib-paper-cover'
+                            ? ' the ones printed on the real IB paper.'
+                            : ' the ones in the Cambridge syllabus.'}
+                        </>
+                      )}
                     </p>
                   )}
                 </Field>

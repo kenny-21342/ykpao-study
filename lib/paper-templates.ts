@@ -27,10 +27,11 @@
  * Paper 3) has mark data on fewer than half its questions.
  */
 import { Prisma } from '@prisma/client';
+import { applyOfficialFormat, type OfficialPaperTemplate } from '@/lib/paper-format-overlay';
+import { officialFormat } from '@/lib/paper-formats';
 import {
   derivePaperTemplates,
   MIN_PAPERS,
-  type PaperTemplate,
   type TemplateRow,
 } from '@/lib/paper-template-shape';
 
@@ -42,6 +43,7 @@ export {
   type PaperTemplate,
   type TemplateRow,
 } from '@/lib/paper-template-shape';
+export { applyOfficialFormat, type OfficialPaperTemplate } from '@/lib/paper-format-overlay';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -111,10 +113,10 @@ export async function measureSubject(subjectCode: string): Promise<TemplateRow[]
  * same reason `/api/platform-stats` does it.
  */
 const CACHE_TTL_MS = 60 * 60 * 1000;
-const cache = new Map<string, { at: number; templates: PaperTemplate[] }>();
-const inFlight = new Map<string, Promise<PaperTemplate[]>>();
+const cache = new Map<string, { at: number; templates: OfficialPaperTemplate[] }>();
+const inFlight = new Map<string, Promise<OfficialPaperTemplate[]>>();
 
-export async function loadPaperTemplates(subjectCode: string): Promise<PaperTemplate[]> {
+export async function loadPaperTemplates(subjectCode: string): Promise<OfficialPaperTemplate[]> {
   const hit = cache.get(subjectCode);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.templates;
 
@@ -123,7 +125,18 @@ export async function loadPaperTemplates(subjectCode: string): Promise<PaperTemp
 
   const pending = (async () => {
     try {
-      const templates = derivePaperTemplates(subjectCode, await measureSubject(subjectCode));
+      // The board's figures are applied here rather than at each call site, so
+      // nothing downstream can accidentally use the uncorrected total -- which
+      // for IGCSE History Paper 4 is 520 marks against an official 40.
+      const templates = derivePaperTemplates(subjectCode, await measureSubject(subjectCode))
+        .map((template) => applyOfficialFormat(
+          template,
+          officialFormat(subjectCode, template.level, template.paperNumber),
+        ))
+        // A shape that cannot carry its official total is dropped rather than
+        // offered: the caller then packs to a mark total, which is what every
+        // subject did before templates existed.
+        .filter((template) => template.shapeCredible);
       cache.set(subjectCode, { at: Date.now(), templates });
       return templates;
     } catch (error) {

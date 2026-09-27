@@ -22,6 +22,20 @@
  * A request with no paper number still packs to a mark total, which is what
  * `selectBankQuestions` below does.
  *
+ * The blueprint's *marks* are no longer ours either. Measuring them from our
+ * own extraction was wrong for 160 of 187 paper groups, sometimes absurdly:
+ * IGCSE History Paper 4 measured 520 marks against an official 40, because
+ * every question in it carries the paper's own total. So the board's figures
+ * are overlaid on the measured ladder -- Cambridge's from the published
+ * syllabus, the IB's read off its papers' cover pages, see
+ * `lib/paper-format-overlay.ts`. A generated paper now adds up to the number
+ * printed on the real cover and runs for the time printed beside it.
+ *
+ * Where our extraction merged a whole paper into one question -- 19 groups,
+ * mostly IB Mathematics -- there is no credible ladder to correct, and the
+ * blueprint is dropped rather than turned into a single 110-mark question.
+ * Those subjects pack to a mark total, as every subject did before.
+ *
  * What is still lost is topic-aware curation. That was written when `bank_topics`
  * had no rows. Tagging has been running since, so the topic filter below does
  * bite for the subjects it has reached -- 271 topics over 39% of published
