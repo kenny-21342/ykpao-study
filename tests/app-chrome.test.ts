@@ -73,8 +73,16 @@ test('the chrome has exactly one scroll container and no title of its own', asyn
 const TAB_VIEWS = [
   'HomeShell.tsx',
   'StudyCoach.tsx',
+  // Practice renders BankPractice by default and QuestionsDatabase only when
+  // a link names a legacy question, so both are "the Practice screen" and both
+  // have to carry a title. BankPractice shipped with none.
+  'BankPractice.tsx',
   'QuestionsDatabase.tsx',
-  'ResourceLibrary.tsx',
+  // Materials is two sub-views behind one hub, and the hub owns the title for
+  // both: the notebook has no page header to put one in, and when the library
+  // carried its own the screen showed two titles in one view and none in the
+  // other.
+  'MaterialsHub.tsx',
   'MockExams.tsx',
   'DiscussionBoard.tsx',
 ];

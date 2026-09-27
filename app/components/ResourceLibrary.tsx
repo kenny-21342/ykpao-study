@@ -16,7 +16,7 @@ import {
   RESOURCE_UPLOAD_MAX_BYTES,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
-import { PageHeader } from './ui';
+import { SegmentedControl } from './ui';
 
 type Tab = 'notes' | 'school';
 
@@ -49,17 +49,24 @@ export default function ResourceLibrary() {
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <PageHeader
-            className="mb-3"
-            title="Resource Library"
-            description="Study notes shared on review.ykpao.com, and your school's own resources."
+        {/* No title here: MaterialsHub titles this screen for both of its
+            halves. This is the supporting line and the scope control only. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-secondary">
+            Study notes shared on review.ykpao.com, and your school&apos;s own resources.
+          </p>
+          <SegmentedControl
+            ariaLabel="Resource scope"
+            value={scope}
+            onChange={(next) => {
+              setScope(next);
+              window.localStorage.setItem('scope:resources', next);
+            }}
+            items={[
+              { value: 'enrolled', label: 'My courses' },
+              { value: 'all', label: 'All subjects' },
+            ]}
           />
-          <div className="inline-flex rounded-lg border border-line bg-surface p-1" role="group" aria-label="Resource scope">
-            <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-accent text-white' : 'text-secondary'}`}>My courses</button>
-            <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-accent text-white' : 'text-secondary'}`}>All subjects</button>
-          </div>
         </div>
 
         {/* Tabs */}

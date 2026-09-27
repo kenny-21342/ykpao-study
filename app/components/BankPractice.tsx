@@ -24,6 +24,7 @@ import BankQuestionCard from './BankQuestionView';
 import { useScreenContext } from './ScreenContext';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
 import { commandTermLabel } from '@/lib/command-terms';
+import { PageHeader } from './ui';
 
 type Filters = {
   subjects: Array<{ id: number; code: string; name: string }>;
@@ -462,6 +463,10 @@ export default function BankPractice({
           was the one that never explained itself. The banner text is also
           where self-marking is described, which is why meeting it cold made
           the intended flow read as a broken AI feature. */}
+      {/* This is the default body of the Practice tab, so it owns the page
+          title. It had none: the shell bar used to label every tab, which hid
+          the gap here and in the notebook half of Materials. */}
+      <PageHeader className="mb-0" title="Practice" />
       <PreviewNotice feature="question-bank" />
       <div className="inline-flex rounded-md bg-surface-raised p-0.5">
         {(['enrolled', 'all'] as const).map((option) => (
