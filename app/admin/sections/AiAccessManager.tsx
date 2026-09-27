@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Search, Loader2, Shield, KeyRound, Wallet, AlertTriangle,
+  Search, Loader2, Shield, KeyRound, Wallet, AlertTriangle, Users,
   ChevronLeft, ChevronRight, Check, X,
 } from 'lucide-react';
 import { adminFetch } from '../lib/fetch';
@@ -49,6 +49,10 @@ type Grant = {
 
 type AiAccessResponse = {
   sharedKeyConfigured: boolean;
+  /** Whether per-account grants are still the gate at all. */
+  sharedKeyOpenToAll: boolean;
+  /** Null when the budget could not be read, not when it is untouched. */
+  sharedBudget: { limitUsd: number | null; usedUsd: number; resetsAt: string } | null;
   grants: Grant[];
   users: AiAccessUser[];
   total: number;
@@ -134,11 +138,55 @@ export default function AiAccessManager() {
         </div>
       </div>
 
+      {/* With open access on, the grants list below is not the whole picture --
+          it reads as one, which is exactly how an admin ends up believing only
+          a handful of accounts can spend. */}
+      {data?.sharedKeyOpenToAll && (
+        <div className="bg-warning-subtle border border-warning-border rounded-lg p-4 flex items-start gap-3">
+          <Users className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-warning space-y-1">
+            <p className="font-semibold">Every signed-in account can use the shared key.</p>
+            <p className="text-[13px] leading-5">
+              <code>SHARED_AI_OPEN_TO_ALL</code> is on, so the grants below are not the
+              limit on who spends — they are only who was granted access individually.
+              Turn it off to make this list mean what it looks like.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* The number that matters once the shared key is open to everyone. */}
+      {data?.sharedBudget && (
+        <div className="bg-surface rounded-lg border border-line p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="w-4 h-4 text-secondary" />
+            <h2 className="font-semibold text-sm">Shared AI budget this month</h2>
+          </div>
+          {data.sharedBudget.limitUsd === null ? (
+            <p className="text-[13px] leading-5 text-danger">
+              No platform-wide ceiling is set. <code>AI_MONTHLY_TOTAL_SPEND_LIMIT_USD</code>{' '}
+              is off, so nothing bounds what the shared key can spend this month.
+              {' '}${data.sharedBudget.usedUsd.toFixed(2)} reserved so far.
+            </p>
+          ) : (
+            <p className="text-[13px] leading-5 text-muted">
+              <span className="font-medium text-secondary">
+                ${data.sharedBudget.usedUsd.toFixed(2)} of ${data.sharedBudget.limitUsd.toFixed(2)}
+              </span>{' '}
+              reserved · resets {data.sharedBudget.resetsAt}. When this is reached, AI pauses
+              for everyone on the shared key; students with their own key are unaffected.
+              Reservations are flat per request and never refunded, so this runs ahead of the
+              real bill.
+            </p>
+          )}
+        </div>
+      )}
+
       {data && !data.sharedKeyConfigured && (
         <div className="bg-danger-subtle border border-danger-border rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
           <p className="text-sm text-danger">
-            No shared server key is configured (<code>DEEPSEEK_API_KEY</code>), so a grant
+            No shared server key is configured (<code>SHARED_AI_API_KEY</code>), so a grant
             would currently do nothing. Existing grants are listed below and take effect as
             soon as a key is set.
           </p>

@@ -115,3 +115,83 @@ test('turning the monthly cap off does not touch the per-minute limiter', async 
     'the per-minute check must run before the cap can be short-circuited',
   );
 });
+
+/**
+ * The platform-wide ceiling.
+ *
+ * Added 27 Sep 2026, immediately after the per-user cap was switched off in
+ * production so that every student could use the tutor. That left `aiLimiter`
+ * — 20 requests a minute *each* — as the only bound on a shared key funded by
+ * a fixed personal donation with no billing alert behind it.
+ */
+test('the platform-wide cap is a real number with a conservative default', async () => {
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  assert.match(
+    text,
+    /positiveNumber\(\s*process\.env\.AI_MONTHLY_TOTAL_SPEND_LIMIT_USD,\s*500,?\s*\)/,
+    'an unset env var must fall back to a real ceiling, never to unlimited',
+  );
+});
+
+test('the platform-wide cap still applies when the per-user cap is off', async () => {
+  /**
+   * The property the whole feature exists for, and the one most likely to be
+   * lost to a refactor: production runs with the per-user cap off, so a
+   * version that checked the total only as an `else` branch of the personal
+   * one would compile, pass every other test, and bound nothing at all.
+   */
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  const gate = text.slice(text.indexOf('export async function checkAiAllowance'));
+
+  // The personal cap must not be able to return early on the allowed path.
+  assert.doesNotMatch(
+    gate,
+    /if\s*\(\s*monthlyCapOff\(\)\s*\)\s*return\s*\{\s*allowed:\s*true/,
+    'switching the per-user cap off must not skip the platform-wide one',
+  );
+  const totalAt = gate.indexOf('reserveTotalAiSpend');
+  const capOffAt = gate.indexOf('monthlyCapOff()');
+  assert.ok(totalAt > -1, 'the platform-wide reservation is no longer taken');
+  assert.ok(
+    totalAt > capOffAt,
+    'the platform-wide reservation must sit outside the per-user off-switch',
+  );
+});
+
+test('the per-user allowance is spent before the shared one', async () => {
+  /**
+   * Neither reservation is ever refunded, so a request denied by the second
+   * check has still consumed the first. Personal-first means one looping
+   * account exhausts its own allowance rather than nibbling everyone else's
+   * ceiling away through requests it was never allowed to make.
+   */
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  const gate = text.slice(text.indexOf('export async function checkAiAllowance'));
+  assert.ok(
+    gate.indexOf('reserveMonthlyAiSpend') < gate.indexOf('reserveTotalAiSpend'),
+    'the personal allowance must be charged before the shared one',
+  );
+});
+
+test('the two ceilings count against separate keys', async () => {
+  // Sharing a key would make the platform ceiling a per-user one with a bigger
+  // number, or vice versa — and the bug would be invisible until launch day.
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  assert.match(text, /`ai-spend:\$\{month\}:\$\{userId\}`/, 'per-user key changed shape');
+  assert.match(text, /`ai-spend-total:\$\{month\}`/, 'the platform key must not be per-user');
+});
+
+test('the shared-budget refusal does not read as the student’s fault', async () => {
+  /**
+   * This message fires for someone who has done nothing wrong, and it is the
+   * only one of these refusals a student can act on — their own key works
+   * immediately and costs the platform nothing. Saying so is the difference
+   * between a dead end and a thirty-second fix.
+   */
+  const text = await readFile(join(ROOT, 'lib/rate-limit.ts'), 'utf8');
+  const start = text.indexOf('The shared AI budget');
+  assert.ok(start > -1, 'the shared-budget refusal message is gone');
+  const message = text.slice(start, start + 400);
+  assert.doesNotMatch(message, /\bYour monthly AI allowance\b/);
+  assert.match(message, /Account Settings/, 'it must point at the personal-key route');
+});

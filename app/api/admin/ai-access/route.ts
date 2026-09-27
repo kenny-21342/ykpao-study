@@ -4,6 +4,7 @@ import { requireAdmin, isAdminUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isSharedAiConfigured, isSharedAiOpenToAll } from '@/lib/ai-credentials';
 import { parsePositiveInt } from '@/lib/query-params';
+import { readSharedAiBudget } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
     textModel: true,
   } as const;
 
-  const [rows, users, total] = await Promise.all([
+  const [rows, users, total, sharedBudget] = await Promise.all([
     prisma.userAiCredential.findMany({
       where: { sharedKeyAccess: true },
       select: { userId: true, ...credentialSelect, user: { select: { name: true, email: true } } },
@@ -91,6 +92,12 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     }),
     prisma.user.count({ where }),
+    // What is left of the platform-wide ceiling. Shown here rather than on a
+    // page of its own because this is where an admin already comes to ask who
+    // is spending the shared key -- and with the per-user cap off, this number
+    // is the only thing standing between a year group and the credit behind
+    // it. It must not first become visible on the day it runs out.
+    readSharedAiBudget(),
   ]);
 
   return NextResponse.json({
@@ -102,6 +109,7 @@ export async function GET(req: NextRequest) {
     // the app which mode was live -- an admin looking at a short grants list
     // could reasonably conclude only those users had AI.
     sharedKeyOpenToAll: isSharedAiOpenToAll(),
+    sharedBudget,
     grants: rows.map((row) => ({
       userId: row.userId,
       name: row.user.name,
@@ -157,7 +165,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          'There is no shared server key configured (DEEPSEEK_API_KEY), so a grant would do nothing.',
+          'There is no shared server key configured (SHARED_AI_API_KEY), so a grant would do nothing.',
       },
       { status: 409 },
     );
