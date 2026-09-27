@@ -32,6 +32,7 @@ import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import type { AIActionProposalPayload, AIActionProposalView, CorpusCoverage, IntakeQuestion } from '@/lib/copilot-types';
+import TutorModelPicker, { readSavedTutorModel } from '@/app/components/TutorModelPicker';
 
 type RAGSource = {
   type: 'textbook' | 'note' | 'question' | 'markscheme' | 'resource' | 'syllabus' | 'competition' | 'generated';
@@ -196,6 +197,20 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
   const [historyLoading, setHistoryLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<StudyAction | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  /**
+   * The picker only means anything on the shared key, so the tutor asks once
+   * which key it is on. A student with their own key chose their own model
+   * when they saved it and it is never substituted, so offering them a list of
+   * OpenCode models would be offering a choice that does nothing.
+   */
+  const [onSharedKey, setOnSharedKey] = useState(false);
+  // Read lazily rather than in the effect below: localStorage is not a system
+  // to synchronise with, it is just the initial value. The window guard is for
+  // SSR, and there is no hydration mismatch to worry about because the picker
+  // does not render until `onSharedKey` turns true, which needs a fetch.
+  const [model, setModel] = useState<string | null>(
+    () => (typeof window === 'undefined' ? null : readSavedTutorModel()),
+  );
   const [mode, setMode] = useState<TutorMode>('explain');
   const [view, setView] = useState<AssistantView>('chat');
   const [learnerCourses, setLearnerCourses] = useState<LearnerCourse[]>([]);
@@ -346,6 +361,21 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetch('/api/account/ai-credentials')
+      .then((r) => (r.ok ? r.json() : null))
+      // `{ credentials: { ... } }`, not the bare view -- unwrapping this
+      // envelope wrong is what kept AiKeyPrompt invisible for a fortnight.
+      .then((data) => { if (!cancelled) setOnSharedKey(data?.credentials?.source === 'shared'); })
+      .catch(() => {
+        // A failed check is not evidence of anything, so leave the picker
+        // hidden rather than offer a choice that may not apply.
+      });
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
   const handleSend = async (options?: { message?: string; courseId?: string }) => {
     const message = (options?.message ?? userInput).trim();
     if (!message || isLoading) return;
@@ -373,6 +403,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           history: conversationId ? undefined : previous.slice(-12).map((item) => ({ role: item.role, content: item.text })),
           screenContext: screenCtx.toPromptString() || undefined,
           mode,
+          model: model || undefined,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -462,7 +493,15 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           )}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-bold">{view === 'history' ? 'Chat history' : view === 'actions' ? 'Plan & act' : conversationTitle}</h3>
-            {!isMinimized && view === 'chat' && <p className="truncate text-[11px] text-accent-text">AI Tutor</p>}
+            {/* The subtitle read "AI Tutor" under a header that already says so.
+                The picker takes that line instead: discoverable without
+                crowding the button row, and absent for a student on their own
+                key, for whom it would change nothing. */}
+            {!isMinimized && view === 'chat' && (
+              onSharedKey
+                ? <TutorModelPicker model={model} onChange={setModel} />
+                : <p className="truncate text-[11px] text-accent-text">AI Tutor</p>
+            )}
           </div>
           <button onClick={() => { setView('history'); void loadConversations(); }} className="rounded-md p-1.5 hover:bg-white/15" title="Chat history" aria-label="Chat history"><History className="h-4 w-4" /></button>
           <button onClick={startNewConversation} className="rounded-md p-1.5 hover:bg-white/15" title="New conversation" aria-label="New conversation"><MessageSquarePlus className="h-4 w-4" /></button>

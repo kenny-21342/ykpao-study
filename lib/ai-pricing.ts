@@ -1,3 +1,5 @@
+import { SHARED_MODEL_CHOICES } from './shared-models.ts';
+
 /**
  * Per-model price estimates for the Usage dashboard.
  *
@@ -9,43 +11,23 @@
  * bring-your-own-key model should be boring, not surprising.
  */
 /**
- * Models the shared key may serve at no cost.
+ * Models the shared key may serve at no cost — the ids of everything a student
+ * can pick in the tutor. `lib/shared-models.ts` is the list itself and records
+ * each model's data-retention terms and why two free ones are excluded.
  *
- * All ten of OpenCode Zen's free models speak OpenAI-compatible
- * `/chat/completions` except `muse-spark-1.3-contributor-free` (`/responses`)
- * and `jev-1.13-free` (`/systemone`), which this codebase cannot call.
+ * Derived rather than restated, because the two must not drift: a model
+ * offered in the picker but missing here would be priced at DEFAULT below,
+ * which bills a free service and re-imposes the monthly cap on it.
  *
- * Four of the remaining eight are here. The two Nemotron models are
- * deliberately absent: NVIDIA's trial terms say "do not submit personal or
- * confidential data", and this platform sends a named student's own answers,
- * notes and schoolwork. That is a term of use, not a privacy preference, so it
- * is not the site owner's to waive.
- *
- * `space-bunny-free` and `longcat-2.5-preview-free` keep OpenCode's default
- * zero-retention policy. The other four state that data collected during the
- * free period may be used to improve the model, which /privacy now says in
- * as many words -- see the sub-processor section there before adding to this
- * list.
- *
- * Every one of these is promotional and time-limited. When one is withdrawn
- * the provider answers with an unknown-model error and the tutor stops for
- * everyone at once, so treat a sudden rise in AI errors as this list going
- * stale before assuming anything else.
+ * Every one is promotional and time-limited. When one is withdrawn the
+ * provider answers with an unknown-model error, so treat a sudden rise in AI
+ * errors as this list going stale before assuming anything else.
  */
-export const FREE_MODELS = [
-  // Zero-retention, no training on submissions.
-  'space-bunny-free',
-  'longcat-2.5-preview-free',
-  // Free period; submissions may be used to improve the model.
-  'big-pickle',
-  'mimo-v2.6-flash-free',
-  'mimo-v2.5-free',
-  'ling-3.0-flash-fin-free',
-] as const;
+export const FREE_MODELS = SHARED_MODEL_CHOICES.map((choice) => choice.id);
 
 /** Whether a model costs nothing, so no spend control should apply to it. */
 export function isFreeModel(model: string | undefined): boolean {
-  return FREE_MODELS.includes((model ?? '').trim() as (typeof FREE_MODELS)[number]);
+  return FREE_MODELS.includes((model ?? '').trim());
 }
 
 type ModelPrice = { inPerMTok: number; outPerMTok: number };

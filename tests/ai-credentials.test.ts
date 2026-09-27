@@ -788,3 +788,106 @@ test('a free primary with a paid interactive model is not free', () => {
     assert.equal(sharedModelIsFree(), true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The tutor's model picker
+// ---------------------------------------------------------------------------
+
+const { SHARED_MODEL_CHOICES, DEFAULT_SHARED_MODEL, isSharedModelChoice } =
+  await import('../lib/shared-models.ts');
+
+test('every model a student can pick is free and priced at zero', () => {
+  // The picker and the price table are the same list by construction, but the
+  // consequence of them ever diverging is worth stating: a pickable model
+  // missing from the price table bills a free service at the default rate and
+  // re-imposes the monthly cap on it.
+  for (const choice of SHARED_MODEL_CHOICES) {
+    assert.equal(isFreeModel(choice.id), true, choice.id);
+    assert.equal(estimateCostUsd(choice.id, 5_000_000, 5_000_000), 0, choice.id);
+  }
+});
+
+test('the configured default is one a student could also pick', () => {
+  assert.equal(isSharedModelChoice(DEFAULT_SHARED_MODEL), true);
+});
+
+test('the picker rejects anything not on the list', () => {
+  // This is the check the tutor route runs on an attacker-controlled body.
+  // Accepting an arbitrary id would let a request point the owner's shared key
+  // at a paid model -- which also slips the monthly cap, because the free-model
+  // exemption reads the *configured* model, not the requested one.
+  for (const bad of [
+    'deepseek-chat',
+    'gpt-4o',
+    'nemotron-3-ultra-free',
+    'muse-spark-1.3-contributor-free',
+    'MIMO-V2.6-FLASH-FREE',
+    'mimo-v2.6-flash-free ',
+    '',
+    null,
+    undefined,
+  ]) {
+    assert.equal(isSharedModelChoice(bad), false, String(bad));
+  }
+});
+
+test('each choice carries a retention label, and both kinds are offered', () => {
+  // The picker's second job is making /privacy's training disclosure
+  // actionable, which only works if a zero-retention option is actually there.
+  for (const choice of SHARED_MODEL_CHOICES) {
+    assert.ok(['zero', 'trains'].includes(choice.retention), choice.id);
+    assert.ok(choice.label.length > 0 && choice.note.length > 0, choice.id);
+  }
+  assert.ok(
+    SHARED_MODEL_CHOICES.some((c) => c.retention === 'zero'),
+    'a student who does not want to be trained on must have somewhere to go',
+  );
+});
+
+test('model ids are unique, so the picker cannot show two identical rows', () => {
+  const ids = SHARED_MODEL_CHOICES.map((c) => c.id);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
+test('no API route uses a client-supplied model without validating it', async () => {
+  /**
+   * The unit tests above prove `isSharedModelChoice` rejects the right things.
+   * They do not prove any route calls it — removing the guard from
+   * `rag-chat/route.ts` left all of them green, which is exactly the kind of
+   * hole that only shows up as someone else's bill.
+   *
+   * So this reads the sources. A model taken off the request body may only
+   * appear in an expression that also names the validator; an unguarded
+   * `parsed.model` reaching a credential would let a request point the owner's
+   * shared key at any model the provider sells, and slip the monthly cap with
+   * it, because the free-model exemption reads the configured model rather
+   * than the requested one.
+   */
+  const { readFile, readdir } = await import('node:fs/promises');
+  const path = await import('node:path');
+  const root = path.resolve(import.meta.dirname, '..', 'app', 'api');
+
+  async function* walk(dir: string): AsyncGenerator<string> {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) yield* walk(full);
+      else if (entry.name.endsWith('.ts')) yield full;
+    }
+  }
+
+  const offenders: string[] = [];
+  let checked = 0;
+  for await (const file of walk(root)) {
+    const src = await readFile(file, 'utf8');
+    for (const [index, line] of src.split('\n').entries()) {
+      if (!/\b(?:parsed|body|payload)\.model\b/.test(line)) continue;
+      checked += 1;
+      if (!line.includes('isSharedModelChoice')) {
+        offenders.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
+      }
+    }
+  }
+
+  assert.ok(checked > 0, 'the scan found no model-bearing routes, so it proves nothing');
+  assert.deepEqual(offenders, [], `unvalidated client-supplied model:\n${offenders.join('\n')}`);
+});

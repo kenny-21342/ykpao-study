@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
 import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
+import { isSharedModelChoice } from '@/lib/shared-models';
 import { retrieveContext } from '@/lib/rag';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
@@ -97,6 +98,9 @@ const Body = z.object({
   bankQuestionId: z.number().int().positive().max(100_000_000).optional(),
   mode: z.enum(['explain', 'hint', 'socratic', 'check', 'worked-example']).default('explain'),
   conversationId: z.string().min(1).max(100).optional(),
+  // Which shared model to answer with. Bounded here only for shape; the value
+  // itself is checked against the catalogue below, never trusted.
+  model: z.string().min(1).max(100).optional(),
 });
 
 const MODE_RULES = {
@@ -241,6 +245,31 @@ export async function POST(req: NextRequest) {
       { status: access.status }
     );
   }
+  /**
+   * The model the student picked in the tutor, if they picked one.
+   *
+   * Validated against the catalogue rather than trusted: the body is
+   * attacker-controlled, and without this check a request could point the
+   * owner's shared key at any model the provider offers, including paid ones
+   * — which would also slip the monthly cap, since `sharedModelIsFree` reads
+   * the configured model and not this one.
+   *
+   * Only ever applied to the shared key. A student who supplied their own key
+   * chose their own model, and the rule that it is never substituted holds
+   * here as everywhere else; these ids are OpenCode's and would fail against
+   * another provider anyway.
+   *
+   * Applied after `forInteractive`, so an explicit choice outranks the latency
+   * swap. An unrecognised id falls back rather than erroring, because the
+   * commonest way to send one is having picked a model that has since been
+   * withdrawn — not something to answer with a failed message.
+   */
+  const credential = (() => {
+    const base = forInteractive(access.credential);
+    if (access.credential.source !== 'shared') return base;
+    return isSharedModelChoice(parsed.model) ? { ...base, model: parsed.model as string } : base;
+  })();
+
   const allowance = await checkAiAllowance(user.id, { source: access.source });
   if (!allowance.allowed) {
     return NextResponse.json({ error: allowance.message, conversationId: conversation.id }, { status: 429 });
@@ -371,7 +400,7 @@ FORMATTING RULES:
     // estimates below are only the fallback for endpoints that omit usage.
     const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const answer = await chat(messages, {
-      credential: forInteractive(access.credential),
+      credential,
       temperature: 0.4,
       maxTokens: 2000,
       budgetMs: TUTOR_BUDGET_MS,
@@ -383,7 +412,7 @@ FORMATTING RULES:
       feature: 'rag-chat',
       tokensIn: usage.current?.promptTokens ?? Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 4),
       tokensOut: usage.current?.completionTokens ?? Math.ceil(answer.length / 4),
-      model: access.credential.model,
+      model: credential.model,
     });
 
     let proposal;
@@ -467,7 +496,7 @@ FORMATTING RULES:
     // it under the :error label is what makes the admin's error counts mean
     // something. The catch also covers the persistence after the model call,
     // so a small number of :error rows are succeeded-then-failed-to-save.
-    await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: access.credential.model });
+    await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: credential.model });
     await reportError(err, { routePath: '/api/ai/rag-chat', source: 'route' });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'AI request failed', conversationId: conversation.id },
