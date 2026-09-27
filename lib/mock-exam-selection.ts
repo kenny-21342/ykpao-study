@@ -15,7 +15,14 @@
  * That makes generation synchronous and free, and removes the `generating`
  * state, the client poll, and the whole timeout failure mode with it.
  *
- * What is lost is topic-aware curation. That was written when `bank_topics`
+ * Paper *shape* is no longer lost, though it was for a year. A request naming
+ * a paper number is built from a blueprint measured over the real papers of
+ * that subject -- see `lib/paper-templates.ts` -- so a Paper 4 is nine
+ * questions of about eight marks in that order rather than whatever adds up.
+ * A request with no paper number still packs to a mark total, which is what
+ * `selectBankQuestions` below does.
+ *
+ * What is still lost is topic-aware curation. That was written when `bank_topics`
  * had no rows. Tagging has been running since, so the topic filter below does
  * bite for the subjects it has reached -- 271 topics over 39% of published
  * questions on 27 Sep, and rising while the pass continues, so treat any
@@ -26,9 +33,10 @@
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { packToTarget, type SelectedQuestion } from '@/lib/mock-exam-packing';
+import { fillSlots, packToTarget, type SelectedQuestion } from '@/lib/mock-exam-packing';
+import type { PaperTemplate } from '@/lib/paper-templates';
 
-export { packToTarget, totalMarksOf } from '@/lib/mock-exam-packing';
+export { fillSlots, packToTarget, totalMarksOf } from '@/lib/mock-exam-packing';
 export type { SelectedQuestion } from '@/lib/mock-exam-packing';
 
 /**
@@ -132,3 +140,62 @@ export async function listServableSubjects(
     ORDER BY s.name ASC
   `);
 }
+
+/**
+ * Fill a real paper's shape with real questions.
+ *
+ * `selectBankQuestions` above packs to a mark total, which gets the weight
+ * right and the shape wrong: it will answer "80 marks of Physics" with eighty
+ * one-mark multiple-choice questions, or drop a multiple-choice question into
+ * the middle of a structured paper. This walks a blueprint from
+ * `lib/paper-templates.ts` instead -- nine questions of eight marks, in that
+ * order, because that is what Paper 4 has been for sixty-eight sittings.
+ *
+ * Matching is widened in steps rather than all at once. An exact mark match is
+ * what makes the paper look right, so it is tried for every slot first; only a
+ * slot that cannot be filled exactly settles for a near miss, and only then
+ * for anything. Widening slot by slot would let an early slot take a question
+ * a later, pickier slot needed.
+ */
+export async function selectByTemplate(options: {
+  subjectCodes: string[];
+  template: PaperTemplate;
+}): Promise<SelectedQuestion[]> {
+  const { subjectCodes, template } = options;
+  if (subjectCodes.length === 0) return [];
+
+  const candidates = await prisma.$queryRaw<
+    Array<{ id: number; marks: number; paperId: number; year: number; keyed: boolean }>
+  >(Prisma.sql`
+    SELECT q.id,
+           COALESCE(m."totalMarks", q."totalMarks") AS marks,
+           p.id AS "paperId", p.year,
+           (m."answerLetter" IS NOT NULL) AS keyed
+    FROM bank_questions q
+    JOIN bank_papers p ON p.id = q."paperId"
+    JOIN bank_subjects s ON s.id = p."subjectId"
+    LEFT JOIN bank_mark_schemes m ON m."questionId" = q.id
+    WHERE q.status = 'published'
+      AND COALESCE(m."totalMarks", q."totalMarks") > 0
+      AND p."docType" = 'qp'
+      AND p."paperNumber" = ${template.paperNumber}
+      AND s.code IN (${Prisma.join(subjectCodes)})
+      ${template.style === 'mcq'
+        ? Prisma.sql`AND m."answerLetter" IS NOT NULL`
+        : Prisma.empty}
+    ORDER BY random()
+    LIMIT ${TEMPLATE_POOL}
+  `);
+
+  return fillSlots(template.slots, candidates);
+}
+
+/**
+ * How many candidates to draw before filling.
+ *
+ * A template can ask for 38 slots (a multiple-choice paper) and each wants a
+ * specific mark value, so the pool has to be deep in every bucket rather than
+ * merely large. Every group measured on 27 Sep held at least three times the
+ * questions its own shape needs, and this is well past that.
+ */
+const TEMPLATE_POOL = 900;

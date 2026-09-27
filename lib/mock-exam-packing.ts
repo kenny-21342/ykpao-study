@@ -83,3 +83,44 @@ export function packToTarget(
 export function totalMarksOf(questions: SelectedQuestion[]): number {
   return questions.reduce((sum, question) => sum + question.marks, 0);
 }
+
+/**
+ * Assign candidates to slots, pure so the widening rules can be tested.
+ *
+ * Exported for the test: the interesting behaviour is what happens when the
+ * pool cannot satisfy a slot exactly, and that is hard to arrange against a
+ * real corpus that always can.
+ */
+export function fillSlots(
+  slots: readonly { position: number; marks: number }[],
+  candidates: readonly SelectedQuestion[],
+): SelectedQuestion[] {
+  const used = new Set<number>();
+  // Questions drawn from one source paper look like a reprint of that paper
+  // rather than a new one, so a paper already drawn from is a last resort for
+  // the next slot -- but never a reason to leave a slot empty.
+  const papersDrawn = new Set<number>();
+  const chosen: SelectedQuestion[] = [];
+
+  const take = (predicate: (candidate: SelectedQuestion) => boolean): SelectedQuestion | null => {
+    const fresh = candidates.find((c) => !used.has(c.id) && !papersDrawn.has(c.paperId) && predicate(c));
+    const any = fresh ?? candidates.find((c) => !used.has(c.id) && predicate(c));
+    if (!any) return null;
+    used.add(any.id);
+    papersDrawn.add(any.paperId);
+    return any;
+  };
+
+  for (const slot of slots) {
+    const pick =
+      take((c) => c.marks === slot.marks)
+      ?? take((c) => Math.abs(c.marks - slot.marks) <= 1)
+      ?? take((c) => Math.abs(c.marks - slot.marks) <= 3)
+      // A slot with nothing close left takes the nearest thing remaining
+      // rather than being dropped: a paper one question short is more
+      // obviously broken to a student than one question slightly mis-weighted.
+      ?? take(() => true);
+    if (pick) chosen.push(pick);
+  }
+  return chosen;
+}

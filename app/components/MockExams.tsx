@@ -583,6 +583,17 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => vo
 // ===================================================================
 // Configure / Generate wizard
 // ===================================================================
+/** One real paper shape, as `/api/mock-exams/formats` measured it. */
+type PaperFormat = {
+  paperNumber: number;
+  level: string;
+  questionCount: number;
+  totalMarks: number;
+  style: 'mcq' | 'structured';
+  papersObserved: number;
+  recommended: boolean;
+};
+
 function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGenerated: (id: string) => void }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(true);
@@ -591,6 +602,17 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
   const [subjectCode, setSubjectCode] = useState('');
   const [difficulty, setDifficulty] = useState<string>('mixed');
   const [totalMarks, setTotalMarks] = useState(50);
+  /**
+   * The paper shapes this subject is actually sat in, measured from the real
+   * papers in the corpus by `/api/mock-exams/formats`.
+   *
+   * A mark total is the wrong question to ask a student: "80 marks of
+   * Physics" describes no paper anyone sits. "Paper 4 - 9 questions, 70
+   * marks" describes one they have seen. `null` means the format is a custom
+   * mark total, which is what every generated paper used to be.
+   */
+  const [formats, setFormats] = useState<PaperFormat[]>([]);
+  const [paperNumber, setPaperNumber] = useState<number | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(90);
   const [topicsRaw, setTopicsRaw] = useState('');
   const [title, setTitle] = useState('');
@@ -623,6 +645,38 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reloaded per subject, because the shapes are per syllabus: Physics has
+  // six papers, Economics four, and offering one subject's list against
+  // another's would promise a paper that cannot be generated.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Inside the async body rather than as an early return: a synchronous
+      // setState in an effect triggers a cascading render, which ESLint
+      // rejects and React charges for.
+      if (!subjectCode) {
+        if (!cancelled) { setFormats([]); setPaperNumber(null); }
+        return;
+      }
+      try {
+        const res = await fetch(`/api/mock-exams/formats?subjectCode=${encodeURIComponent(subjectCode)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        const next: PaperFormat[] = Array.isArray(data.formats) ? data.formats : [];
+        setFormats(next);
+        // Default to a real paper rather than a mark total: the recommended
+        // one is the heaviest, which is what "a mock exam" usually means.
+        setPaperNumber(next.find((f) => f.recommended)?.paperNumber ?? next[0]?.paperNumber ?? null);
+      } catch {
+        // A format list we cannot load is not a reason to block generation --
+        // the mark-total path still works and is what the form did before.
+        if (!cancelled) { setFormats([]); setPaperNumber(null); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [subjectCode]);
+
+  const selectedFormat = formats.find((f) => f.paperNumber === paperNumber) ?? null;
   const canGenerate = !!subjectCode && !generating;
 
   // Controls that only the model-curated path can act on. For a bank-backed
@@ -652,6 +706,9 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
           difficulty,
           title: title.trim() || undefined,
           mode,
+          // Omitted for a custom mark total, which is what the server treats
+          // as "pack to the total" rather than "shape it like a real paper".
+          ...(paperNumber === null ? {} : { paperNumber }),
         }),
       });
       const data = await res.json();
@@ -797,7 +854,56 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
               </Field>
               )}
 
+              {formats.length > 0 && (
+                <Field label="Paper">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {formats.map((format) => (
+                      <button
+                        key={`${format.level}-${format.paperNumber}`}
+                        type="button"
+                        onClick={() => setPaperNumber(format.paperNumber)}
+                        className={`rounded-lg border px-3 py-2 text-left transition-all ${
+                          paperNumber === format.paperNumber
+                            ? 'bg-accent text-white border-transparent shadow'
+                            : 'bg-surface text-secondary border-strong hover:border-accent'
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold">Paper {format.paperNumber}</span>
+                        <span className={`block text-xs ${paperNumber === format.paperNumber ? 'text-white/80' : 'text-muted'}`}>
+                          {format.questionCount} {format.style === 'mcq' ? 'MCQs' : 'questions'} · {format.totalMarks} marks
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setPaperNumber(null)}
+                      className={`rounded-lg border px-3 py-2 text-left transition-all ${
+                        paperNumber === null
+                          ? 'bg-accent text-white border-transparent shadow'
+                          : 'bg-surface text-secondary border-strong hover:border-accent'
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">Custom</span>
+                      <span className={`block text-xs ${paperNumber === null ? 'text-white/80' : 'text-muted'}`}>
+                        Choose your own mark total
+                      </span>
+                    </button>
+                  </div>
+                  {selectedFormat && (
+                    <p className="mt-2 text-xs text-muted">
+                      Shaped after {selectedFormat.papersObserved} real Paper {selectedFormat.paperNumber} sittings:
+                      {' '}{selectedFormat.questionCount} questions worth {selectedFormat.totalMarks} marks in total,
+                      drawn from different past papers.
+                    </p>
+                  )}
+                </Field>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* The mark total only means anything when no paper shape is
+                    chosen -- a Paper 4 is 70 marks because that is what a
+                    Paper 4 is, and a slider beside it would imply otherwise. */}
+                {paperNumber === null && (
                 <Field label={`Total marks: ${totalMarks}`}>
                   <input
                     type="range"
@@ -812,6 +918,7 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                     <span>20</span><span>120</span>
                   </div>
                 </Field>
+                )}
 
                 <Field label={`Duration: ${durationMinutes} min`}>
                   <input

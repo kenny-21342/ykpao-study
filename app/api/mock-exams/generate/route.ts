@@ -6,7 +6,8 @@ import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createPredictedPaper } from '@/lib/predicted-paper';
 import { getLearnerContext, LearnerContextError } from '@/lib/learner-context';
 import { MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib/mock-exam-limits';
-import { selectBankQuestions, totalMarksOf } from '@/lib/mock-exam-selection';
+import { selectBankQuestions, selectByTemplate, totalMarksOf } from '@/lib/mock-exam-selection';
+import { chooseTemplate, loadPaperTemplates } from '@/lib/paper-templates';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 
 export const dynamic = 'force-dynamic';
@@ -142,13 +143,36 @@ export async function POST(req: Request) {
         : MAX_KEYED_EXAM_ITEMS;
     const targetCount = Math.max(1, Math.min(MAX_KEYED_EXAM_ITEMS, requestedCount));
 
-    const selected = await selectBankQuestions({
-      subjectCodes: bankSubjectCodes,
-      targetMarks: totalMarks,
-      maxItems: targetCount,
-      // Only questions needing a model constrain the invocation.
-      maxUnkeyedItems: MAX_EXAM_ITEMS,
-    });
+    /**
+     * Shape the paper after a real one when the student asked for a format.
+     *
+     * `paperNumber` is the request saying "give me a Paper 4", and a Paper 4
+     * is nine questions of about eight marks in that order -- not whatever
+     * adds up to the mark total. `lib/paper-templates.ts` measures that shape
+     * from the sixty-eight real Paper 4s already in the corpus.
+     *
+     * Falling back rather than failing is deliberate: a subject with fewer
+     * than three extracted papers has no measurable shape, and packing to a
+     * mark total is a worse paper, not a broken one. The response says which
+     * happened so the client does not have to claim a structure it did not
+     * get.
+     */
+    const template = paperNumber === undefined || paperNumber === null
+      ? null
+      : chooseTemplate(
+          await loadPaperTemplates(bankSubjectCodes[0] ?? resolvedSubjectCode),
+          { level: learnerContext.activeCourse?.level, paperNumber },
+        );
+
+    const selected = template
+      ? await selectByTemplate({ subjectCodes: bankSubjectCodes, template })
+      : await selectBankQuestions({
+          subjectCodes: bankSubjectCodes,
+          targetMarks: totalMarks,
+          maxItems: targetCount,
+          // Only questions needing a model constrain the invocation.
+          maxUnkeyedItems: MAX_EXAM_ITEMS,
+        });
 
     if (selected.length === 0) {
       return NextResponse.json(
