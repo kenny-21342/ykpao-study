@@ -646,3 +646,145 @@ test('clients of the ai-credentials route read through .credentials', async () =
     `these read /api/account/ai-credentials without unwrapping .credentials:\n${offenders.join('\n')}`,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Open access to the shared key (SHARED_AI_OPEN_TO_ALL)
+// ---------------------------------------------------------------------------
+
+/**
+ * From 27 Sep 2026 the shared key serves OpenCode Zen's free models and the
+ * whole year group is meant to reach the tutor. The two tests above still
+ * stand unchanged, and that is the point: with the switch off, an ungranted
+ * account still gets nothing. These pin the other half.
+ */
+const { sharedModelIsFree, isSharedAiOpenToAll, sharedTextCredential } =
+  await import('../lib/ai-credentials.ts');
+const { isFreeModel, FREE_MODELS } = await import('../lib/ai-pricing.ts');
+const { estimateCostUsd } = await import('../lib/ai-pricing.ts');
+
+function withOpenAccess<T>(model: string, fn: () => T): T {
+  const before = {
+    open: process.env.SHARED_AI_OPEN_TO_ALL,
+    key: process.env.SHARED_AI_API_KEY,
+    base: process.env.SHARED_AI_BASE_URL,
+    model: process.env.SHARED_AI_MODEL,
+    interactive: process.env.AI_INTERACTIVE_MODEL,
+  };
+  process.env.SHARED_AI_OPEN_TO_ALL = 'on';
+  process.env.SHARED_AI_API_KEY = 'sk-owner-server-key';
+  process.env.SHARED_AI_BASE_URL = 'https://opencode.ai/zen/v1';
+  process.env.SHARED_AI_MODEL = model;
+  delete process.env.AI_INTERACTIVE_MODEL;
+  try {
+    return fn();
+  } finally {
+    for (const [name, value] of [
+      ['SHARED_AI_OPEN_TO_ALL', before.open],
+      ['SHARED_AI_API_KEY', before.key],
+      ['SHARED_AI_BASE_URL', before.base],
+      ['SHARED_AI_MODEL', before.model],
+      ['AI_INTERACTIVE_MODEL', before.interactive],
+    ] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
+test('with open access on, an account with no row at all reaches the tutor', () => {
+  withOpenAccess('big-pickle', () => {
+    const resolved = resolveFromRow(null);
+    assert.equal(resolved.status.textEnabled, true);
+    assert.equal(resolved.status.source, 'shared');
+    assert.equal(resolved.text?.model, 'big-pickle');
+    assert.equal(gateText(resolved).ok, true);
+  });
+});
+
+test('with open access on, an ungranted row still reaches the tutor', () => {
+  withOpenAccess('big-pickle', () => {
+    const resolved = resolveFromRow({
+      encryptedApiKey: null,
+      keyHint: null,
+      baseUrl: null,
+      textModel: null,
+      visionModel: null,
+      sharedKeyAccess: false,
+    });
+    assert.equal(resolved.status.source, 'shared');
+    assert.equal(gateText(resolved).ok, true);
+  });
+});
+
+test('open access never overrides a student’s own key', () => {
+  withOpenAccess('big-pickle', () => {
+    const resolved = resolveFromRow(ownKeyRow());
+    assert.equal(resolved.status.source, 'user', 'their key, their model, their bill');
+    assert.notEqual(resolved.text?.model, 'big-pickle');
+  });
+});
+
+test('the switch is off unless explicitly set', () => {
+  const before = process.env.SHARED_AI_OPEN_TO_ALL;
+  try {
+    for (const value of [undefined, '', 'off', 'false', '0', 'no', 'yes-please']) {
+      if (value === undefined) delete process.env.SHARED_AI_OPEN_TO_ALL;
+      else process.env.SHARED_AI_OPEN_TO_ALL = value;
+      assert.equal(isSharedAiOpenToAll(), false, `"${value}" must not open access`);
+    }
+    for (const value of ['on', 'true', '1', 'ON', ' True ']) {
+      process.env.SHARED_AI_OPEN_TO_ALL = value;
+      assert.equal(isSharedAiOpenToAll(), true, `"${value}" must open access`);
+    }
+  } finally {
+    if (before === undefined) delete process.env.SHARED_AI_OPEN_TO_ALL;
+    else process.env.SHARED_AI_OPEN_TO_ALL = before;
+  }
+});
+
+test('a bare base URL is normalised to a chat-completions endpoint', () => {
+  withOpenAccess('big-pickle', () => {
+    assert.equal(
+      sharedTextCredential()?.endpoint,
+      'https://opencode.ai/zen/v1/chat/completions',
+    );
+  });
+});
+
+test('every free model costs nothing and is recognised as free', () => {
+  for (const model of FREE_MODELS) {
+    assert.equal(isFreeModel(model), true, model);
+    assert.equal(estimateCostUsd(model, 1_000_000, 1_000_000), 0, model);
+  }
+});
+
+test('the NVIDIA trial models are not offered, because their terms forbid this use', () => {
+  // "do not submit personal or confidential data" — this platform sends a
+  // named student's own answers and notes, so these are not eligible however
+  // free they are. Pinned so a later sweep for "free models" cannot add them
+  // back without deleting this test and reading why.
+  for (const model of ['nemotron-3-ultra-free', 'nemotron-3.5-lightning-free']) {
+    assert.equal(isFreeModel(model), false, model);
+  }
+});
+
+test('a paid model is never mistaken for free, so the spend cap still applies', () => {
+  for (const model of ['deepseek-chat', 'deepseek-reasoner', 'gpt-4o', 'big-pickle-pro', '']) {
+    assert.equal(isFreeModel(model), false, model);
+  }
+  withOpenAccess('deepseek-chat', () => {
+    assert.equal(sharedModelIsFree(), false);
+  });
+});
+
+test('a free primary with a paid interactive model is not free', () => {
+  // `forInteractive` swaps the model on exactly the calls a student waits on,
+  // so both have to be free or the cap must keep applying.
+  withOpenAccess('big-pickle', () => {
+    assert.equal(sharedModelIsFree(), true);
+    process.env.AI_INTERACTIVE_MODEL = 'deepseek-chat';
+    assert.equal(sharedModelIsFree(), false, 'the swapped-in model bills');
+    process.env.AI_INTERACTIVE_MODEL = 'mimo-v2.6-flash-free';
+    assert.equal(sharedModelIsFree(), true);
+  });
+});

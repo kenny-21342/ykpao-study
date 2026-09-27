@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { estimateCostUsd } from './ai-pricing.ts';
+import { sharedModelIsFree } from './ai-credentials.ts';
 
 /**
  * Durable fixed-window rate limiter, backed by Postgres.
@@ -312,6 +313,15 @@ export async function checkAiAllowance(
 
   // A user's own key never touches the owner's monthly budget.
   if (options.source === 'user') return { allowed: true };
+
+  // Neither does a shared key with no bill behind it. The reservation below is
+  // a flat AI_REQUEST_RESERVE_USD ($0.02) per request against
+  // AI_MONTHLY_USER_SPEND_LIMIT_USD ($5) and is deliberately never refunded,
+  // so it is really a request quota wearing a dollar sign: 250 calls a month,
+  // whatever they actually cost. On OpenCode Zen's free models that number
+  // protects nothing and would simply stop each student partway through the
+  // term, with a message about an allowance they never spent.
+  if (sharedModelIsFree()) return { allowed: true };
 
   const monthly = await reserveMonthlyAiSpend(userId, options.requests ?? 1);
   if (monthly === 'budget') {

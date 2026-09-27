@@ -14,7 +14,13 @@ export const metadata: Metadata = {
  *  - the AI-key handling is lib/ai-credentials.ts (encrypted at rest with
  *    CREDENTIAL_ENCRYPTION_KEY, never returned to the client)
  *  - the sub-processors are the services the app is actually deployed on:
- *    Vercel, Neon, Cloudflare R2, Resend, Google (optional sign-in)
+ *    Vercel, Aiven, Cloudflare R2, Resend, OpenCode, Google (optional sign-in).
+ *    Neon was named here until 27 Sep 2026 and no longer processes anything --
+ *    both projects were deleted on 26 Sep when the database moved to Aiven.
+ *  - the training disclosure in section 4 is `FREE_MODELS` in lib/ai-pricing.ts,
+ *    where each model's terms are recorded next to it. If that list changes,
+ *    section 4 has to be re-read: four of the six say submissions may be used
+ *    to improve the model, and two do not
  *  - the AI disclosure is lib/ai.ts and lib/vision.ts, which POST the
  *    student's own answer text and images to whichever endpoint their key
  *    points at
@@ -84,7 +90,12 @@ export default function PrivacyPolicy() {
         </p>
         <ul>
           <li><strong>Vercel</strong> — hosting and request logs.</li>
-          <li><strong>Neon</strong> — the database everything above is stored in.</li>
+          <li><strong>Aiven</strong> — the database everything above is stored in.</li>
+          <li>
+            <strong>OpenCode</strong> — the AI provider behind the shared key, and through
+            it the model vendors it routes to. See section 4; this is the one that receives
+            your schoolwork.
+          </li>
           <li><strong>Cloudflare R2</strong> — uploaded files, images and question crops.</li>
           <li><strong>Resend</strong> — the confirmation and password-reset emails.</li>
           <li>
@@ -106,12 +117,29 @@ export default function PrivacyPolicy() {
           .
         </p>
         <p>
-          Which provider receives it depends on the key in use: your own if you have added
-          one, otherwise a shared key if an administrator has granted you access. The
-          provider&apos;s own privacy terms then apply to that request, and this platform
-          has no control over how long they keep it or whether they train on it. If that
-          is not acceptable to you, do not use the AI features — everything else on the
-          platform works without them.
+          Which provider receives it depends on the key in use. If you have added your own
+          API key, your key and your chosen model are used, and the platform never
+          substitutes a different one. Otherwise the shared key is used, which every
+          signed-in student can now reach — it is no longer something an administrator has
+          to grant.
+        </p>
+        <p>
+          <strong>
+            The shared key runs on free models, and several of them say that content sent
+            during their free period may be used to improve the model.
+          </strong>{' '}
+          Plainly: if you use the tutor or AI marking without your own key, the answer you
+          write and the question you ask can become training data for the company that
+          makes the model. That is the trade for the tutor being free to use. It applies to
+          what you send the AI — not to your notes, attempts or files, which are never sent
+          anywhere for training.
+        </p>
+        <p>
+          If you would rather that did not happen, you have two options that both work
+          today: add your own API key under Account Settings → AI Provider, which is used
+          in place of the shared one, or simply do not use the AI features. Everything else
+          on the platform — past papers, the question bank, notes, mock exams — works
+          without them.
         </p>
       </Section>
 

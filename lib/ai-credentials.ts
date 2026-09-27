@@ -2,6 +2,7 @@
 // uses) so this module is loadable by the plain-node test runner as well as by
 // Next — the resolution rules below are worth testing without a database.
 import { decryptSecret, isCredentialEncryptionConfigured } from './credential-crypto.ts';
+import { isFreeModel } from './ai-pricing.ts';
 
 /**
  * Per-user resolution of AI credentials — the single place that decides
@@ -12,14 +13,24 @@ import { decryptSecret, isCredentialEncryptionConfigured } from './credential-cr
  * students' usage, so the model is bring-your-own-key:
  *
  *   1. The user's own key, endpoint and model names, if they saved any.
- *   2. Otherwise the owner's shared server key — but ONLY for accounts an
- *      admin has explicitly granted, for demos and for students who genuinely
- *      cannot obtain a key of their own.
+ *   2. Otherwise the owner's shared server key — for accounts an admin has
+ *      explicitly granted, and, when `SHARED_AI_OPEN_TO_ALL` is on, for every
+ *      signed-in account.
  *   3. Otherwise AI is off, and every entry point says so in words the student
  *      can act on.
  *
- * There is deliberately no general fallback to step 2: an ungranted account
- * with no key of its own gets the disabled state, never the owner's bill.
+ * Step 2 used to be grant-only, with no general fallback, because it spent the
+ * owner's money: an ungranted student reaching it was a bill, not a bug
+ * report. From 27 Sep 2026 the shared key serves OpenCode Zen's free models,
+ * so there is no bill to protect and the whole year group is meant to reach
+ * the tutor — `SHARED_AI_OPEN_TO_ALL` is what says so, deliberately as an
+ * explicit switch rather than a silent default, so that pointing this back at
+ * a paid provider cannot quietly open it to everyone.
+ *
+ * "Every signed-in account" needs no verification check of its own. Sign-in is
+ * refused before an address is verified (`app/api/auth/[...nextauth]/route.ts`)
+ * and a banned user gets no session (`lib/auth.ts`), so holding a session is
+ * already the proof.
  *
  * Nothing here is provider-specific. Students will point this at OpenAI,
  * DeepSeek, SiliconFlow, OpenRouter and school proxies alike, so the only
@@ -179,15 +190,67 @@ export function validateBaseUrl(raw: string): string | null {
  * owner's money and therefore still passes the monthly cap.
  */
 export function sharedTextCredential(): TextCredential | null {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  // SHARED_AI_* is canonical; the DEEPSEEK_* names are what this read before
+  // BYOK and are kept as a fallback so nothing breaks on the deploy that
+  // renames them. The rename is not cosmetic: from 27 Sep 2026 the shared key
+  // is an OpenCode Zen key, and a variable called DEEPSEEK_API_KEY holding a
+  // key for a different provider is exactly the kind of quiet lie that costs
+  // an hour the next time someone debugs this.
+  const apiKey = process.env.SHARED_AI_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return null;
+  const baseUrl =
+    process.env.SHARED_AI_BASE_URL
+    || process.env.DEEPSEEK_API_URL
+    || 'https://api.deepseek.com/v1';
   return {
     source: 'shared',
     apiKey,
-    endpoint:
-      process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions',
-    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    // Normalised, so this accepts `https://opencode.ai/zen/v1` as readily as a
+    // fully-qualified completions URL -- the same courtesy the BYOK form
+    // already extends to students.
+    endpoint: toChatCompletionsUrl(baseUrl),
+    model: process.env.SHARED_AI_MODEL || process.env.DEEPSEEK_MODEL || 'deepseek-chat',
   };
+}
+
+/**
+ * Whether the shared key currently serves a model that costs nothing.
+ *
+ * Read by `checkAiAllowance`, which otherwise reserves a flat $0.02 per
+ * request against a $5 monthly ceiling and so would stop every student at
+ * their 250th tutor message -- for a service with no bill behind it.
+ */
+/**
+ * Whether every signed-in account may use the shared key.
+ *
+ * Off unless set, so a deployment that inherits a paid key does not hand it to
+ * the whole school by default. When it is on with a model that is not free,
+ * the monthly per-user cap is still the thing standing between the owner and
+ * the bill, so this warns rather than refuses -- silently disabling the tutor
+ * for everyone would be the worse failure.
+ */
+export function isSharedAiOpenToAll(): boolean {
+  const raw = (process.env.SHARED_AI_OPEN_TO_ALL || '').trim().toLowerCase();
+  const on = raw === 'on' || raw === 'true' || raw === '1';
+  if (on && !sharedModelIsFree() && !warnedAboutPaidOpenAccess) {
+    warnedAboutPaidOpenAccess = true;
+    console.warn(
+      '[ai-credentials] SHARED_AI_OPEN_TO_ALL is on but the shared model is not '
+      + 'in FREE_MODELS; every signed-in account can now spend the owner\'s key, '
+      + 'bounded only by AI_MONTHLY_USER_SPEND_LIMIT_USD.',
+    );
+  }
+  return on;
+}
+
+let warnedAboutPaidOpenAccess = false;
+
+export function sharedModelIsFree(): boolean {
+  const shared = sharedTextCredential();
+  if (!shared) return false;
+  const interactive = process.env.AI_INTERACTIVE_MODEL;
+  // Both models have to be free, because either may serve a given call.
+  return isFreeModel(shared.model) && (!interactive || isFreeModel(interactive));
 }
 
 /**
@@ -347,16 +410,19 @@ export async function resolveAiCredentials(userId: string): Promise<ResolvedAi> 
 export function resolveFromRow(row: CredentialRow | null, userId = 'unknown'): ResolvedAi {
   const status = emptyStatus();
 
-  if (!row) return { text: null, vision: null, status };
-
-  status.sharedKeyAccess = row.sharedKeyAccess;
-  status.keyHint = row.keyHint;
-  status.baseUrl = row.baseUrl;
-  status.textModel = row.textModel;
-  status.visionModel = row.visionModel;
+  // No row is the ordinary case, not an edge case: a student who never opened
+  // the settings page has none, and with open access those are exactly the
+  // accounts that should still reach the tutor. This used to return early.
+  if (row) {
+    status.sharedKeyAccess = row.sharedKeyAccess;
+    status.keyHint = row.keyHint;
+    status.baseUrl = row.baseUrl;
+    status.textModel = row.textModel;
+    status.visionModel = row.visionModel;
+  }
 
   // ---- 1. the user's own key ----
-  if (row.encryptedApiKey && row.baseUrl && row.textModel) {
+  if (row?.encryptedApiKey && row.baseUrl && row.textModel) {
     status.hasOwnKey = true;
     let apiKey: string;
     try {
@@ -393,8 +459,8 @@ export function resolveFromRow(row: CredentialRow | null, userId = 'unknown'): R
     return { text, vision, status };
   }
 
-  // ---- 2. an admin-granted share of the owner's key ----
-  if (row.sharedKeyAccess) {
+  // ---- 2. a share of the owner's key: granted, or open to everyone ----
+  if (row?.sharedKeyAccess || isSharedAiOpenToAll()) {
     const text = sharedTextCredential();
     const vision = sharedVisionCredential();
     if (text) {
