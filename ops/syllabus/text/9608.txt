@@ -1,0 +1,61 @@
+Cambridge International AS & A Level Computer Science 9608 syllabus.   Assessment at a glance  
+Syllabus for examination in 2021.
+12
+www.cambridgeinternational.org/alevel
+Back to contents page
+2	
+Assessment at a glance
+For Cambridge International AS and A Level Computer Science, candidates may choose:
+•	
+to take Papers 1, 2, 3 and 4 in the same examination series, leading to the full Cambridge International 
+A Level
+•	
+to follow a staged assessment route by taking Papers 1 and 2 (for the AS Level qualification) in one 
+series, then Papers 3 and 4 (for the full Cambridge International A Level) in a later series
+•	
+to take Papers 1 and 2 only (for the AS Level qualification).
+Please see the inside front cover for more information about when this syllabus is available.
+Components
+Weighting (%)
+AS
+A
+Paper 1 Theory Fundamentals
+This written paper contains short-answer and structured questions. 
+There is no choice of questions.
+75 marks
+Externally assessed	
+1 hour 30 minutes
+50
+25
+Paper 2 Fundamental Problem-solving and Programming Skills
+This written paper contains short-answer and structured questions. 
+There is no choice of questions.
+Topics will include those given in the pre-release material.1
+75 marks
+Externally assessed	
+2 hours
+50
+25
+Paper 3 Advanced Theory
+This written paper contains short-answer and structured questions. 
+There is no choice of questions.
+75 marks
+Externally assessed	
+1 hour 30 minutes
+–
+25
+Paper 4 Further Problem-solving and Programming Skills
+This written paper contains short-answer and structured questions. 
+There is no choice of questions.
+Topics will include those given in the pre-release material.1
+75 marks
+Externally assessed	
+2 hours
+–
+25
+Advanced Subsidiary (AS) forms 50% of the assessment weighting of the full Advanced (A) Level.1
+1  You should check the Cambridge Handbook for the year candidates are taking the assessment for 
+information on when the pre-release materials will be available and where to access the materials 
+www.cambridgeinternational.org/eoguide. The material should be shared with the relevant teachers in 
+the centre and issued to candidates immediately, as teachers and candidates need the material to prepare 
+for the examinations. Candidates are not permitted to bring any prepared material into the examination.  

@@ -1,0 +1,58 @@
+Cambridge International AS & A Level Computer Science 9618 syllabus for 2024 and 2025.  Syllabus overview 
+11
+www.cambridgeinternational.org/alevel
+Back to contents page
+Assessment overview
+At AS Level candidates take papers 1 and 2. At A Level candidates take all four papers. Calculators must not 
+be used in any paper.
+Paper 1 Theory Fundamentals
+Paper 3 Advanced Theory
+1 hour 30 minutes
+75 marks
+Paper 1 will assess sections 1 to 8 of the 
+syllabus content.
+Written paper.
+Externally assessed. Candidates answer all 
+questions.
+50% of the AS Level
+25% of the A Level
+1 hour 30 minutes
+75 marks
+Paper 3 will assess sections 13 to 20 of the 
+syllabus content.
+Written paper.
+Externally assessed. Candidates answer all 
+questions.
+25% of the A Level
+Paper 2 Fundamental Problem-solving and 
+Programming Skills
+Paper 4 Practical
+2 hours
+75 marks
+Paper 2 will assess sections 9 to 12 of the 
+syllabus content.
+Candidates will need to write answers in 
+pseudocode.
+Written paper. 
+Externally assessed. Candidates answer all 
+questions.
+50% of the AS Level
+25% of the A Level
+2 hours 30 minutes
+75 marks
+Paper 4 will assess sections 19 to 20 of the 
+syllabus content, except for low-level and 
+declarative programming.
+Candidates will submit complete program code 
+and evidence of testing.  
+Candidates will be required to use either Java 
+(console mode), Visual Basic* (console mode) or 
+Python (console mode) programming languages. 
+Externally assessed. Candidates answer all 
+questions on a computer without internet or 
+email facility.
+25% of the A Level
+Information on availability is in the Before you start section.
+* Visual Basic in this syllabus refers to any .Net versions of the Visual Basic programming language. Candidates 
+are asked to use one of these versions of the software and not Visual Basic 6.0 or earlier versions of this 
+programming language.

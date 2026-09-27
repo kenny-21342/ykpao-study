@@ -1,0 +1,772 @@
+{
+  "0400": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 100,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 100,
+        "minutes": 480,
+        "name": "Externally Set Assignment",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664588-2025-syllabus.pdf",
+    "years": "2025"
+  },
+  "0410": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 70,
+        "minutes": 75,
+        "name": "Listening",
+        "paperNumber": "1",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 50,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 100,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "3",
+        "weightingPercent": 30
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664596-2025-syllabus.pdf",
+    "years": "2025"
+  },
+  "0411": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 80,
+        "minutes": 150,
+        "name": "Written examination",
+        "paperNumber": "1",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 120,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "2",
+        "weightingPercent": 60
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664602-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0413": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 100,
+        "minutes": 105,
+        "name": "Theory",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 100,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664604-2025-2026-syllabus.pdf",
+    "years": "2025-2026"
+  },
+  "0450": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 80,
+        "minutes": 90,
+        "name": "Short Answer and Data Response",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 80,
+        "minutes": 90,
+        "name": "Case Study",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/596930-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0455": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 30,
+        "minutes": 45,
+        "name": "Multiple Choice",
+        "paperNumber": "1",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 90,
+        "minutes": 135,
+        "name": "Structured Questions",
+        "paperNumber": "2",
+        "weightingPercent": 70
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/596945-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0460": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 105,
+        "name": "Geographical Themes",
+        "paperNumber": "1",
+        "weightingPercent": 45
+      },
+      {
+        "marks": 60,
+        "minutes": 90,
+        "name": "Geographical Skills",
+        "paperNumber": "2",
+        "weightingPercent": 28
+      },
+      {
+        "marks": 60,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "3",
+        "weightingPercent": 28
+      },
+      {
+        "marks": 60,
+        "minutes": 90,
+        "name": "Alternative to Coursework",
+        "paperNumber": "4",
+        "weightingPercent": 28
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664610-2025-2026-syllabus.pdf",
+    "years": "2025-2026"
+  },
+  "0470": {
+    "corpusOverlapYears": 2,
+    "papers": [
+      {
+        "marks": 60,
+        "minutes": 120,
+        "name": "Structured Questions",
+        "paperNumber": "1",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 40,
+        "minutes": 105,
+        "name": "Document Questions",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 40,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "3",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 40,
+        "minutes": 60,
+        "name": "Alternative to Coursework",
+        "paperNumber": "4",
+        "weightingPercent": 30
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/649636-2024-2026-syllabus.pdf",
+    "years": "2024-2026"
+  },
+  "0475": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 50,
+        "minutes": 90,
+        "name": "Poetry and Prose",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 50,
+        "minutes": 90,
+        "name": "Drama",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 25,
+        "minutes": 45,
+        "name": "Drama (Open Text)",
+        "paperNumber": "3",
+        "weightingPercent": 25
+      },
+      {
+        "marks": 25,
+        "minutes": 75,
+        "name": "Unseen",
+        "paperNumber": "4",
+        "weightingPercent": 25
+      },
+      {
+        "marks": 25,
+        "minutes": null,
+        "name": "Coursework",
+        "paperNumber": "5",
+        "weightingPercent": 25
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/596436-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0478": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 105,
+        "name": "Computer Systems",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 75,
+        "minutes": 105,
+        "name": "Algorithms, Programming and Logic",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/595424-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0500": {
+    "corpusOverlapYears": 2,
+    "papers": [
+      {
+        "marks": 80,
+        "minutes": 120,
+        "name": "Reading",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 80,
+        "minutes": 120,
+        "name": "Directed Writing and Composition",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 80,
+        "minutes": null,
+        "name": "Coursework Portfolio",
+        "paperNumber": "3",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 12,
+        "name": "Speaking and Listening Test",
+        "paperNumber": "4",
+        "weightingPercent": null
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/635230-2024-2026-syllabus.pdf",
+    "years": "2024-2026"
+  },
+  "0509": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 60,
+        "minutes": 135,
+        "name": "Reading, Directed Writing and",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 50,
+        "minutes": 120,
+        "name": "Writing",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/596963-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0606": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 80,
+        "minutes": 120,
+        "name": "Non-calculator",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 80,
+        "minutes": 120,
+        "name": "Calculator",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/662470-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0607": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 60,
+        "minutes": 75,
+        "name": "Non-calculator (Core)",
+        "paperNumber": "1",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 60,
+        "minutes": 75,
+        "name": "Calculator (Core)",
+        "paperNumber": "3",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 40,
+        "minutes": 75,
+        "name": "Investigation (Core)",
+        "paperNumber": "5",
+        "weightingPercent": 20
+      },
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Non-calculator (Extended)",
+        "paperNumber": "2",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Calculator (Extended)",
+        "paperNumber": "4",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 50,
+        "minutes": 90,
+        "name": "Investigation and Modelling",
+        "paperNumber": "6",
+        "weightingPercent": 20
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/662472-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0610": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Core)",
+        "paperNumber": "1",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Core)",
+        "paperNumber": "3",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Extended)",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Extended)",
+        "paperNumber": "4",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 75,
+        "name": "Practical Test",
+        "paperNumber": "5",
+        "weightingPercent": 20
+      },
+      {
+        "marks": 40,
+        "minutes": 60,
+        "name": "Alternative to Practical",
+        "paperNumber": "6",
+        "weightingPercent": 20
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/595426-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0620": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Core)",
+        "paperNumber": "1",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Core)",
+        "paperNumber": "3",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Extended)",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Extended)",
+        "paperNumber": "4",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 75,
+        "name": "Practical Test",
+        "paperNumber": "5",
+        "weightingPercent": 20
+      },
+      {
+        "marks": 40,
+        "minutes": 60,
+        "name": "Alternative to Practical",
+        "paperNumber": "6",
+        "weightingPercent": 20
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/595428-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0625": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Core)",
+        "paperNumber": "1",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Core)",
+        "paperNumber": "3",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 45,
+        "name": "Multiple Choice (Extended)",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 80,
+        "minutes": 75,
+        "name": "Theory (Extended)",
+        "paperNumber": "4",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 40,
+        "minutes": 75,
+        "name": "Practical Test",
+        "paperNumber": "5",
+        "weightingPercent": 20
+      },
+      {
+        "marks": 40,
+        "minutes": 60,
+        "name": "Alternative to Practical",
+        "paperNumber": "6",
+        "weightingPercent": 20
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/595430-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9231": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 120,
+        "name": "Further Pure Mathematics 1",
+        "paperNumber": "1",
+        "weightingPercent": 60
+      },
+      {
+        "marks": 50,
+        "minutes": 90,
+        "name": "Further Mechanics",
+        "paperNumber": "3",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 75,
+        "minutes": 120,
+        "name": "Further Pure Mathematics 2",
+        "paperNumber": "2",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 50,
+        "minutes": 90,
+        "name": "Further Probability & Statistics",
+        "paperNumber": "4",
+        "weightingPercent": 40
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/597381-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9608": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Theory Fundamentals",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 75,
+        "minutes": 120,
+        "name": "Fundamental Problem-solving and Programming Skills",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Advanced Theory",
+        "paperNumber": "3",
+        "weightingPercent": 25
+      },
+      {
+        "marks": 75,
+        "minutes": 120,
+        "name": "Further Problem-solving and Programming Skills",
+        "paperNumber": "4",
+        "weightingPercent": 50
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/502960-2021-syllabus.pdf",
+    "years": "2021"
+  },
+  "9618": {
+    "corpusOverlapYears": 2,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Theory Fundamentals",
+        "paperNumber": "1",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 75,
+        "minutes": 90,
+        "name": "Advanced Theory",
+        "paperNumber": "3",
+        "weightingPercent": 25
+      },
+      {
+        "marks": 75,
+        "minutes": 120,
+        "name": "Fundamental Problem-solving and Programming Skills",
+        "paperNumber": "2",
+        "weightingPercent": 50
+      },
+      {
+        "marks": 75,
+        "minutes": 150,
+        "name": "Practical",
+        "paperNumber": "4",
+        "weightingPercent": 25
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/636089-2024-2025-syllabus.pdf",
+    "years": "2024-2025"
+  },
+  "9702": {
+    "corpusOverlapYears": 1,
+    "papers": [
+      {
+        "marks": 40,
+        "minutes": 75,
+        "name": "Multiple Choice",
+        "paperNumber": "1",
+        "weightingPercent": 31
+      },
+      {
+        "marks": 100,
+        "minutes": 120,
+        "name": "A Level Structured Questions",
+        "paperNumber": "4",
+        "weightingPercent": 38
+      },
+      {
+        "marks": 60,
+        "minutes": 75,
+        "name": "AS Level Structured Questions",
+        "paperNumber": "2",
+        "weightingPercent": 46
+      },
+      {
+        "marks": 30,
+        "minutes": 75,
+        "name": "Planning, Analysis and Evaluation",
+        "paperNumber": "5",
+        "weightingPercent": 12
+      },
+      {
+        "marks": 40,
+        "minutes": 120,
+        "name": "Advanced Practical Skills",
+        "paperNumber": "3",
+        "weightingPercent": 23
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/664565-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "9708": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 30,
+        "minutes": 60,
+        "name": "AS Level Multiple Choice",
+        "paperNumber": "1",
+        "weightingPercent": 33
+      },
+      {
+        "marks": 30,
+        "minutes": 75,
+        "name": "A Level Multiple Choice",
+        "paperNumber": "3",
+        "weightingPercent": 17
+      },
+      {
+        "marks": 60,
+        "minutes": 120,
+        "name": "AS Level Data Response and Essays",
+        "paperNumber": "2",
+        "weightingPercent": 67
+      },
+      {
+        "marks": 60,
+        "minutes": 120,
+        "name": "A Level Data Response and Essays",
+        "paperNumber": "4",
+        "weightingPercent": 33
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/595463-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9709": {
+    "corpusOverlapYears": 3,
+    "papers": [
+      {
+        "marks": 75,
+        "minutes": 110,
+        "name": "Pure Mathematics 1",
+        "paperNumber": "1",
+        "weightingPercent": 60
+      },
+      {
+        "marks": 50,
+        "minutes": 75,
+        "name": "Pure Mathematics 2",
+        "paperNumber": "2",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 75,
+        "minutes": 110,
+        "name": "Pure Mathematics 3",
+        "paperNumber": "3",
+        "weightingPercent": 30
+      },
+      {
+        "marks": 50,
+        "minutes": 75,
+        "name": "Mechanics",
+        "paperNumber": "4",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 50,
+        "minutes": 75,
+        "name": "Probability & Statistics 1",
+        "paperNumber": "5",
+        "weightingPercent": 40
+      },
+      {
+        "marks": 50,
+        "minutes": 75,
+        "name": "Probability & Statistics 2",
+        "paperNumber": "6",
+        "weightingPercent": 20
+      }
+    ],
+    "url": "https://www.cambridgeinternational.org/Images/597421-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  }
+}

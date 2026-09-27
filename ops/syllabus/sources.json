@@ -1,0 +1,210 @@
+{
+  "0400": {
+    "code": "0400",
+    "name": "Cambridge IGCSE Art & Design 0400",
+    "overlap": 1,
+    "pages_chars": 1522,
+    "slug": "cambridge-igcse-art-and-design-0400",
+    "url": "https://www.cambridgeinternational.org/Images/664588-2025-syllabus.pdf",
+    "years": "2025"
+  },
+  "0410": {
+    "code": "0410",
+    "name": "Cambridge IGCSE Music 0410",
+    "overlap": 1,
+    "pages_chars": 923,
+    "slug": "cambridge-igcse-music-0410",
+    "url": "https://www.cambridgeinternational.org/Images/664596-2025-syllabus.pdf",
+    "years": "2025"
+  },
+  "0411": {
+    "code": "0411",
+    "name": "Cambridge IGCSE Drama 0411",
+    "overlap": 1,
+    "pages_chars": 1436,
+    "slug": "cambridge-igcse-drama-0411",
+    "url": "https://www.cambridgeinternational.org/Images/664602-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0413": {
+    "code": "0413",
+    "name": "Cambridge IGCSE Physical Education 0413",
+    "overlap": 1,
+    "pages_chars": 649,
+    "slug": "cambridge-igcse-physical-education-0413",
+    "url": "https://www.cambridgeinternational.org/Images/664604-2025-2026-syllabus.pdf",
+    "years": "2025-2026"
+  },
+  "0450": {
+    "code": "0450",
+    "name": "Cambridge IGCSE Business Studies 0450",
+    "overlap": 3,
+    "pages_chars": 733,
+    "slug": "cambridge-igcse-business-studies-0450",
+    "url": "https://www.cambridgeinternational.org/Images/596930-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0455": {
+    "code": "0455",
+    "name": "Cambridge IGCSE Economics 0455",
+    "overlap": 3,
+    "pages_chars": 1482,
+    "slug": "cambridge-igcse-economics-0455",
+    "url": "https://www.cambridgeinternational.org/Images/596945-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0460": {
+    "code": "0460",
+    "name": "Cambridge IGCSE Geography 0460",
+    "overlap": 1,
+    "pages_chars": 1352,
+    "slug": "cambridge-igcse-geography-0460",
+    "url": "https://www.cambridgeinternational.org/Images/664610-2025-2026-syllabus.pdf",
+    "years": "2025-2026"
+  },
+  "0470": {
+    "code": "0470",
+    "name": "Cambridge IGCSE History 0470",
+    "overlap": 2,
+    "pages_chars": 1657,
+    "slug": "cambridge-igcse-history-0470",
+    "url": "https://www.cambridgeinternational.org/Images/649636-2024-2026-syllabus.pdf",
+    "years": "2024-2026"
+  },
+  "0475": {
+    "code": "0475",
+    "name": "Cambridge IGCSE Literature in English 0475",
+    "overlap": 3,
+    "pages_chars": 1334,
+    "slug": "english-literature-0475",
+    "url": "https://www.cambridgeinternational.org/Images/596436-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0478": {
+    "code": "0478",
+    "name": "Cambridge IGCSE Computer Science 0478",
+    "overlap": 3,
+    "pages_chars": 870,
+    "slug": "cambridge-igcse-computer-science-0478",
+    "url": "https://www.cambridgeinternational.org/Images/595424-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0500": {
+    "code": "0500",
+    "name": "Cambridge IGCSE English First Language 0500",
+    "overlap": 2,
+    "pages_chars": 1755,
+    "slug": "cambridge-igcse-english-first-language-0500",
+    "url": "https://www.cambridgeinternational.org/Images/635230-2024-2026-syllabus.pdf",
+    "years": "2024-2026"
+  },
+  "0509": {
+    "code": "0509",
+    "name": "Cambridge IGCSE Chinese First Language 0509",
+    "overlap": 3,
+    "pages_chars": 1685,
+    "slug": "cambridge-igcse-chinese-first-language-0509",
+    "url": "https://www.cambridgeinternational.org/Images/596963-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0606": {
+    "code": "0606",
+    "name": "Cambridge IGCSE Additional Mathematics 0606",
+    "overlap": 1,
+    "pages_chars": 866,
+    "slug": "cambridge-igcse-mathematics-additional-0606",
+    "url": "https://www.cambridgeinternational.org/Images/662470-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0607": {
+    "code": "0607",
+    "name": "Cambridge IGCSE Mathematics (International) 0607",
+    "overlap": 1,
+    "pages_chars": 2382,
+    "slug": "cambridge-igcse-international-mathematics-0607",
+    "url": "https://www.cambridgeinternational.org/Images/662472-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "0610": {
+    "code": "0610",
+    "name": "Cambridge IGCSE Biology 0610",
+    "overlap": 3,
+    "pages_chars": 1848,
+    "slug": "cambridge-igcse-biology-0610",
+    "url": "https://www.cambridgeinternational.org/Images/595426-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0620": {
+    "code": "0620",
+    "name": "Cambridge IGCSE Chemistry 0620",
+    "overlap": 3,
+    "pages_chars": 1851,
+    "slug": "cambridge-igcse-chemistry-0620",
+    "url": "https://www.cambridgeinternational.org/Images/595428-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "0625": {
+    "code": "0625",
+    "name": "Cambridge IGCSE Physics 0625",
+    "overlap": 3,
+    "pages_chars": 1847,
+    "slug": "cambridge-igcse-physics-0625",
+    "url": "https://www.cambridgeinternational.org/Images/595430-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9231": {
+    "code": "9231",
+    "name": "Cambridge AS & A Level Further Mathematics 9231",
+    "overlap": 3,
+    "pages_chars": 1294,
+    "slug": "cambridge-international-as-and-a-level-mathematics-further-9231",
+    "url": "https://www.cambridgeinternational.org/Images/597381-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9608": {
+    "code": "9608",
+    "name": "Cambridge AS & A Level Computer Science 9608 (retired 2021)",
+    "overlap": 1,
+    "pages_chars": 2302,
+    "retired": true,
+    "slug": null,
+    "url": "https://www.cambridgeinternational.org/Images/502960-2021-syllabus.pdf",
+    "years": "2021"
+  },
+  "9618": {
+    "code": "9618",
+    "name": "Cambridge AS & A Level Computer Science 9618",
+    "overlap": 2,
+    "pages_chars": 1867,
+    "slug": "cambridge-international-as-and-a-level-computer-science-9618",
+    "url": "https://www.cambridgeinternational.org/Images/636089-2024-2025-syllabus.pdf",
+    "years": "2024-2025"
+  },
+  "9702": {
+    "code": "9702",
+    "name": "Cambridge AS & A Level Physics 9702",
+    "overlap": 1,
+    "pages_chars": 1546,
+    "slug": "cambridge-international-as-and-a-level-physics-9702",
+    "url": "https://www.cambridgeinternational.org/Images/664565-2025-2027-syllabus.pdf",
+    "years": "2025-2027"
+  },
+  "9708": {
+    "code": "9708",
+    "name": "Cambridge AS & A Level Economics 9708",
+    "overlap": 3,
+    "pages_chars": 1735,
+    "slug": "cambridge-international-as-and-a-level-economics-9708",
+    "url": "https://www.cambridgeinternational.org/Images/595463-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  },
+  "9709": {
+    "code": "9709",
+    "name": "CAIE A-Level Mathematics 9709",
+    "overlap": 3,
+    "pages_chars": 2229,
+    "slug": "cambridge-international-as-and-a-level-mathematics-9709",
+    "url": "https://www.cambridgeinternational.org/Images/597421-2023-2025-syllabus.pdf",
+    "years": "2023-2025"
+  }
+}

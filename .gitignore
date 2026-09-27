@@ -160,3 +160,9 @@ pdf_extraction/bank/transcription-alerts.log
 
 # runtime artefact of pdf_extraction/bank/run_transcription.sh
 pdf_extraction/bank/.transcription.lock/
+
+# Syllabus PDFs, fetched by scripts/fetch_syllabus_formats.py. 28MB of
+# Cambridge's own documents, re-fetchable from the URLs in
+# ops/syllabus/sources.json. The extracted text is committed instead, so a
+# change to the parser can be reviewed without fetching anything.
+/ops/syllabus/pdf/
