@@ -34,7 +34,7 @@ export default function AnnouncementsPage() {
     <SessionProvider>
       <div className="min-h-full bg-canvas">
         {/* Top bar */}
-        <header className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 px-6 py-4 flex items-center justify-between">
+        <header className="flex items-center justify-between border-b border-line bg-surface/80 px-6 py-4 backdrop-blur-xl">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-accent-text transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard

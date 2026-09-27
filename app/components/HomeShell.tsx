@@ -606,8 +606,21 @@ export default function SmartEduPlatform() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top Bar with Notifications — glass */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 dark:border-white/10">
+        {/*
+          * The app bar, on every screen, and the last thing wearing raw
+          * Tailwind colours: `bg-white/50 dark:bg-gray-900/40` over
+          * `border-white/30`, with a 2xl blur and a saturation boost. Three
+          * problems at once -- outside the token system, so it did not move
+          * with the theme; a different treatment from the two other chrome
+          * headers; and frosted glass, which is the most dated template
+          * signature on the site.
+          *
+          * It stays translucent, because a student can set a background photo
+          * and a solid bar would crop it. `AppChrome` already had the tokened
+          * version of exactly this, so this is now the same bar in all three
+          * places rather than a third interpretation.
+          */}
+        <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface/80 backdrop-blur-xl">
           <div className="flex items-center space-x-4">
             {/* Mobile: open the navigation drawer. */}
             <button
