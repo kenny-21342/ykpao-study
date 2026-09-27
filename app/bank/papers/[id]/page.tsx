@@ -1,10 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth';
 import { getBankPaper } from '@/lib/bank-questions';
 import BankQuestionCard from '@/app/components/BankQuestionView';
 import PreviewNotice from '@/app/components/PreviewNotice';
+import { PageHeader } from '@/app/components/ui';
 import ScreenContextReporter from '@/app/components/ScreenContextReporter';
 
 export const dynamic = 'force-dynamic';
@@ -57,24 +56,13 @@ export default async function BankPaperPage({
         data={{ subjectCode: paper.subjectCode, questionSubject: paper.subject }}
       />
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
-        <div>
-          <Link
-            href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent-text"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Past papers
-          </Link>
-          <h1 className="mt-1 text-xl font-bold text-primary">
-            {paper.subject} · Paper {variant}
-          </h1>
-          <p className="text-sm text-muted">
-            {paper.board} · {paper.year} · {session} ·{' '}
-            {paper.questions.length === 1
-              ? '1 question'
-              : `${paper.questions.length} questions`}
-          </p>
-        </div>
+        <PageHeader
+          back={{ href: '/papers', label: 'Past papers' }}
+          title={`${paper.subject} · Paper ${variant}`}
+          description={`${paper.board} · ${paper.year} · ${session} · ${
+            paper.questions.length === 1 ? '1 question' : `${paper.questions.length} questions`
+          }`}
+        />
 
         <PreviewNotice feature="question-bank" />
 

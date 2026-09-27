@@ -10,12 +10,11 @@ import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 import { useScreenContext } from './ScreenContext';
 import toast from 'react-hot-toast';
 import { normalizeOptionLetter } from '@/lib/bank-grading';
-import {
-  ClipboardList, Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
-  CheckCircle2, XCircle, Sparkles, FileText, ChevronRight, Loader2, AlertCircle,
-  Trophy, Target, BookOpen, RefreshCw, Eye, X, Lightbulb, Flag,
-  Image as ImageIcon, Upload,
+import { Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
+  CheckCircle2, XCircle, Sparkles, FileText, ChevronRight, Loader2, AlertCircle, Target, RefreshCw, X, Lightbulb, Flag,
+  Image as ImageIcon,
 } from 'lucide-react';
+import { Badge, Button, Card, CardRow, PageHeader, type BadgeTone } from './ui';
 
 /*
  * next/image is deliberately not used for the crops below.
@@ -174,27 +173,15 @@ type View =
   | { name: 'results'; examId: string };
 
 // ----------------------------- Helpers -----------------------------
-const STATUS_META: Record<ExamStatus, { label: string; cls: string }> = {
-  generating: {
-    label: 'Building…',
-    cls: 'bg-surface-raised text-secondary border-line',
-  },
-  failed: {
-    label: 'Failed',
-    cls: 'bg-danger-subtle text-danger border-danger-border',
-  },
-  generated: {
-    label: 'Ready',
-    cls: 'bg-surface-raised text-secondary border-line',
-  },
-  in_progress: {
-    label: 'In Progress',
-    cls: 'bg-warning-subtle text-warning border-warning-border',
-  },
-  completed: {
-    label: 'Completed',
-    cls: 'bg-accent-subtle text-accent-text border-accent-border',
-  },
+// Tones rather than five hand-written class strings, so a status badge here
+// looks like a status badge everywhere else. Sentence case too: "In Progress"
+// was the only Title Case label on the screen.
+const STATUS_META: Record<ExamStatus, { label: string; tone: BadgeTone }> = {
+  generating: { label: 'Building…', tone: 'neutral' },
+  failed: { label: 'Failed', tone: 'danger' },
+  generated: { label: 'Ready', tone: 'neutral' },
+  in_progress: { label: 'In progress', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'accent' },
 };
 
 const DIFFICULTY_OPTIONS = ['mixed', 'easy', 'medium', 'hard'] as const;
@@ -282,66 +269,48 @@ export default function MockExams() {
   }
 
   // ---- LIST VIEW ----
+  // One quiet line instead of a KPI row. The average is stated only once
+  // something has been marked -- an average over nothing is not a fact, and
+  // rendering it as "—" in a big tile was worse than leaving it out.
+  const completed = exams.filter((e) => e.status === 'completed');
+  const scored = completed.filter((e) => e.score !== null);
+  const average = scored.length === 0 ? null : Math.round(
+    scored.reduce((acc, e) => acc + (e.score ?? 0) / (e.totalMarks || 1), 0) / scored.length * 100,
+  );
+  const summary = exams.length === 0 ? undefined : [
+    `${exams.length} ${exams.length === 1 ? 'paper' : 'papers'}`,
+    completed.length > 0 ? `${completed.length} completed` : null,
+    exams.filter((e) => e.status === 'in_progress').length > 0
+      ? `${exams.filter((e) => e.status === 'in_progress').length} in progress` : null,
+    average === null ? null : `${average}% average`,
+  ].filter(Boolean).join(' · ');
+
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <PreviewNotice feature="mock-exams" />
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-              <ClipboardList className="w-6 h-6 text-accent-text" />
-              Mock Exams
-            </h2>
-            <p className="text-secondary mt-1">
-              Build a paper from the question bank, sit it under timed conditions, and
-              get multiple-choice answers marked the moment you submit.
-            </p>
-          </div>
-          <button
-            onClick={() => setView({ name: 'configure' })}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-semibold transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            New Mock Exam
-          </button>
-        </div>
-
-        {/* Stats summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            icon={<ClipboardList className="w-5 h-5" />}
-            label="Total Exams"
-            value={exams.length}
-            tint="blue"
-          />
-          <StatCard
-            icon={<Trophy className="w-5 h-5" />}
-            label="Completed"
-            value={exams.filter((e) => e.status === 'completed').length}
-            tint="green"
-          />
-          <StatCard
-            icon={<Clock className="w-5 h-5" />}
-            label="In Progress"
-            value={exams.filter((e) => e.status === 'in_progress').length}
-            tint="amber"
-          />
-          <StatCard
-            icon={<Award className="w-5 h-5" />}
-            label="Avg Score"
-            value={
-              exams.filter((e) => e.status === 'completed').length === 0
-                ? '—'
-                : `${Math.round(
-                    exams
-                      .filter((e) => e.status === 'completed' && e.score !== null)
-                      .reduce((acc, e, _i, arr) => acc + (e.score ?? 0) / (e.totalMarks || 1) / arr.length * 100, 0)
-                  )}%`
-            }
-            tint="purple"
-          />
-        </div>
+        <PageHeader
+          title="Mock Exams"
+          /*
+           * The four stat tiles that were here are one line now.
+           *
+           * They were the most recognisable generated-dashboard motif on the
+           * site: four equal bordered boxes, each with a tinted icon square,
+           * for four numbers that mean the same kind of thing. The last of
+           * them greeted a student with their average score before they had
+           * done anything, which is the worst possible first sentence.
+           *
+           * The explanatory paragraph went with them. A student who has
+           * clicked "Mock Exams" knows what mock exams are; the page does not
+           * need to introduce itself.
+           */
+          description={summary}
+          actions={
+            <Button variant="primary" onClick={() => setView({ name: 'configure' })} icon={Plus}>
+              New Mock Exam
+            </Button>
+          }
+        />
 
         {/* List */}
         {loadingList && exams.length === 0 ? (
@@ -353,7 +322,15 @@ export default function MockExams() {
         ) : exams.length === 0 ? (
           <EmptyState onCreate={() => setView({ name: 'configure' })} />
         ) : (
-          <div className="grid gap-4">
+          /*
+           * One surface, not one per paper.
+           *
+           * Every row used to be its own bordered, rounded, padded card, so a
+           * list of nine papers was nine competing boxes and the page had no
+           * shape. `CardRow` was written for exactly this and had never been
+           * used anywhere.
+           */
+          <Card padding="none">
             {exams.map((exam) => (
               <ExamCard
                 key={exam.id}
@@ -384,7 +361,7 @@ export default function MockExams() {
                 onViewResults={() => handleViewResults(exam.id)}
               />
             ))}
-          </div>
+          </Card>
         )}
 
         <NoticeDialog
@@ -401,26 +378,6 @@ export default function MockExams() {
 }
 
 // --------------------------- Subcomponents: list ---------------------------
-function StatCard({
-  icon, label, value, tint,
-}: { icon: React.ReactNode; label: string; value: string | number; tint: 'blue' | 'green' | 'amber' | 'purple' }) {
-  const tints: Record<string, string> = {
-    blue: 'bg-surface-raised text-secondary',
-    green: 'bg-accent-subtle text-accent-text',
-    amber: 'bg-warning-subtle text-warning',
-    purple: 'bg-surface-raised text-secondary',
-  };
-  return (
-    <div className="bg-surface rounded-lg p-5 border border-line">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${tints[tint]}`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-primary">{value}</p>
-      <p className="text-xs font-medium text-muted mt-0.5">{label}</p>
-    </div>
-  );
-}
-
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="bg-surface rounded-lg border border-dashed border-strong p-12 text-center">
@@ -456,111 +413,75 @@ function ExamCard({
       ? Math.round((exam.score / exam.totalMarks) * 100)
       : null;
 
+  /*
+   * The five icon chips are one line of text.
+   *
+   * They read `0625 · 9 questions · 75 min · 80 marks · Created Sep 27` --
+   * five items of equal weight, each with its own small icon, directly above a
+   * description that said the same thing again in prose. Metadata about a
+   * database row, presented as if it were the content.
+   *
+   * What a student actually needs to recognise a paper is which paper it is,
+   * and what it is worth. The rest is available when they open it.
+   */
+  const detail = [
+    exam.subjectCode,
+    `${exam.questionCount} questions`,
+    `${exam.totalMarks} marks`,
+    `${exam.durationMinutes} min`,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className="bg-surface rounded-lg border border-line transition-shadow p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-bold text-primary truncate">
-              {exam.title}
-            </h3>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${meta.cls}`}>
-              {meta.label}
-            </span>
-          </div>
-          {exam.description && exam.status !== 'failed' && (
-            <p className="text-sm text-muted mt-1 line-clamp-2">
-              {exam.description}
-            </p>
-          )}
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted flex-wrap">
-            {exam.subjectCode && (
-              <span className="inline-flex items-center gap-1">
-                <BookOpen className="w-3.5 h-3.5" /> {exam.subjectCode}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5" /> {exam.questionCount} questions
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" /> {exam.durationMinutes} min
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Target className="w-3.5 h-3.5" /> {exam.totalMarks} marks
-            </span>
-            <span>Created {fmtDate(exam.createdAt)}</span>
-          </div>
+    <CardRow className="items-start gap-4 px-5 py-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-lg font-semibold tracking-tight text-primary truncate">
+            {exam.title}
+          </h3>
+          <Badge tone={meta.tone}>{meta.label}</Badge>
         </div>
-
-        <div className="flex flex-col items-end gap-2">
-          {pct !== null && (
-            <div className="text-right">
-              <div className={`text-2xl font-bold ${pct >= 70 ? 'text-accent-text' : pct >= 40 ? 'text-warning' : 'text-danger'}`}>
-                {pct}%
-              </div>
-              <div className="text-xs text-muted">
-                {Math.round(exam.score ?? 0)} / {exam.totalMarks}
-              </div>
-            </div>
-          )}
-        </div>
+        <p className="mt-1 text-sm text-secondary">{detail}</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Created {fmtDate(exam.createdAt)}
+          {pct !== null && ` · scored ${Math.round(exam.score ?? 0)} of ${exam.totalMarks}`}
+        </p>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-subtle">
-        <div className="flex items-center gap-2">
-          {exam.topics.slice(0, 3).map((t) => (
-            <span key={t} className="text-xs px-2 py-1 bg-surface-raised text-secondary rounded-md">
-              {t}
-            </span>
-          ))}
-          {exam.topics.length > 3 && (
-            <span className="text-xs text-muted">+{exam.topics.length - 3}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {exam.status === 'completed' && (
-            <button
-              onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-secondary bg-surface-raised hover:bg-surface-active rounded-md transition-colors"
-            >
-              <Eye className="w-4 h-4" /> Review
-            </button>
-          )}
-          <button
-            onClick={onDelete}
-            className="p-2 text-muted hover:text-danger hover:bg-danger-subtle rounded-md transition-colors"
-            title="Delete" aria-label="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          {/* A paper that failed to generate has no questions on it, so Start
-              leads to an error page. Say what went wrong instead of offering a
-              button that cannot work. */}
-          {exam.status === 'failed' ? (
-            <span className="text-xs text-danger max-w-xs text-right">
-              {exam.generationError ?? 'This paper could not be generated.'}
-            </span>
-          ) : exam.status === 'generating' ? (
-            <span className="text-xs text-muted">Still building…</span>
-          ) : exam.status !== 'completed' ? (
-            <button
-              onClick={onOpen}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow transition-all"
-            >
-              <Play className="w-4 h-4" />
-              {exam.status === 'in_progress' ? 'Resume' : 'Start'}
-            </button>
-          ) : (
-            <button
-              onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-accent rounded-md shadow transition-all"
-            >
-              View Results <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+      {/*
+        * Score and action in one column, instead of a bordered footer strip.
+        *
+        * The topic chips that shared that strip are gone: three of a paper's
+        * topics, truncated with "+2", told a student nothing they could act on
+        * and added a third row of grey pills to every item in the list.
+        */}
+      <div className="flex items-center gap-3 shrink-0">
+        {pct !== null && (
+          <div className={`text-xl font-semibold tabular-nums ${pct >= 70 ? 'text-accent-text' : pct >= 40 ? 'text-warning' : 'text-danger'}`}>
+            {pct}%
+          </div>
+        )}
+        {exam.status === 'failed' ? (
+          <span className="text-xs text-danger max-w-[16rem] text-right">
+            {exam.generationError ?? 'This paper could not be generated.'}
+          </span>
+        ) : exam.status === 'generating' ? (
+          <span className="text-xs text-muted">Still building…</span>
+        ) : exam.status === 'completed' ? (
+          <Button variant="secondary" size="sm" onClick={onViewResults}>View results</Button>
+        ) : (
+          <Button variant="primary" size="sm" onClick={onOpen} icon={Play}>
+            {exam.status === 'in_progress' ? 'Resume' : 'Start'}
+          </Button>
+        )}
+        <button
+          onClick={onDelete}
+          className="p-2 text-muted hover:text-danger hover:bg-danger-subtle rounded-md transition-colors"
+          title="Delete" aria-label={`Delete ${exam.title}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
-    </div>
+    </CardRow>
   );
 }
 

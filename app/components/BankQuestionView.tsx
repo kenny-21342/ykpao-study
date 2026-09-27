@@ -426,7 +426,10 @@ export default function BankQuestionCard({ question }: { question: Question }) {
   return (
     <article className="rounded-lg border border-line bg-surface">
       <header className="flex items-baseline justify-between gap-3 border-b border-subtle px-4 py-3">
-        <h2 className="text-sm font-semibold text-primary">
+        {/* The question's own number is the title of this card, so it is set
+            like one. At text-sm it was the same size as the mark count beside
+            it and read as another label. */}
+        <h2 className="text-base font-semibold text-primary">
           Question {question.rootNumber}
         </h2>
         <div className="flex items-center gap-3 text-xs text-muted">

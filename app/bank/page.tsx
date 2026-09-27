@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth';
 import { listBankPapers } from '@/lib/bank-questions';
 import PreviewNotice from '@/app/components/PreviewNotice';
+import { PageHeader } from '@/app/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,19 +34,16 @@ export default async function BankIndexPage() {
   return (
     <main className="min-h-full bg-surface-raised">
       <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
-        <div>
-          <Link
-            href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent-text"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Past papers
-          </Link>
-          <h1 className="mt-1 text-xl font-bold text-primary">Question bank</h1>
-          <p className="text-sm text-muted">
-            Past-paper questions, one at a time, shown as they appear on the paper.
-          </p>
-        </div>
+        {/* The back link, title and supporting line were hand-rolled here and
+            again on the paper page, which is what PageHeader is for. The
+            supporting line stays: unlike an explain-the-page subtitle it says
+            something a student cannot infer -- that these are crops of the real
+            paper rather than retyped text. */}
+        <PageHeader
+          back={{ href: '/papers', label: 'Past papers' }}
+          title="Question bank"
+          description="Past-paper questions, one at a time, shown as they appear on the paper."
+        />
 
         <PreviewNotice feature="question-bank" />
 

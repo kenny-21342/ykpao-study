@@ -407,7 +407,7 @@ export default function StudyCoach({
       <div className="border-b border-line bg-white/80 dark:bg-gray-900/80 px-4 md:px-6">
         <div className="flex items-center justify-between gap-4 min-h-16">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-primary">Study</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-primary">Study</h2>
             <p className="text-xs text-muted truncate">Plan from deadlines, mistakes, and mastery</p>
           </div>
           <div className="flex items-center gap-2">
@@ -499,16 +499,18 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
     ? Math.round((overview.latestExam.score / overview.latestExam.totalMarks) * 100) : null;
   return (
     <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Metric label="Tasks due" value={overview.summary.tasksDue} detail={`${overview.overdueTasks.length} overdue`} icon={ListChecks} />
-        <Metric label="Reviews due" value={overview.dueReviews} detail={`${overview.summary.activeReviews} active cards`} icon={Brain} />
-        <Metric label="Topics started" value={overview.summary.topicsStarted} detail={`${overview.summary.topicsMastered} at mastery`} icon={Target} />
+      {/* Divided by hairlines rather than gapped like four separate objects,
+          which is what a grid with a gap reads as once the borders are gone. */}
+      <section className="flex flex-wrap divide-x divide-subtle -mx-4">
+        <Metric label="Tasks due" value={overview.summary.tasksDue} detail={`${overview.overdueTasks.length} overdue`} />
+        <Metric label="Reviews due" value={overview.dueReviews} detail={`${overview.summary.activeReviews} active cards`} />
+        <Metric label="Topics started" value={overview.summary.topicsStarted} detail={`${overview.summary.topicsMastered} at mastery`} />
         {overview.daysUntilExam === null ? (
-          <Metric label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} detail={overview.latestExam?.title ?? 'No completed exam'} icon={GraduationCap} />
+          <Metric label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} detail={overview.latestExam?.title ?? 'No completed exam'} />
         ) : (
           // The countdown replaces the mock tile rather than adding a fifth:
           // once an exam is close it is the number that should be on screen.
-          <Metric label="Days to exam" value={overview.daysUntilExam} detail={overview.examCountdown ?? ''} icon={CalendarDays} />
+          <Metric label="Days to exam" value={overview.daysUntilExam} detail={overview.examCountdown ?? ''} />
         )}
       </section>
 
@@ -622,8 +624,18 @@ function CommandTermPanel({ stats }: { stats: CommandTermStat[] }) {
   );
 }
 
-function Metric({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof Target }) {
-  return <div className="p-4 border border-line bg-surface rounded-md"><div className="flex items-center justify-between"><p className="text-xs font-medium text-muted">{label}</p><Icon className="w-4 h-4 text-accent-text" /></div><p className="text-2xl font-bold mt-2 text-primary">{value}</p><p className="text-[11px] text-muted mt-1 truncate">{detail}</p></div>;
+function Metric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
+  // Borderless and iconless, matching the dashboard's StatTile. This was the
+  // last surviving copy of the bordered-box-with-an-accent-icon tile: four of
+  // them in a row, each repeating the same shape, which is the motif that made
+  // the app read as generated more than any other single thing.
+  return (
+    <div className="px-4 py-3 first:pl-0 last:pr-0 min-w-0">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted truncate">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-primary tabular-nums">{value}</p>
+      <p className="mt-0.5 text-xs text-muted truncate">{detail}</p>
+    </div>
+  );
 }
 
 function PlanView({ tasks, busy, taskFormOpen, setTaskFormOpen, onGenerate, onUpdate, onDelete, onCreated, onOpenQuestion, onOpenBankQuestion, onOpenMockExams }: {
