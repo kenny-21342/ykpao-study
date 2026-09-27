@@ -109,6 +109,18 @@ const TUTOR_MODES: Array<{ id: TutorMode; label: string; icon: typeof Sparkles }
   { id: 'worked-example', label: 'Example', icon: ListOrdered },
 ];
 
+/**
+ * What the student picks between: the two things the assistant does.
+ *
+ * `TUTOR_MODES` above is still the vocabulary of `mode` -- the API, the
+ * stored conversations and the system prompt all keep using it -- but it is
+ * no longer a menu put in front of someone who has not asked anything yet.
+ */
+const ASSISTANT_TABS: Array<{ view: 'chat' | 'actions'; label: string; icon: typeof Sparkles }> = [
+  { view: 'chat', label: 'Chat', icon: Sparkles },
+  { view: 'actions', label: 'Plan', icon: Workflow },
+];
+
 const SUGGESTED_MESSAGES = [
   'What should I study today?',
   'Explain my weakest topic',
@@ -337,16 +349,11 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
     await loadConversations();
   };
 
-  const changeMode = (nextMode: TutorMode) => {
-    setMode(nextMode);
-    if (conversationId) {
-      void fetch('/api/ai/conversations', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, mode: nextMode }),
-      });
-    }
-  };
+  // `changeMode` used to sit here and PATCH the conversation when the student
+  // picked a teaching mode. With the mode row gone there is nothing to pick,
+  // and the PATCH was always redundant: `mode` is sent with every message
+  // (see the rag-chat body below), so the server records it per message and
+  // on conversation creation without being told separately.
 
   const changeCourse = (courseId: string) => {
     setActiveCourseId(courseId);
@@ -500,7 +507,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/15"><Sparkles className="h-4 w-4" /></div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-bold">{view === 'history' ? 'Chat history' : view === 'actions' ? 'Plan & act' : conversationTitle}</h3>
+            <h3 className="truncate text-sm font-bold">{view === 'history' ? 'Chat history' : view === 'actions' ? 'Plan' : conversationTitle}</h3>
             {/* The subtitle read "AI Tutor" under a header that already says so.
                 The picker takes that line instead: discoverable without
                 crowding the button row, and absent for a student on their own
@@ -517,29 +524,29 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-white/15" title="Close" aria-label="Close"><X className="h-4 w-4" /></button>
         </header>
 
+        {/* Two things the tutor does, not five ways of asking it.
+            
+            This row used to offer Explain / Hint / Socratic / Check /
+            Example beside a "Plan & act" button -- six controls, five of
+            which differ only in the tone of the same answer, above a chat
+            box a student has not typed in yet. Choosing between them is a
+            decision the student has no basis to make before seeing any
+            output, and it pushed the real controls off the edge at panel
+            width.
+
+            The teaching modes still exist server-side and still reach the
+            prompt: `MODE_RULES` is unchanged, notes' "quiz me" still opens
+            in `check`, and a conversation saved in any mode reopens in it.
+            What is gone is asking the student to pick one up front. */}
+        {!isMinimized && <div className="flex items-center gap-1 border-b border-line bg-surface-raised p-2">
+          {ASSISTANT_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = view === tab.view;
+            return <button key={tab.view} onClick={() => setView(tab.view)} aria-current={active ? 'page' : undefined} className={`flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md text-xs font-semibold ${active ? 'bg-surface text-accent-text' : 'text-muted hover:bg-surface-hover'}`}><Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{tab.label}</span></button>;
+          })}
+        </div>}
+
         {!isMinimized && view === 'chat' && <>
-          <div className="flex items-center gap-1 border-b border-line bg-surface-raised p-2">
-            <div className="grid min-w-0 flex-1 grid-cols-5 gap-1">
-              {TUTOR_MODES.map((item) => {
-                const Icon = item.icon;
-                // `min-w-0` on each cell and `truncate` on the label are what
-                // keep this row inside its own width. Without them the five
-                // equal columns size to their content and the last one slides
-                // under the "Plan & act" button.
-                //
-                // The label used to be hidden below a `min-[390px]`
-                // breakpoint, which could not help: that measures the
-                // viewport, while this panel has a width of its own, so on a
-                // wide screen with a narrow panel the labels were shown
-                // precisely when they did not fit. Truncation needs no
-                // breakpoint and cannot be wrong about the width -- the label
-                // is whole when it fits and clipped when it does not, and the
-                // icon and tooltip carry the meaning either way.
-                return <button key={item.id} onClick={() => changeMode(item.id)} title={item.label} aria-label={item.label} className={`flex h-8 min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-semibold ${mode === item.id ? 'bg-surface text-accent-text' : 'text-muted hover:bg-surface-hover'}`}><Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.label}</span></button>;
-              })}
-            </div>
-            <button onClick={() => setView('actions')} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-surface-inverse px-2.5 text-[11px] font-bold text-inverse hover:bg-surface-inverse-hover" title="Plan and system actions" aria-label="Plan and system actions"><Workflow className="h-3.5 w-3.5" /> Plan & act</button>
-          </div>
           {learnerCourses.length > 0 && <div className="border-b border-line px-3 py-2"><select aria-label="Chat course" value={activeCourseId} onChange={(event) => changeCourse(event.target.value)} className="h-8 w-full rounded-md border border-strong bg-surface px-2 text-xs font-medium"><option value="">Choose a course</option>{learnerCourses.map((course) => <option key={course.id} value={course.id}>{course.name} · {course.level}</option>)}</select></div>}
 
           <div className="flex-1 overflow-y-auto p-4">
