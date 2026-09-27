@@ -456,7 +456,20 @@ function ExamCard({
         */}
       <div className="flex items-center gap-3 shrink-0">
         {pct !== null && (
-          <div className={`text-xl font-semibold tabular-nums ${pct >= 70 ? 'text-accent-text' : pct >= 40 ? 'text-warning' : 'text-danger'}`}>
+          /*
+           * Quiet, and one colour rather than three.
+           *
+           * At 28px in red this was the loudest thing on the screen, and what
+           * it was shouting was a student's worst result -- "0%" in danger red,
+           * twice, above a list of papers they had not sat yet. The three-way
+           * green/amber/red also turned every row back into a traffic light,
+           * which is the same decoration the stat tiles were removed for.
+           *
+           * The exact figure is already on the line below ("scored 0 of 20"),
+           * so this only has to be scannable. Following StatTile's rule: only
+           * a fall is coloured.
+           */
+          <div className={`text-base font-semibold tabular-nums ${pct < 40 ? 'text-danger' : 'text-secondary'}`}>
             {pct}%
           </div>
         )}
