@@ -240,6 +240,19 @@ def _detect_answer_key(path: Path) -> DocumentSpans | None:
     Both CAIE layouts — pre-2018 ``Question Number | Key`` and post-2018
     ``Question | Answer | Marks`` — reduce to a run of question numbers each
     followed immediately by a single option letter.
+
+    The IB reduces to the same thing, except that it writes the number with a
+    trailing period: ``1.`` then ``B``. That one character meant this detector
+    recognised **no** IB answer key at all -- 221 papers and 7,677 keys, the
+    whole of IB Physics, Chemistry, Biology and Sports Science Paper 1, came
+    through as unkeyed. A generated IB Paper 1 was then forty multiple-choice
+    questions sent to a model to mark with no key to mark them against.
+
+    Tolerating the period is safe rather than merely cheap: across all 1,854 IB
+    mark schemes it newly claims 221 papers and every one of them is a Paper 1.
+    Nothing structured is misread as a key, which is the failure that would
+    matter -- ``run`` returns early on a detected key, so a false positive
+    would cost that paper its real mark scheme.
     """
     pairs: dict[int, str] = {}
     page_count = 0
@@ -248,6 +261,9 @@ def _detect_answer_key(path: Path) -> DocumentSpans | None:
         for page in document:
             tokens = page.get_text().split()
             for index, token in enumerate(tokens[:-1]):
+                # The IB numbers its key "1." where CAIE writes "1".
+                if token.endswith(".") and len(token) > 1:
+                    token = token[:-1]
                 # str.isdigit() accepts Unicode superscripts such as "3²",
                 # which int() then rejects, so require plain ASCII digits.
                 if not (token.isascii() and token.isdigit()):
