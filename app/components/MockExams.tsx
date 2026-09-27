@@ -964,20 +964,33 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
                 </Field>
                 )}
 
-                <Field label={`Duration: ${durationMinutes} min`}>
-                  <input
-                    type="range"
-                    min={30}
-                    max={180}
-                    step={15}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="w-full accent-[var(--accent)]"
-                  />
-                  <div className="flex justify-between text-xs text-muted mt-1">
-                    <span>30m</span><span>3h</span>
-                  </div>
-                </Field>
+                {/* The clock is the board's whenever it publishes one, and the
+                    server uses that regardless of what is sent -- so offering a
+                    slider beside it would be a control that does nothing. Same
+                    rule as the mark total above: a Paper 1 is sat in 45 minutes
+                    because that is what a Paper 1 is. */}
+                {selectedFormat?.minutes ? (
+                  <Field label="Duration">
+                    <p className="text-sm text-secondary">
+                      {shortDuration(selectedFormat.minutes)}, as the real paper is timed.
+                    </p>
+                  </Field>
+                ) : (
+                  <Field label={`Duration: ${durationMinutes} min`}>
+                    <input
+                      type="range"
+                      min={30}
+                      max={180}
+                      step={15}
+                      value={durationMinutes}
+                      onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                      className="w-full accent-[var(--accent)]"
+                    />
+                    <div className="flex justify-between text-xs text-muted mt-1">
+                      <span>30m</span><span>3h</span>
+                    </div>
+                  </Field>
+                )}
               </div>
 
               {showPredictionSteering && (

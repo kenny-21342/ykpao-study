@@ -164,6 +164,22 @@ export async function POST(req: Request) {
           { level: learnerContext.activeCourse?.level, paperNumber },
         );
 
+    /**
+     * The real paper's own name and clock, where the board publishes them.
+     *
+     * The duration used to be whatever the client sent, defaulting to 90
+     * minutes, which put a 90-minute clock on a Paper 1 that is sat in 45.
+     * Pacing is most of what a mock is for, so a wrong clock undoes the point
+     * of shaping the paper at all. The client's value is still used when no
+     * paper was named, or for the papers the board times nothing -- Cambridge
+     * coursework and every IB Language A paper.
+     */
+    const official = template?.official ?? null;
+    const examDuration = official?.minutes ?? durationMinutes;
+    const paperLabel = template
+      ? `Paper ${template.paperNumber}${official?.name ? ` \u2014 ${official.name}` : ''}`
+      : null;
+
     const selected = template
       ? await selectByTemplate({ subjectCodes: bankSubjectCodes, template })
       : await selectBankQuestions({
@@ -188,12 +204,18 @@ export async function POST(req: Request) {
     const exam = await prisma.mockExam.create({
       data: {
         userId: user.id,
-        title: title || `${subject.name} Mock Exam`,
+        title: title || (paperLabel
+          ? `${subject.name} ${paperLabel}`
+          : `${subject.name} Mock Exam`),
+        // The selected marks, not the official total: `fillSlots` matches each
+        // slot as closely as the corpus allows, so saying 80 when the questions
+        // come to 78 would be the same kind of untruth this set out to fix.
         description:
           `${selected.length} questions from past ${subject.name} papers, ` +
-          `${totalMarksOf(selected)} marks.`,
+          `${totalMarksOf(selected)} marks`
+          + (official?.minutes ? `, ${official.minutes} minutes` : '') + '.',
         subjectCode: subject.code,
-        durationMinutes,
+        durationMinutes: examDuration,
         totalMarks: totalMarksOf(selected),
         topics,
         difficulty,

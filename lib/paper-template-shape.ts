@@ -126,10 +126,14 @@ export function derivePaperTemplates(subjectCode: string, rows: TemplateRow[]): 
  * where Paper 1 is usually a multiple-choice screen and Papers 5/6 are
  * practicals that do not transfer to a screen at all.
  */
-export function chooseTemplate(
-  templates: readonly PaperTemplate[],
+// Generic so that a caller passing templates carrying the exam board's figures
+// gets one back still carrying them; typing this to `PaperTemplate` dropped the
+// `official` field on the way out, which is where the paper's real duration and
+// name live.
+export function chooseTemplate<T extends PaperTemplate>(
+  templates: readonly T[],
   options: { level?: string | null; paperNumber?: number | null } = {},
-): PaperTemplate | null {
+): T | null {
   // Normalised on both sides because the two vocabularies were written years
   // apart: a course says "A Level", `bank_subjects` says "a-level", and an IB
   // course says "HL" to match. Comparing raw strings silently matched nothing
