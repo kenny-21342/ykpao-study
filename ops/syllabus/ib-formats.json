@@ -1,0 +1,2094 @@
+{
+  "biology": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 35,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          72,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 72,
+        "minutes": 150,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 45,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 36,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          50,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 31,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          35,
+          35
+        ],
+        "marks": 35,
+        "marksMedianAllYears": 35,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 20,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "business-management": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          40,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 60,
+        "minutes": 135,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 17,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          50,
+          70
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 60,
+        "minutes": 105,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 26,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 4,
+        "weightingPercent": null,
+        "years": [
+          2024,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 12,
+        "weightingPercent": null,
+        "years": [
+          2024,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 75,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 17,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          50
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 50,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 25,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "chemistry": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 35,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          90,
+          95
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 150,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 45,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 35,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          50,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          35,
+          35
+        ],
+        "marks": 35,
+        "marksMedianAllYears": 35,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "chinese-a-language-and-literature": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2023,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          20,
+          20
+        ],
+        "marks": 20,
+        "marksMedianAllYears": 20,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 17,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "chinese-a-literature": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 17,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2023,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          20,
+          20
+        ],
+        "marks": 20,
+        "marksMedianAllYears": 20,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "computer-science": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          100,
+          100
+        ],
+        "marks": 100,
+        "marksMedianAllYears": 100,
+        "minutes": 130,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          65,
+          65
+        ],
+        "marks": 65,
+        "marksMedianAllYears": 65,
+        "minutes": 80,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 21,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          70,
+          70
+        ],
+        "marks": 70,
+        "marksMedianAllYears": 70,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 60,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "economics": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          50
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 50,
+        "minutes": 75,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 31,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 105,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 14,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          30,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 50,
+        "minutes": 105,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 105,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 8,
+        "weightingPercent": null,
+        "years": [
+          2024,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          50
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 50,
+        "minutes": 75,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 31,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 105,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 14,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "english-a-language-and-literature": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 28,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2023,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          20,
+          20
+        ],
+        "marks": 20,
+        "marksMedianAllYears": 20,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 27,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "english-a-literature": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          20,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2023,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          20,
+          20
+        ],
+        "marks": 20,
+        "marksMedianAllYears": 20,
+        "minutes": null,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": null,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "environmental-systems-and-societies": {
+    "papers": [
+      {
+        "level": "SL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2016
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          65,
+          65
+        ],
+        "marks": 65,
+        "marksMedianAllYears": 65,
+        "minutes": 120,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 24,
+        "weightingPercent": null,
+        "years": [
+          2017,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "further-mathematics": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          150,
+          150
+        ],
+        "marks": 150,
+        "marksMedianAllYears": 150,
+        "minutes": 150,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 5,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          150,
+          150
+        ],
+        "marks": 150,
+        "marksMedianAllYears": 150,
+        "minutes": 150,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 5,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "geography": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          28
+        ],
+        "marks": 28,
+        "marksMedianAllYears": 28,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 23,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          60,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 60,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 6,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2018
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "history": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          30,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 150,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 74,
+        "weightingPercent": null,
+        "years": [
+          2018,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          15,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 26,
+        "weightingPercent": null,
+        "years": [
+          2018,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "history-route-1": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          60,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 60,
+        "minutes": 150,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2016
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2016
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2016
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "history-route-2": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          45,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 52,
+        "minutes": 150,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2017
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 6,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2016
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          30,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 5,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2017
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "itgs": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          60,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 60,
+        "minutes": 135,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 15,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 14,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 15,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2023
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "mathematical-studies": {
+    "papers": [
+      {
+        "level": "SL",
+        "markSpread": [
+          90,
+          90
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          90,
+          90
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "mathematics": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          100,
+          120
+        ],
+        "marks": 100,
+        "marksMedianAllYears": 100,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          100,
+          120
+        ],
+        "marks": 100,
+        "marksMedianAllYears": 100,
+        "minutes": 120,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          50,
+          60
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 36,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          90,
+          90
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          90,
+          90
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "mathematics-analysis-and-approaches": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          110,
+          110
+        ],
+        "marks": 110,
+        "marksMedianAllYears": 110,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 18,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          110,
+          110
+        ],
+        "marks": 110,
+        "marksMedianAllYears": 110,
+        "minutes": 120,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 18,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          55,
+          55
+        ],
+        "marks": 55,
+        "marksMedianAllYears": 55,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 17,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          80,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 80,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          80,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 80,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "mathematics-applications-and-interpretation": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          110,
+          110
+        ],
+        "marks": 110,
+        "marksMedianAllYears": 110,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          110,
+          110
+        ],
+        "marks": 110,
+        "marksMedianAllYears": 110,
+        "minutes": 120,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          55,
+          55
+        ],
+        "marks": 55,
+        "marksMedianAllYears": 55,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          80,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 80,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          80,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 80,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2021,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "music": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          100,
+          100
+        ],
+        "marks": 100,
+        "marksMedianAllYears": 100,
+        "minutes": 150,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          80,
+          80
+        ],
+        "marks": 80,
+        "marksMedianAllYears": 80,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2020
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "nature-of-science": {
+    "papers": [
+      {
+        "level": "SL",
+        "markSpread": [
+          60,
+          60
+        ],
+        "marks": 60,
+        "marksMedianAllYears": 60,
+        "minutes": 90,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2017,
+          2018
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 60,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 2,
+        "weightingPercent": null,
+        "years": [
+          2017,
+          2018
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "philosophy": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          75
+        ],
+        "marks": 75,
+        "marksMedianAllYears": 75,
+        "minutes": 150,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 16,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          25,
+          25
+        ],
+        "marks": 25,
+        "marksMedianAllYears": 25,
+        "minutes": 60,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 20,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          25,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 105,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "physics": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 35,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          90,
+          95
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 150,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          45,
+          45
+        ],
+        "marks": 45,
+        "marksMedianAllYears": 45,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 45,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 35,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          50,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 90,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 30,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          35,
+          35
+        ],
+        "marks": 35,
+        "marksMedianAllYears": 35,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 19,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2024
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "psychology": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          49,
+          49
+        ],
+        "marks": 49,
+        "marksMedianAllYears": 49,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 21,
+        "weightingPercent": null,
+        "years": [
+          2019,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          22,
+          44
+        ],
+        "marks": 44,
+        "marksMedianAllYears": 44,
+        "minutes": 120,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 24,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          24,
+          30
+        ],
+        "marks": 24,
+        "marksMedianAllYears": 24,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 13,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "HLSL",
+        "markSpread": [
+          46,
+          46
+        ],
+        "marks": 46,
+        "marksMedianAllYears": 46,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 9,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2018
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          49,
+          49
+        ],
+        "marks": 49,
+        "marksMedianAllYears": 49,
+        "minutes": 120,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 21,
+        "weightingPercent": null,
+        "years": [
+          2019,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          22,
+          22
+        ],
+        "marks": 22,
+        "marksMedianAllYears": 22,
+        "minutes": 60,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 20,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  },
+  "sports-exercise-and-health-science": {
+    "papers": [
+      {
+        "level": "HL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 60,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 18,
+        "weightingPercent": null,
+        "years": [
+          2018,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          90,
+          90
+        ],
+        "marks": 90,
+        "marksMedianAllYears": 90,
+        "minutes": 135,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 18,
+        "weightingPercent": null,
+        "years": [
+          2018,
+          2025
+        ]
+      },
+      {
+        "level": "HL",
+        "markSpread": [
+          50,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 75,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 11,
+        "weightingPercent": null,
+        "years": [
+          2018,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          30,
+          30
+        ],
+        "marks": 30,
+        "marksMedianAllYears": 30,
+        "minutes": 45,
+        "name": "Paper 1",
+        "paperNumber": "1",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          50,
+          50
+        ],
+        "marks": 50,
+        "marksMedianAllYears": 50,
+        "minutes": 75,
+        "name": "Paper 2",
+        "paperNumber": "2",
+        "papersRead": 22,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      },
+      {
+        "level": "SL",
+        "markSpread": [
+          40,
+          40
+        ],
+        "marks": 40,
+        "marksMedianAllYears": 40,
+        "minutes": 60,
+        "name": "Paper 3",
+        "paperNumber": "3",
+        "papersRead": 15,
+        "weightingPercent": null,
+        "years": [
+          2016,
+          2025
+        ]
+      }
+    ],
+    "source": "IB paper cover pages"
+  }
+}
