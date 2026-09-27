@@ -127,12 +127,33 @@ jobs:
           aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
           aws configure set region "$BACKUP_S3_REGION"
 
-          aws s3api list-objects-v2 \
+          # A failure here must never fail the job. The dump is already uploaded
+          # by this point, and housekeeping that cannot run is not a reason to
+          # report the backup as broken -- that inverts which half matters.
+          #
+          # It is currently expected to fail, and the warning is the point.
+          # This step broke the nightly backup on its first scheduled run
+          # (27 Sep, `NoSuchKey`, run 36306020877) and the cause is a
+          # pre-existing misconfiguration this step merely exposed:
+          # BACKUP_S3_ENDPOINT carries the bucket name on the end of the URL.
+          # PutObject still works, because the extra segment simply becomes
+          # part of the key -- which is why every dump is really stored under
+          # `<bucket>/<bucket>/postgres/`. But a list is a GET on the bucket
+          # URL, so the extra segment makes it a GET on a *key* instead, and
+          # R2 answers NoSuchKey. No prefix or list command fixes that from
+          # here; removing the bucket name from the BACKUP_S3_ENDPOINT secret
+          # does, and the existing dumps then need moving to match.
+          if ! aws s3api list-objects-v2 \
             --bucket "$BACKUP_S3_BUCKET" \
             --prefix "$prefix/" \
             "${endpoint_args[@]}" \
             --query 'Contents[].{Key:Key,LastModified:LastModified}' \
-            --output json > "$RUNNER_TEMP/backups.json"
+            --output json > "$RUNNER_TEMP/backups.json" 2> "$RUNNER_TEMP/list-error.txt"; then
+            echo "::warning::Retention could not list the bucket, so nothing was deleted. The dump itself uploaded fine. $(head -c 300 "$RUNNER_TEMP/list-error.txt")"
+            echo "Retention: **skipped** — could not list the bucket. The dump uploaded normally." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           cutoff="$(date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%SZ)"
           # Two guards beyond the age test, because this step deletes.

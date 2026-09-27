@@ -1,5 +1,10 @@
 name: Backup bucket lifecycle rule
 
+# NOTE (27 Sep): this cannot run successfully until the BACKUP_S3_ENDPOINT
+# secret stops carrying the bucket name on the end of the URL. A lifecycle
+# write is a PUT on the bucket URL, so the extra path segment turns it into a
+# PUT on a key, exactly as it breaks the retention listing in db-backup.yml.
+#
 # The backstop docs/PRODUCTION_OPERATIONS.md has asked for since the backup
 # workflow was written, and which was never done because it lived as prose:
 # "in the Cloudflare dashboard, R2 -> the backup bucket -> Settings -> Object
@@ -22,6 +27,15 @@ on:
         description: 'Write the rule. Leave unchecked to print the current one and stop.'
         type: boolean
         default: false
+      prefix:
+        description: >-
+          Real key prefix the dumps live under, with no trailing slash. Check
+          this against the bucket rather than assuming: BACKUP_S3_ENDPOINT
+          currently carries the bucket name, so uploads land under
+          `<bucket>/postgres`, not `postgres`. Leave blank to use
+          BACKUP_S3_PREFIX.
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -87,7 +101,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          prefix="${{ inputs.prefix }}"
+          prefix="${prefix:-${BACKUP_S3_PREFIX:-postgres}}"
+          prefix="${prefix%/}"
           days="${BACKUP_RETENTION_DAYS:-90}"
           # The same floor `db-backup.yml` enforces, for the same reason: this
           # one deletes on a schedule nobody is watching, so a typo here is
@@ -101,7 +117,13 @@ jobs:
           # refuse to run if the bucket carries a rule this workflow did not
           # write. Silently discarding someone else's retention policy would be
           # a data-loss bug wearing the costume of a housekeeping task.
-          foreign="$(jq -r --arg id "$RULE_ID" '[.Rules[]? | select(.ID != $id) | .ID] | join(", ")' current.json)"
+          # R2 puts "Default Multipart Abort Rule" on every bucket itself. It
+          # is not a policy anyone chose, and our rule carries the same
+          # AbortIncompleteMultipartUpload, so replacing it loses nothing.
+          # Anything else is someone's decision and is not ours to discard.
+          foreign="$(jq -r --arg id "$RULE_ID" '
+            [.Rules[]? | select(.ID != $id and .ID != "Default Multipart Abort Rule") | .ID]
+            | join(", ")' current.json)"
           if [[ -n "$foreign" ]]; then
             echo "This bucket already has lifecycle rules this workflow did not write: ${foreign}" >&2
             echo "Reconcile them by hand; refusing to overwrite." >&2
