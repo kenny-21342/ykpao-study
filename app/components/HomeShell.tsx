@@ -646,16 +646,13 @@ export default function SmartEduPlatform() {
               )}
             </button>
 
-            <div>
-              <h1 className="text-xl font-bold text-primary">
-                {activeTab === 'dashboard' && 'Dashboard'}
-                {activeTab === 'study' && 'Study'}
-                {activeTab === 'practice' && 'Practice'}
-                {activeTab === 'materials' && 'Materials'}
-                {activeTab === 'mock-exams' && 'Mock Exams'}
-                {activeTab === 'discussions' && 'Discussion Board'}
-              </h1>
-            </div>
+            {/*
+              * No title here. Every view renders its own heading directly
+              * below this bar, so a title in the bar said the same word twice
+              * at two sizes -- and on Mock Exams and Discussions it was a
+              * literal repeat, with two `h1`s on the page. The sidebar marks
+              * where you are; the bar carries navigation and actions.
+              */}
           </div>
           <div className="flex items-center space-x-4">
             <button
@@ -683,14 +680,14 @@ export default function SmartEduPlatform() {
             <div className="mx-auto max-w-7xl space-y-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  {/* h2, not h1: the shell header already titles this view
-                      "Dashboard". Bigger than the h1 visually, one level below
-                      it semantically, which is the correct way round. */}
-                  <h2 className="text-3xl font-bold text-primary">
+                  {/* The page's own h1, now that the bar no longer carries
+                      one. A greeting rather than the word "Dashboard": the
+                      sidebar already says which view this is. */}
+                  <h1 className="text-3xl font-bold text-primary">
                     {isSessionLoading
                       ? 'Welcome back!'
                       : `Welcome back, ${user?.name?.split(' ')[0] ?? 'Student'}!`}
-                  </h2>
+                  </h1>
                   <p className="mt-1 text-sm text-secondary">One next step, then the next.</p>
                 </div>
               </div>

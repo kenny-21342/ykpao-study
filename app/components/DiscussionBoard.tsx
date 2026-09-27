@@ -11,6 +11,7 @@ import {
   Search, Plus, Eye, Reply, Pin, Lock, Trash2, ChevronRight,
   MessagesSquare, X, Tag, Pencil, ThumbsUp, ThumbsDown, Flag,
 } from 'lucide-react';
+import { PageHeader } from './ui';
 
 const RichContent = dynamic(() => import('./RichContent'), { ssr: false });
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
@@ -157,18 +158,10 @@ export default function DiscussionBoard({
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-              <MessagesSquare className="w-6 h-6 text-accent-text" />
-              Discussion Board
-            </h2>
-            <p className="text-secondary mt-1">
-              Ask questions, share insights, and discuss with the community.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Discussion Board"
+          description="Ask questions, share insights, and discuss with the community."
+        />
 
         {/*
           The board is signed-in only. Checking here keeps a signed-out visitor

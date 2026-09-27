@@ -16,6 +16,7 @@ import {
   RESOURCE_UPLOAD_MAX_BYTES,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
+import { PageHeader } from './ui';
 
 type Tab = 'notes' | 'school';
 
@@ -50,14 +51,12 @@ export default function ResourceLibrary() {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-            <Library className="w-6 h-6 text-accent-text" />
-            Resource Library
-          </h2>
-          <p className="text-secondary mt-1">
-            Study notes shared on review.ykpao.com, and your school&apos;s own resources.
-          </p>
-          <div className="mt-3 inline-flex rounded-lg border border-line bg-surface p-1" role="group" aria-label="Resource scope">
+          <PageHeader
+            className="mb-3"
+            title="Resource Library"
+            description="Study notes shared on review.ykpao.com, and your school's own resources."
+          />
+          <div className="inline-flex rounded-lg border border-line bg-surface p-1" role="group" aria-label="Resource scope">
             <button type="button" onClick={() => { setScope('enrolled'); window.localStorage.setItem('scope:resources', 'enrolled'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'enrolled' ? 'bg-accent text-white' : 'text-secondary'}`}>My courses</button>
             <button type="button" onClick={() => { setScope('all'); window.localStorage.setItem('scope:resources', 'all'); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === 'all' ? 'bg-accent text-white' : 'text-secondary'}`}>All subjects</button>
           </div>

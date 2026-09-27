@@ -407,7 +407,7 @@ export default function StudyCoach({
       <div className="border-b border-line bg-white/80 dark:bg-gray-900/80 px-4 md:px-6">
         <div className="flex items-center justify-between gap-4 min-h-16">
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold tracking-tight text-primary">Study</h2>
+            <h1 className="text-xl font-semibold tracking-tight text-primary">Study</h1>
             <p className="text-xs text-muted truncate">Plan from deadlines, mistakes, and mastery</p>
           </div>
           <div className="flex items-center gap-2">

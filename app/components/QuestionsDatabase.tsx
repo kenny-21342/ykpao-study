@@ -569,7 +569,7 @@ export default function QuestionsDatabase({
       <div className="bg-surface border-b border-line px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold tracking-tight text-primary">Practice</h2>
+            <h1 className="text-xl font-semibold tracking-tight text-primary">Practice</h1>
             {/* The second line said "Browse past-paper questions and switch
                 into practice mode" on every visit. A student who clicked
                 Practice knows. It survives only for the vault, where it is not

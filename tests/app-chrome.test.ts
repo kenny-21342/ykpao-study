@@ -66,28 +66,62 @@ test('the chrome has exactly one scroll container and no title of its own', asyn
   assert.doesNotMatch(src, /<h1/, 'the chrome must not render a heading; the page owns it');
 });
 
+/**
+ * The six tab views of the shell, and the component that draws each one.
+ * `dashboard` is drawn by HomeShell itself.
+ */
+const TAB_VIEWS = [
+  'HomeShell.tsx',
+  'StudyCoach.tsx',
+  'QuestionsDatabase.tsx',
+  'ResourceLibrary.tsx',
+  'MockExams.tsx',
+  'DiscussionBoard.tsx',
+];
+
+/** These render outside the shell and are their own page, so they own an h1. */
+const OUTSIDE_SHELL = ['LandingPage.tsx', 'LegalPage.tsx', 'PaperBrowser.tsx', 'PaperViewer.tsx'];
+
+/**
+ * A title reaches the page either as a literal <h1> or through <PageHeader>,
+ * which renders one. Counting only the literal is how Mock Exams carried two
+ * titles with this test green: the shell drew one and PageHeader drew the
+ * other, and nothing here could see the second.
+ */
+const titleCount = (src: string) =>
+  (src.match(/<h1\b/g) ?? []).length + (src.match(/<PageHeader\b/g) ?? []).length;
+
 test('each view has exactly one page title', async () => {
-  // The shell header renders one <h1> per tab, and AppChrome renders none
-  // because the routed pages own theirs. Either way a view gets exactly one —
-  // so a component rendered inside the shell must not add a second.
+  // The rule is the same one AppChrome already followed, now applied to the
+  // shell: the chrome carries navigation and actions, and the page under it
+  // owns its title. The bar used to title the view too, so Mock Exams and
+  // Discussions printed their own name twice, at two sizes, as two <h1>s.
   const dir = path.join(ROOT, 'app/components');
+
+  for (const name of TAB_VIEWS) {
+    const src = stripComments(await readFile(path.join(dir, name), 'utf8'));
+    assert.equal(titleCount(src), 1, `${name} must render exactly one page title`);
+  }
+
+  // Nothing else rendered inside the shell may add one.
   const offenders: string[] = [];
   for (const name of await readdir(dir)) {
-    if (!name.endsWith('.tsx') || name === 'HomeShell.tsx') continue;
-    // Comments in these files discuss <h1> by name, so match the markup only.
+    if (!name.endsWith('.tsx')) continue;
+    if (TAB_VIEWS.includes(name) || OUTSIDE_SHELL.includes(name)) continue;
     const src = stripComments(await readFile(path.join(dir, name), 'utf8'));
-    // These render outside the shell and are their own page.
-    if (['LandingPage.tsx', 'LegalPage.tsx', 'PaperBrowser.tsx', 'PaperViewer.tsx'].includes(name)) continue;
-    if (/<h1\b/.test(src)) offenders.push(name);
+    if (titleCount(src) > 0) offenders.push(name);
   }
   assert.deepEqual(offenders, [],
-    `a second <h1> inside the shell:\n${offenders.join('\n')}`);
+    `a second page title inside the shell:\n${offenders.join('\n')}`);
+});
 
-  // And the shell itself titles the view once, in its header — not again in
-  // the dashboard body, which is where the duplicate was.
-  const shell = stripComments(
+test('the shell header carries no title of its own', async () => {
+  // Its one <h1> is the dashboard greeting in the body, not a per-tab label in
+  // the bar. A switch over activeTab inside the <header> is the old duplicate
+  // coming back.
+  const src = stripComments(
     await readFile(path.join(ROOT, 'app/components/HomeShell.tsx'), 'utf8'),
   );
-  assert.equal((shell.match(/<h1\b/g) ?? []).length, 1,
-    'HomeShell renders more than one <h1>; the dashboard used to add its own');
+  const header = src.slice(src.indexOf('<header'), src.indexOf('</header>'));
+  assert.doesNotMatch(header, /<h1/, 'the shell header must not title the view; the page owns it');
 });
