@@ -1,29 +1,35 @@
-import { SHARED_MODEL_CHOICES } from './shared-models.ts';
-
 /**
  * Per-model price estimates for the Usage dashboard.
  *
  * Prices are USD per million tokens, input and output listed separately, and
  * they are estimates for reporting only — the provider's invoice is the
  * authority, and a provider that reprices will make this table drift until it
- * is updated. Anything not named here falls back to DEFAULT, chosen near the
- * DeepSeek text models the shared key serves: a wrong estimate on an unknown
- * bring-your-own-key model should be boring, not surprising.
+ * is updated. Anything not named here falls back to DEFAULT.
+ *
+ * The shared key now serves a New API gateway carrying models from eight
+ * vendors, none of them priced here yet, so every shared call is currently
+ * estimated at DEFAULT. That is reporting drift rather than a spend risk --
+ * the monthly cap reserves a flat amount per request and does not read this
+ * table -- but /usage will not be trustworthy until the gateway's own price
+ * list is transcribed into the table below.
  */
 /**
- * Models the shared key may serve at no cost — the ids of everything a student
- * can pick in the tutor. `lib/shared-models.ts` is the list itself and records
- * each model's data-retention terms and why two free ones are excluded.
+ * Models the shared key serves at no cost — currently none.
  *
- * Derived rather than restated, because the two must not drift: a model
- * offered in the picker but missing here would be priced at DEFAULT below,
- * which bills a free service and re-imposes the monthly cap on it.
+ * This held OpenCode Zen's free tier until 27 Sep 2026. That plan did not
+ * survive contact with the provider: OpenCode allows its free models only
+ * inside its own client, so they were never usable from here. The shared key
+ * now points at a New API gateway whose models all draw down real credit.
  *
- * Every one is promotional and time-limited. When one is withdrawn the
- * provider answers with an unknown-model error, so treat a sudden rise in AI
- * errors as this list going stale before assuming anything else.
+ * Left in place rather than deleted, because `isFreeModel` is what
+ * `sharedModelIsFree` reads, and that is what decides whether the monthly
+ * per-user spend cap applies. Empty is the correct value and the safe one: it
+ * means the cap applies to every shared call, which with open access is the
+ * only thing bounding what a whole year group can spend. Adding a model here
+ * switches that protection off for it, so add one only when it is genuinely
+ * billed at zero.
  */
-export const FREE_MODELS = SHARED_MODEL_CHOICES.map((choice) => choice.id);
+export const FREE_MODELS: readonly string[] = [];
 
 /** Whether a model costs nothing, so no spend control should apply to it. */
 export function isFreeModel(model: string | undefined): boolean {
@@ -50,15 +56,12 @@ const PRICES: Array<{ match: RegExp; price: ModelPrice }> = [
   { match: /qwen3-vl/, price: { inPerMTok: 0.28, outPerMTok: 1.13 } },
   { match: /^deepseek-ai\//, price: { inPerMTok: 0.27, outPerMTok: 1.1 } },
 
-  // OpenCode Zen's free tier, which the shared key serves from 27 Sep 2026.
-  // Listed at $0, so they must be named here: an unlisted model falls through
-  // to DEFAULT below and would bill a free service at $0.30/$1.20 per Mtok --
-  // fiction on /usage, and worse than fiction in `reserveMonthlyAiSpend`,
-  // which would cut every student off at the monthly cap for spending nothing.
-  //
-  // `FREE_MODELS` rather than one loose pattern: these are individually-named
-  // promotional models that expire, and a regex like /-free$/ would silently
-  // price a future paid model at zero.
+  // Anything in FREE_MODELS, priced at $0. That list is empty today, so this
+  // contributes nothing -- kept because it is what makes adding a genuinely
+  // free model a one-line change in one place rather than two edits that can
+  // disagree. A model in FREE_MODELS but not priced here would be reported at
+  // DEFAULT on /usage while also skipping the spend cap: billed in the UI,
+  // unbilled in reality, which is the worst of both.
   ...FREE_MODELS.map((model) => ({
     match: new RegExp(`^${model}$`),
     price: { inPerMTok: 0, outPerMTok: 0 },

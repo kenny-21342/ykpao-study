@@ -21,11 +21,16 @@ import { isFreeModel } from './ai-pricing.ts';
  *
  * Step 2 used to be grant-only, with no general fallback, because it spent the
  * owner's money: an ungranted student reaching it was a bill, not a bug
- * report. From 27 Sep 2026 the shared key serves OpenCode Zen's free models,
- * so there is no bill to protect and the whole year group is meant to reach
- * the tutor — `SHARED_AI_OPEN_TO_ALL` is what says so, deliberately as an
- * explicit switch rather than a silent default, so that pointing this back at
- * a paid provider cannot quietly open it to everyone.
+ * report. From 27 Sep 2026 the whole year group is meant to reach the tutor,
+ * and `SHARED_AI_OPEN_TO_ALL` is what says so — deliberately an explicit
+ * switch rather than a silent default.
+ *
+ * The bill did not disappear with the grant; it moved. The shared key points
+ * at a gateway funded by a friend of the owner, so every shared call still
+ * spends someone's credit, `FREE_MODELS` is empty, and the per-user monthly
+ * cap in lib/rate-limit.ts is the only thing bounding what a year group can
+ * spend. Opening access without setting that cap deliberately is the mistake
+ * this arrangement makes easy.
  *
  * "Every signed-in account" needs no verification check of its own. Sign-in is
  * refused before an address is verified (`app/api/auth/[...nextauth]/route.ts`)
@@ -193,9 +198,9 @@ export function sharedTextCredential(): TextCredential | null {
   // SHARED_AI_* is canonical; the DEEPSEEK_* names are what this read before
   // BYOK and are kept as a fallback so nothing breaks on the deploy that
   // renames them. The rename is not cosmetic: from 27 Sep 2026 the shared key
-  // is an OpenCode Zen key, and a variable called DEEPSEEK_API_KEY holding a
-  // key for a different provider is exactly the kind of quiet lie that costs
-  // an hour the next time someone debugs this.
+  // is a key for a friend-operated New API gateway, and a variable called
+  // DEEPSEEK_API_KEY holding a key for a different provider is exactly the
+  // kind of quiet lie that costs an hour the next time someone debugs this.
   const apiKey = process.env.SHARED_AI_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return null;
   const baseUrl =
@@ -205,8 +210,8 @@ export function sharedTextCredential(): TextCredential | null {
   return {
     source: 'shared',
     apiKey,
-    // Normalised, so this accepts `https://opencode.ai/zen/v1` as readily as a
-    // fully-qualified completions URL -- the same courtesy the BYOK form
+    // Normalised, so this accepts `https://runanytime.hxi.me/v1` as readily
+    // as a fully-qualified completions URL -- the same courtesy the BYOK form
     // already extends to students.
     endpoint: toChatCompletionsUrl(baseUrl),
     model: process.env.SHARED_AI_MODEL || process.env.DEEPSEEK_MODEL || 'deepseek-chat',

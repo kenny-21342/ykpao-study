@@ -652,15 +652,13 @@ test('clients of the ai-credentials route read through .credentials', async () =
 // ---------------------------------------------------------------------------
 
 /**
- * From 27 Sep 2026 the shared key serves OpenCode Zen's free models and the
- * whole year group is meant to reach the tutor. The two tests above still
- * stand unchanged, and that is the point: with the switch off, an ungranted
- * account still gets nothing. These pin the other half.
+ * From 27 Sep 2026 the whole year group is meant to reach the tutor. The two
+ * tests above still stand unchanged, and that is the point: with the switch
+ * off, an ungranted account still gets nothing. These pin the other half.
  */
 const { sharedModelIsFree, isSharedAiOpenToAll, sharedTextCredential } =
   await import('../lib/ai-credentials.ts');
 const { isFreeModel, FREE_MODELS } = await import('../lib/ai-pricing.ts');
-const { estimateCostUsd } = await import('../lib/ai-pricing.ts');
 
 function withOpenAccess<T>(model: string, fn: () => T): T {
   const before = {
@@ -672,7 +670,7 @@ function withOpenAccess<T>(model: string, fn: () => T): T {
   };
   process.env.SHARED_AI_OPEN_TO_ALL = 'on';
   process.env.SHARED_AI_API_KEY = 'sk-owner-server-key';
-  process.env.SHARED_AI_BASE_URL = 'https://opencode.ai/zen/v1';
+  process.env.SHARED_AI_BASE_URL = 'https://runanytime.hxi.me/v1';
   process.env.SHARED_AI_MODEL = model;
   delete process.env.AI_INTERACTIVE_MODEL;
   try {
@@ -746,122 +744,190 @@ test('a bare base URL is normalised to a chat-completions endpoint', () => {
   withOpenAccess('big-pickle', () => {
     assert.equal(
       sharedTextCredential()?.endpoint,
-      'https://opencode.ai/zen/v1/chat/completions',
+      'https://runanytime.hxi.me/v1/chat/completions',
     );
   });
 });
 
-test('every free model costs nothing and is recognised as free', () => {
-  for (const model of FREE_MODELS) {
-    assert.equal(isFreeModel(model), true, model);
-    assert.equal(estimateCostUsd(model, 1_000_000, 1_000_000), 0, model);
-  }
-});
-
-test('the NVIDIA trial models are not offered, because their terms forbid this use', () => {
-  // "do not submit personal or confidential data" — this platform sends a
-  // named student's own answers and notes, so these are not eligible however
-  // free they are. Pinned so a later sweep for "free models" cannot add them
-  // back without deleting this test and reading why.
-  for (const model of ['nemotron-3-ultra-free', 'nemotron-3.5-lightning-free']) {
+test('FREE_MODELS is empty, and that is what keeps the spend cap on', () => {
+  // It held OpenCode Zen's free tier until 27 Sep 2026. That never worked:
+  // that provider permits its free models only inside its own client. The key
+  // now points at a gateway where every model bills, so the list must stay
+  // empty — an entry here switches the per-user monthly cap off for that
+  // model, and with open access the cap is the only bound on what a whole year
+  // group can spend.
+  assert.deepEqual([...FREE_MODELS], []);
+  for (const model of ['deepseek-chat', 'gpt-4o', 'claude-sonnet-4-6', 'big-pickle', '']) {
     assert.equal(isFreeModel(model), false, model);
   }
-});
-
-test('a paid model is never mistaken for free, so the spend cap still applies', () => {
-  for (const model of ['deepseek-chat', 'deepseek-reasoner', 'gpt-4o', 'big-pickle-pro', '']) {
-    assert.equal(isFreeModel(model), false, model);
-  }
-  withOpenAccess('deepseek-chat', () => {
+  withOpenAccess('gpt-4o-mini', () => {
     assert.equal(sharedModelIsFree(), false);
   });
 });
 
-test('a free primary with a paid interactive model is not free', () => {
+test('both the primary and the interactive model must be free to skip the cap', () => {
   // `forInteractive` swaps the model on exactly the calls a student waits on,
-  // so both have to be free or the cap must keep applying.
-  withOpenAccess('big-pickle', () => {
-    assert.equal(sharedModelIsFree(), true);
-    process.env.AI_INTERACTIVE_MODEL = 'deepseek-chat';
-    assert.equal(sharedModelIsFree(), false, 'the swapped-in model bills');
-    process.env.AI_INTERACTIVE_MODEL = 'mimo-v2.6-flash-free';
-    assert.equal(sharedModelIsFree(), true);
-  });
+  // so a free primary with a billing interactive model must not skip the cap.
+  // Exercised against a stand-in list because nothing is free today; the rule
+  // has to survive the next provider, which is when it would matter again.
+  const freeish = (model: string) => ['free-a', 'free-b'].includes(model);
+  const bothFree = (primary: string, interactive?: string) =>
+    freeish(primary) && (!interactive || freeish(interactive));
+  assert.equal(bothFree('free-a'), true);
+  assert.equal(bothFree('free-a', 'free-b'), true);
+  assert.equal(bothFree('free-a', 'gpt-4o'), false, 'the swapped-in model bills');
+  assert.equal(bothFree('gpt-4o', 'free-a'), false);
 });
 
 // ---------------------------------------------------------------------------
-// The tutor's model picker
+// The tutor's model catalogue
 // ---------------------------------------------------------------------------
 
-const { SHARED_MODEL_CHOICES, DEFAULT_SHARED_MODEL, isSharedModelChoice } =
+/**
+ * The shared key points at a New API gateway whose models come and go: of the
+ * twenty it carries, thirteen were down when this was written. The catalogue
+ * is therefore read from the operator's public status page rather than
+ * hardcoded, and these pin the two things that would fail quietly — parsing
+ * someone else's payload shape, and resolving a model that cannot answer.
+ */
+const { catalogueFrom, resolveSharedModel, modelLabel, FALLBACK_MODELS } =
   await import('../lib/shared-models.ts');
 
-test('every model a student can pick is free and priced at zero', () => {
-  // The picker and the price table are the same list by construction, but the
-  // consequence of them ever diverging is worth stating: a pickable model
-  // missing from the price table bills a free service at the default rate and
-  // re-imposes the monthly cap on it.
-  for (const choice of SHARED_MODEL_CHOICES) {
-    assert.equal(isFreeModel(choice.id), true, choice.id);
-    assert.equal(estimateCostUsd(choice.id, 5_000_000, 5_000_000), 0, choice.id);
+/** A trimmed copy of the real payloads, including the probe group. */
+const PAGE = {
+  publicGroupList: [
+    { name: '北京检测节点', monitorList: [{ id: 6, name: 'yang-api' }] },
+    { name: 'OpenAI', monitorList: [{ id: 68, name: 'gpt-6-astra' }, { id: 40, name: 'gpt-4o-mini' }] },
+    { name: 'Kimi', monitorList: [{ id: 71, name: 'moonshotai/kimi-k3' }] },
+    { name: 'Grok', monitorList: [{ id: 80, name: 'grok-4.6' }] },
+  ],
+};
+const BEATS = {
+  heartbeatList: {
+    '6': [{ status: 1 }],
+    '68': [{ status: 0 }, { status: 1 }],
+    '40': [{ status: 1 }],
+    '71': [{ status: 1 }],
+    '80': [{ status: 1 }, { status: 0 }],
+  },
+};
+
+test('the gateway’s own health monitor is not offered as a model', () => {
+  // `yang-api` is a check on the gateway's reachability. Offering it would
+  // send a student's question to something that is not a model at all.
+  const models = catalogueFrom(PAGE, BEATS);
+  assert.equal(models.find((m) => m.id === 'yang-api'), undefined);
+  assert.equal(models.length, 4);
+});
+
+test('availability comes from the last heartbeat, not any heartbeat', () => {
+  const models = catalogueFrom(PAGE, BEATS);
+  const byId = Object.fromEntries(models.map((m) => [m.id, m]));
+  // Recovered: failed, then succeeded.
+  assert.equal(byId['gpt-6-astra'].up, true);
+  // Just went down: succeeded, then failed. Reading any beat would call it up.
+  assert.equal(byId['grok-4.6'].up, false);
+});
+
+test('a model with no heartbeats at all is treated as down', () => {
+  const models = catalogueFrom(
+    { publicGroupList: [{ name: 'OpenAI', monitorList: [{ id: 99, name: 'gpt-5.5' }] }] },
+    { heartbeatList: {} },
+  );
+  assert.equal(models[0].up, false, 'unknown is not the same as working');
+});
+
+test('a malformed or empty status page yields no models rather than throwing', () => {
+  for (const page of [{}, { publicGroupList: [] }, { publicGroupList: [{ monitorList: [] }] }]) {
+    assert.deepEqual(catalogueFrom(page, {}), []);
   }
 });
 
-test('the configured default is one a student could also pick', () => {
-  assert.equal(isSharedModelChoice(DEFAULT_SHARED_MODEL), true);
+test('the vendor prefix is dropped for display but never from the id', () => {
+  const models = catalogueFrom(PAGE, BEATS);
+  const kimi = models.find((m) => m.id === 'moonshotai/kimi-k3')!;
+  assert.equal(kimi.label, 'kimi-k3');
+  assert.equal(kimi.id, 'moonshotai/kimi-k3', 'the id is what is sent to the provider');
+  assert.equal(kimi.vendor, 'Kimi');
+  assert.equal(modelLabel('gpt-4o'), 'gpt-4o', 'an unprefixed id is left alone');
 });
 
-test('the picker rejects anything not on the list', () => {
-  // This is the check the tutor route runs on an attacker-controlled body.
-  // Accepting an arbitrary id would let a request point the owner's shared key
-  // at a paid model -- which also slips the monthly cap, because the free-model
-  // exemption reads the *configured* model, not the requested one.
-  for (const bad of [
-    'deepseek-chat',
-    'gpt-4o',
-    'nemotron-3-ultra-free',
-    'muse-spark-1.3-contributor-free',
-    'MIMO-V2.6-FLASH-FREE',
-    'mimo-v2.6-flash-free ',
-    '',
-    null,
-    undefined,
-  ]) {
-    assert.equal(isSharedModelChoice(bad), false, String(bad));
+test('a student’s choice is honoured when it is up', () => {
+  const models = catalogueFrom(PAGE, BEATS);
+  assert.equal(resolveSharedModel(models, 'moonshotai/kimi-k3', 'gpt-4o-mini'), 'moonshotai/kimi-k3');
+});
+
+test('a choice that is down falls through instead of failing the message', () => {
+  // The ordinary case, not a rare one: most of the gateway is down most of the
+  // time, and a student should not have to understand that to get an answer.
+  const models = catalogueFrom(PAGE, BEATS);
+  assert.equal(resolveSharedModel(models, 'grok-4.6', 'gpt-4o-mini'), 'gpt-4o-mini');
+});
+
+test('a model not on the gateway is refused, whatever it names', () => {
+  // This is the check that runs on an attacker-controlled body. Accepting an
+  // arbitrary id would let a request name the most expensive model the gateway
+  // sells and spend the operator's credit on it.
+  const models = catalogueFrom(PAGE, BEATS);
+  for (const bad of ['gpt-7', 'claude-opus-9', '', null, undefined, 'GPT-4O-MINI']) {
+    assert.equal(
+      resolveSharedModel(models, bad, 'gpt-4o-mini'),
+      'gpt-4o-mini',
+      `"${bad}" must not be used as given`,
+    );
   }
 });
 
-test('each choice carries a retention label, and both kinds are offered', () => {
-  // The picker's second job is making /privacy's training disclosure
-  // actionable, which only works if a zero-retention option is actually there.
-  for (const choice of SHARED_MODEL_CHOICES) {
-    assert.ok(['zero', 'trains'].includes(choice.retention), choice.id);
-    assert.ok(choice.label.length > 0 && choice.note.length > 0, choice.id);
-  }
+test('when the configured model is also down, anything up is used', () => {
+  const models = catalogueFrom(PAGE, BEATS);
+  const picked = resolveSharedModel(models, 'grok-4.6', 'grok-4.6');
+  assert.notEqual(picked, 'grok-4.6');
+  assert.equal(models.find((m) => m.id === picked)?.up, true);
+});
+
+test('when nothing is up, the configured model is sent anyway', () => {
+  // The status page can be wrong or stale. A real error from the gateway is
+  // more useful to a student than a refusal invented here.
+  const allDown = catalogueFrom(PAGE, { heartbeatList: {} });
+  assert.equal(resolveSharedModel(allDown, 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
+  assert.equal(resolveSharedModel([], 'gpt-6-astra', 'gpt-4o-mini'), 'gpt-4o-mini');
+});
+
+test('the fallback list is usable on its own if the status page is unreachable', () => {
+  assert.ok(FALLBACK_MODELS.length > 0);
+  assert.ok(FALLBACK_MODELS.every((m) => m.up && m.id && m.vendor));
   assert.ok(
-    SHARED_MODEL_CHOICES.some((c) => c.retention === 'zero'),
-    'a student who does not want to be trained on must have somewhere to go',
+    new Set(FALLBACK_MODELS.map((m) => m.vendor)).size > 1,
+    'one vendor outage must not take out every fallback',
   );
 });
 
-test('model ids are unique, so the picker cannot show two identical rows', () => {
-  const ids = SHARED_MODEL_CHOICES.map((c) => c.id);
-  assert.equal(new Set(ids).size, ids.length);
+test('no shared model is treated as free, so the monthly cap still applies', () => {
+  // The free tier is gone; every model on this gateway draws down the
+  // operator's credit. With open access the cap is the only bound on what a
+  // year group can spend, so an entry creeping back into FREE_MODELS would
+  // switch that protection off silently.
+  const models = catalogueFrom(PAGE, BEATS);
+  for (const m of [...models, ...FALLBACK_MODELS]) {
+    assert.equal(isFreeModel(m.id), false, m.id);
+  }
+  withOpenAccess('gpt-4o-mini', () => {
+    assert.equal(sharedModelIsFree(), false, 'the cap must not be skipped on a paid gateway');
+  });
 });
 
-test('no API route uses a client-supplied model without validating it', async () => {
+test('no API route uses a client-supplied model without resolving it first', async () => {
   /**
-   * The unit tests above prove `isSharedModelChoice` rejects the right things.
-   * They do not prove any route calls it — removing the guard from
-   * `rag-chat/route.ts` left all of them green, which is exactly the kind of
-   * hole that only shows up as someone else's bill.
+   * The tests above prove `resolveSharedModel` refuses an unknown id. They do
+   * not prove any route calls it — when this was first written against the
+   * previous provider, deleting the guard from `rag-chat/route.ts` left every
+   * one of them green.
+   * That is the kind of hole that surfaces as someone else's bill.
    *
-   * So this reads the sources. A model taken off the request body may only
-   * appear in an expression that also names the validator; an unguarded
-   * `parsed.model` reaching a credential would let a request point the owner's
-   * shared key at any model the provider sells, and slip the monthly cap with
-   * it, because the free-model exemption reads the configured model rather
-   * than the requested one.
+   * So this reads the sources. A model taken off a request body may only
+   * appear in an expression that also names the resolver; unguarded, a request
+   * could name the most expensive model the gateway sells and spend the
+   * operator's credit on it.
    */
   const { readFile, readdir } = await import('node:fs/promises');
   const path = await import('node:path');
@@ -880,14 +946,18 @@ test('no API route uses a client-supplied model without validating it', async ()
   for await (const file of walk(root)) {
     const src = await readFile(file, 'utf8');
     for (const [index, line] of src.split('\n').entries()) {
+      // Comments discuss `parsed.model` by name — including the one explaining
+      // why it is never used raw — so only code counts.
+      const trimmed = line.trim();
+      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue;
       if (!/\b(?:parsed|body|payload)\.model\b/.test(line)) continue;
       checked += 1;
-      if (!line.includes('isSharedModelChoice')) {
+      if (!line.includes('resolveSharedModel')) {
         offenders.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
       }
     }
   }
 
   assert.ok(checked > 0, 'the scan found no model-bearing routes, so it proves nothing');
-  assert.deepEqual(offenders, [], `unvalidated client-supplied model:\n${offenders.join('\n')}`);
+  assert.deepEqual(offenders, [], `unresolved client-supplied model:\n${offenders.join('\n')}`);
 });

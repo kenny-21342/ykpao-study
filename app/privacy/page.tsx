@@ -14,13 +14,14 @@ export const metadata: Metadata = {
  *  - the AI-key handling is lib/ai-credentials.ts (encrypted at rest with
  *    CREDENTIAL_ENCRYPTION_KEY, never returned to the client)
  *  - the sub-processors are the services the app is actually deployed on:
- *    Vercel, Aiven, Cloudflare R2, Resend, OpenCode, Google (optional sign-in).
+ *    Vercel, Aiven, Cloudflare R2, Resend, a friend-run AI gateway and the
+ *    vendors behind it, Google (optional sign-in).
  *    Neon was named here until 27 Sep 2026 and no longer processes anything --
  *    both projects were deleted on 26 Sep when the database moved to Aiven.
- *  - the training disclosure in section 4 is `FREE_MODELS` in lib/ai-pricing.ts,
- *    where each model's terms are recorded next to it. If that list changes,
- *    section 4 has to be re-read: four of the six say submissions may be used
- *    to improve the model, and two do not
+ *  - the AI routing in section 4 is lib/shared-models.ts: the shared key goes
+ *    to a New API gateway a friend of the owner runs and funds, which fronts
+ *    models from eight vendors. The vendor list there is the one section 4
+ *    names, so re-read section 4 whenever the gateway's line-up changes
  *  - the AI disclosure is lib/ai.ts and lib/vision.ts, which POST the
  *    student's own answer text and images to whichever endpoint their key
  *    points at
@@ -92,9 +93,11 @@ export default function PrivacyPolicy() {
           <li><strong>Vercel</strong> — hosting and request logs.</li>
           <li><strong>Aiven</strong> — the database everything above is stored in.</li>
           <li>
-            <strong>OpenCode</strong> — the AI provider behind the shared key, and through
-            it the model vendors it routes to. See section 4; this is the one that receives
-            your schoolwork.
+            <strong>An AI gateway operated by Henry Yang</strong>, a friend of the person
+            who runs this site, who provides the credit the shared key spends. It forwards
+            what you send the tutor to whichever model you are using, so those vendors —
+            OpenAI, Anthropic, Google, xAI, DeepSeek, Alibaba, Moonshot, Z.ai and MiniMax —
+            receive it too. See section 4; this is the one that receives your schoolwork.
           </li>
           <li><strong>Cloudflare R2</strong> — uploaded files, images and question crops.</li>
           <li><strong>Resend</strong> — the confirmation and password-reset emails.</li>
@@ -124,15 +127,22 @@ export default function PrivacyPolicy() {
           to grant.
         </p>
         <p>
+          The shared key does not talk to a model vendor directly. It goes through a
+          gateway run by a private individual, Henry Yang, who funds it and who could in
+          principle see what passes through it, and the gateway forwards your message to
+          whichever vendor makes the model you picked. You can see and change that model in
+          the tutor itself; each vendor&apos;s own terms then govern what they do with it,
+          including whether they keep it or train on it.
+        </p>
+        <p>
           <strong>
-            The shared key runs on free models, and several of them say that content sent
-            during their free period may be used to improve the model.
+            So treat anything you send the tutor as something that leaves this platform and
+            is read by people and companies who are not part of your school.
           </strong>{' '}
-          Plainly: if you use the tutor or AI marking without your own key, the answer you
-          write and the question you ask can become training data for the company that
-          makes the model. That is the trade for the tutor being free to use. It applies to
-          what you send the AI — not to your notes, attempts or files, which are never sent
-          anywhere for training.
+          Do not send it anything you would not be willing to have seen — your own
+          schoolwork is the point of it, but personal details about yourself or anyone else
+          are not. This applies only to what you send the AI. Your notes, attempts and
+          uploaded files are never sent anywhere for training.
         </p>
         <p>
           If you would rather that did not happen, you have two options that both work

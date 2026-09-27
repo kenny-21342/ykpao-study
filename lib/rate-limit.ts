@@ -318,9 +318,10 @@ export async function checkAiAllowance(
   // a flat AI_REQUEST_RESERVE_USD ($0.02) per request against
   // AI_MONTHLY_USER_SPEND_LIMIT_USD ($5) and is deliberately never refunded,
   // so it is really a request quota wearing a dollar sign: 250 calls a month,
-  // whatever they actually cost. On OpenCode Zen's free models that number
-  // protects nothing and would simply stop each student partway through the
-  // term, with a message about an allowance they never spent.
+  // whatever they actually cost. That is the right shape when the shared key
+  // is genuinely free, and FREE_MODELS is empty today, so this never fires and
+  // the cap applies to every shared call -- which is correct, because the
+  // current gateway bills someone for all of them.
   if (sharedModelIsFree()) return { allowed: true };
 
   const monthly = await reserveMonthlyAiSpend(userId, options.requests ?? 1);

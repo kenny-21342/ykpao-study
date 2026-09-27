@@ -33,6 +33,7 @@ import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import type { AIActionProposalPayload, AIActionProposalView, CorpusCoverage, IntakeQuestion } from '@/lib/copilot-types';
 import TutorModelPicker, { readSavedTutorModel } from '@/app/components/TutorModelPicker';
+import type { SharedModelChoice } from '@/lib/shared-models';
 
 type RAGSource = {
   type: 'textbook' | 'note' | 'question' | 'markscheme' | 'resource' | 'syllabus' | 'competition' | 'generated';
@@ -198,12 +199,14 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
   const [actionLoading, setActionLoading] = useState<StudyAction | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   /**
-   * The picker only means anything on the shared key, so the tutor asks once
-   * which key it is on. A student with their own key chose their own model
-   * when they saved it and it is never substituted, so offering them a list of
-   * OpenCode models would be offering a choice that does nothing.
+   * Which models the tutor can offer right now.
+   *
+   * Empty for a student on their own key -- they chose their model when they
+   * saved it and it is never substituted -- and empty while the first request
+   * is in flight, so the picker is not drawn until there is something real to
+   * draw.
    */
-  const [onSharedKey, setOnSharedKey] = useState(false);
+  const [sharedModels, setSharedModels] = useState<SharedModelChoice[]>([]);
   // Read lazily rather than in the effect below: localStorage is not a system
   // to synchronise with, it is just the initial value. The window guard is for
   // SSR, and there is no hydration mismatch to worry about because the picker
@@ -364,14 +367,13 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    fetch('/api/account/ai-credentials')
+    fetch('/api/ai/models')
       .then((r) => (r.ok ? r.json() : null))
-      // `{ credentials: { ... } }`, not the bare view -- unwrapping this
-      // envelope wrong is what kept AiKeyPrompt invisible for a fortnight.
-      .then((data) => { if (!cancelled) setOnSharedKey(data?.credentials?.source === 'shared'); })
+      .then((data) => { if (!cancelled && Array.isArray(data?.models)) setSharedModels(data.models); })
       .catch(() => {
-        // A failed check is not evidence of anything, so leave the picker
-        // hidden rather than offer a choice that may not apply.
+        // A failed lookup is not evidence of anything. An empty list hides the
+        // picker and changes nothing else: the server resolves the model on
+        // its own whether or not the student ever saw a choice.
       });
     return () => { cancelled = true; };
   }, [isOpen]);
@@ -498,8 +500,8 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
                 crowding the button row, and absent for a student on their own
                 key, for whom it would change nothing. */}
             {!isMinimized && view === 'chat' && (
-              onSharedKey
-                ? <TutorModelPicker model={model} onChange={setModel} />
+              sharedModels.length > 0
+                ? <TutorModelPicker models={sharedModels} model={model} onChange={setModel} />
                 : <p className="truncate text-[11px] text-accent-text">AI Tutor</p>
             )}
           </div>

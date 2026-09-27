@@ -5,7 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chat } from '@/lib/ai';
 import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
-import { isSharedModelChoice } from '@/lib/shared-models';
+import { loadSharedModels, resolveSharedModel } from '@/lib/shared-models';
 import { retrieveContext } from '@/lib/rag';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { createAIActionProposal } from '@/lib/ai-proposals';
@@ -246,28 +246,31 @@ export async function POST(req: NextRequest) {
     );
   }
   /**
-   * The model the student picked in the tutor, if they picked one.
+   * Which model actually answers.
    *
-   * Validated against the catalogue rather than trusted: the body is
-   * attacker-controlled, and without this check a request could point the
-   * owner's shared key at any model the provider offers, including paid ones
-   * — which would also slip the monthly cap, since `sharedModelIsFree` reads
-   * the configured model and not this one.
+   * `parsed.model` is the student's pick from the tutor and comes off an
+   * attacker-controlled body, so it is never used as given: `resolveSharedModel`
+   * requires it to be a model the gateway is currently carrying. Without that
+   * test a request could name the most expensive model the gateway sells and
+   * spend the operator's credit on it.
    *
-   * Only ever applied to the shared key. A student who supplied their own key
-   * chose their own model, and the rule that it is never substituted holds
-   * here as everywhere else; these ids are OpenCode's and would fail against
-   * another provider anyway.
+   * It also routes around an outage. Thirteen of the gateway's twenty models
+   * were down when this was written, and which thirteen moves through the day,
+   * so a student's saved choice being unavailable is the ordinary case rather
+   * than a rare one — it falls through to the configured model, then to
+   * anything that is up, rather than failing the message.
+   *
+   * Shared key only. A student who supplied their own key chose their own
+   * model, and the rule that it is never substituted holds here too.
    *
    * Applied after `forInteractive`, so an explicit choice outranks the latency
-   * swap. An unrecognised id falls back rather than erroring, because the
-   * commonest way to send one is having picked a model that has since been
-   * withdrawn — not something to answer with a failed message.
+   * swap.
    */
-  const credential = (() => {
+  const credential = await (async () => {
     const base = forInteractive(access.credential);
     if (access.credential.source !== 'shared') return base;
-    return isSharedModelChoice(parsed.model) ? { ...base, model: parsed.model as string } : base;
+    const models = await loadSharedModels();
+    return { ...base, model: resolveSharedModel(models, parsed.model, base.model) };
   })();
 
   const allowance = await checkAiAllowance(user.id, { source: access.source });
