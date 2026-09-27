@@ -30,6 +30,8 @@ jobs:
       BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
       BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
       BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
+      # Defaults to 90 to match the window /privacy promises students.
+      BACKUP_RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS }}
     steps:
       - name: Validate backup configuration
         shell: bash
@@ -92,3 +94,86 @@ jobs:
             "s3://$BACKUP_S3_BUCKET/$prefix/${{ steps.dump.outputs.file }}" \
             "${endpoint_args[@]}" \
             --only-show-errors
+      - name: Delete backups past the retention window
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This is what makes the "kept for up to 90 days" sentence in
+          # /privacy true. Until 27 Sep nothing deleted anything: the upload
+          # above was the whole job, so a dump -- and every deleted account
+          # inside it -- was kept forever. docs/PRODUCTION_OPERATIONS.md had
+          # carried "configure object-storage lifecycle retention on the
+          # bucket" as a manual step since the workflow was written, and it
+          # was never done.
+          #
+          # A bucket lifecycle rule is still the better mechanism, because it
+          # holds even when this workflow does not run. It is a backstop to
+          # add in the Cloudflare console, not a replacement for this: a rule
+          # nobody can see in the repository is a rule nobody remembers to
+          # check, and this step prints what it removed.
+          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          days="${BACKUP_RETENTION_DAYS:-90}"
+          # A floor, not a default. Someone typing 1 here would destroy the
+          # backup history on the next run, and the doc's stated minimum is 30.
+          if [[ ! "$days" =~ ^[0-9]+$ ]] || (( days < 30 )); then
+            echo "BACKUP_RETENTION_DAYS must be a whole number of at least 30; got '${days}'" >&2
+            exit 1
+          fi
+          endpoint_args=()
+          if [[ -n "${BACKUP_S3_ENDPOINT:-}" ]]; then
+            endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          fi
+          aws configure set aws_access_key_id "$BACKUP_S3_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
+          aws configure set region "$BACKUP_S3_REGION"
+
+          aws s3api list-objects-v2 \
+            --bucket "$BACKUP_S3_BUCKET" \
+            --prefix "$prefix/" \
+            "${endpoint_args[@]}" \
+            --query 'Contents[].{Key:Key,LastModified:LastModified}' \
+            --output json > "$RUNNER_TEMP/backups.json"
+
+          cutoff="$(date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%SZ)"
+          # Two guards beyond the age test, because this step deletes.
+          #
+          # Only keys this workflow itself writes are eligible -- same prefix,
+          # same `ykpao-study-*.dump` name. If the bucket is ever shared with
+          # anything else, nothing else is touchable.
+          #
+          # And the newest few survive regardless of age. Without that, a
+          # workflow paused for longer than the window would find every object
+          # expired on the run that resumed it and delete the entire history in
+          # one pass, leaving exactly one backup: the one made seconds earlier,
+          # by a job whose health nobody had been watching.
+          doomed="$(jq -r --arg cutoff "$cutoff" --arg prefix "$prefix" --argjson keep 7 '
+            (. // [])
+            | map(select(
+                (.Key | startswith($prefix + "/"))
+                and (.Key | contains("/ykpao-study-"))
+                and (.Key | endswith(".dump"))
+              ))
+            | sort_by(.LastModified) | reverse
+            | .[$keep:]
+            | map(select(.LastModified < $cutoff))
+            | .[].Key
+          ' "$RUNNER_TEMP/backups.json")"
+
+          if [[ -z "$doomed" ]]; then
+            echo "Retention ${days}d: nothing older than \`$cutoff\` to delete." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          count=0
+          while IFS= read -r key; do
+            [[ -n "$key" ]] || continue
+            aws s3api delete-object \
+              --bucket "$BACKUP_S3_BUCKET" \
+              --key "$key" \
+              "${endpoint_args[@]}" >/dev/null
+            echo "- \`$key\`" >> "$GITHUB_STEP_SUMMARY"
+            count=$((count + 1))
+          done <<< "$doomed"
+          echo "Retention ${days}d: deleted **$count** backup(s) older than \`$cutoff\`." \
+            >> "$GITHUB_STEP_SUMMARY"
