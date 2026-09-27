@@ -522,7 +522,20 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
             <div className="grid min-w-0 flex-1 grid-cols-5 gap-1">
               {TUTOR_MODES.map((item) => {
                 const Icon = item.icon;
-                return <button key={item.id} onClick={() => changeMode(item.id)} className={`flex h-8 items-center justify-center gap-1 rounded-md text-[10px] font-semibold ${mode === item.id ? 'bg-surface text-accent-text' : 'text-muted hover:bg-surface-hover'}`}><Icon className="h-3.5 w-3.5" /><span className="hidden min-[390px]:inline">{item.label}</span></button>;
+                // `min-w-0` on each cell and `truncate` on the label are what
+                // keep this row inside its own width. Without them the five
+                // equal columns size to their content and the last one slides
+                // under the "Plan & act" button.
+                //
+                // The label used to be hidden below a `min-[390px]`
+                // breakpoint, which could not help: that measures the
+                // viewport, while this panel has a width of its own, so on a
+                // wide screen with a narrow panel the labels were shown
+                // precisely when they did not fit. Truncation needs no
+                // breakpoint and cannot be wrong about the width -- the label
+                // is whole when it fits and clipped when it does not, and the
+                // icon and tooltip carry the meaning either way.
+                return <button key={item.id} onClick={() => changeMode(item.id)} title={item.label} aria-label={item.label} className={`flex h-8 min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-semibold ${mode === item.id ? 'bg-surface text-accent-text' : 'text-muted hover:bg-surface-hover'}`}><Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.label}</span></button>;
               })}
             </div>
             <button onClick={() => setView('actions')} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-surface-inverse px-2.5 text-[11px] font-bold text-inverse hover:bg-surface-inverse-hover" title="Plan and system actions" aria-label="Plan and system actions"><Workflow className="h-3.5 w-3.5" /> Plan & act</button>

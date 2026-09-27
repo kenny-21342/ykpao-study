@@ -231,7 +231,14 @@ export async function POST(req: NextRequest) {
 
   if (learnerContext.clarificationRequired) {
     const options = learnerContext.eligibleCourses.map((course) => ({ id: course.id, name: course.name, subject: course.subject, level: course.level }));
-    const clarification = `Which course should I use for this? Choose one: ${options.map((course) => course.name).join(', ')}.`;
+    // The chips the client renders below this already name every option, with
+    // the level that tells two same-named courses apart. Enumerating them in
+    // prose as well repeated the list -- and repeated it *worse*, since
+    // `name` alone renders "Computer Science, ... Computer Science" for a
+    // student taking it at both IGCSE and IB.
+    const clarification = options.length === 2
+      ? `Did you mean ${options[0].name} (${options[0].level}) or ${options[1].name} (${options[1].level})?`
+      : 'That could match more than one of your courses — which one did you mean?';
     const assistantMessage = await appendConversationMessage({
       conversationId: conversation.id,
       role: 'assistant',
@@ -578,6 +585,15 @@ FORMATTING RULES:
       personalizationApplied,
       contextResolution: learnerContext.contextResolution,
       clarificationRequired: false,
+      // Offered, not demanded, and only while nothing is scoped yet: the
+      // client renders these as chips under the answer. Once a course is
+      // resolved -- including by tapping one of these -- it sticks to the
+      // conversation and the offer stops.
+      ...(learnerContext.activeCourse ? {} : {
+        eligibleCourses: learnerContext.eligibleCourses.map((course) => ({
+          id: course.id, name: course.name, subject: course.subject, level: course.level,
+        })),
+      }),
       queryRewrite: learnerContext.queryRewrite,
       ...(retrievalDiagnostics ? { retrievalDiagnostics } : {}),
       proposal,

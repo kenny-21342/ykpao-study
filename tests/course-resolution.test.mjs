@@ -54,11 +54,32 @@ test('a unique prompt course resolves automatically', () => {
   assert.equal(result.signal?.provenance, 'prompt-course-match');
 });
 
-test('ambiguous multi-course prompt requires clarification', () => {
+test('a prompt naming no course is answered unscoped, not blocked', () => {
+  /**
+   * Changed 27 Sep 2026 after seeing it in production: "Good morning" to a
+   * student with twelve enrolments produced a wall of twelve buttons and no
+   * answer. Naming no course is absence of a signal, not ambiguity between
+   * candidates, and the tutor should still say something.
+   *
+   * The courses come back regardless, so the client can offer them as chips
+   * under a real answer.
+   */
   const result = resolveActiveCourse({ courses: [physics, biology], prompt: 'Explain my weakest topic' });
   assert.equal(result.activeCourse, null);
-  assert.equal(result.clarificationRequired, true);
+  assert.equal(result.clarificationRequired, false);
+  assert.equal(result.status, 'unrestricted');
   assert.deepEqual(result.eligibleCourses.map((course) => course.id), ['physics', 'biology']);
+});
+
+test('a prompt matching two courses by name still asks', () => {
+  // The case clarification is actually for: the student said something that
+  // genuinely matches two of their courses, so one short question settles it
+  // and the list is short enough to read.
+  const igcsePhysics = { ...physics, id: 'physics-igcse', level: 'IGCSE' };
+  const ibPhysics = { ...physics, id: 'physics-ib', level: 'IB' };
+  const result = resolveActiveCourse({ courses: [igcsePhysics, ibPhysics], prompt: 'Explain Physics momentum' });
+  assert.equal(result.clarificationRequired, true);
+  assert.deepEqual(result.eligibleCourses.map((course) => course.id), ['physics-igcse', 'physics-ib']);
 });
 
 test('sole enrollment resolves and no enrollment remains unrestricted', () => {

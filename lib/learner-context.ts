@@ -188,8 +188,23 @@ export function resolveActiveCourse(input: {
       eligibleCourses: input.courses,
     };
   }
+  // Enrolled in several courses and the message named none of them.
+  //
+  // This is absence of a signal, not ambiguity between candidates, and the
+  // difference matters: the branches above fire when the student said
+  // something that matches two courses, where one short question resolves it.
+  // This one fired for *anything else* -- so a student with twelve
+  // enrolments was met by a wall of twelve buttons before the tutor would say
+  // a word, including in reply to "Good morning". For a year group, that is
+  // the first thing almost everyone would ever see it do.
+  //
+  // Answer unscoped instead. `eligibleCourses` is still returned, so the
+  // client can offer the same courses as chips underneath a real answer; the
+  // choice is then an refinement the student may take, rather than a toll
+  // gate. Picking one is remembered for the conversation, so the offer stops
+  // after it is used.
   if (input.courses.length > 1) {
-    return { activeCourse: null, signal: null, status: 'clarification', clarificationRequired: true, eligibleCourses: input.courses };
+    return { activeCourse: null, signal: null, status: 'unrestricted', clarificationRequired: false, eligibleCourses: input.courses };
   }
   return { activeCourse: null, signal: null, status: 'unrestricted', clarificationRequired: false, eligibleCourses: [] };
 }
