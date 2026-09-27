@@ -42,6 +42,26 @@ indefinitely and the 90-day sentence in `/privacy` was untrue. **A bucket
 lifecycle rule is still worth having as a backstop**, because it holds even
 when the workflow does not run.
 
+**The rule was applied on 27 Sep 2026 and verified by reading it back.** The
+live configuration is recorded in `ops/r2-lifecycle.json`, which is the source
+of truth — a rule that exists only in a console is one nobody can review.
+Three rules: R2's own bucket-wide multipart-abort rule, preserved verbatim,
+and a 90-day expiry on each of the two prefixes dumps can live under.
+
+Two things found while applying it, both worth knowing before touching this
+again:
+
+- **The backup bucket is the same bucket as the live application's assets** —
+  `uploads/`, `papers/`, `bank_assets/`, `step-images/` are all in it. A
+  lifecycle rule without a prefix filter would expire the question bank. Every
+  rule here must stay prefix-scoped, and a lifecycle filter matches a prefix
+  and **cannot** match a suffix, so the prefix must contain nothing but dumps.
+- **`BACKUP_S3_ENDPOINT` carries the bucket name on the end of the URL.** That
+  is why dumps are stored under `<bucket>/postgres/` rather than `postgres/`,
+  and why the retention step in `db-backup.yml` cannot list them. Removing it
+  from the secret fixes both, and the 27 existing dumps then need moving; the
+  lifecycle rule already covers both prefixes so it survives that change.
+
 That rule is no longer a manual console step — it lived as prose here for
 three weeks and was never applied, which is how the `/privacy` sentence came
 to be untrue in the first place. Run the **Backup bucket lifecycle rule**

@@ -27,15 +27,6 @@ on:
         description: 'Write the rule. Leave unchecked to print the current one and stop.'
         type: boolean
         default: false
-      prefix:
-        description: >-
-          Real key prefix the dumps live under, with no trailing slash. Check
-          this against the bucket rather than assuming: BACKUP_S3_ENDPOINT
-          currently carries the bucket name, so uploads land under
-          `<bucket>/postgres`, not `postgres`. Leave blank to use
-          BACKUP_S3_PREFIX.
-        type: string
-        default: ''
 
 permissions:
   contents: read
@@ -54,12 +45,10 @@ jobs:
       BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
       BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
       BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
-      BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
       # Defaults to 90 to match the window /privacy promises students, and the
       # same default `db-backup.yml` uses. The two must agree or the policy
       # says two different things.
       BACKUP_RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS }}
-      RULE_ID: expire-postgres-dumps
     steps:
       - name: Configure the client
         shell: bash
@@ -101,48 +90,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          prefix="${{ inputs.prefix }}"
-          prefix="${prefix:-${BACKUP_S3_PREFIX:-postgres}}"
-          prefix="${prefix%/}"
           days="${BACKUP_RETENTION_DAYS:-90}"
-          # The same floor `db-backup.yml` enforces, for the same reason: this
-          # one deletes on a schedule nobody is watching, so a typo here is
-          # worse, not better.
+          # The same floor db-backup.yml enforces, for the same reason: this
+          # deletes on a schedule nobody is watching, so a typo is worse here.
           if [[ ! "$days" =~ ^[0-9]+$ ]] || (( days < 30 )); then
             echo "BACKUP_RETENTION_DAYS must be a whole number of at least 30; got '${days}'" >&2
             exit 1
           fi
+          # The document is checked in rather than built here, so what is live
+          # on the bucket is reviewable in the repository -- which is the whole
+          # point of not leaving this in a console. Strip the comment keys the
+          # file carries for the reader; the API rejects unknown fields.
+          jq 'del(._comment, .Rules[]._comment)' ops/r2-lifecycle.json > lifecycle.json
 
-          # put-bucket-lifecycle-configuration REPLACES the whole document, so
-          # refuse to run if the bucket carries a rule this workflow did not
-          # write. Silently discarding someone else's retention policy would be
-          # a data-loss bug wearing the costume of a housekeeping task.
-          # R2 puts "Default Multipart Abort Rule" on every bucket itself. It
-          # is not a policy anyone chose, and our rule carries the same
-          # AbortIncompleteMultipartUpload, so replacing it loses nothing.
-          # Anything else is someone's decision and is not ours to discard.
-          foreign="$(jq -r --arg id "$RULE_ID" '
-            [.Rules[]? | select(.ID != $id and .ID != "Default Multipart Abort Rule") | .ID]
-            | join(", ")' current.json)"
-          if [[ -n "$foreign" ]]; then
-            echo "This bucket already has lifecycle rules this workflow did not write: ${foreign}" >&2
-            echo "Reconcile them by hand; refusing to overwrite." >&2
+          # Every Expiration must agree with BACKUP_RETENTION_DAYS, or the
+          # bucket and the workflow enforce different policies while both
+          # claim to implement the one /privacy states.
+          mismatched="$(jq -r --argjson days "$days" \
+            '[.Rules[] | select(.Expiration != null) | select(.Expiration.Days != $days) | .ID] | join(", ")' lifecycle.json)"
+          if [[ -n "$mismatched" ]]; then
+            echo "These rules disagree with BACKUP_RETENTION_DAYS (${days}d): ${mismatched}" >&2
             exit 1
           fi
 
-          # Scoped to the prefix, never the whole bucket: if the bucket is ever
-          # shared with anything else, nothing else expires.
-          jq -n --arg id "$RULE_ID" --arg prefix "$prefix/" --argjson days "$days" '{
-            Rules: [{
-              ID: $id,
-              Status: "Enabled",
-              Filter: { Prefix: $prefix },
-              Expiration: { Days: $days },
-              AbortIncompleteMultipartUpload: { DaysAfterInitiation: 7 }
-            }]
-          }' > lifecycle.json
-          cat lifecycle.json
+          # PUT replaces the whole document, so refuse if the bucket carries a
+          # rule this file does not describe. Silently discarding someone
+          # else's retention policy would be data loss wearing the costume of
+          # a housekeeping task.
+          unknown="$(jq -rn --slurpfile live current.json --slurpfile want lifecycle.json '
+            ($want[0].Rules | map(.ID)) as $known
+            | [$live[0].Rules[]? | select(.ID as $id | $known | index($id) | not) | .ID]
+            | join(", ")')"
+          if [[ -n "$unknown" ]]; then
+            echo "The bucket has lifecycle rules this file does not describe: ${unknown}" >&2
+            echo "Add them to ops/r2-lifecycle.json or remove them deliberately; refusing to overwrite." >&2
+            exit 1
+          fi
 
+          cat lifecycle.json
           endpoint_args=()
           if [[ -n "${BACKUP_S3_ENDPOINT:-}" ]]; then
             endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")

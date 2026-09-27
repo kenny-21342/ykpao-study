@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "The lifecycle configuration that is live on the backup bucket, kept here so it is reviewable.",
+    "The whole reason this exists is that the rule previously lived only as a sentence in a runbook and was never applied for three weeks, which is how /privacy's 90-day sentence came to be untrue.",
+    "PutBucketLifecycleConfiguration REPLACES the entire document, so every rule the bucket should have must appear here - including ones this project did not author.",
+    "Days must match BACKUP_RETENTION_DAYS (default 90) or the policy says two different things.",
+    "Applied 27 Sep 2026 and read back; R2 rejects a rule whose Filter is empty, it needs Filter.Prefix of \"\"."
+  ],
+  "Rules": [
+    {
+      "_comment": "R2 puts this on every bucket itself. It aborts stale multipart uploads across the WHOLE bucket - uploads/, papers/, bank_assets/, step-images/ - and has no Expiration, so it deletes no objects. Preserved verbatim: dropping it would silently remove that cleanup for the entire application.",
+      "ID": "Default Multipart Abort Rule",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 }
+    },
+    {
+      "_comment": "Where dumps will land once BACKUP_S3_ENDPOINT stops carrying the bucket name. Empty today; here so the rule survives that fix with no second round of work.",
+      "ID": "expire-postgres-dumps",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "postgres/" },
+      "Expiration": { "Days": 90 }
+    },
+    {
+      "_comment": "Where the dumps actually are today, because the endpoint secret carries the bucket name and the extra path segment becomes part of the key. Verified 27 Sep: 27 objects under this prefix, all .dump, nothing else. That check matters because a lifecycle Filter matches a prefix and CANNOT match a suffix - this rule expires everything under the prefix, not just .dump files.",
+      "ID": "expire-postgres-dumps-nested",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "ykpao-study/postgres/" },
+      "Expiration": { "Days": 90 }
+    }
+  ]
+}
