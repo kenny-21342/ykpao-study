@@ -268,7 +268,7 @@ export default function AiAccessManager() {
                 </thead>
                 <tbody className="divide-y divide-subtle">
                   {data.users.map((u) => (
-                    <tr key={u.id} className="hover:bg-surface-hover dark:hover:bg-gray-800/30">
+                    <tr key={u.id} className="hover:bg-surface-hover">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar name={u.name} image={u.image} />

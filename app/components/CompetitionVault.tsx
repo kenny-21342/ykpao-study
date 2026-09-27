@@ -129,7 +129,7 @@ export default function CompetitionVault() {
                   className={`px-4 py-3 cursor-pointer transition-colors ${
                     selected?.id === q.id
                       ? 'bg-accent-subtle border-l-2 border-accent'
-                      : 'hover:bg-surface-hover dark:hover:bg-gray-800/50'
+                      : 'hover:bg-surface-hover'
                   }`}
                 >
                   <div className="flex items-center gap-2">

@@ -859,7 +859,7 @@ export default function QuestionsDatabase({
                     className={`block w-full text-left px-4 py-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/25 ${
                       selectedQuestion?.id === question.id
                         ? 'bg-accent-subtle border-l-2 border-accent'
-                        : 'hover:bg-surface-hover dark:hover:bg-gray-800/50 border-l-2 border-transparent'
+                        : 'hover:bg-surface-hover border-l-2 border-transparent'
                     }`}
                   >
                     {/* Row 1: the question code (prominent, monospace) */}

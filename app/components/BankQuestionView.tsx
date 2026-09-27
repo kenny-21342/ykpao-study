@@ -474,7 +474,7 @@ export default function BankQuestionCard({ question }: { question: Question }) {
             type="button"
             onClick={() => setShowAnswer((open) => !open)}
             aria-expanded={showAnswer}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-secondary hover:bg-surface-hover dark:hover:bg-gray-700/50"
+            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-secondary hover:bg-surface-hover"
           >
             {showAnswer ? 'Hide mark scheme' : 'Show mark scheme'}
             {showAnswer ? (

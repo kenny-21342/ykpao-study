@@ -1872,7 +1872,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                   <div key={item.id} className="bg-surface rounded-lg border border-line overflow-hidden">
                     <button
                       onClick={() => toggleItem(item.id)}
-                      className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-surface-hover dark:hover:bg-gray-700/50 transition-colors"
+                      className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-surface-hover transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${

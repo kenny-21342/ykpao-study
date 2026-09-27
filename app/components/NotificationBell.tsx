@@ -315,7 +315,7 @@ export default function NotificationBell() {
                             setOpen(false);
                           }
                         }}
-                        className={`flex gap-3 px-4 py-3 hover:bg-surface-hover dark:hover:bg-gray-700/50 transition-colors ${
+                        className={`flex gap-3 px-4 py-3 hover:bg-surface-hover transition-colors ${
                           !n.read ? 'bg-accent-subtle' : ''
                         }`}
                       >

@@ -612,7 +612,15 @@ export default function BankPractice({
         </div>
       )}
 
-      <ul className="space-y-2">
+      {/*
+        * One surface with divided rows, not a stack of bordered cards. Twenty
+        * questions each carrying their own border, radius and background is
+        * the pattern CardRow was written to end -- "most of why the dashboard
+        * read as a pile of boxes". This is a real ul/li, and CardRow is a
+        * div, so the rows take its treatment directly rather than losing the
+        * list semantics to use the component.
+        */}
+      <ul className="overflow-hidden rounded-lg border border-line bg-surface">
         {questions.map((question) => (
           <li
             key={question.id}
@@ -620,7 +628,7 @@ export default function BankPractice({
             // button -- a button inside a button is invalid and the inner one
             // stops responding. The row is a container; the open action and
             // the star are siblings inside it.
-            className="flex items-center rounded-lg border border-line bg-surface hover:border-strong hover:bg-surface-hover dark:hover:bg-gray-700/40"
+            className="flex items-center border-b border-subtle last:border-0 transition-colors hover:bg-surface-hover"
           >
             <button
               type="button"

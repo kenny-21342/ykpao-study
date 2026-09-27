@@ -303,7 +303,7 @@ function SubjectChip({
       className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
         selected
           ? 'border-accent bg-accent-subtle ring-1 ring-ring/25'
-          : 'border-line hover:border-accent-border hover:bg-surface-hover dark:hover:bg-gray-700/50'
+          : 'border-line hover:border-accent-border hover:bg-surface-hover'
       }`}
     >
       <div
