@@ -1,25 +1,36 @@
 /**
  * Which shipped-but-unfinished features get a "not ready yet" treatment.
  *
- * The question bank was at ~5% extraction coverage and the mock-exam generator
- * still fails on some attempts, so both would read as broken rather than as
- * unfinished if we launched them silently on 14 Sep. Rather than scatter
- * conditionals through the UI, every entrance reads this one table.
+ * Both entries are 'ready' as of 27 Sep 2026, so nothing carries a banner or
+ * a badge today. The table is kept rather than deleted because it is how a
+ * feature gets labelled honestly the next time one ships half-done, and every
+ * entrance already reads it.
  *
- * Re-checked 25 Sep, after the bulk transcription run finished: 65,572 of
- * 66,756 published questions (98%) now carry a transcript, so the bank's
- * headline limitation -- that a student marks their own written answers --
- * stopped being true. `decideGradingMode` gates AI marking on
- * `hasQuestionText`, and that gate now opens for almost the whole corpus.
- * Copy that undersells a feature is as misleading as copy that oversells it,
- * so the numbers below are re-measured rather than inherited.
+ * The copy below is left in place as the record of what was true when the
+ * treatment was removed, measured against production that day rather than
+ * inherited:
  *
- * 'ready'   — no treatment at all; the feature stands on its own.
- * 'preview' — reachable, but every entrance carries a banner and a badge.
- * 'hidden'  — the sidebar entrance is not rendered. Direct links, deep links
- *             and the in-app shortcuts from the dashboard and study plan still
- *             resolve, so this hides the front door, not the room. Removing
- *             those too is a bigger change than the launch needs today.
+ *  - Question bank: 66,756 published questions over 49 syllabuses, 74.9% with
+ *    a mark scheme, 98.2% carrying a transcript -- so written answers are
+ *    marked for the student rather than by them, which was the headline
+ *    limitation. Still open: 4.7% held back for a bad crop, and topic tags on
+ *    39.2% of published questions, so filtering by topic still misses part of
+ *    the bank.
+ *  - Mock exams: papers are packed at random from questions that have a mark
+ *    scheme, to hit a mark total. They are not modelled on the structure of a
+ *    real paper and are not weighted across topics -- see the note at the top
+ *    of `lib/mock-exam-selection.ts`, which is the authority on that and was
+ *    still accurate when this was flipped.
+ *
+ * Removing the treatment was the owner's decision, taken with those numbers
+ * in front of him. If either feature should say something about itself again,
+ * change the state here and every entrance follows.
+ *
+ * 'ready'   -- no treatment at all; the feature stands on its own.
+ * 'preview' -- reachable, but every entrance carries a banner and a badge.
+ * 'hidden'  -- the sidebar entrance is not rendered. Direct links, deep links
+ *              and the in-app shortcuts from the dashboard and study plan
+ *              still resolve, so this hides the front door, not the room.
  */
 export type ReadinessState = 'ready' | 'preview' | 'hidden';
 
@@ -37,14 +48,14 @@ export type FeatureReadiness = {
 
 export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
   'question-bank': {
-    state: 'preview',
+    state: 'ready',
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
       'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and topic tags are still being filled in subject by subject, so filtering by topic misses part of the bank.',
   },
   'mock-exams': {
-    state: 'preview',
+    state: 'ready',
     badge: 'Preview',
     title: 'Mock exams are still in preview',
     body:

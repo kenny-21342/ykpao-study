@@ -10,12 +10,31 @@ import {
 
 const features = Object.keys(FEATURE_READINESS) as PreviewFeature[];
 
-test('the unfinished features are declared as previews, not as ready', () => {
-  // If either of these ever reads 'ready' by accident, the launch ships a
-  // half-extracted question bank with no warning on it — the exact thing this
-  // table exists to prevent.
-  assert.equal(FEATURE_READINESS['question-bank'].state, 'preview');
-  assert.equal(FEATURE_READINESS['mock-exams'].state, 'preview');
+test('both features are declared ready, and neither state drifts unnoticed', () => {
+  /**
+   * This used to pin both to 'preview', so that shipping a half-extracted
+   * question bank with no warning on it took a deliberate act. The owner
+   * took that act on 27 Sep 2026, with the measured numbers in front of him:
+   * 98.2% of published questions transcribed, 74.9% with a mark scheme,
+   * against 4.7% held back for a bad crop and topics on 39.2%.
+   *
+   * So the guard is inverted, not deleted. Its job was never to enforce one
+   * particular state — it was to make sure the state cannot change by
+   * accident, in either direction. Any edit to the table still has to come
+   * here and say so.
+   */
+  assert.equal(FEATURE_READINESS['question-bank'].state, 'ready');
+  assert.equal(FEATURE_READINESS['mock-exams'].state, 'ready');
+});
+
+test('a ready feature renders no banner and no badge anywhere', () => {
+  // The entrances all gate on `state !== 'preview'`, so this is what actually
+  // removes the treatment. Asserted through the helpers the UI calls rather
+  // than by reading the table again, since those are what the components use.
+  for (const feature of features) {
+    assert.equal(isFeaturePreview(feature), false, `${feature} still renders a banner`);
+    assert.equal(isFeatureVisible(feature), true, `${feature} lost its sidebar entrance`);
+  }
 });
 
 test('every preview carries copy the banner can render', () => {
