@@ -1,0 +1,141 @@
+name: Backup bucket lifecycle rule
+
+# The backstop docs/PRODUCTION_OPERATIONS.md has asked for since the backup
+# workflow was written, and which was never done because it lived as prose:
+# "in the Cloudflare dashboard, R2 -> the backup bucket -> Settings -> Object
+# lifecycle rules -> add a rule". A rule nobody can see in the repository is a
+# rule nobody remembers to check, and one nobody applied for three weeks.
+#
+# The credentials to do it already exist here as the backup workflow's own
+# secrets, so this applies the rule with the S3 API that R2 implements rather
+# than asking a person to click through a console and get the prefix right.
+#
+# Why it is worth having *as well as* the delete step inside `db-backup.yml`:
+# that step only runs when the backup workflow runs. This holds even if the
+# workflow is paused, broken, or its schedule stops firing -- which is exactly
+# the situation in which old dumps would otherwise pile up unnoticed, each one
+# holding the personal data of every account that existed when it was taken.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write the rule. Leave unchecked to print the current one and stop.'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-lifecycle
+  cancel-in-progress: false
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX }}
+      # Defaults to 90 to match the window /privacy promises students, and the
+      # same default `db-backup.yml` uses. The two must agree or the policy
+      # says two different things.
+      BACKUP_RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS }}
+      RULE_ID: expire-postgres-dumps
+    steps:
+      - name: Configure the client
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            BACKUP_S3_BUCKET \
+            BACKUP_S3_ACCESS_KEY_ID \
+            BACKUP_S3_SECRET_ACCESS_KEY \
+            BACKUP_S3_REGION; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required repository secret: $name" >&2
+              exit 1
+            fi
+          done
+          aws configure set aws_access_key_id "$BACKUP_S3_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$BACKUP_S3_SECRET_ACCESS_KEY"
+          aws configure set region "$BACKUP_S3_REGION"
+
+      - name: Show the rule that is live now
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint_args=()
+          if [[ -n "${BACKUP_S3_ENDPOINT:-}" ]]; then
+            endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          fi
+          # A bucket with no lifecycle configuration answers with an error
+          # rather than an empty document, and that is the expected state the
+          # first time this runs -- so it must not fail the job.
+          aws s3api get-bucket-lifecycle-configuration \
+            --bucket "$BACKUP_S3_BUCKET" "${endpoint_args[@]}" \
+            > current.json 2> get-error.txt \
+            || { echo "No lifecycle configuration on this bucket yet."; echo '{"Rules":[]}' > current.json; }
+          cat current.json
+
+      - name: Write the rule
+        if: ${{ inputs.apply }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="${BACKUP_S3_PREFIX:-postgres}"
+          days="${BACKUP_RETENTION_DAYS:-90}"
+          # The same floor `db-backup.yml` enforces, for the same reason: this
+          # one deletes on a schedule nobody is watching, so a typo here is
+          # worse, not better.
+          if [[ ! "$days" =~ ^[0-9]+$ ]] || (( days < 30 )); then
+            echo "BACKUP_RETENTION_DAYS must be a whole number of at least 30; got '${days}'" >&2
+            exit 1
+          fi
+
+          # put-bucket-lifecycle-configuration REPLACES the whole document, so
+          # refuse to run if the bucket carries a rule this workflow did not
+          # write. Silently discarding someone else's retention policy would be
+          # a data-loss bug wearing the costume of a housekeeping task.
+          foreign="$(jq -r --arg id "$RULE_ID" '[.Rules[]? | select(.ID != $id) | .ID] | join(", ")' current.json)"
+          if [[ -n "$foreign" ]]; then
+            echo "This bucket already has lifecycle rules this workflow did not write: ${foreign}" >&2
+            echo "Reconcile them by hand; refusing to overwrite." >&2
+            exit 1
+          fi
+
+          # Scoped to the prefix, never the whole bucket: if the bucket is ever
+          # shared with anything else, nothing else expires.
+          jq -n --arg id "$RULE_ID" --arg prefix "$prefix/" --argjson days "$days" '{
+            Rules: [{
+              ID: $id,
+              Status: "Enabled",
+              Filter: { Prefix: $prefix },
+              Expiration: { Days: $days },
+              AbortIncompleteMultipartUpload: { DaysAfterInitiation: 7 }
+            }]
+          }' > lifecycle.json
+          cat lifecycle.json
+
+          endpoint_args=()
+          if [[ -n "${BACKUP_S3_ENDPOINT:-}" ]]; then
+            endpoint_args+=(--endpoint-url "$BACKUP_S3_ENDPOINT")
+          fi
+          aws s3api put-bucket-lifecycle-configuration \
+            --bucket "$BACKUP_S3_BUCKET" \
+            --lifecycle-configuration file://lifecycle.json \
+            "${endpoint_args[@]}"
+
+          echo "Applied. Reading it back:"
+          aws s3api get-bucket-lifecycle-configuration \
+            --bucket "$BACKUP_S3_BUCKET" "${endpoint_args[@]}"
+
+      - name: Say what to do next
+        if: ${{ !inputs.apply }}
+        shell: bash
+        run: |
+          echo "Dry run. Re-run with 'apply' checked to write the rule above."

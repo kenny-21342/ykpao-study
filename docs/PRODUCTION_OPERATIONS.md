@@ -39,12 +39,22 @@ run that resumes it. Each run prints what it removed to the job summary.
 Until 27 Sep 2026 this section instead asked for a bucket lifecycle rule to be
 configured by hand, and it never was — so every dump ever taken was kept
 indefinitely and the 90-day sentence in `/privacy` was untrue. **A bucket
-lifecycle rule is still worth adding as a backstop**, because it holds even
-when the workflow does not run: in the Cloudflare dashboard, R2 → the backup
-bucket → Settings → Object lifecycle rules → add a rule scoped to the
-`postgres/` prefix that deletes objects 90 days after upload. Set it to the
-same number as `BACKUP_RETENTION_DAYS`, or the two will disagree about what
-the policy says.
+lifecycle rule is still worth having as a backstop**, because it holds even
+when the workflow does not run.
+
+That rule is no longer a manual console step — it lived as prose here for
+three weeks and was never applied, which is how the `/privacy` sentence came
+to be untrue in the first place. Run the **Backup bucket lifecycle rule**
+workflow (`.github/workflows/backup-lifecycle.yml`) from the Actions tab: it
+uses the backup workflow's own `BACKUP_S3_*` secrets, so no credential has to
+be handled by hand, and it reads `BACKUP_S3_PREFIX` and
+`BACKUP_RETENTION_DAYS` from the same repository variables — so the rule and
+the delete step cannot disagree about what the policy says.
+
+Run it once with **apply** unchecked to print whatever rule the bucket carries
+today, then again with it checked to write the rule. It refuses to overwrite a
+lifecycle rule it did not write itself, and refuses any retention under 30
+days. It only needs running again if the retention window changes.
 
 After adding the secrets, run the workflow once with **Run workflow** and
 restore the resulting archive into a disposable Neon branch. Record the
