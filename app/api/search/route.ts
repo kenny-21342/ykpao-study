@@ -9,6 +9,7 @@ import { LearnerContextError } from '@/lib/learner-context';
 import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { scoreRagMatches } from '@/lib/rag';
 import { bankQuestionIdOf, indexedRoute } from '@/lib/rag-routes';
+import { dedupeSearchResults } from '@/lib/search-dedupe';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -421,7 +422,7 @@ export async function GET(req: NextRequest) {
       url: indexedRoute(row) ?? '/?tab=materials',
     }));
 
-  const results: SearchResult[] = [
+  const assembled: SearchResult[] = [
     ...ragResults,
     ...questions.map((question) => ({
       id: `question-${question.id}`,
@@ -474,6 +475,11 @@ export async function GET(req: NextRequest) {
       topic: resource.category,
     })),
   ];
+
+  // Last, so it catches collisions inside a single block and across two of
+  // them. The RAG rows are spread first and win ties, which is what we want:
+  // they arrive ranked.
+  const results = dedupeSearchResults(assembled);
 
   return NextResponse.json({ results, query, counts: countTypes(results), scope: courseScope });
 }
