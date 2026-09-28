@@ -1813,7 +1813,25 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
   const scorePct = exam.totalMarks > 0 && exam.score !== null
     ? Math.round((exam.score / exam.totalMarks) * 100)
     : 0;
-  const attempted = exam.items.filter((i) => i.attemptedAt);
+  /*
+   * Answered, marked, and the gap between them.
+   *
+   * `attemptedAt` is stamped on *every* item at submission, answered or not --
+   * the route writes it on the ungraded branch too, so the paper can be resumed
+   * and reviewed. It therefore says nothing about whether the student wrote
+   * anything, and using it made a paper with one answer report "10 attempted".
+   *
+   * `score === null` is the reliable marker for "not marked": every grading
+   * path that succeeds writes a number, and all three ungraded branches write
+   * null. That covers AI being off, a question with no transcript, and an
+   * upstream failure.
+   */
+  const answered = exam.items.filter(
+    (i) => (i.answer ?? '').trim().length > 0 || Boolean(i.answerLetter),
+  );
+  const marked = exam.items.filter((i) => i.score !== null);
+  const unmarkedAnswers = answered.filter((i) => i.score === null).length;
+  const attempted = answered;
   const correctCount = exam.items.filter((i) => i.isCorrect).length;
   // The grade comes from the server, which reads real thresholds for the
   // subject. This used to be a fixed percentage ladder applied to every board:
@@ -1867,29 +1885,59 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
               <p className="text-accent-text text-sm mt-2">
                 {exam.subjectCode ?? 'Exam'} • Submitted {fmtDate(exam.submittedAt)}
               </p>
+              {/* The score is out of the whole paper, so an unmarked question
+                  silently costs marks the student may well have earned. */}
+              {marked.length > 0 && unmarkedAnswers > 0 && (
+                <p className="text-accent-text text-sm mt-2 max-w-md leading-relaxed">
+                  {unmarkedAnswers} of your {answered.length} answers could not be marked
+                  automatically and count as zero here. Mark those yourself below.
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-5xl font-bold">{grade}</div>
-                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">
-                  {exam.grade?.scale === 'ib' ? 'IB Grade' : 'Grade'}
+            {/*
+              A paper nothing could be marked on has no score, and must not be
+              given one.
+
+              It used to render the full trio regardless: a student who sat
+              seventy-five minutes while the AI provider was down was shown
+              "E", "0%" and "0/80" in large type. Every per-question note said
+              marking was unavailable, but nobody reads ten notes before
+              reading the grade. The honest reading of an unmarked paper is
+              that it is unmarked.
+            */}
+            {marked.length === 0 ? (
+              <div className="max-w-sm md:text-right">
+                <div className="text-3xl font-bold">Not marked</div>
+                <p className="text-accent-text text-sm mt-2 leading-relaxed">
+                  {answered.length === 0
+                    ? 'You did not answer any questions, so there is nothing to mark.'
+                    : 'None of your answers could be marked automatically, so this paper has no score. They are saved below — award yourself the marks against each mark scheme.'}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <div className="text-5xl font-bold">{grade}</div>
+                  <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">
+                    {exam.grade?.scale === 'ib' ? 'IB Grade' : 'Grade'}
+                  </div>
+                  {gradeNote && (
+                    <div className="text-[10px] text-accent-text mt-1 max-w-[9rem] leading-tight">{gradeNote}</div>
+                  )}
                 </div>
-                {gradeNote && (
-                  <div className="text-[10px] text-accent-text mt-1 max-w-[9rem] leading-tight">{gradeNote}</div>
-                )}
-              </div>
-              <div className="text-center">
-                <div className="text-5xl font-bold">{scorePct}%</div>
-                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Score</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold">
-                  {Math.round(exam.score ?? 0)}
-                  <span className="text-lg text-accent-text">/{exam.totalMarks}</span>
+                <div className="text-center">
+                  <div className="text-5xl font-bold">{scorePct}%</div>
+                  <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Score</div>
                 </div>
-                <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Marks</div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">
+                    {Math.round(exam.score ?? 0)}
+                    <span className="text-lg text-accent-text">/{exam.totalMarks}</span>
+                  </div>
+                  <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Marks</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

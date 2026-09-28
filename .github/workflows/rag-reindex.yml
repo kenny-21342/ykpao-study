@@ -24,7 +24,15 @@ concurrency:
 jobs:
   reindex:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Six hours is GitHub's ceiling for a job; this sits just under it.
+    #
+    # 60 was set when the corpus was mostly empty. Transcription filled 65,572
+    # questions, and `reindexRagCorpus` rebuilds *everything* on every run, so a
+    # full pass is now ~100,000 documents. The 28 Sep 2026 run was killed at
+    # exactly 1h00m32s having refreshed 24,030 of them -- and because the walk
+    # starts from the beginning each week, the same opening quarter would be
+    # redone every Sunday and the rest never reached.
+    timeout-minutes: 350
     env:
       # The reindexer reads and writes through Prisma, so it wants the pooled
       # URL the app uses, not the direct one pg_dump needs.
@@ -63,5 +71,19 @@ jobs:
       - name: Generate the Prisma client
         run: npx prisma generate
 
+      # Newly transcribed questions first, cheaply.
+      #
+      # This visits only questions that have text and no `rag_documents` row, so
+      # once it has caught up it costs almost nothing -- and it runs first so
+      # that if the full pass below is cut short, the content added since the
+      # last run is indexed rather than the content that already was. Filling
+      # `bodyMd` with SQL bypasses `refreshRagIndex` entirely, so without this
+      # a transcription push is invisible to search until a full rebuild lands.
+      - name: Index newly transcribed bank questions
+        run: npx tsx scripts/reindex-bank.ts
+
+      # Then everything the incremental pass cannot see: notes, resources,
+      # announcements, threads, the legacy past-paper corpus -- and the prune of
+      # documents whose source record is gone, which once cleared 857 of them.
       - name: Rebuild the index
         run: npx tsx scripts/reindex-rag.ts
