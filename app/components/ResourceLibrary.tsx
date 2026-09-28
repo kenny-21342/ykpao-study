@@ -1090,8 +1090,16 @@ function ResourceBrowserView({
                   <Folder className="h-5 w-5 flex-shrink-0 text-warning" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-primary">{folder.name}</span>
-                    <span className="block text-xs text-muted">
-                      {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+                      <span className="flex-shrink-0">
+                        {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
+                      </span>
+                      {folder.createdBy ? (
+                        <>
+                          <span aria-hidden="true" className="flex-shrink-0">·</span>
+                          <Contributor user={folder.createdBy} className="min-w-0" />
+                        </>
+                      ) : null}
                     </span>
                   </span>
                 </button>
