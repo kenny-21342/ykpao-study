@@ -175,9 +175,24 @@ function VerifyView() {
       )}
 
       {sentMessage ? (
-        <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3">
-          <CheckCircle2 className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-accent-text">{sentMessage}</p>
+        <div className="space-y-4">
+          <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg flex items-start space-x-3">
+            <CheckCircle2 className="w-5 h-5 text-accent-text flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-accent-text">{sentMessage}</p>
+          </div>
+          {/* Verified 28 Sep 2026: SPF, DKIM and DMARC all PASS and Gmail
+              still files this under Junk. Somebody on this page has already
+              failed to find one email; sending a second without saying where
+              it lands wastes their time twice. */}
+          <div className="p-4 bg-warning-subtle border border-warning-border rounded-lg text-sm text-warning">
+            <p className="font-semibold">Check your spam or junk folder.</p>
+            <p className="mt-1 leading-relaxed">
+              This site is new, so mail providers filter it there almost every time. Look for{' '}
+              <span className="font-semibold">&ldquo;Confirm your email for YKPao Study&rdquo;</span>{' '}
+              from <span className="font-semibold">no-reply@busypizza.bond</span> and mark it
+              &ldquo;Not spam&rdquo;.
+            </p>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleResend} className="space-y-5">

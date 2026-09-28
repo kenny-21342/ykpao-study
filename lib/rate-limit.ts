@@ -169,13 +169,48 @@ export const strictLimiter = rateLimit({ intervalMs: 60_000, max: 5 });
  * lesson is the expected shape of the traffic, not an anomaly, and a short
  * window turns that burst into a lockout even when the hourly rate is fine.
  */
-export const loginIpLimiter = rateLimit({ intervalMs: 5 * 60_000, max: 60 });
+/**
+ * Sized for a YEAR GROUP behind one address, not a class.
+ *
+ * The previous numbers (60 per 5 min, 40 per 15 min) were chosen against the
+ * sentence "comfortably above a class registering together". A class is
+ * thirty. The platform opens to a whole year group, and the shape of launch
+ * day is an announcement in an assembly followed by everyone registering at
+ * once from the school network -- so the 41st student to sign up in fifteen
+ * minutes was going to be locked out and told to wait, which does not help,
+ * because their classmates keep spending the budget as fast as it refills.
+ *
+ * That is the same failure this pair already fixed once at 5/min, surviving a
+ * regression test whose floor was only a class.
+ *
+ * Env-tunable so the cap can be raised during a launch or an assembly WITHOUT
+ * a deploy -- the moment you need it raised is the moment you cannot wait for
+ * a build.
+ *
+ * The security control is `strictLimiter` above, keyed per ACCOUNT, and it
+ * stays tight. A looser per-IP cap lets one host try more distinct accounts
+ * per hour; it still cannot converge on any particular one, which is what
+ * password spraying needs.
+ */
+function envMax(name: string, fallback: number): number {
+  const raw = Number.parseInt(process.env[name] ?? '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
+export const loginIpLimiter = rateLimit({
+  intervalMs: 5 * 60_000,
+  max: envMax('LOGIN_IP_MAX', 300),
+});
 
 /**
- * Signup per IP. Lower than login, because a student registers once and signs
- * in daily, but still comfortably above a class registering together.
+ * Signup per IP. Still lower than login, because a student registers once and
+ * signs in daily -- but 200 in fifteen minutes absorbs an entire year group
+ * arriving together, which is precisely what launch day is.
  */
-export const signupIpLimiter = rateLimit({ intervalMs: 15 * 60_000, max: 40 });
+export const signupIpLimiter = rateLimit({
+  intervalMs: 15 * 60_000,
+  max: envMax('SIGNUP_IP_MAX', 200),
+});
 
 /**
  * Competition-vault unlock attempts, keyed to one account.

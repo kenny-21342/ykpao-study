@@ -157,13 +157,25 @@ export default function SignupPage() {
               <div className="p-4 bg-accent-subtle border border-accent-border rounded-lg text-sm text-accent-text mb-6">
                 We sent a confirmation link to{' '}
                 <span className="font-semibold">{created.email}</span>. Open it to activate your
-                account. The link lasts 24 hours &mdash; check your spam folder if it has not
-                arrived in a few minutes.
+                account. The link lasts 24 hours.
               </div>
             ) : (
               <div className="p-4 bg-warning-subtle border border-warning-border rounded-lg text-sm text-warning mb-6">
                 Your account was created, but we could not send the confirmation email just now.
                 Request a new link below, or contact us if it keeps failing.
+              </div>
+            )}
+
+            {created.emailSent && (
+              <div className="p-4 bg-warning-subtle border border-warning-border rounded-lg text-sm text-warning mb-6">
+                <p className="font-semibold">Look in your spam or junk folder first.</p>
+                <p className="mt-1 leading-relaxed">
+                  This is a new site, so mail providers do not trust it yet and filter it there
+                  almost every time. Search for{' '}
+                  <span className="font-semibold">&ldquo;Confirm your email for YKPao Study&rdquo;</span>{' '}
+                  from <span className="font-semibold">no-reply@busypizza.bond</span>, then mark it
+                  &ldquo;Not spam&rdquo; &mdash; that is what stops the next one being filtered.
+                </p>
               </div>
             )}
 

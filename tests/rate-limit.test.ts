@@ -139,11 +139,18 @@ test('login throttles the account tightly and the IP loosely, not the reverse', 
   assert.match(auth, /loginIpLimiter\.check\(`login-ip:\$\{ip\}`\)/);
   assert.match(auth, /strictLimiter\.check\(`login-email:\$\{normalisedEmail\}`\)/);
 
+  // Two declaration shapes are allowed: a literal max, and an env-tunable one
+  // with a literal DEFAULT. The per-IP caps use the second so they can be
+  // raised during an assembly without waiting for a build -- the moment you
+  // need the cap raised is the moment you cannot deploy. The default is what
+  // is asserted here, because that is what an un-configured production runs.
   const read = (name: string) => {
     const m = limits.match(
-      new RegExp(`export const ${name} = rateLimit\\(\\{ intervalMs: ([^,]+), max: (\\d+) \\}\\)`),
+      new RegExp(
+        `export const ${name} = rateLimit\\(\\{\\s*intervalMs: ([^,]+),\\s*max: (?:envMax\\('[A-Z_]+', )?(\\d+)\\)?,?\\s*\\}\\)`,
+      ),
     );
-    assert.ok(m, `${name} must be declared with a literal interval and max`);
+    assert.ok(m, `${name} must be declared with a literal interval and a literal max or env default`);
     // The interval is written as a product of numeric literals (`5 * 60_000`),
     // so multiplying the parsed factors reads it without evaluating source.
     const intervalMs = m![1]
@@ -157,10 +164,15 @@ test('login throttles the account tightly and the IP loosely, not the reverse', 
   const perIpSignup = read('signupIpLimiter');
 
   // A year group shares one NAT address, so a per-IP cap sized for one person
-  // locks out the cohort it is meant to protect. These floors encode that: a
-  // class of thirty must be able to sign in, and to register, together.
-  assert.ok(perIp.max >= 30, 'a class behind one school IP must be able to sign in together');
-  assert.ok(perIpSignup.max >= 30, 'a class behind one school IP must be able to register together');
+  // locks out the cohort it is meant to protect.
+  //
+  // The floors are a YEAR GROUP, not a class. The previous pair (60 and 40)
+  // cleared a thirty-person floor and would still have locked out most of a
+  // year group registering together after an assembly, which is exactly the
+  // shape of launch day. A floor that only a class has to clear is how the
+  // first version of this bug survived its own regression test.
+  assert.ok(perIp.max >= 150, 'a year group behind one school IP must be able to sign in together');
+  assert.ok(perIpSignup.max >= 150, 'a year group behind one school IP must be able to register together');
 
   // The per-account limit is the security control and must stay the tight one.
   assert.ok(
