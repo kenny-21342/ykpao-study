@@ -33,8 +33,13 @@ for (const size of [192, 512]) {
 // Maskable icons are cropped to the inner 80% "safe zone" by Android's
 // adaptive-icon masks, so the artwork is inset and the gap filled with brand
 // colour rather than letting the mask bite into the glyph.
+// `flatten` before `extend` is load-bearing: icon.svg's tile has rounded
+// corners, so the inset copy carries four transparent corners into the middle
+// of the maskable icon, where a mask cannot crop them away. Without it Android
+// showed the launcher background through the corners of the green square.
 await sharp(svg, { density: 512 })
   .resize(410, 410)
+  .flatten({ background: BRAND })
   .extend({ top: 51, bottom: 51, left: 51, right: 51, background: BRAND })
   .png({ compressionLevel: 9 })
   .toFile(join(publicDir, 'icon-maskable-512.png'));
