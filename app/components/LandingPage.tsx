@@ -141,7 +141,7 @@ export default async function LandingPage() {
           .
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-secondary max-w-2xl leading-relaxed">
-          A revision platform built around the IGCSE and A-level archive: every question
+          A revision platform built around the IGCSE, A-level and IB archive: every question
           separated from its paper, paired with its mark scheme, and ready to practise,
           mark and come back to.
         </p>

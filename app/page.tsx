@@ -23,7 +23,7 @@ import HomeShell from './components/HomeShell';
 export const metadata: Metadata = {
   title: 'YKPao Study — past papers, already cut into questions',
   description:
-    'A revision platform built around the IGCSE and A-level archive: every question separated from its paper, paired with its mark scheme, and ready to practise, mark and come back to.',
+    'A revision platform built around the IGCSE, A-level and IB archive: every question separated from its paper, paired with its mark scheme, and ready to practise, mark and come back to.',
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
