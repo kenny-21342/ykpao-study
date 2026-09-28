@@ -38,8 +38,13 @@ export const metadata: Metadata = {
   description: "An integrated smart education platform with past papers, AI tutoring, and collaborative notes",
   icons: {
     icon: [
+      // Ordered most-preferred first. The .ico is listed last and exists
+      // mainly for the browser that requests /favicon.ico before it has read
+      // any of this; it carries 16, 32 and 48 so a tab, a retina tab and a
+      // bookmark list each get a size drawn for them.
       { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
     ],
     // iOS ignores the manifest for the home-screen icon and reads this link
     // tag instead, so without it an installed app shows a screenshot thumbnail.

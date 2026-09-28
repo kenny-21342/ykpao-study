@@ -1,14 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#059669"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <path d="M256 120 L376 180 V280 C376 350 326 392 256 412 C186 392 136 350 136 280 V180 Z"
-        fill="#ffffff" opacity="0.95"/>
-  <path d="M206 256 L242 292 L316 218"
-        fill="none" stroke="#10b981" stroke-width="28"
-        stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="YKPao Study">
+  <!--
+    The app's own logo mark, so the tab icon is the same thing as the mark in
+    the sidebar and on the auth pages. The previous icon was a shield with a
+    tick, which reads as "verified" rather than "study" and matched nothing
+    else in the product.
+
+    Flat #1A7F4B, the single accent from app/globals.css. The old icon was an
+    emerald gradient (#10b981 to #059669); both the two-hue pair and the
+    gradient itself were taken off every other surface in the restyle, and the
+    manifest's theme_color had already moved to #1A7F4B without the icon
+    following it.
+
+    Drawn as two solid shapes rather than lucide's stroked cap, because at
+    16px a 1.5px stroke turns to grey mush while a silhouette holds. The
+    mortarboard reads as one shape when small; the hairline between board and
+    cap only appears once the icon is large enough to carry it. The glyph is
+    sized at 79% of the tile rather than the 70% of the first attempt, which
+    was the difference between legible and mush at 16px.
+  -->
+  <rect width="512" height="512" rx="112" fill="#1A7F4B"/>
+  <g fill="#FFFFFF">
+    <!-- The board, in perspective. -->
+    <path d="M256 135 458 222 256 310 54 222Z"/>
+    <!-- The cap beneath it, tucked just under the board's lower edges. -->
+    <path d="M140 269v56q0 45 116 45t116-45v-56l-116 51z"/>
+  </g>
 </svg>
