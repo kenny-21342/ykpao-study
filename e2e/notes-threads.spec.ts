@@ -7,9 +7,16 @@ test.describe('notes', () => {
     await page.goto('/?tab=materials');
     await expect(page.getByRole('heading', { name: /^Materials$/ }).first()).toBeVisible({ timeout: 90_000 });
     // The view toggle in the Materials header (other panes reuse these words).
-    const toggle = page.locator('div').filter({ has: page.getByRole('heading', { name: /^Materials$/ }) }).last();
-    const notebookTab = toggle.getByRole('button', { name: 'Notebook', exact: true }).first();
-    const libraryTab = toggle.getByRole('button', { name: 'Library', exact: true }).first();
+    //
+    // Addressed through the radiogroup rather than "the last div containing the
+    // heading". Two things broke that: the toggle moved into PageHeader's
+    // `actions`, which is a SIBLING of the div wrapping the h1, so the old
+    // locator could never reach it; and SegmentedControl renders role="radio"
+    // inside role="radiogroup", not plain buttons, so getByRole('button') would
+    // have missed it wherever it sat. The aria-label is the stable handle.
+    const toggle = page.getByRole('radiogroup', { name: /materials view/i });
+    const notebookTab = toggle.getByRole('radio', { name: 'Notebook', exact: true }).first();
+    const libraryTab = toggle.getByRole('radio', { name: 'Library', exact: true }).first();
     await expect(notebookTab).toBeVisible();
 
     // Switch to the library and back; both panes must mount without throwing.

@@ -58,7 +58,10 @@ test.describe('school resource folders', () => {
           description: 'created by the e2e suite',
           subject: 'Chemistry',
           folderPath,
-          fileUrl: '/uploads/files/e2e-placeholder.txt',
+          // Must match the UUID shape /api/upload issues: lib/school-resource-upload.ts
+          // rejects anything else with a 400, which is a path-traversal guard, not a
+          // formality. A human-readable placeholder name never reaches the database.
+          fileUrl: '/uploads/files/00000000-0000-4000-8000-000000000000.txt',
           fileName: 'e2e-placeholder.txt',
           fileSize: 12,
           category: 'notes',
@@ -96,7 +99,10 @@ test.describe('school resource folders', () => {
         title: `e2e survivor ${stamp}`,
         subject: 'Chemistry',
         folderPath: `e2e doomed ${stamp}`,
-        fileUrl: '/uploads/files/e2e-placeholder.txt',
+        // Must match the UUID shape /api/upload issues: lib/school-resource-upload.ts
+          // rejects anything else with a 400, which is a path-traversal guard, not a
+          // formality. A human-readable placeholder name never reaches the database.
+          fileUrl: '/uploads/files/00000000-0000-4000-8000-000000000000.txt',
         fileName: 'e2e-placeholder.txt',
         fileSize: 12,
         category: 'notes',
