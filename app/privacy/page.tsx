@@ -58,8 +58,8 @@ export default function PrivacyPolicy() {
           </li>
           <li>
             <strong>Your work</strong> — answers you submit, the marks and feedback they
-            receive, anything you draw on the scratchpad, your notes and notebooks, files
-            you upload, and posts you make on the discussion board.
+            receive, anything you draw on the scratchpad, files you upload, and posts you
+            make on the discussion board.
           </li>
           <li>
             <strong>Your progress</strong> — which questions you have attempted, what you
@@ -162,11 +162,10 @@ export default function PrivacyPolicy() {
 
       <Section heading="5. What other students can see">
         <p>
-          Your notes, attempts and scratchpads are private to you unless you share them.
-          Sharing a notebook page with a classmate gives that person the access you chose,
-          viewer or editor, until you remove it. Discussion board posts are visible to
-          everyone signed in. Administrators can see account records and moderate posted
-          content.
+          Your attempts and scratchpads are private to you. Anything you upload to the
+          school resource library is visible to everyone signed in, with your name shown
+          as the contributor, and so are discussion board posts. Administrators can see
+          account records and moderate posted content.
         </p>
       </Section>
 

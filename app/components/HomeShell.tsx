@@ -119,8 +119,6 @@ export default function SmartEduPlatform() {
   // Separate from `pendingQuestionId`: that one is a legacy text-bank id and
   // routes to QuestionsDatabase. Bank ids are a different sequence entirely.
   const [pendingBankQuestionId, setPendingBankQuestionId] = useState<number | null>(null);
-  // The notebook page a link asked for, handed to Materials once and cleared.
-  const [pendingPageId, setPendingPageId] = useState<string | null>(null);
   // The syllabus code a course card asked for, handed to Practice or Mock
   // exams once and cleared, so re-picking the subject by hand afterwards is
   // not undone on the next render.
@@ -162,9 +160,6 @@ export default function SmartEduPlatform() {
       // QuestionsDatabase when a legacy id is set and BankPractice otherwise,
       // so leaving a stale legacy id here would swallow the bank route.
       if (route.bankQuestionId) setPendingBankQuestionId(route.bankQuestionId);
-    } else if (route.tab === 'materials') {
-      setPendingQuestionId(null);
-      setPendingPageId(route.pageId ?? null);
     } else if (route.tab === 'mock-exams') {
       setPendingQuestionId(null);
       setPendingSubjectCode(route.subjectCode ?? null);
@@ -939,17 +934,7 @@ export default function SmartEduPlatform() {
         )}
 
         {/* VIEW 3: Materials */}
-        {activeTab === 'materials' && (
-          <MaterialsHub
-            initialPageId={pendingPageId}
-            onPageOpened={(pageId) => {
-              setPendingPageId(pageId);
-              // Keep the address bar naming the page that is actually open, so
-              // copying the URL shares the page rather than the workspace.
-              openRoute({ tab: 'materials', pageId });
-            }}
-          />
-        )}
+        {activeTab === 'materials' && <MaterialsHub />}
 
         {/* VIEW 4: Mock Exams */}
         {activeTab === 'mock-exams' && (
@@ -1012,7 +997,7 @@ function TabContextSync({ activeTab }: { activeTab: MainTab }) {
       dashboard: 'Dashboard — guided study overview',
       study: 'Study — plan, review, and mastery',
       practice: 'Practice — question bank and worked answers',
-      materials: 'Materials — notebook and library',
+      materials: 'Materials — the school resource library',
       'mock-exams': 'Mock Exams',
       discussions: 'Discussion Board',
     };

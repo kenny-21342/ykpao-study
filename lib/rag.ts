@@ -97,12 +97,11 @@ export async function retrieveContext(
   // may be indexed but empty while its personal materials are still useful.
   const hasStrongMetadata = Boolean(intent.board || intent.qualification || intent.level || intent.subjectCode || intent.subject);
   if (hasStrongMetadata) {
-    const [notes, textbookPages, cloudDocuments] = await Promise.all([
+    const [notes, cloudDocuments] = await Promise.all([
       searchNotes(sanitized, options.userId, options.courseId, options.strictCourseScope),
-      searchTextbookPages(sanitized, options.userId, options.courseId, options.strictCourseScope),
       searchCloudDocuments(sanitized, options.userId, options.strictCourseScope),
     ]);
-    const personal = [...notes, ...textbookPages, ...cloudDocuments].slice(0, maxSources);
+    const personal = [...notes, ...cloudDocuments].slice(0, maxSources);
     return {
       sources: personal,
       context: formatContext(personal),
@@ -113,9 +112,8 @@ export async function retrieveContext(
   }
 
   // Run searches in parallel across all sources.
-  const [notes, textbookPages, cloudDocuments, questions, markschemes, resources] = await Promise.all([
+  const [notes, cloudDocuments, questions, markschemes, resources] = await Promise.all([
     searchNotes(sanitized, options.userId, options.courseId, options.strictCourseScope),
-    searchTextbookPages(sanitized, options.userId, options.courseId, options.strictCourseScope),
     searchCloudDocuments(sanitized, options.userId, options.strictCourseScope),
     searchQuestions(sanitized, options.curriculumScopes?.map((scope) => scope.subjectCode) ?? (options.subjectCode ? [options.subjectCode] : undefined)),
     searchMarkschemes(sanitized, options.curriculumScopes?.map((scope) => scope.subjectCode) ?? (options.subjectCode ? [options.subjectCode] : undefined)),
@@ -123,7 +121,7 @@ export async function retrieveContext(
   ]);
 
   // Merge, re-rank by relevance, and take top N.
-  const all = [...notes, ...textbookPages, ...cloudDocuments, ...questions, ...markschemes, ...resources]
+  const all = [...notes, ...cloudDocuments, ...questions, ...markschemes, ...resources]
     .sort((a, b) => b.relevance - a.relevance)
     .slice(0, maxSources);
 
@@ -133,7 +131,7 @@ export async function retrieveContext(
   return {
     sources: all,
     context,
-    totalFound: notes.length + textbookPages.length + cloudDocuments.length + questions.length + markschemes.length + resources.length,
+    totalFound: notes.length + cloudDocuments.length + questions.length + markschemes.length + resources.length,
     intent,
     corpusCoverage,
   };
@@ -531,38 +529,6 @@ async function searchNotes(query: string, userId?: string, courseId?: string, st
       content: truncate(n.content, MAX_CHARS_PER_SOURCE),
       url: `/notes/${n.id}`,
       relevance: 0.7, // ILIKE match — no precise rank, so give a fixed score
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function searchTextbookPages(query: string, userId?: string, courseId?: string, strictCourseScope?: boolean): Promise<RAGSource[]> {
-  if (!userId) return [];
-  try {
-    const terms = searchTerms(query);
-    const pages = await prisma.page.findMany({
-      where: {
-        AND: [
-          { OR: [{ section: { notebook: { userId } } }, { collaborators: { some: { userId } } }] },
-          ...(strictCourseScope ? [{ OR: [{ section: { notebook: { courseId } } }, { section: { notebook: { courseId: null } } }] }] : []),
-          { OR: terms.flatMap((term) => [
-            { title: { contains: term, mode: 'insensitive' as const } },
-            { content: { contains: term, mode: 'insensitive' as const } },
-            { tags: { has: term } },
-          ]) },
-        ],
-      },
-      include: { section: { include: { notebook: true } } },
-      orderBy: { updatedAt: 'desc' },
-      take: 5,
-    });
-    return pages.map((page) => ({
-      type: 'textbook' as const,
-      title: `${page.section.notebook.name}: ${page.title}`,
-      content: truncate(page.content, MAX_CHARS_PER_SOURCE),
-      url: '/?tab=notes-textbook',
-      relevance: 0.75,
     }));
   } catch {
     return [];

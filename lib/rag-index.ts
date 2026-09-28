@@ -174,41 +174,12 @@ export async function indexNote(noteId: string) {
   });
 }
 
-export async function indexPage(pageId: string) {
-  const page = await prisma.page.findUnique({
-    where: { id: pageId },
-    include: {
-      collaborators: { select: { userId: true } },
-      section: { include: { notebook: { include: { course: { include: { curriculumScopes: true } } } } } },
-    },
-  });
-  if (!page) return prisma.ragDocument.deleteMany({ where: { documentKey: `page:${pageId}` } });
-  const notebook = page.section.notebook;
-  const scope = notebook.course?.curriculumScopes[0];
-  const academic = scope ?? academicMetadata(null, notebook.course?.name, notebook.course?.level);
-  return upsertIndexedDocument({
-    documentKey: `page:${page.id}`,
-    sourceType: 'textbook',
-    sourceRecordId: page.id,
-    ownerId: notebook.userId,
-    title: `${notebook.name}: ${page.title}`,
-    text: page.content,
-    route: `/?tab=notes-textbook&pageId=${page.id}`,
-    ...academic,
-    subjectCode: scope?.subjectCode,
-    documentType: 'notebook-page',
-    visibility: page.collaborators.length > 0 ? 'collaborator' : 'private',
-    accessUserIds: page.collaborators.map((row) => row.userId),
-    metadata: { tags: page.tags, notebookId: notebook.id, sectionId: page.sectionId, courseId: notebook.courseId, crossCourse: notebook.courseId === null },
-  });
-}
-
 export async function indexCloudDocument(documentId: string) {
   const document = await prisma.cloudDocument.findUnique({ where: { id: documentId } });
-  // A `page:` clientId is `syncPageToCloud` mirroring a Page for iPad sync, and
-  // `indexPage` has already indexed that same text. Indexing the mirror too put
-  // every notebook page into the corpus twice -- one copy per key -- which the
-  // incremental path avoided only because nothing ever called this function.
+  // A `page:` clientId is `syncPageToCloud` mirroring a notebook Page for iPad
+  // sync. The notebook was removed on 28 Sep 2026, so no new ones appear, but
+  // existing mirrors are still in the table and were double-indexed against
+  // the page's own document -- the skip stays.
   if (!document || document.deletedAt || document.clientId.startsWith('page:')) {
     return prisma.ragDocument.deleteMany({ where: { documentKey: `cloud-document:${documentId}` } });
   }
@@ -678,12 +649,8 @@ async function pruneStaleDocuments(startedAt: Date, prefixes: string[]) {
 export async function reindexRagCorpus(options: { userId?: string; includeCompetition?: boolean } = {}) {
   const startedAt = new Date();
   const ownerFilter = options.userId ? { userId: options.userId } : undefined;
-  const [notes, pages, cloudDocuments, resources, questions, bankQuestions, competition, announcements, discussionThreads, pastPapers] = await Promise.all([
+  const [notes, cloudDocuments, resources, questions, bankQuestions, competition, announcements, discussionThreads, pastPapers] = await Promise.all([
     prisma.note.findMany({ where: ownerFilter, select: { id: true } }),
-    prisma.page.findMany({
-      where: options.userId ? { section: { notebook: { userId: options.userId } } } : undefined,
-      select: { id: true },
-    }),
     prisma.cloudDocument.findMany({ where: options.userId ? { ownerId: options.userId } : undefined, select: { id: true } }),
     prisma.schoolResource.findMany({ select: { id: true } }),
     prisma.pastPaperQuestion.findMany({ select: { id: true } }),
@@ -699,7 +666,6 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
     options.userId ? Promise.resolve([]) : prisma.pastPaper.findMany({ select: { id: true } }),
   ]);
   await processIds(notes.map((row) => row.id), indexNote);
-  await processIds(pages.map((row) => row.id), indexPage);
   await processIds(cloudDocuments.map((row) => row.id), indexCloudDocument);
   await processIds(resources.map((row) => row.id), indexSchoolResource);
   await processIds(questions.map((row) => row.id), indexPastPaperQuestion);
@@ -712,9 +678,11 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   // A per-user rebuild sees only that user's rows, so everyone else's documents
   // would look stale to it. Pruning belongs to the full rebuild alone.
   //
-  // 'shared-note:' stays in this list (even though nothing indexes it anymore
-  // now that the community shared-notes feature is removed) so any documents
-  // left over from before this change get pruned by the next full rebuild.
+  // 'shared-note:' and 'page:' stay in this list even though nothing indexes
+  // them anymore -- the community shared-notes feature and, on 28 Sep 2026,
+  // the notebook were both removed. Keeping the prefixes is what gets their
+  // leftover documents pruned by the next full rebuild; dropping them would
+  // strand those documents in the index permanently.
   const prefixes = options.userId
     ? []
     : [
@@ -736,7 +704,7 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   const manifests = await rebuildCorpusManifests();
   return {
     indexed:
-      notes.length + pages.length + cloudDocuments.length + resources.length +
+      notes.length + cloudDocuments.length + resources.length +
       questions.length + bankQuestions.length + competition.length +
       announcements.length + discussionThreads.length + pastPapers.length,
     pruned,

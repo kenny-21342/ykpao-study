@@ -199,7 +199,9 @@ test('the SSE streams outlive the connection lifetime they advertise', async () 
   const lifetime = Number(/DEFAULT_STREAM_LIFETIME_MS = ([\d_]+)/.exec(config)?.[1].replace(/_/g, ''));
   assert.ok(Number.isFinite(lifetime), 'the default stream lifetime must be readable');
 
-  for (const route of ['app/api/notifications/stream/route.ts', 'app/api/pages/[id]/stream/route.ts']) {
+  // Was two routes; the notebook's page stream went with the notebook on
+  // 28 Sep 2026, leaving notifications as the only SSE endpoint.
+  for (const route of ['app/api/notifications/stream/route.ts']) {
     const src = await readFile(join(root, route), 'utf8');
     const max = Number(/export const maxDuration = (\d+)/.exec(src)?.[1]);
     assert.ok(Number.isFinite(max), `${route} must declare maxDuration`);

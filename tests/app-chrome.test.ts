@@ -78,10 +78,9 @@ const TAB_VIEWS = [
   // have to carry a title. BankPractice shipped with none.
   'BankPractice.tsx',
   'QuestionsDatabase.tsx',
-  // Materials is two sub-views behind one hub, and the hub owns the title for
-  // both: the notebook has no page header to put one in, and when the library
-  // carried its own the screen showed two titles in one view and none in the
-  // other.
+  // Materials was two sub-views behind one hub and the hub owned the title for
+  // both; the notebook half was removed on 28 Sep 2026. The hub keeps the
+  // title, because the library still must not render one of its own.
   'MaterialsHub.tsx',
   'MockExams.tsx',
   'DiscussionBoard.tsx',

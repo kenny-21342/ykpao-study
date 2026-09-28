@@ -240,21 +240,11 @@ export async function recommendMaterials(userId: string, focus: FocusTopic[]) {
     { title: { contains: term, mode: 'insensitive' as const } },
     { content: { contains: term, mode: 'insensitive' as const } },
   ]);
-  const [resources, pages, notes] = await Promise.all([
+  const [resources, notes] = await Promise.all([
     prisma.schoolResource.findMany({
       where: filters.length > 0 ? { OR: filters } : undefined,
       orderBy: { createdAt: 'desc' },
       take: 5,
-    }),
-    prisma.page.findMany({
-      where: {
-        AND: [
-          { OR: [{ section: { notebook: { userId } } }, { collaborators: { some: { userId } } }] },
-          ...(noteFilters.length > 0 ? [{ OR: noteFilters }] : []),
-        ],
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 4,
     }),
     prisma.note.findMany({
       where: {
@@ -274,13 +264,6 @@ export async function recommendMaterials(userId: string, focus: FocusTopic[]) {
       title: resource.title,
       description: plainText(resource.description || resource.fileName, 180),
       url: resource.fileUrl,
-    })),
-    ...pages.map((page) => ({
-      id: page.id,
-      type: 'note' as const,
-      title: page.title,
-      description: plainText(page.content, 180),
-      url: '/?tab=notes-textbook',
     })),
     ...notes.map((note) => ({
       id: note.id,

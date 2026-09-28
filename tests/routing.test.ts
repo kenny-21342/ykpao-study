@@ -23,7 +23,6 @@ const effective = (r: RoutedTab) => ({
   studyView: r.tab === 'study' ? r.studyView ?? 'today' : undefined,
   questionId: r.tab === 'practice' ? r.questionId ?? null : undefined,
   bankQuestionId: r.tab === 'practice' ? r.bankQuestionId ?? null : undefined,
-  pageId: r.tab === 'materials' ? r.pageId ?? null : undefined,
   subjectCode: r.tab === 'practice' || r.tab === 'mock-exams' ? r.subjectCode ?? null : undefined,
   practiceMode: r.tab === 'practice'
     ? (r.questionId || r.bankQuestionId ? 'practice' : r.practiceMode ?? 'browse')
@@ -44,9 +43,6 @@ test('every destination survives a round trip through the URL', () => {
     }
     if (tab === 'mock-exams') {
       routes.push({ tab, subjectCode: '9702' });
-    }
-    if (tab === 'materials') {
-      routes.push({ tab, pageId: 'cmt13awz4000004l965cg7idg' });
     }
   }
 
@@ -116,32 +112,15 @@ test('a malformed id is ignored rather than routed to', () => {
   }
 });
 
-test('a notebook page is addressable on its own', () => {
-  // The whole point of the parameter: a link with nothing but the page id has
-  // to reach the page, because that is what someone pastes into a chat.
-  const bare = parseRoute('?pageId=cmt13awz4000004l965cg7idg');
-  assert.equal(bare?.tab, 'materials');
-  assert.equal(bare?.pageId, 'cmt13awz4000004l965cg7idg');
-
-  // And it survives alongside the tab it implies.
-  const explicit = parseRoute('?tab=materials&pageId=cmt13awz4000004l965cg7idg');
-  assert.equal(explicit?.pageId, 'cmt13awz4000004l965cg7idg');
-
-  // Materials without a page is still Materials, not a broken link.
-  assert.equal(parseRoute('?tab=materials')?.pageId, null);
-});
-
-test('a malformed page id is dropped rather than forwarded', () => {
-  // This value reaches `GET /api/pages?pageId=` on mount. The route decides
-  // who may read a page, but nothing that cannot be an id should get that far.
-  for (const bad of ['', '../../etc/passwd', 'short', 'has-dashes-in-it', "' OR 1=1--", 'x'.repeat(64)]) {
-    const parsed = parseRoute(`?tab=materials&pageId=${encodeURIComponent(bad)}`);
-    assert.equal(parsed?.pageId, null, `accepted a malformed page id: ${bad}`);
-  }
-
-  // A bare malformed id names nothing at all, rather than silently landing on
-  // Materials as though a real page had been asked for.
-  assert.equal(parseRoute('?pageId=nope'), null);
+test('a leftover pageId link lands on Materials rather than nowhere', () => {
+  // The notebook was removed on 28 Sep 2026 and `pageId` went with it. Links
+  // to a page are still out there, in chats and in RAG documents indexed
+  // before the removal, so they have to land somewhere sensible.
+  assert.equal(parseRoute('?tab=materials&pageId=cmt13awz4000004l965cg7idg')?.tab, 'materials');
+  // The old alias for the notebook half of Materials still resolves too.
+  assert.equal(resolveRoute('notes-textbook')?.tab, 'materials');
+  // But a bare page id now names nothing: there is no page to open.
+  assert.equal(parseRoute('?pageId=cmt13awz4000004l965cg7idg'), null);
 });
 
 test('a subject code only survives on the two tabs that can act on it', () => {

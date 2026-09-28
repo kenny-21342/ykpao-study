@@ -45,6 +45,9 @@ const BACKED_UP_TABLES = [
   'noteRating',
   'noteCollaborator',
   'sharedNote',
+  // The notebook tables are deliberately still here. The feature was removed
+  // from the site on 28 Sep 2026 but the tables were not dropped, so they hold
+  // real rows that a restore must bring back.
   'notebook',
   'section',
   'page',

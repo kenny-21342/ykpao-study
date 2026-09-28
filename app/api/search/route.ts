@@ -63,9 +63,11 @@ function readableChunk(content: string): string {
 
 /** Maps a `rag_documents.sourceType` value onto this route's own result type. */
 function ragResultType(sourceType: string, documentType?: string | null): SearchResult['type'] {
-  // `indexPage` files a student's own notebook page under sourceType
-  // 'textbook', so the badge read TEXTBOOK on a page they wrote themselves.
-  // documentType carries the honest answer.
+  // 'notebook-page' documents were a student's own notebook pages, filed
+  // under sourceType 'textbook' so the badge read TEXTBOOK on something they
+  // wrote themselves. The notebook was removed on 28 Sep 2026 and its
+  // documents deleted from the index, but the mapping stays: an index built
+  // before that date can still be in place.
   if (documentType === 'notebook-page') return 'note';
   if (sourceType === 'question' || sourceType === 'bank-question') return 'question';
   if (sourceType === 'markscheme' || sourceType === 'bank-markscheme') return 'markscheme';
@@ -218,7 +220,6 @@ export async function GET(req: NextRequest) {
     markSchemeTextRows,
     matchedSubjects,
     notes,
-    pages,
     documents,
     resources,
   ] = await Promise.all([
@@ -248,22 +249,6 @@ export async function GET(req: NextRequest) {
           ]) },
         ],
       },
-      take: 6,
-      orderBy: { updatedAt: 'desc' },
-    }) : Promise.resolve([]),
-    user ? prisma.page.findMany({
-      where: {
-        AND: [
-          { OR: [{ section: { notebook: { userId: user.id } } }, { collaborators: { some: { userId: user.id } } }] },
-          ...(courseScope.effectiveScope === 'enrolled' ? [{ OR: [{ section: { notebook: { courseId: { in: courseScope.courseIds } } } }, { section: { notebook: { courseId: null } } }] }] : []),
-          { OR: terms.flatMap((term) => [
-            { title: { contains: term, mode: 'insensitive' as const } },
-            { content: { contains: term, mode: 'insensitive' as const } },
-            { tags: { has: term } },
-          ]) },
-        ],
-      },
-      include: { section: { include: { notebook: true } } },
       take: 6,
       orderBy: { updatedAt: 'desc' },
     }) : Promise.resolve([]),
@@ -449,14 +434,6 @@ export async function GET(req: NextRequest) {
       snippet: plainText(note.content, 240),
       url: '/?tab=materials',
       subject: note.tags[0] ?? null,
-    })),
-    ...pages.map((page) => ({
-      id: `page-${page.id}`,
-      type: 'textbook' as const,
-      title: `${page.section.notebook.name}: ${page.title}`,
-      snippet: plainText(page.content, 240),
-      url: '/?tab=materials',
-      subject: page.section.notebook.name,
     })),
     ...documents.map((document) => ({
       id: `document-${document.id}`,

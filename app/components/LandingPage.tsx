@@ -8,7 +8,7 @@ import {
   FileText,
   Brain,
   ClipboardList,
-  NotebookPen,
+  Library,
   Repeat,
   Search,
   ArrowRight,
@@ -87,10 +87,10 @@ const FEATURES = [
       'Generate a timed paper to a mark total you choose, sit it against the clock, and get it marked question by question.',
   },
   {
-    icon: NotebookPen,
-    title: 'Keep notes that do more than sit there',
+    icon: Library,
+    title: 'Share what your year group makes',
     body:
-      'A notebook with LaTeX, live formula checking and reopenable drawings, shared with classmates when you want a second pair of eyes.',
+      'Upload notes, summaries and past-paper walkthroughs for the whole school, in real folders, with the contributor named on every one.',
   },
   {
     icon: Search,

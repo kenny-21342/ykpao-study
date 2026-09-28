@@ -1,10 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import Collaboration from '@tiptap/extension-collaboration';
-import type { RemoteCursor } from './RemoteCursors';
 import { createRichTextEditorExtensions } from './richTextEditorExtensions';
-import { useYjsPageSync } from './useYjsPageSync';
 import NoticeDialog from './NoticeDialog';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -26,16 +23,15 @@ type RichTextEditorProps = {
   compactToolbar?: boolean;
   onSelectionChange?: (text: string) => void;
   insertRequest?: { id: string; html: string } | null;
-  // --- Collaboration (optional) ---
-  remoteCursors?: RemoteCursor[];
-  onCursorChange?: (from: number, to: number) => void;
-  // --- Real-time CRDT collaboration (Feature 5, flagged off by default) ---
-  // Only the Notebook page editor passes these; every other caller of this
-  // component (bank/mock-exam free-response answers, discussion posts,
-  // announcements) leaves them unset and is completely unaffected.
-  yjsPageId?: string | null;
-  yjsRemoteUpdate?: { id: string; nonce: number } | null;
 };
+
+/*
+ * The collaboration props that used to be here -- `remoteCursors`,
+ * `onCursorChange`, `yjsPageId`, `yjsRemoteUpdate` -- went with the notebook
+ * on 28 Sep 2026. Only the notebook page editor ever passed them; the four
+ * remaining callers (announcements, discussions, mock exams, the question
+ * browser) always left them unset, so nothing here changes for them.
+ */
 
 // Hoisted out so it isn't re-created on every render (react/no-typos).
 function MenuButton({
@@ -76,12 +72,7 @@ export default function RichTextEditor({
   compactToolbar = false,
   onSelectionChange,
   insertRequest,
-  remoteCursors,
-  onCursorChange,
-  yjsPageId,
-  yjsRemoteUpdate,
 }: RichTextEditorProps) {
-  const yjsDoc = useYjsPageSync(yjsPageId ?? null, content, yjsRemoteUpdate ?? null);
   const [showLatexModal, setShowLatexModal] = useState(false);
   const [latexInput, setLatexInput] = useState('');
   const [latexDisplay, setLatexDisplay] = useState(false);
@@ -115,27 +106,14 @@ export default function RichTextEditor({
 
   const editor = useEditor(
     {
-      extensions: [
-        ...createRichTextEditorExtensions({ remoteCursors, history: !yjsDoc }),
-        // Present only once this page's Yjs document has finished loading
-        // (existing session applied, or this client's seed-from-HTML step
-        // resolved) -- see useYjsPageSync's module comment for why seeding
-        // happens before this ever mounts, not after.
-        ...(yjsDoc ? [Collaboration.configure({ document: yjsDoc })] : []),
-      ],
-      // Once collaboration is active, the Yjs document is the source of
-      // truth for the initial doc -- passing `content` too would race
-      // TipTap's own HTML parsing against the sync plugin's own initial
-      // state. Before that point (not yet resolved, or not a collaborative
-      // page at all), `content` behaves exactly as before.
-      content: yjsDoc ? undefined : content,
+      extensions: createRichTextEditorExtensions(),
+      content,
       onUpdate: ({ editor }) => {
         onChange(editor.getHTML());
       },
       onSelectionUpdate: ({ editor }) => {
         const { from, to } = editor.state.selection;
         onSelectionChange?.(editor.state.doc.textBetween(from, to, ' ').trim());
-        onCursorChange?.(from, to);
       },
       editorProps: {
         attributes: {
@@ -144,12 +122,6 @@ export default function RichTextEditor({
         },
       },
     },
-    // Recreate once the Yjs doc transitions from "not yet loaded" to
-    // "ready" so Collaboration binds from the start of the new editor
-    // instance's life, matching every published TipTap+Yjs example --
-    // toggling it into an already-running editor's extensions is not
-    // supported.
-    [yjsDoc]
   );
 
   useEffect(() => {
@@ -159,11 +131,9 @@ export default function RichTextEditor({
   }, [editor, insertRequest]);
 
   useEffect(() => {
-    // While collaborating, the Yjs sync plugin owns the doc; imposing
-    // `content` on top of it here would fight that instead of merging with it.
-    if (!editor || yjsDoc || editor.getHTML() === content) return;
+    if (!editor || editor.getHTML() === content) return;
     editor.commands.setContent(content, { emitUpdate: false });
-  }, [content, editor, yjsDoc]);
+  }, [content, editor]);
 
   if (!editor) {
     return null;

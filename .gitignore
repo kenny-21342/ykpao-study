@@ -172,3 +172,6 @@ pdf_extraction/bank/answer-keys-watch.log
 
 # Full-resolution artwork sources; the webp in public/ is what ships.
 design/
+
+# Local archives of removed features; the code lives in git tags.
+backups/

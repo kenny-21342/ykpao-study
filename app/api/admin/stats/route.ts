@@ -21,7 +21,7 @@ export async function GET() {
   const [
     totalUsers, newUsers7d, newUsers30d, bannedUsers,
     threads, posts, schoolResources,
-    mockExams, pastPaperAttempts, notebooks,
+    mockExams, pastPaperAttempts,
     announcements, activeAnnouncements,
     aiUsageAll, aiUsage30d,
   ] = await Promise.all([
@@ -34,7 +34,6 @@ export async function GET() {
     prisma.schoolResource.count(),
     prisma.mockExam.count(),
     prisma.pastPaperAttempt.count(),
-    prisma.notebook.count(),
     prisma.announcement.count(),
     prisma.announcement.count({ where: { published: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
     prisma.usageRecord.aggregate({ _sum: { cost: true, tokensIn: true, tokensOut: true }, _count: true }),
@@ -80,7 +79,7 @@ export async function GET() {
 
   return NextResponse.json({
     users: { total: totalUsers, new7d: newUsers7d, new30d: newUsers30d, banned: bannedUsers },
-    content: { threads, posts, schoolResources, mockExams, pastPaperAttempts, notebooks },
+    content: { threads, posts, schoolResources, mockExams, pastPaperAttempts },
     announcements: { total: announcements, active: activeAnnouncements },
     ai: {
       totalCost: aiUsageAll._sum.cost ?? 0,

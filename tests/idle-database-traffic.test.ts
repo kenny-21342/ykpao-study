@@ -83,9 +83,6 @@ test('no other signed-in component polls the server on an ungated timer', async 
   // (or justify itself by being added to this list).
   const allowed = new Set([
     join(root, 'app/components/NotificationBell.tsx'),
-    // Presence is only mounted while a notebook page is actually open, and
-    // its whole purpose is telling other people you are there.
-    join(root, 'app/components/usePageCollaboration.ts'),
     // Mock-exam autosave. Its 60s timer cannot be gated on tab activity --
     // losing a student's answers because they alt-tabbed is far worse than
     // any database bill -- so it is made harmless a different way: the save

@@ -6,7 +6,7 @@ import { adminFetch } from '../lib/fetch';
 
 type Stats = {
   users: { total: number; new7d: number; new30d: number; banned: number };
-  content: { threads: number; posts: number; schoolResources: number; mockExams: number; pastPaperAttempts: number; notebooks: number };
+  content: { threads: number; posts: number; schoolResources: number; mockExams: number; pastPaperAttempts: number };
   announcements: { total: number; active: number };
   ai: { totalCost: number; totalRequests: number; cost30d: number; requests30d: number };
   charts: {
@@ -106,7 +106,6 @@ export default function AdminDashboard() {
           <StatRow icon={FileText} label="School Resources" value={stats.content.schoolResources} />
           <StatRow icon={Activity} label="Mock Exams" value={stats.content.mockExams} />
           <StatRow icon={TrendingUp} label="Past-Paper Attempts" value={stats.content.pastPaperAttempts} />
-          <StatRow icon={FileText} label="Notebooks" value={stats.content.notebooks} />
         </InfoCard>
 
         <InfoCard title="User Roles">
