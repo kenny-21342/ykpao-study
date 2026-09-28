@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import { aiLimiter } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
 import { plainText } from '@/lib/learning';
+import { plainTextPreview } from '@/lib/latex';
 import { Prisma } from '@prisma/client';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
@@ -38,6 +39,19 @@ type SearchResult = {
  * back to prose for display; anything that isn't that shape is returned
  * untouched.
  */
+/**
+ * A snippet for a source written in Markdown, rather than HTML.
+ *
+ * `plainText` strips tags, which is right for a note but does nothing to a
+ * transcribed exam question: those are Markdown with LaTeX, so a raw snippet
+ * shows a student `![](asset:fig1)` and `\\frac{1}{2}` in the middle of a
+ * sentence. `plainTextPreview` renders both readably; `plainText` then does the
+ * trimming and the length cap as before.
+ */
+function markdownSnippet(value: string, maxLength = 240): string {
+  return plainText(plainTextPreview(value), maxLength);
+}
+
 function readableChunk(content: string): string {
   const trimmed = content.trimStart();
   if (!trimmed.startsWith('{') || !trimmed.includes('marking_points')) return content;
@@ -403,7 +417,7 @@ export async function GET(req: NextRequest) {
       id: `rag-${row.documentId}`,
       type: ragResultType(row.sourceType, row.documentType),
       title: row.title,
-      snippet: plainText(readableChunk(row.content), 240),
+      snippet: markdownSnippet(readableChunk(row.content)),
       url: indexedRoute(row) ?? '/?tab=materials',
     }));
 
@@ -413,7 +427,7 @@ export async function GET(req: NextRequest) {
       id: `question-${question.id}`,
       type: 'question' as const,
       title: `${question.paper.subject.code} ${question.paper.year} ${question.paper.session.toUpperCase()} P${question.paper.paperNumber}${question.paper.variant ? `v${question.paper.variant}` : ''} Q${question.rootNumber}`,
-      snippet: question.bodyMd ? plainText(question.bodyMd, 240) : `${question.paper.subject.name} — Paper ${question.paper.paperNumber}, Question ${question.rootNumber}`,
+      snippet: question.bodyMd ? markdownSnippet(question.bodyMd) : `${question.paper.subject.name} — Paper ${question.paper.paperNumber}, Question ${question.rootNumber}`,
       url: `/?tab=practice&bqid=${question.id}`,
       subject: question.paper.subject.name,
       topic: null,
@@ -422,7 +436,7 @@ export async function GET(req: NextRequest) {
       id: `markscheme-${scheme.id}`,
       type: 'markscheme' as const,
       title: `${scheme.paper.subject.code} ${scheme.paper.year} ${scheme.paper.session.toUpperCase()} P${scheme.paper.paperNumber}${scheme.paper.variant ? `v${scheme.paper.variant}` : ''} Q${scheme.question.rootNumber} mark scheme`,
-      snippet: scheme.answerMd ? plainText(scheme.answerMd, 240) : `Mark scheme for Q${scheme.question.rootNumber}`,
+      snippet: scheme.answerMd ? markdownSnippet(scheme.answerMd) : `Mark scheme for Q${scheme.question.rootNumber}`,
       url: `/?tab=practice&bqid=${scheme.questionId}`,
       subject: scheme.paper.subject.name,
       topic: null,

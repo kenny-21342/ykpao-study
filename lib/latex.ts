@@ -335,6 +335,23 @@ export function plainTextPreview(src: string): string {
 
   return readableLatex(out)
     .replace(/^#{1,6}\s+/gm, '')
+    /*
+     * Figure placeholders, dropped rather than kept.
+     *
+     * A transcribed exam question carries its figures as `![](asset:fig1)`,
+     * because the crop is a separate image the transcript only points at. Left
+     * in, that markup is what a student reads in a search result: "Fig. 1.1
+     * shows a measuring cylinder containing some water. ![](asset:fig1) (a)
+     * State the volume..." -- seen in production on 28 Sep 2026, on the first
+     * three results for a plain search.
+     *
+     * Dropping the whole thing loses nothing: the alt text is empty in every
+     * transcript the pipeline writes, and the prose already names the figure.
+     */
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    // A real link keeps its words and loses its target, which is never
+    // something a preview should show.
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/(\*\*\*|\*\*|\*|__|_|`)/g, '')
     .replace(/\s+/g, ' ')
     .trim();

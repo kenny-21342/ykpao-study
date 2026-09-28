@@ -50,3 +50,43 @@ test('spacing commands vanish rather than leaving their name behind', () => {
   assert.equal(plainTextPreview('energy \\uparrow reactants \\quad products'),
     'energy ↑ reactants products');
 });
+
+test('a figure placeholder does not reach the reader', () => {
+  /**
+   * Taken verbatim from the first search result for "measuring cylinder to
+   * measure the volume" on production, 28 Sep 2026. Every transcribed question
+   * with a figure carried its `![](asset:fig1)` marker into the snippet,
+   * because the snippet was built with `plainText`, which strips HTML tags and
+   * knows nothing about Markdown.
+   */
+  assert.equal(
+    plainTextPreview(
+      'Fig. 1.1 shows a measuring cylinder containing some water. ![](asset:fig1) (a) State the volume.',
+    ),
+    'Fig. 1.1 shows a measuring cylinder containing some water. (a) State the volume.',
+  );
+});
+
+test('a figure with alt text loses the markup too, not just the target', () => {
+  assert.equal(
+    plainTextPreview('before ![a ray diagram](asset:fig2) after'),
+    'before after',
+  );
+});
+
+test('a link keeps its words and drops its target', () => {
+  // The words are the content; the URL is never something a preview shows.
+  assert.equal(
+    plainTextPreview('see [the mark scheme](https://example.com/ms.pdf) for detail'),
+    'see the mark scheme for detail',
+  );
+});
+
+test('square brackets that are not markup survive', () => {
+  // Mark allocations are written exactly like this all over the corpus, and
+  // eating them would make every snippet read as though marks were missing.
+  assert.equal(
+    plainTextPreview('State the volume. [1] Explain your answer. [3]'),
+    'State the volume. [1] Explain your answer. [3]',
+  );
+});
