@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { derivePaperTemplates, chooseTemplate, MIN_PAPERS, type TemplateRow } from '../lib/paper-template-shape.ts';
 import { fillSlots, topicShares } from '../lib/mock-exam-packing.ts';
 
@@ -197,4 +200,76 @@ test('a slot is filled even when no topic has room left', () => {
   // its allowance is spent and the slot has to overrun it.
   const picked = fillSlots(slots, pool, topicShares([{ topicId: 1, share: 1 }]));
   assert.equal(picked.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// The board's figures reach both kinds of paper
+// ---------------------------------------------------------------------------
+
+/**
+ * A source scan, because the wiring is the bug.
+ *
+ * Both halves of this were individually reasonable and wrong together. The
+ * generator's form renders its mark and duration sliders only for a *custom*
+ * total, so picking "Paper 3 - 80 marks, 1h 15m" left `totalMarks` and
+ * `durationMinutes` at their useState defaults of 50 and 90. The plain mock
+ * path never noticed, because the route re-derives everything from
+ * `paperNumber`. The predicted path passed them straight to the model.
+ *
+ * So a student chose Physics Paper 3, read "The mark total and timing are the
+ * ones in the Cambridge syllabus", and sat a 50-mark paper on a 90-minute
+ * clock. Verified against production on 28 Sep 2026 before the fix.
+ *
+ * There is no unit to test here -- the decision is three assignments across two
+ * files -- so this pins the assignments.
+ */
+const source = (relative: string) =>
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', relative), 'utf8');
+
+test('a predicted paper is built from the board\'s figures, not the form\'s defaults', () => {
+  const route = source('app/api/mock-exams/generate/route.ts');
+  const call = route.slice(
+    route.indexOf('createPredictedPaper({'),
+    route.indexOf('await recordUsage'),
+  );
+  assert.ok(call.length > 0, 'the predicted branch no longer calls createPredictedPaper');
+  assert.match(
+    call,
+    /totalMarks:\s*examTotalMarks/,
+    'the predicted paper is using a mark total other than the named paper\'s',
+  );
+  assert.match(
+    call,
+    /durationMinutes:\s*examDuration/,
+    'the predicted paper is using a duration other than the board\'s clock',
+  );
+});
+
+test('the paper format is resolved before the predicted branch, not after it', () => {
+  const route = source('app/api/mock-exams/generate/route.ts');
+  const branch = route.indexOf("if (mode === 'predicted')");
+  assert.ok(branch > 0, 'the predicted branch moved');
+  assert.ok(
+    route.indexOf('const template =') < branch,
+    'the template is resolved after the predicted branch, so only mock exams can use it',
+  );
+  assert.ok(
+    route.indexOf('const examTotalMarks =') < branch,
+    'examTotalMarks is resolved after the predicted branch',
+  );
+  // One definition, shared. Two would drift exactly as they did before.
+  assert.equal(route.match(/const template = /g)?.length, 1);
+  assert.equal(route.match(/const examDuration = /g)?.length, 1);
+});
+
+test('the generator sends the chosen paper\'s figures, not the custom sliders', () => {
+  const form = source('app/components/MockExams.tsx');
+  const start = form.indexOf("fetch('/api/mock-exams/generate'");
+  assert.ok(start > 0, 'the generate request moved');
+  // Searched from the call, not the file: an earlier `res.json()` elsewhere in
+  // this component would otherwise slice backwards into nothing.
+  const body = form.slice(start, form.indexOf('const data = await res.json()', start));
+  assert.ok(body.length > 0, 'the generate request body could not be located');
+  assert.match(body, /totalMarks:\s*selectedFormat\?\.totalMarks\s*\?\?\s*totalMarks/);
+  assert.match(body, /durationMinutes:\s*selectedFormat\?\.minutes\s*\?\?\s*durationMinutes/);
 });

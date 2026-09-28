@@ -694,8 +694,24 @@ function ConfigureView({
         body: JSON.stringify({
           subjectCode,
           topics,
-          totalMarks,
-          durationMinutes,
+          /*
+           * The chosen paper's own figures, falling back to the sliders.
+           *
+           * Read off `selectedFormat` rather than mirrored into `totalMarks`
+           * and `durationMinutes` when a card is clicked, because those two
+           * are the *custom* controls -- they are only rendered when
+           * `paperNumber === null`, and an effect further up re-picks a
+           * recommended format whenever the subject changes, which would race
+           * any mirroring. Deriving here cannot drift from what the cards say.
+           *
+           * Sending the untouched defaults was harmless for a plain mock,
+           * which the server re-derives from `paperNumber`, and wrong for a
+           * predicted paper, which took them at face value: choosing Physics
+           * Paper 3 -- 80 marks, 1h15m, under a line promising the syllabus
+           * figures -- produced a 50-mark paper on a 90-minute clock.
+           */
+          totalMarks: selectedFormat?.totalMarks ?? totalMarks,
+          durationMinutes: selectedFormat?.minutes ?? durationMinutes,
           difficulty,
           title: title.trim() || undefined,
           mode,

@@ -74,6 +74,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Unknown subject code: ${resolvedSubjectCode}` }, { status: 404 });
     }
 
+    const bankSubjectCodes = toBankSubjectCodes([resolvedSubjectCode]);
+
+    /**
+     * Shape the paper after a real one when the student asked for a format.
+     *
+     * `paperNumber` is the request saying "give me a Paper 4", and a Paper 4
+     * is nine questions of about eight marks in that order -- not whatever
+     * adds up to the mark total. `lib/paper-templates.ts` measures that shape
+     * from the sixty-eight real Paper 4s already in the corpus.
+     *
+     * Falling back rather than failing is deliberate: a subject with fewer
+     * than three extracted papers has no measurable shape, and packing to a
+     * mark total is a worse paper, not a broken one. The response says which
+     * happened so the client does not have to claim a structure it did not
+     * get.
+     *
+     * Resolved here, before the branch, because **both** kinds of paper need
+     * it. It used to sit inside the plain-mock path, so a predicted paper took
+     * the client's numbers instead of the board's -- see the predicted branch.
+     */
+    const template = paperNumber === undefined || paperNumber === null
+      ? null
+      : chooseTemplate(
+          (await loadPaperTemplatesForCatalogCode(
+            bankSubjectCodes[0] ?? resolvedSubjectCode,
+          )).templates,
+          { level: learnerContext.activeCourse?.level, paperNumber },
+        );
+
+    /**
+     * The real paper's own name and clock, where the board publishes them.
+     *
+     * The duration used to be whatever the client sent, defaulting to 90
+     * minutes, which put a 90-minute clock on a Paper 1 that is sat in 45.
+     * Pacing is most of what a mock is for, so a wrong clock undoes the point
+     * of shaping the paper at all. The client's value is still used when no
+     * paper was named, or for the papers the board times nothing -- Cambridge
+     * coursework and every IB Language A paper.
+     */
+    const official = template?.official ?? null;
+    const examDuration = official?.minutes ?? durationMinutes;
+    const paperLabel = template
+      ? `Paper ${template.paperNumber}${official?.name ? ` \u2014 ${official.name}` : ''}`
+      : null;
+
+    /**
+     * The board's own mark total, where a named paper has one.
+     *
+     * `template.totalMarks` is already the official figure: `applyOfficialFormat`
+     * rescales the measured ladder onto it, and drops the template entirely
+     * when the shape cannot carry it. So a named paper is the board's total and
+     * an unnamed one is whatever the student asked for.
+     */
+    const examTotalMarks = template?.totalMarks ?? totalMarks;
+
     if (mode === 'predicted') {
       // Only the predicted paper still asks a model to do anything, so only it
       // needs a credential. A plain mock exam is a database query now, and
@@ -96,8 +151,12 @@ export async function POST(req: Request) {
         credential: access.credential,
         subjectCode: resolvedSubjectCode,
         topics,
-        totalMarks,
-        durationMinutes,
+        // The board's figures when a paper was named, not the client's.
+        // A predicted Physics Paper 3 is 80 marks in 1h15m; this used to send
+        // the form's untouched defaults and build a 50-mark, 90-minute paper
+        // under a heading promising the syllabus total.
+        totalMarks: examTotalMarks,
+        durationMinutes: examDuration,
         difficulty,
         questionCount,
         title,
@@ -128,8 +187,6 @@ export async function POST(req: Request) {
     // Because there is no provider in the path any more, the paper is finished
     // before this route answers: no `generating` state, no `after()`, no client
     // poll, and no way for a slow completion to strand a paper in `failed`.
-    const bankSubjectCodes = toBankSubjectCodes([resolvedSubjectCode]);
-
     // Let the mark target decide how many questions a paper holds, and cap the
     // count only where a cap is actually needed.
     //
@@ -143,44 +200,6 @@ export async function POST(req: Request) {
         : MAX_KEYED_EXAM_ITEMS;
     const targetCount = Math.max(1, Math.min(MAX_KEYED_EXAM_ITEMS, requestedCount));
 
-    /**
-     * Shape the paper after a real one when the student asked for a format.
-     *
-     * `paperNumber` is the request saying "give me a Paper 4", and a Paper 4
-     * is nine questions of about eight marks in that order -- not whatever
-     * adds up to the mark total. `lib/paper-templates.ts` measures that shape
-     * from the sixty-eight real Paper 4s already in the corpus.
-     *
-     * Falling back rather than failing is deliberate: a subject with fewer
-     * than three extracted papers has no measurable shape, and packing to a
-     * mark total is a worse paper, not a broken one. The response says which
-     * happened so the client does not have to claim a structure it did not
-     * get.
-     */
-    const template = paperNumber === undefined || paperNumber === null
-      ? null
-      : chooseTemplate(
-          (await loadPaperTemplatesForCatalogCode(
-            bankSubjectCodes[0] ?? resolvedSubjectCode,
-          )).templates,
-          { level: learnerContext.activeCourse?.level, paperNumber },
-        );
-
-    /**
-     * The real paper's own name and clock, where the board publishes them.
-     *
-     * The duration used to be whatever the client sent, defaulting to 90
-     * minutes, which put a 90-minute clock on a Paper 1 that is sat in 45.
-     * Pacing is most of what a mock is for, so a wrong clock undoes the point
-     * of shaping the paper at all. The client's value is still used when no
-     * paper was named, or for the papers the board times nothing -- Cambridge
-     * coursework and every IB Language A paper.
-     */
-    const official = template?.official ?? null;
-    const examDuration = official?.minutes ?? durationMinutes;
-    const paperLabel = template
-      ? `Paper ${template.paperNumber}${official?.name ? ` \u2014 ${official.name}` : ''}`
-      : null;
 
     const selected = template
       ? await selectByTemplate({ subjectCodes: bankSubjectCodes, template })
