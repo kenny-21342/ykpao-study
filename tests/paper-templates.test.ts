@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { derivePaperTemplates, chooseTemplate, MIN_PAPERS, type TemplateRow } from '../lib/paper-template-shape.ts';
-import { fillSlots } from '../lib/mock-exam-packing.ts';
+import { fillSlots, topicShares } from '../lib/mock-exam-packing.ts';
 
 /**
  * Shaped after the real measurement of Physics 0625 Paper 4 on 27 Sep 2026:
@@ -102,7 +102,8 @@ test('with no paper named, the biggest paper is the one a student means', () => 
   assert.equal(chooseTemplate(templates)?.paperNumber, 4);
 });
 
-const candidate = (id: number, marks: number, paperId = id) => ({ id, marks, paperId, year: 2024, keyed: false });
+const candidate = (id: number, marks: number, paperId = id, topicId: number | null = null) =>
+  ({ id, marks, paperId, year: 2024, keyed: false, topicId });
 
 test('every slot takes an exact mark match when one exists', () => {
   const slots = [{ position: 1, marks: 8 }, { position: 2, marks: 7 }];
@@ -154,4 +155,46 @@ test('paper 0 is not offered, because it is not a paper', () => {
 
   // A real paper number is untouched by the guard.
   assert.equal(derivePaperTemplates('0625', [row({ paperNumber: 4 })]).length, 1);
+});
+
+
+test('a blueprint\'s slots spread across topics when they can', () => {
+  // Same shape as the mark-total draw: the pool leans on topic 1, and the
+  // quota pulls the paper back towards the subject's real spread. The slots
+  // are all the same size so the only thing distinguishing the picks is topic.
+  const slots = [
+    { position: 1, marks: 5 },
+    { position: 2, marks: 5 },
+    { position: 3, marks: 5 },
+    { position: 4, marks: 5 },
+  ];
+  const pool = [
+    ...Array.from({ length: 10 }, (_, i) => candidate(100 + i, 5, 100 + i, 1)),
+    candidate(200, 5, 200, 2),
+    candidate(300, 5, 300, 3),
+  ];
+  // Topic 1 holds half the syllabus, so its running allowance over a
+  // four-question paper is two -- and the pool's ten topic-1 questions cannot
+  // take all four slots.
+  const shares = topicShares([
+    { topicId: 1, share: 0.5 },
+    { topicId: 2, share: 0.25 },
+    { topicId: 3, share: 0.25 },
+  ]);
+
+  const picked = fillSlots(slots, pool, shares);
+  assert.equal(picked.length, 4, 'balancing must never leave a slot empty');
+  const topics = new Set(picked.map((x) => x.topicId));
+  assert.ok(topics.has(2) && topics.has(3), `expected topics 2 and 3, got ${[...topics]}`);
+});
+
+test('a slot is filled even when no topic has room left', () => {
+  // The blueprint's shape outranks its topic spread: a missing question is
+  // visible to a student and a slightly over-represented topic is not.
+  const slots = [{ position: 1, marks: 5 }, { position: 2, marks: 5 }];
+  const pool = [candidate(1, 5, 1, 1), candidate(2, 5, 2, 1)];
+  // Topic 1 is the whole syllabus and the whole pool, so by the second slot
+  // its allowance is spent and the slot has to overrun it.
+  const picked = fillSlots(slots, pool, topicShares([{ topicId: 1, share: 1 }]));
+  assert.equal(picked.length, 2);
 });

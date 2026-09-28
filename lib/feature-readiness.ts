@@ -21,12 +21,17 @@
  *    they are production counts, not estimates.
  *  - Mock exams: papers were packed at random from questions that have a mark
  *    scheme, to hit a mark total -- not modelled on a real paper's structure
- *    and not weighted across topics. **The first half of that is now fixed**,
- *    after this was flipped rather than before: a paper named by number is
- *    built from a blueprint measured over the real sittings, and its mark
- *    total and duration are the exam board's own. 146 of 165 paper groups have
- *    a usable blueprint; the rest still pack to a mark total. Topic weighting
- *    is still not done. See the note at the top of
+ *    and not weighted across topics. **Both halves are now fixed**, after this
+ *    was flipped rather than before. A paper named by number is built from a
+ *    blueprint measured over the real sittings, with the exam board's own mark
+ *    total and duration; 146 of 165 paper groups have a usable blueprint and
+ *    the rest still pack to a mark total. And every paper is now weighted
+ *    across topics, from the subject's own observed distribution of marks.
+ *    What remains: a paper cannot be balanced on questions that carry no topic
+ *    -- 0-7% on twenty-one of the twenty-four large subjects -- so those fill
+ *    whatever the weighted passes leave, and the two History syllabuses, 0460
+ *    and 0470, are only 36-39% tagged and so are still packed unweighted on
+ *    purpose. See the note at the top of
  *    `lib/mock-exam-selection.ts`, which remains the authority.
  *
  * Removing the treatment was the owner's decision, taken with those numbers
@@ -66,7 +71,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'Mock exams are still in preview',
     body:
-      'A paper that names a paper number now follows the real one’s shape: a blueprint measured from that subject’s past papers, with the mark total and duration printed on the exam board’s own cover. A few subjects — mostly IB Mathematics, where our extraction merged a whole paper into one question — have no usable blueprint and still pack to the mark total you ask for. What is missing is topic balance: questions are not yet weighted across a syllabus, so a paper can lean on whatever the bank holds most of. Treat one as strong practice rather than a faithful sitting.',
+      'A paper that names a paper number now follows the real one’s shape: a blueprint measured from that subject’s past papers, with the mark total and duration printed on the exam board’s own cover. Papers are also weighted across topics the way the subject’s own past papers are — in IGCSE Physics that means about a third of the marks on motion, forces and energy and roughly one in two hundred on space physics, because that is how the real papers fall. Three things are still short of that. A few subjects — mostly IB Mathematics, where our extraction merged a whole paper into one question — have no usable blueprint and pack to the mark total you ask for. A small number of questions carry no topic yet, so they fill whatever the weighting leaves over. And the two IGCSE History syllabuses are only a third tagged, too little to weight honestly, so their papers are still drawn unweighted. Treat one as strong practice rather than a faithful sitting.',
   },
 };
 
