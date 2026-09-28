@@ -19,7 +19,9 @@ import {
 import { Contributor } from './ui';
 import type { ContributorUser } from './ui';
 
-type Tab = 'notes' | 'school';
+/** Which half of Materials is showing. Owned by `MaterialsHub`, which renders
+ *  the tab strip in its header so the screen has one rule and not two. */
+export type MaterialsTab = 'notes' | 'school';
 
 type ExternalNote = {
   id: string;
@@ -39,33 +41,48 @@ type ExternalNote = {
 // ===================================================================
 // Component
 // ===================================================================
-export default function ResourceLibrary() {
-  const [tab, setTab] = useState<Tab>('notes');
-
+/**
+ * The tab strip, rendered by `MaterialsHub` inside its header block.
+ *
+ * It lives up there rather than at the top of the library because it carries
+ * no border of its own: the header's rule is the one the active underline sits
+ * on, via `-mb-px` below. Kept here, beside the views it switches between, so
+ * adding a third half means touching one file.
+ */
+export function MaterialsTabs({
+  tab,
+  onChange,
+}: {
+  tab: MaterialsTab;
+  onChange: (tab: MaterialsTab) => void;
+}) {
   return (
-    <div className="h-full overflow-y-auto p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* No title or supporting line here: MaterialsHub carries both, on one
-            PageHeader, for both of this screen's halves.
+    <div className="flex items-center gap-2">
+      <TabButton active={tab === 'notes'} onClick={() => onChange('notes')} icon={<Users className="w-4 h-4" />}>
+        Shared Notes
+      </TabButton>
+      <TabButton active={tab === 'school'} onClick={() => onChange('school')} icon={<Library className="w-4 h-4" />}>
+        School Resources
+      </TabButton>
+    </div>
+  );
+}
 
-            There was a My courses / All subjects control here as well. It did
-            the same job as the subject select inside the School Resources tab,
-            one level up and with a different vocabulary, and defaulted to
-            hiding everything outside the student's own courses -- in a library
-            the whole year group uploads to, where a resource is just as likely
-            to be useful outside your subjects. Narrowing is still there, in
-            the select that sits with the other filters. */}
-
-        {/* Tabs */}
-        <div className="flex items-center gap-2 border-b border-line">
-          <TabButton active={tab === 'notes'} onClick={() => setTab('notes')} icon={<Users className="w-4 h-4" />}>
-            Shared Notes
-          </TabButton>
-          <TabButton active={tab === 'school'} onClick={() => setTab('school')} icon={<Library className="w-4 h-4" />}>
-            School Resources
-          </TabButton>
-        </div>
-
+/**
+ * Neither the title, the supporting line, nor the tabs are here: MaterialsHub
+ * carries all three on one header, for both of this screen's halves.
+ *
+ * There was a My courses / All subjects control here as well. It did the same
+ * job as the subject select inside the School Resources tab, one level up and
+ * with a different vocabulary, and defaulted to hiding everything outside the
+ * student's own courses -- in a library the whole year group uploads to, where
+ * a resource is just as likely to be useful outside your subjects. Narrowing is
+ * still there, in the select that sits with the other filters.
+ */
+export default function ResourceLibrary({ tab }: { tab: MaterialsTab }) {
+  return (
+    <div className="h-full overflow-y-auto px-6 pb-6 pt-6 md:px-8 md:pb-8">
+      <div className="max-w-6xl mx-auto">
         {tab === 'notes' ? <SharedNotesTab /> : <SchoolResourcesTab />}
       </div>
     </div>
