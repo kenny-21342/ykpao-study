@@ -26,6 +26,19 @@
 #   launchctl list | grep transcription      # check it is up
 #   launchctl unload ~/Library/LaunchAgents/bond.busypizza.transcription.plist
 #
+# A SECOND agent, bond.busypizza.transcription-watch, runs watch_quality.py
+# alongside a batch. It is read-only and silent while a run is healthy, but
+# once no `corpus_run` exists it logs "BATCH NOT RUNNING" every 30 minutes
+# forever. It was disabled on 28 Sep 2026 when the tagging run finished:
+#
+#   launchctl unload -w ~/Library/LaunchAgents/bond.busypizza.transcription-watch.plist
+#
+# The `-w` is why it stays off across reboots -- and it is the trap: a plain
+# `launchctl load` will NOT bring it back, because -w wrote a Disabled flag.
+# Re-enable it with the -w on the load side before starting the next batch:
+#
+#   launchctl load -w ~/Library/LaunchAgents/bond.busypizza.transcription-watch.plist
+#
 # For an attended run in a terminal, plain `./run_transcription.sh` is fine.
 #
 # NOTE: bash reads a script incrementally, by byte offset. Editing this file
