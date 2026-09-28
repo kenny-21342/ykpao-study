@@ -577,16 +577,19 @@ function SchoolResourcesTab() {
 
   return (
     <div className="space-y-4">
-      {/* Header + upload */}
+      {/* Count + view mode + upload.
+
+          No "School Resources" heading here: the tab the student just clicked
+          in MaterialsHub's header says that, immediately above this, under a
+          "Materials" title that says it again. The count is the only part of
+          the old heading block that the tab label did not already carry, so it
+          stands on its own. */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-primary">School Resources</h3>
-          <p className="text-xs text-muted">
-            {isBrowserView
-              ? `${total.toLocaleString()} direct file${total === 1 ? '' : 's'} in ${breadcrumb.length ? breadcrumb[breadcrumb.length - 1].name : 'Root'}`
-              : `${total.toLocaleString()} resource${total === 1 ? '' : 's'} across all folders`}
-          </p>
-        </div>
+        <p className="text-sm text-secondary">
+          {isBrowserView
+            ? `${total.toLocaleString()} direct file${total === 1 ? '' : 's'} in ${breadcrumb.length ? breadcrumb[breadcrumb.length - 1].name : 'Root'}`
+            : `${total.toLocaleString()} resource${total === 1 ? '' : 's'} across all folders`}
+        </p>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-line bg-surface p-1">
             <button
