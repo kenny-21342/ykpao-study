@@ -4,6 +4,7 @@ import { signIn, getProviders } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Field } from '@/app/components/ui';
+import AuthBackground from '@/app/components/AuthBackground';
 import { GraduationCap, Mail, Lock, AlertCircle, MailCheck } from 'lucide-react';
 
 export default function LoginPage() {
@@ -86,16 +87,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex relative bg-canvas">
+      <AuthBackground />
 
-      {/* Centred form panel.
-          The full-bleed `/auth-hero.webp` background was removed on 28 Sep
-          2026 while a replacement with a better aspect ratio is chosen. The
-          panel was pinned right (`ml-auto`) so the photograph filled the space
-          beside it; with no image that left a form against the edge of an
-          empty page, so it is centred for now. Re-pinning is `mx-auto` ->
-          `ml-auto` on the panel in each of the five auth pages, plus putting
-          the <Image> back. */}
-      <div className="relative mx-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
+      {/* Right-edge form panel.
+          `ml-auto` pins it so the artwork fills the space beside it on a
+          laptop; below `sm` the panel is full width and the artwork sits
+          behind it. The two theme variants and why they are CSS backgrounds
+          rather than <Image> are documented in AuthBackground itself. */}
+      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}

@@ -169,3 +169,6 @@ pdf_extraction/bank/.transcription.lock/
 
 # Runtime log of scripts/watch-tagging-then-answer-keys.sh, not source.
 pdf_extraction/bank/answer-keys-watch.log
+
+# Full-resolution artwork sources; the webp in public/ is what ships.
+design/
