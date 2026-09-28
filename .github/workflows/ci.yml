@@ -16,6 +16,11 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # The e2e job below gates on `workflow_dispatch`, so it has to be a trigger
+  # here or that arm is dead code: without it the suite can only ever run at
+  # 03:30 UTC, and anyone fixing the E2E secrets has to wait overnight to learn
+  # whether the fix worked.
+  workflow_dispatch:
   schedule:
     # After the nightly backup, so a failure has a fresh snapshot behind it.
     - cron: '30 3 * * *'
