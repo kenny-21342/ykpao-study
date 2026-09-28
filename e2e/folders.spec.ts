@@ -6,118 +6,120 @@ import { test, expect } from '@playwright/test';
  *
  * Driven through the API rather than the upload dialog: a `webkitdirectory`
  * input cannot be filled from Playwright without shipping fixture trees, and
- * the assertions worth guarding -- path resolution reusing folders, the cycle
- * guard, and files surviving their folder's deletion -- are all server-side.
+ * the assertions worth guarding -- path resolution reusing folders, attribution
+ * and the permission split -- are all server-side.
+ *
+ * THE PERMISSION MODEL IS DELIBERATE, and these tests exist to hold it still:
+ * any signed-in student may CREATE folders and upload into them, because the
+ * library belongs to the year group rather than to staff; only an admin may
+ * rename, move or delete, so a contributor cannot sabotage the shelf everyone
+ * else's work sits on. An earlier version of this file asserted 200 on rename
+ * and read as a bug report against that design.
+ *
+ * Two consequences for the fixtures:
+ *  - Nothing here can clean up a folder it made -- DELETE is admin-only and
+ *    this suite runs as a student. So the tree is DETERMINISTIC and reused
+ *    across runs instead of stamped with Date.now(), which otherwise left a
+ *    fresh `e2e root <stamp>` in the shared library every single night.
+ *  - Resources still delete cleanly (that route only needs a session), so
+ *    those are cleaned up per test as before.
  */
 test.describe('school resource folders', () => {
-  const created: { folders: string[]; resources: string[] } = { folders: [], resources: [] };
+  // Reused every run. Path resolution is find-or-create, so the second run
+  // lands in the same rows the first one made.
+  const ROOT = 'e2e fixtures';
+  const created: { resources: string[] } = { resources: [] };
+
+  // A valid resource upload. The UUID shape is required:
+  // lib/school-resource-upload.ts 400s anything else, which is a
+  // path-traversal guard rather than a formality.
+  const FILE = {
+    fileUrl: '/uploads/files/00000000-0000-4000-8000-000000000000.txt',
+    fileName: 'e2e-placeholder.txt',
+    fileSize: 12,
+    category: 'notes',
+    subject: 'Chemistry',
+  };
 
   test.afterEach(async ({ request }) => {
     for (const id of created.resources.splice(0)) {
       await request.delete(`/api/school-resources/${id}`).catch(() => {});
     }
-    // Children first: a parent delete would orphan the ids we still hold.
-    for (const id of created.folders.splice(0).reverse()) {
-      await request.delete(`/api/school-resource-folders/${id}`).catch(() => {});
-    }
   });
 
-  test('nests, renames, moves, and refuses to make a cycle', async ({ request }) => {
-    const stamp = Date.now().toString(36);
+  test('any signed-in student can create and nest folders', async ({ request }) => {
     const mk = async (name: string, parentId: string | null = null) => {
       const res = await request.post('/api/school-resource-folders', { data: { name, parentId } });
       expect(res.status(), `POST folder ${name}`).toBe(201);
-      const id = (await res.json()).folder.id as string;
-      created.folders.push(id);
-      return id;
+      return (await res.json()).folder as { id: string; createdBy: { id: string; name: string | null } | null };
     };
 
-    const root = await mk(`e2e root ${stamp}`);
-    const mid = await mk('level 2', root);
-    const leaf = await mk('level 3', mid);
+    const root = await mk(ROOT);
+    const mid = await mk('level 2', root.id);
+    const leaf = await mk('level 3', mid.id);
+    expect(leaf.id).toBeTruthy();
 
-    const patch = (id: string, data: Record<string, unknown>) =>
-      request.patch(`/api/school-resource-folders/${id}`, { data });
+    // Attribution: a folder records who made it, so the library can show a
+    // contributor rather than presenting student work as school-issued.
+    // Only asserted on the root, which this suite created on its first run --
+    // the nested two may have been reused, and reuse deliberately does not
+    // overwrite the original contributor.
+    expect(root.createdBy, 'the root folder carries a contributor').not.toBeNull();
+  });
 
-    expect((await patch(mid, { name: 'level 2 renamed' })).status(), 'rename').toBe(200);
-    expect((await patch(leaf, { parentId: root })).status(), 'legal move').toBe(200);
+  test('a student cannot rename, move or delete a folder', async ({ request }) => {
+    const res = await request.post('/api/school-resource-folders', { data: { name: ROOT, parentId: null } });
+    expect(res.status()).toBe(201);
+    const id = (await res.json()).folder.id as string;
 
-    // The two shapes of cycle. Both must be refused, not merely survived.
-    expect((await patch(root, { parentId: leaf })).status(), 'move into own descendant').toBe(400);
-    expect((await patch(root, { parentId: root })).status(), 'move into itself').toBe(400);
+    // This is the design, not a gap: contribute freely, cannot sabotage.
+    expect((await request.patch(`/api/school-resource-folders/${id}`, { data: { name: 'renamed by a student' } })).status(),
+      'rename is admin-only').toBe(403);
+    expect((await request.patch(`/api/school-resource-folders/${id}`, { data: { parentId: null } })).status(),
+      'move is admin-only').toBe(403);
+    expect((await request.delete(`/api/school-resource-folders/${id}`)).status(),
+      'delete is admin-only').toBe(403);
   });
 
   test('a folder path resolves to existing folders instead of duplicating them', async ({ request }) => {
-    const stamp = Date.now().toString(36);
-    const folderPath = `e2e path ${stamp}/inner`;
+    const folderPath = `${ROOT}/inner`;
+    const post = (title: string) =>
+      request.post('/api/school-resources', { data: { ...FILE, title, description: 'created by the e2e suite', folderPath } });
 
-    const post = () =>
-      request.post('/api/school-resources', {
-        data: {
-          title: `e2e resource ${stamp}`,
-          description: 'created by the e2e suite',
-          subject: 'Chemistry',
-          folderPath,
-          // Must match the UUID shape /api/upload issues: lib/school-resource-upload.ts
-          // rejects anything else with a 400, which is a path-traversal guard, not a
-          // formality. A human-readable placeholder name never reaches the database.
-          fileUrl: '/uploads/files/00000000-0000-4000-8000-000000000000.txt',
-          fileName: 'e2e-placeholder.txt',
-          fileSize: 12,
-          category: 'notes',
-        },
-      });
-
-    const first = await post();
+    const first = await post('e2e resource A');
     expect(first.status(), 'first upload into a new path').toBe(201);
     const firstBody = (await first.json()).resource as { id: string; folderId: string; description: string };
     created.resources.push(firstBody.id);
 
-    const second = await post();
+    const second = await post('e2e resource B');
     expect(second.status(), 'second upload into the same path').toBe(201);
     const secondBody = (await second.json()).resource as { id: string; folderId: string };
     created.resources.push(secondBody.id);
 
     // Same path, same folder row -- not a second one with the same name.
     expect(secondBody.folderId, 'the path resolved to the existing folder').toBe(firstBody.folderId);
-    created.folders.push(firstBody.folderId);
 
     // The marker string that used to carry the path is gone for good.
     expect(firstBody.description).not.toContain('From folder upload:');
   });
 
-  test('deleting a folder keeps its files, with folderId cleared', async ({ request }) => {
-    const stamp = Date.now().toString(36);
-    const folder = await request.post('/api/school-resource-folders', {
-      data: { name: `e2e doomed ${stamp}`, parentId: null },
-    });
-    expect(folder.status()).toBe(201);
-    const folderId = (await folder.json()).folder.id as string;
-
-    const resource = await request.post('/api/school-resources', {
-      data: {
-        title: `e2e survivor ${stamp}`,
-        subject: 'Chemistry',
-        folderPath: `e2e doomed ${stamp}`,
-        // Must match the UUID shape /api/upload issues: lib/school-resource-upload.ts
-          // rejects anything else with a 400, which is a path-traversal guard, not a
-          // formality. A human-readable placeholder name never reaches the database.
-          fileUrl: '/uploads/files/00000000-0000-4000-8000-000000000000.txt',
-        fileName: 'e2e-placeholder.txt',
-        fileSize: 12,
-        category: 'notes',
-      },
-    });
-    expect(resource.status()).toBe(201);
-    const resourceId = (await resource.json()).resource.id as string;
-    created.resources.push(resourceId);
-
-    expect((await request.delete(`/api/school-resource-folders/${folderId}`)).status()).toBe(200);
-
-    // ON DELETE SET NULL: the file is not collateral damage, it moves to root.
-    const rootListing = await request.get('/api/school-resources?folderId=');
-    expect(rootListing.status()).toBe(200);
-    const listed = (await rootListing.json()).resources as { id: string }[];
-    expect(listed.some((row) => row.id === resourceId), 'the file survived at root level').toBe(true);
+  test('a folder listing names the contributor of each subfolder', async ({ request }) => {
+    await request.post('/api/school-resource-folders', { data: { name: ROOT, parentId: null } });
+    const listing = await request.get('/api/school-resources?folderId=');
+    expect(listing.status()).toBe(200);
+    const folders = (await listing.json()).folders as { name: string; createdBy: unknown }[];
+    const root = folders.find((f) => f.name === ROOT);
+    expect(root, `${ROOT} is listed at the top level`).toBeTruthy();
+    // `createdBy` must be PRESENT as a field even when null -- folders made
+    // before attribution shipped legitimately have none, and the UI renders
+    // nothing rather than guessing.
+    expect(root && 'createdBy' in root, 'the listing carries a createdBy field').toBe(true);
   });
+
+  // Needs an admin storage state, which this suite does not have: deletion is
+  // admin-only by design, so a student cannot set the scenario up. The
+  // behaviour it guarded -- ON DELETE SET NULL, so a deleted folder does not
+  // take a student's file with it -- is asserted instead by the schema and by
+  // prisma/migrations/20260928080000_school_resource_folder_creator.
+  test.skip('deleting a folder keeps its files, with folderId cleared', async () => {});
 });

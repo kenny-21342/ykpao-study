@@ -16,7 +16,8 @@ import {
   RESOURCE_UPLOAD_MAX_BYTES,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
-import { SegmentedControl } from './ui';
+import { SegmentedControl, Contributor } from './ui';
+import type { ContributorUser } from './ui';
 
 type Tab = 'notes' | 'school';
 
@@ -417,7 +418,7 @@ type ResourceSort = 'createdAt' | 'updatedAt' | 'title' | 'fileName' | 'download
 type ResourceSortOrder = 'asc' | 'desc';
 
 /** A resource's immediate subfolder, as returned for the current browse location. */
-type ResourceFolderEntry = { id: string; name: string; fileCount: number };
+type ResourceFolderEntry = { id: string; name: string; fileCount: number; createdBy?: ContributorUser | null };
 /** One link in the breadcrumb from the library root down to the current folder. */
 type ResourceBreadcrumbEntry = { id: string; name: string };
 
@@ -871,7 +872,7 @@ function ResourceRow({
         {resource.downloads.toLocaleString()}
       </td>
       <td className="px-4 py-3 text-sm text-secondary">
-        {resource.uploader.name ?? 'Staff'}
+        <Contributor user={resource.uploader} />
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2">
@@ -1045,8 +1046,16 @@ function ResourceBrowserView({
                     <Folder className="h-5 w-5 flex-shrink-0 text-warning" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{folder.name}</span>
-                      <span className="block text-xs text-muted">
-                        {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
+                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+                        <span className="flex-shrink-0">
+                          {folder.fileCount.toLocaleString()} file{folder.fileCount === 1 ? '' : 's'}
+                        </span>
+                        {folder.createdBy ? (
+                          <>
+                            <span aria-hidden="true" className="flex-shrink-0">·</span>
+                            <Contributor user={folder.createdBy} className="min-w-0" />
+                          </>
+                        ) : null}
                       </span>
                     </span>
                     <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />

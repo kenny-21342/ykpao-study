@@ -43,10 +43,13 @@ export async function POST(req: NextRequest) {
       if (!parent) return NextResponse.json({ error: 'Parent folder not found' }, { status: 404 });
     }
 
-    const id = await findOrCreateResourceFolder(trimmed, parentId || null);
+    const id = await findOrCreateResourceFolder(trimmed, parentId || null, user.id);
     const folder = await prisma.schoolResourceFolder.findUniqueOrThrow({
       where: { id },
-      select: { id: true, name: true, parentId: true },
+      select: {
+        id: true, name: true, parentId: true,
+        createdBy: { select: { id: true, name: true, image: true } },
+      },
     });
     return NextResponse.json({ folder }, { status: 201 });
   } catch (error) {

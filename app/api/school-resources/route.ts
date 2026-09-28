@@ -108,7 +108,10 @@ export async function GET(req: NextRequest) {
       const children = await prisma.schoolResourceFolder.findMany({
         where: { parentId: folderId },
         orderBy: { name: 'asc' },
-        select: { id: true, name: true },
+        select: {
+          id: true, name: true,
+          createdBy: { select: { id: true, name: true, image: true } },
+        },
       });
       const counts = children.length > 0
         ? await prisma.schoolResource.groupBy({
@@ -118,7 +121,12 @@ export async function GET(req: NextRequest) {
           })
         : [];
       const countByFolder = new Map(counts.map((c) => [c.folderId, c._count._all]));
-      folders = children.map((c) => ({ id: c.id, name: c.name, fileCount: countByFolder.get(c.id) ?? 0 }));
+      folders = children.map((c) => ({
+        id: c.id,
+        name: c.name,
+        fileCount: countByFolder.get(c.id) ?? 0,
+        createdBy: c.createdBy,
+      }));
 
       const chain: Array<{ id: string; name: string }> = [];
       let cursor = folderId;
@@ -228,7 +236,7 @@ export async function POST(req: Request) {
       if (!folder) return NextResponse.json({ error: 'Resource folder not found' }, { status: 404 });
       folderId = folder.id;
     } else if (folderPath?.trim()) {
-      folderId = await resolveFolderPath(folderPath);
+      folderId = await resolveFolderPath(folderPath, null, user.id);
     } else if (uploadFolderId) {
       const folder = await prisma.schoolResourceFolder.findUnique({
         where: { id: uploadFolderId }, select: { id: true },

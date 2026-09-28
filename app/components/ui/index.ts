@@ -14,4 +14,6 @@ export { Field, Input, Textarea, Select, Checkbox } from './Field';
 export { PageHeader } from './PageHeader';
 export { StatTile, StatRow } from './StatTile';
 export { SegmentedControl } from './SegmentedControl';
+export { Contributor } from './Contributor';
+export type { ContributorUser } from './Contributor';
 export type { SegmentedItem } from './SegmentedControl';

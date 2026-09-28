@@ -54,6 +54,7 @@ model User {
   notifications           Notification[]
   sentNotifications       Notification[]          @relation("NotificationsFrom")
   schoolResources         SchoolResource[]
+  schoolResourceFolders   SchoolResourceFolder[]  @relation("SchoolResourceFoldersCreated")
   announcements           Announcement[]
   dailyChallengeAttempts  DailyChallengeAttempt[]
   noteCollaborations      NoteCollaborator[]
@@ -1288,16 +1289,24 @@ model SchoolResource {
 // so its folders are shared too -- any staff member's upload can land in a
 // folder any other staff member created.
 model SchoolResourceFolder {
-  id        String   @id @default(cuid())
-  name      String
-  parentId  String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  parentId    String?
+  // Who made the folder. Nullable because every folder that existed before
+  // attribution shipped has no answer, and inventing one would be worse than
+  // showing none. SetNull rather than Cascade for the same reason a resource's
+  // folder does: a contributor leaving must not delete the shelf their work
+  // sat on, only the name on it.
+  createdById String?
+  createdAt   DateTime @default(now())
 
+  createdBy User?                  @relation("SchoolResourceFoldersCreated", fields: [createdById], references: [id], onDelete: SetNull)
   resources SchoolResource[]
   parent    SchoolResourceFolder?  @relation("SchoolResourceSubfolders", fields: [parentId], references: [id], onDelete: Cascade)
   children  SchoolResourceFolder[] @relation("SchoolResourceSubfolders")
 
   @@index([parentId])
+  @@index([createdById])
   @@map("school_resource_folders")
 }
 
@@ -1486,21 +1495,21 @@ model BankPaper {
 }
 
 model BankQuestion {
-  id                  Int      @id @default(autoincrement())
+  id                  Int       @id @default(autoincrement())
   paperId             Int
   rootNumber          Int
   bodyMd              String
   // Mirrors PastPaperQuestion.hasDiagram -- routes grading to gradeWithVision
   // instead of OCR-then-text-grade, since a diagram/graph/circuit answer has
   // no text for OCR to usefully extract.
-  requiresDiagram     Int      @default(0)
-  parts               String   @default("[]") // JSON [{"label": "a(i)", "marks": 3}]
+  requiresDiagram     Int       @default(0)
+  parts               String    @default("[]") // JSON [{"label": "a(i)", "marks": 3}]
   totalMarks          Int?
   screenshotId        Int?
   pageStart           Int?
   pageEnd             Int?
-  confidence          Float    @default(0)
-  status              String   @default("needs_review") // published | needs_review
+  confidence          Float     @default(0)
+  status              String    @default("needs_review") // published | needs_review
   reviewedBy          String?
   reviewedAt          DateTime?
   difficulty          Int? // 1-5
@@ -1509,7 +1518,7 @@ model BankQuestion {
   runId               String?
   model               String?
   promptVersion       String?
-  createdAt           DateTime @default(now())
+  createdAt           DateTime  @default(now())
 
   paper                  BankPaper               @relation(fields: [paperId], references: [id], onDelete: Cascade)
   screenshot             BankAsset?              @relation("QuestionScreenshot", fields: [screenshotId], references: [id])
@@ -1798,18 +1807,18 @@ model BankQuestionSkill {
 
 // QA advisory queue — never blocks writes, only routes to review
 model BankReviewFlag {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   questionId Int?
   paperId    Int?
   issueType  String // marks_mismatch | latex_invalid | ...
   severity   String // low | medium | high
   message    String
   evidence   String? // JSON
-  status     String   @default("open") // open | resolved | dismissed
+  status     String    @default("open") // open | resolved | dismissed
   reviewedBy String?
   reviewedAt DateTime?
   reviewNote String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   question BankQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
   paper    BankPaper?    @relation(fields: [paperId], references: [id], onDelete: Cascade)

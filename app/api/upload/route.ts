@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         if (!parent) return NextResponse.json({ error: 'Resource parent folder not found' }, { status: 404 });
         parentId = parent.id;
       }
-      folderId = await resolveFolderPath(requestedFolderPath, parentId);
+      folderId = await resolveFolderPath(requestedFolderPath, parentId, user.id);
     }
 
     // Strip the user's original filename and use a UUID + validated ext so

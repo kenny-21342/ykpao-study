@@ -6,8 +6,17 @@ export function validResourceFolderName(name: string): boolean {
 }
 
 /** Serialize creation of a particular sibling name so parallel folder uploads
- * reuse one row even before a database uniqueness migration can be deployed. */
-export async function findOrCreateResourceFolder(name: string, parentId: string | null): Promise<string> {
+ * reuse one row even before a database uniqueness migration can be deployed.
+ *
+ * `createdById` attributes a NEW folder to whoever caused it to exist. It is
+ * deliberately not written when an existing folder is reused: the first person
+ * to make "Physics/Unit 3" is its contributor, and everyone who later uploads
+ * into it would otherwise silently take that credit from them. */
+export async function findOrCreateResourceFolder(
+  name: string,
+  parentId: string | null,
+  createdById: string | null = null,
+): Promise<string> {
   if (!validResourceFolderName(name)) throw new Error('Invalid resource folder name');
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${parentId ?? ''}), hashtext(${name}))::text`;
@@ -16,7 +25,7 @@ export async function findOrCreateResourceFolder(name: string, parentId: string 
     });
     if (existing) return existing.id;
     const created = await tx.schoolResourceFolder.create({
-      data: { name, parentId }, select: { id: true },
+      data: { name, parentId, createdById }, select: { id: true },
     });
     return created.id;
   });

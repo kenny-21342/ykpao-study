@@ -63,7 +63,11 @@ function reindex(id: string): Promise<unknown> {
  * Each sibling creation is serialized in the database, so concurrent files
  * from one directory reuse the same folder rows.
  */
-export async function resolveFolderPath(path: string, baseFolderId: string | null = null): Promise<string | null> {
+export async function resolveFolderPath(
+  path: string,
+  baseFolderId: string | null = null,
+  createdById: string | null = null,
+): Promise<string | null> {
   const segments = path
     .split('/')
     .map((s) => s.trim());
@@ -74,7 +78,7 @@ export async function resolveFolderPath(path: string, baseFolderId: string | nul
 
   let parentId: string | null = baseFolderId;
   for (const name of segments) {
-    parentId = await findOrCreateResourceFolder(name, parentId);
+    parentId = await findOrCreateResourceFolder(name, parentId, createdById);
   }
   return parentId;
 }
