@@ -18,18 +18,28 @@ import { GraduationCap, AlertTriangle } from 'lucide-react';
  * stands behind any of it -- was drafted too, conservatively, but is the site
  * owner's to confirm or correct.
  *
- * **Flip this to `false` only once he has read both pages end to end.** Four
- * claims are the ones to check, because each is a promise the platform then has
- * to keep: the 30-day deletion window and the 90-day backup window in
- * /privacy (the backup window needs an object-storage lifecycle rule to be
- * true -- `docs/PRODUCTION_OPERATIONS.md` says the backup workflow deletes
- * nothing by itself), the 30-day shutdown notice in /terms, and the statement
- * that this is a student project the school does not operate or endorse.
+ * **Confirmed by the owner on 28 Sep 2026**, so the draft banner is off and
+ * both pages are now a binding agreement. Four claims are the promises the
+ * platform has to keep, and each has to be re-checked whenever the thing
+ * underneath it changes:
+ *
+ *  1. the 30-day account-deletion window in /privacy
+ *  2. the 90-day backup window in /privacy. `db-backup.yml` gained a retention
+ *     step on 27 Sep that makes this true in principle, but the step has been
+ *     FAILING since -- a bucket-level ListObjectsV2 returns NoSuchKey because
+ *     BACKUP_S3_ENDPOINT already carries the bucket name, so the dumps are
+ *     uploaded and never pruned. Until that is fixed this is the one sentence
+ *     on either page the platform is not actually keeping.
+ *  3. the 30-day shutdown notice in /terms
+ *  4. the statement that this is a student project the school does not operate
+ *     or endorse
+ *
  * Shipping a policy that promises something untrue is worse than shipping no
  * policy, and worse still when the readers are students at one school who can
- * all be identified.
+ * all be identified. That is why (2) is written down here rather than left in
+ * a run log.
  */
-export const LEGAL_COPY_IS_DRAFT = true;
+export const LEGAL_COPY_IS_DRAFT = false;
 
 export function LegalPage({
   title,
