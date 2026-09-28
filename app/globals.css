@@ -95,6 +95,12 @@
   /* Kept: three call sites still read these. */
   --background: var(--canvas);
   --foreground: var(--text-primary);
+
+  /* The auth-page artwork, as a variable rather than two elements swapped by
+     `dark:hidden`. Both were measured being fetched that way -- 348 KB to
+     paint 190 -- whereas a custom property resolves to exactly one value, and
+     only that value's image is ever loaded. See app/components/AuthBackground. */
+  --auth-hero: url('/auth-hero-light.webp');
 }
 
 .dark {
@@ -145,6 +151,8 @@
 
   --shadow-overlay: 0 8px 28px -6px rgb(0 0 0 / 0.55),
                     0 2px 8px -2px rgb(0 0 0 / 0.40);
+
+  --auth-hero: url('/auth-hero-dark.webp');
 }
 
 @theme inline {
