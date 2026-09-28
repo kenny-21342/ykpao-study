@@ -7,7 +7,7 @@
  */
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import {
@@ -38,6 +38,7 @@ import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import WeaknessHeatmap from './WeaknessHeatmap';
 import { plainTextPreview } from '@/lib/latex';
+import { describeFailedSources } from '@/lib/study-load-errors';
 import { useScreenContext } from './ScreenContext';
 
 type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery' | 'search';
@@ -256,38 +257,80 @@ export default function StudyCoach({
     return () => window.clearTimeout(timer);
   }, [initialView]);
 
+  /**
+   * The load that is currently allowed to write to this screen.
+   *
+   * `status` flips from 'loading' to 'authenticated' on mount, which rebuilds
+   * `load` and re-runs the effect below while the first three requests are
+   * still open. Nothing used to stop the abandoned set: both pairs ran to
+   * completion and whichever settled last won. That is the intermittent
+   * "Study data could not be loaded." banner -- it came from the losing load,
+   * on a screen whose data had already arrived intact.
+   */
+  const inFlight = useRef<AbortController | null>(null);
+
   const load = useCallback(async () => {
     if (status !== 'authenticated') {
       setLoading(false);
       return;
     }
+    // Supersede any earlier load. The Refresh button calls this directly, so
+    // the effect's cleanup is not the only way in.
+    inFlight.current?.abort();
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const { signal } = controller;
+
     setLoading(true);
     setError(null);
     try {
-      const [overviewRes, tasksRes, reviewsRes] = await Promise.all([
-        fetch('/api/learning/overview'),
-        fetch('/api/learning/tasks'),
-        fetch('/api/learning/reviews?mode=all'),
-      ]);
-      if (!overviewRes.ok || !tasksRes.ok || !reviewsRes.ok) throw new Error('Study data could not be loaded.');
-      const [overviewData, tasksData, reviewsData] = await Promise.all([
-        overviewRes.json(), tasksRes.json(), reviewsRes.json(),
-      ]);
+      const sources = [
+        ['overview', '/api/learning/overview'],
+        ['tasks', '/api/learning/tasks'],
+        ['reviews', '/api/learning/reviews?mode=all'],
+      ] as const;
+      const responses = await Promise.all(sources.map(([, url]) => fetch(url, { signal })));
+
+      const failure = describeFailedSources(
+        responses.map((res, index) => ({
+          name: sources[index][0],
+          ok: res.ok,
+          status: res.status,
+        })),
+      );
+      if (failure) throw new Error(failure);
+
+      const [overviewData, tasksData, reviewsData] = await Promise.all(
+        responses.map((res) => res.json()),
+      );
       setOverview(overviewData);
       setTasks(tasksData.tasks ?? []);
       setReviews(reviewsData.reviews ?? []);
     } catch (loadError) {
+      // An abort is this component replacing itself, not a failure. The load
+      // that superseded this one owns the screen, and raising a banner here
+      // would report an error in which nothing actually went wrong.
+      if (signal.aborted) return;
       setError(loadError instanceof Error ? loadError.message : 'Study data could not be loaded.');
     } finally {
-      setLoading(false);
-      setHasLoaded(true);
+      // Likewise: a superseded load must not clear the spinner the live one
+      // is still showing.
+      if (!signal.aborted) {
+        setLoading(false);
+        setHasLoaded(true);
+      }
     }
   }, [status]);
 
   // Initial remote-data synchronization for this client workspace.
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      // Also covers unmount, so a reply can no longer arrive for a screen
+      // that has gone away.
+      inFlight.current?.abort();
+    };
   }, [load]);
 
   const updateTask = async (id: string, taskStatus: 'pending' | 'completed' | 'skipped') => {
