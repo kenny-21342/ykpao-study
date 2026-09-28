@@ -4,7 +4,6 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Field } from '@/app/components/ui';
-import Image from 'next/image';
 import {
   GraduationCap,
   Mail,
@@ -20,17 +19,9 @@ function AuthPanel({ title, subtitle, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-full flex relative bg-black">
-      <Image
-        src="/auth-hero.webp"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="fixed inset-0 object-cover"
-      />
+    <div className="min-h-screen w-full flex relative bg-canvas">
 
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative mx-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">

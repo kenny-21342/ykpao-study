@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Field } from '@/app/components/ui';
-import Image from 'next/image';
 import { signIn, getProviders } from 'next-auth/react';
 import { GraduationCap, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, MailCheck } from 'lucide-react';
 
@@ -132,16 +131,8 @@ export default function SignupPage() {
   // the 409 "already registered" error, which reads as a failure.
   if (created) {
     return (
-      <div className="min-h-screen w-full flex relative bg-black">
-        <Image
-          src="/auth-hero.webp"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="fixed inset-0 object-cover"
-        />
-        <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="min-h-screen w-full flex relative bg-canvas">
+        <div className="relative mx-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
           <div className="w-full">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-lg mb-4">
@@ -199,22 +190,10 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex relative bg-black">
-      {/* Full-bleed background image — covers the entire page.
-          Served as WebP (160 KB, down from a 2.2 MB PNG) through next/image,
-          which also emits the responsive srcset. This is the first paint every
-          user sees, so its weight is the app's first impression. */}
-      <Image
-        src="/auth-hero.webp"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="fixed inset-0 object-cover"
-      />
+    <div className="min-h-screen w-full flex relative bg-canvas">
 
       {/* Right-edge rectangular form panel. */}
-      <div className="relative ml-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
+      <div className="relative mx-auto w-full sm:w-[440px] lg:w-[480px] min-h-screen bg-surface flex flex-col justify-center px-8 sm:px-12 py-10">
         <div className="w-full">
 
           {/* Logo Section */}
