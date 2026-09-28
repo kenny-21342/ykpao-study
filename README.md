@@ -209,7 +209,9 @@ than locking every user out — but until you migrate, limits are not enforced.
 The root layout includes Vercel Web Analytics and Speed Insights. Enable both
 for the Vercel project (the project settings are already enabled) so page views
 and Web Vitals are collected after the first deployment. `GET /api/health` is
-the unauthenticated uptime probe, and `instrumentation.ts` emits a consistent
+the unauthenticated uptime probe (liveness only; add `?deep=1` for the
+database round-trip, which must not be put on a timer -- see
+`docs/PRODUCTION_OPERATIONS.md`), and `instrumentation.ts` emits a consistent
 `[request-error]` log record for server-side failures.
 
 An independent nightly PostgreSQL backup runs from

@@ -129,3 +129,30 @@ test('mock-exam autosave skips writes when nothing changed', async () => {
       'can never fire',
   );
 });
+
+test('the default health probe does not touch the database', async () => {
+  // The other tests here stop *clients* pinning the compute awake. This one
+  // stops the server doing it to itself. /api/health is unauthenticated and
+  // the single most requested path on the site -- 90 hits in 42 minutes on
+  // 28 Sep 2026, one every 28 seconds -- so a `SELECT 1` on the default path
+  // means the compute never reaches the five minutes of idle it needs to
+  // suspend. The database check still exists behind `?deep=1`, which is asked
+  // deliberately rather than on a timer.
+  const src = await readFile(join(root, 'app/api/health/route.ts'), 'utf8');
+
+  assert.ok(
+    /deep/.test(src),
+    'the health route no longer distinguishes liveness from readiness, so the ' +
+      'uptime probe is back to querying the database twice a minute',
+  );
+
+  // The shallow branch must return before anything reaches Postgres.
+  const shallowEnd = src.indexOf('let databaseOk');
+  assert.ok(shallowEnd > 0, 'expected a readiness branch after the liveness one');
+  const shallow = src.slice(0, shallowEnd);
+  assert.ok(
+    !/prisma\./.test(shallow),
+    'the liveness branch of /api/health reaches Prisma before returning; it ' +
+      'must answer without a database round-trip',
+  );
+});

@@ -82,8 +82,17 @@ restore result in the project runbook before launch.
 
 ## Monitoring
 
-- Keep `GET /api/health` as the uptime probe. It returns `200` only when the
-  production database round-trip succeeds and never exposes connection data.
+- Keep `GET /api/health` as the uptime probe. It answers liveness only and
+  never exposes connection data. It deliberately does **not** touch the
+  database: the probe runs about twice a minute, the compute suspends after
+  five minutes of inactivity, and a query on that cadence means it never
+  suspends at all. Use `GET /api/health?deep=1` for the database round-trip --
+  it returns `503` when Postgres is unreachable -- in deploy checks and when
+  investigating, not on a timer.
+- A database outage is therefore found in Vercel's runtime logs, not from the
+  probe. Note that `error_events` cannot record connection exhaustion, because
+  writing the row needs the connection that ran out; the table looks calmest
+  exactly when that is the problem.
 - Keep Vercel runtime logs enabled. `instrumentation.ts` emits request errors in
   one stable shape (`[request-error] ...`) so they can be searched and routed
   to an error provider later without changing handlers.
