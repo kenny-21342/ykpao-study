@@ -96,10 +96,8 @@
   --background: var(--canvas);
   --foreground: var(--text-primary);
 
-  /* The auth-page artwork, as a variable rather than two elements swapped by
-     `dark:hidden`. Both were measured being fetched that way -- 348 KB to
-     paint 190 -- whereas a custom property resolves to exactly one value, and
-     only that value's image is ever loaded. See app/components/AuthBackground. */
+  /* The auth-page artwork. Only the value that resolves for the active theme
+     is ever fetched -- verified, not assumed; see app/components/AuthBackground. */
   --auth-hero: url('/auth-hero-light.webp');
 }
 

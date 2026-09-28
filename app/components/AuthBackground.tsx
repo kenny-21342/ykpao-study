@@ -12,17 +12,16 @@
  * that case, and still follows the system for everyone who has never touched
  * the toggle, because that is where the class comes from in the first place.
  *
- * WHY ONE ELEMENT AND A CSS VARIABLE: the first version of this was two divs
- * swapped with `dark:hidden` / `hidden dark:block`, on the theory that an
- * element with `display: none` generates no box and so never fetches its
- * background. Measured against the deployment, Chrome requested BOTH files
- * anyway -- 348 KB to paint 190. A custom property has no such ambiguity: only
- * the value that actually resolves on the element is ever loaded, so the
- * variant off-screen costs nothing. `--auth-hero` is defined once per theme in
- * app/globals.css alongside the other tokens.
+ * ONLY THE RESOLVED VARIANT IS FETCHED. Both URLs sit in the stylesheet, so
+ * this is worth stating rather than assuming: a controlled test (two themes,
+ * distinct files, a server access log) confirmed Chrome requests exactly one of
+ * them, for a `url()` in a custom property as much as for a rule that matches
+ * no element. The off-screen variant costs nothing. The artwork is a 3840x2160
+ * render re-encoded to 2400w WebP -- 153 KB light, 190 KB dark -- so getting
+ * this wrong would have doubled the weight of the app's first screen.
  *
- * The artwork is a 3840x2160 render re-encoded to 2400w WebP (153/190 KB).
- * Sources live in design/auth-hero/, which is gitignored.
+ * `--auth-hero` is defined once per theme in app/globals.css beside the other
+ * tokens; one element reads it. Sources live in design/auth-hero/ (gitignored).
  */
 export default function AuthBackground() {
   return (
