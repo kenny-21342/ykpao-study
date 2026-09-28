@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 /**
  * Drafted alongside app/privacy/page.tsx. The same rule applies: every factual
  * claim is checkable in the repository, and everything that is a decision
- * rather than a fact is marked REVIEW.
+ * rather than a fact was left to the operator; those decisions have since been
+ * made and written in, so nothing here is marked REVIEW any more.
  *
  * Section 6 is the one that is genuinely load-bearing and genuinely true: the
  * corpus is copyrighted exam material, and the platform's own preview banners

@@ -14,10 +14,14 @@ export const metadata: Metadata = {
  *  - the AI-key handling is lib/ai-credentials.ts (encrypted at rest with
  *    CREDENTIAL_ENCRYPTION_KEY, never returned to the client)
  *  - the sub-processors are the services the app is actually deployed on:
- *    Vercel, Aiven, Cloudflare R2, Resend, a friend-run AI gateway and the
+ *    Vercel, Neon, Cloudflare R2, Resend, a friend-run AI gateway and the
  *    vendors behind it, Google (optional sign-in).
- *    Neon was named here until 27 Sep 2026 and no longer processes anything --
- *    both projects were deleted on 26 Sep when the database moved to Aiven.
+ *    The database vendor has moved twice: Neon until 26 Sep 2026, Aiven from
+ *    26 to 28 Sep, and Neon again from 28 Sep (a new project, us-east-1, on
+ *    the Vercel Marketplace -- the two projects named here before were
+ *    deleted on 26 Sep and share nothing with it). Aiven no longer processes
+ *    anything once its plan is cancelled; until then it holds a copy of the
+ *    pre-cutover data. Re-read this line whenever DATABASE_URL changes host.
  *  - the AI routing in section 4 is lib/shared-models.ts: the shared key goes
  *    to a New API gateway a friend of the owner runs and funds, which fronts
  *    models from eight vendors. The vendor list there is the one section 4
@@ -27,11 +31,14 @@ export const metadata: Metadata = {
  *    points at
  *
  * What is NOT checkable from the code -- retention, contact, jurisdiction, and
- * whether the school is involved at all -- is marked REVIEW.
+ * whether the school is involved at all -- was left to the operator and has
+ * since been decided, so nothing here is marked REVIEW any more. The draft
+ * banner is still up: LEGAL_COPY_IS_DRAFT in app/components/LegalPage.tsx is
+ * his to flip once he has read the filled-in copy back.
  */
 export default function PrivacyPolicy() {
   return (
-    <LegalPage title="Privacy" updated="26 September 2026">
+    <LegalPage title="Privacy" updated="28 September 2026">
       <Section heading="The short version">
         <p>
           This is a study tool run by a student, not a company. It stores your account,
@@ -91,7 +98,7 @@ export default function PrivacyPolicy() {
         </p>
         <ul>
           <li><strong>Vercel</strong> — hosting and request logs.</li>
-          <li><strong>Aiven</strong> — the database everything above is stored in.</li>
+          <li><strong>Neon</strong> — the database everything above is stored in.</li>
           <li>
             <strong>An AI gateway operated by Henry Yang</strong>, a friend of the person
             who runs this site, who provides the credit the shared key spends. It forwards
