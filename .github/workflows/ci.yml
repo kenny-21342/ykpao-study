@@ -89,6 +89,12 @@ jobs:
       E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      # The folder specs create folders in the LIVE resource library and
+      # cannot clean up after themselves: deleting a folder is admin-only by
+      # design and this suite runs as a student. Unattended, that left test
+      # scaffolding sitting in a shelf the whole year group can see, every
+      # night. So they run only when a human asks for them.
+      E2E_FOLDER_FIXTURES: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Validate configuration
         shell: bash

@@ -25,6 +25,16 @@ import { test, expect } from '@playwright/test';
  *    those are cleaned up per test as before.
  */
 test.describe('school resource folders', () => {
+  // These tests leave folders behind in the live library -- see E2E_FOLDER_FIXTURES
+  // in .github/workflows/ci.yml for why they cannot tidy up. Skipped unless the
+  // run was asked for by a person, so the nightly never litters a shelf students
+  // can see. `npm run e2e` locally sets nothing, so set it explicitly:
+  //   E2E_FOLDER_FIXTURES=true npm run e2e
+  test.skip(
+    process.env.E2E_FOLDER_FIXTURES !== 'true',
+    'creates folders in the live library that only an admin can remove; run on demand',
+  );
+
   // Reused every run. Path resolution is find-or-create, so the second run
   // lands in the same rows the first one made.
   const ROOT = 'e2e fixtures';
