@@ -10,12 +10,15 @@
  * treatment was removed, measured against production that day rather than
  * inherited:
  *
- *  - Question bank: 66,756 published questions over 49 syllabuses, 74.9% with
+ *  - Question bank: 66,756 published questions over 49 syllabuses, 85.9% with
  *    a mark scheme, 98.2% carrying a transcript -- so written answers are
  *    marked for the student rather than by them, which was the headline
- *    limitation. Still open: 4.7% held back for a bad crop, and topic tags on
- *    39.2% of published questions, so filtering by topic still misses part of
- *    the bank.
+ *    limitation. Topic coverage was 39.2% when this was written; the tagging
+ *    run finished 28 Sep 2026 and it is now **90.1%**, with 84.3% also
+ *    carrying a difficulty. Still open: 4.7% held back for a bad crop, and the
+ *    remaining ~10% with no topic, so a topic filter still misses some of the
+ *    bank rather than most of it. Re-measure before editing these numbers --
+ *    they are production counts, not estimates.
  *  - Mock exams: papers were packed at random from questions that have a mark
  *    scheme, to hit a mark total -- not modelled on a real paper's structure
  *    and not weighted across topics. **The first half of that is now fixed**,
@@ -56,7 +59,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'The question bank is still being built',
     body:
-      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for three quarters of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and topic tags are still being filled in subject by subject, so filtering by topic misses part of the bank.',
+      'Most of the archive is here — around 67,000 questions across 49 syllabuses, each with the original crop and, for most of them, its mark scheme. Almost every question now carries a transcript, so written answers are marked for you rather than left for you to mark yourself, and nine in ten now carry topic tags. Two gaps remain: about 5% of questions are held back because their crop was cut wrongly, and the last tenth has no topic yet, so filtering by topic still misses a little of the bank.',
   },
   'mock-exams': {
     state: 'ready',
