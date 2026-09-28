@@ -121,6 +121,10 @@ export default function SmartEduPlatform() {
   const [pendingBankQuestionId, setPendingBankQuestionId] = useState<number | null>(null);
   // The notebook page a link asked for, handed to Materials once and cleared.
   const [pendingPageId, setPendingPageId] = useState<string | null>(null);
+  // The syllabus code a course card asked for, handed to Practice or Mock
+  // exams once and cleared, so re-picking the subject by hand afterwards is
+  // not undone on the next render.
+  const [pendingSubjectCode, setPendingSubjectCode] = useState<string | null>(null);
   const [studyStartView, setStudyStartView] = useState<StudyCoachView>('today');
   const [practiceStartMode, setPracticeStartMode] = useState<PracticeMode>('browse');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
@@ -153,6 +157,7 @@ export default function SmartEduPlatform() {
     } else if (route.tab === 'practice') {
       setPracticeStartMode(route.practiceMode ?? (route.questionId ? 'practice' : 'browse'));
       setPendingQuestionId(route.questionId ?? null);
+      setPendingSubjectCode(route.subjectCode ?? null);
       // Only one of the two can be pending: the practice tab renders
       // QuestionsDatabase when a legacy id is set and BankPractice otherwise,
       // so leaving a stale legacy id here would swallow the bank route.
@@ -160,6 +165,9 @@ export default function SmartEduPlatform() {
     } else if (route.tab === 'materials') {
       setPendingQuestionId(null);
       setPendingPageId(route.pageId ?? null);
+    } else if (route.tab === 'mock-exams') {
+      setPendingQuestionId(null);
+      setPendingSubjectCode(route.subjectCode ?? null);
     } else {
       setPendingQuestionId(null);
     }
@@ -204,20 +212,36 @@ export default function SmartEduPlatform() {
   // this changes what the dashboard suggests, not what is reachable.
   const bankIsPreview = isFeaturePreview('question-bank');
   const router = useRouter();
-  const openPracticeOrPapers = useCallback(() => {
+  /*
+   * Takes an optional syllabus code, so this cannot be used as a bare
+   * `onClick` -- React would pass the MouseEvent in as the subject. `tsc`
+   * catches that, and the two call sites that are click handlers wrap it.
+   */
+  /*
+   * Memoised because BankPractice's filter fetch depends on it: a fresh arrow
+   * each render would re-run that fetch on every keystroke anywhere in the
+   * shell.
+   */
+  const clearPendingSubject = useCallback(() => setPendingSubjectCode(null), []);
+
+  const openPracticeOrPapers = useCallback((subjectCode?: string) => {
     if (bankIsPreview) {
       closeMobile();
+      // Past Papers browses by curriculum, not by a bare syllabus code, so a
+      // code cannot be forwarded here. The course card's own Past papers link
+      // carries the full scope and is the filtered way in while the bank is
+      // in preview.
       router.push('/papers');
       return;
     }
-    openRoute({ tab: 'practice', practiceMode: 'browse' });
+    openRoute({ tab: 'practice', practiceMode: 'browse', subjectCode: subjectCode ?? null });
   }, [bankIsPreview, router, openRoute, closeMobile]);
   // Memoised because it is a dependency of the dashboard-focus memo below; a
   // fresh object each render would recompute that on every keystroke.
   const practiceShortcut = useMemo(
     () => (bankIsPreview
-      ? { label: 'Past Papers', icon: Library, action: openPracticeOrPapers }
-      : { label: 'Practice', icon: Database, action: openPracticeOrPapers }),
+      ? { label: 'Past Papers', icon: Library, action: () => openPracticeOrPapers() }
+      : { label: 'Practice', icon: Database, action: () => openPracticeOrPapers() }),
     [bankIsPreview, openPracticeOrPapers],
   );
 
@@ -814,7 +838,8 @@ export default function SmartEduPlatform() {
               {isAuthenticated && (
                 <CourseShortcuts
                   onOpenPractice={openPracticeOrPapers}
-                  onOpenMockExams={() => openRoute({ tab: 'mock-exams' })}
+                  onOpenMockExams={(subjectCode) =>
+                    openRoute({ tab: 'mock-exams', subjectCode: subjectCode ?? null })}
                 />
               )}
 
@@ -826,7 +851,7 @@ export default function SmartEduPlatform() {
                       <p className="mt-1 text-xs text-muted">Keep the streak moving from here.</p>
                     </div>
                     <button
-                      onClick={openPracticeOrPapers}
+                      onClick={() => openPracticeOrPapers()}
                       className="inline-flex items-center gap-2 text-sm font-medium text-accent-text hover:text-accent-text"
                     >
                       {practiceShortcut.label}
@@ -906,6 +931,8 @@ export default function SmartEduPlatform() {
           ) : (
             <BankPractice
               initialQuestionId={pendingBankQuestionId}
+              initialSubjectCode={pendingSubjectCode}
+              onSubjectApplied={clearPendingSubject}
               onQuestionOpened={() => setPendingBankQuestionId(null)}
             />
           )
@@ -926,7 +953,19 @@ export default function SmartEduPlatform() {
 
         {/* VIEW 4: Mock Exams */}
         {activeTab === 'mock-exams' && (
-          <MockExams />
+          <MockExams
+            // Keyed on the subject so a second course card re-mounts the
+            // generator on the new subject rather than leaving the first one
+            // on screen: the requested code is only read on mount.
+            //
+            // Deliberately no `onSubjectApplied` here, unlike Practice. It
+            // would null the code, which would change the key, which would
+            // remount straight back to the exam list. Nothing needs clearing:
+            // `applyRoute` already sets the code to null for any arrival at
+            // this tab that did not name a subject.
+            key={pendingSubjectCode ?? 'all'}
+            initialSubjectCode={pendingSubjectCode}
+          />
         )}
 
         {/* VIEW 5: Discussion Board */}

@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { StatRow, StatTile } from './ui';
 import toast from 'react-hot-toast';
 import {
   AlertCircle,
@@ -542,20 +543,24 @@ function TodayView({ overview, busy, onComplete, onOpenQuestion, onOpenBankQuest
     ? Math.round((overview.latestExam.score / overview.latestExam.totalMarks) * 100) : null;
   return (
     <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Divided by hairlines rather than gapped like four separate objects,
-          which is what a grid with a gap reads as once the borders are gone. */}
-      <section className="flex flex-wrap divide-x divide-subtle -mx-4">
-        <Metric label="Tasks due" value={overview.summary.tasksDue} detail={`${overview.overdueTasks.length} overdue`} />
-        <Metric label="Reviews due" value={overview.dueReviews} detail={`${overview.summary.activeReviews} active cards`} />
-        <Metric label="Topics started" value={overview.summary.topicsStarted} detail={`${overview.summary.topicsMastered} at mastery`} />
+      {/* The shared StatRow, not a local copy of it. This row used to be a
+          hand-rolled `Metric` with the same markup as StatTile, and it carried
+          the same two faults: `-mx-4` on the row plus `first:pl-0` on the tile
+          outdented the whole thing 16px left of the heading above it, and
+          content-width tiles left the figures huddled in the left third of the
+          row. Both were fixed in the primitive; this now inherits that. */}
+      <StatRow>
+        <StatTile label="Tasks due" value={String(overview.summary.tasksDue)} hint={`${overview.overdueTasks.length} overdue`} />
+        <StatTile label="Reviews due" value={String(overview.dueReviews)} hint={`${overview.summary.activeReviews} active cards`} />
+        <StatTile label="Topics started" value={String(overview.summary.topicsStarted)} hint={`${overview.summary.topicsMastered} at mastery`} />
         {overview.daysUntilExam === null ? (
-          <Metric label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} detail={overview.latestExam?.title ?? 'No completed exam'} />
+          <StatTile label="Latest mock" value={examPercent == null ? '-' : `${examPercent}%`} hint={overview.latestExam?.title ?? 'No completed exam'} />
         ) : (
           // The countdown replaces the mock tile rather than adding a fifth:
           // once an exam is close it is the number that should be on screen.
-          <Metric label="Days to exam" value={overview.daysUntilExam} detail={overview.examCountdown ?? ''} />
+          <StatTile label="Days to exam" value={String(overview.daysUntilExam)} hint={overview.examCountdown ?? ''} />
         )}
-      </section>
+      </StatRow>
 
       <section className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] gap-6">
         <div>
@@ -664,20 +669,6 @@ function CommandTermPanel({ stats }: { stats: CommandTermStat[] }) {
         ))}
       </div>
     </section>
-  );
-}
-
-function Metric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
-  // Borderless and iconless, matching the dashboard's StatTile. This was the
-  // last surviving copy of the bordered-box-with-an-accent-icon tile: four of
-  // them in a row, each repeating the same shape, which is the motif that made
-  // the app read as generated more than any other single thing.
-  return (
-    <div className="px-4 py-3 first:pl-0 last:pr-0 min-w-0">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted truncate">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-primary tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs text-muted truncate">{detail}</p>
-    </div>
   );
 }
 

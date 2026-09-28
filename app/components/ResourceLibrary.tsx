@@ -16,7 +16,7 @@ import {
   RESOURCE_UPLOAD_MAX_BYTES,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
-import { SegmentedControl, Contributor } from './ui';
+import { Contributor } from './ui';
 import type { ContributorUser } from './ui';
 
 type Tab = 'notes' | 'school';
@@ -41,34 +41,23 @@ type ExternalNote = {
 // ===================================================================
 export default function ResourceLibrary() {
   const [tab, setTab] = useState<Tab>('notes');
-  const [scope, setScope] = useState<'enrolled' | 'all'>('enrolled');
-  useEffect(() => {
-    const stored = window.localStorage.getItem('scope:resources');
-    if (stored === 'all' || stored === 'enrolled') window.setTimeout(() => setScope(stored), 0);
-  }, []);
 
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* No title here: MaterialsHub titles this screen for both of its
-            halves. This is the supporting line and the scope control only. */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-secondary">
-            Study notes shared on review.ykpao.com, and your school&apos;s own resources.
-          </p>
-          <SegmentedControl
-            ariaLabel="Resource scope"
-            value={scope}
-            onChange={(next) => {
-              setScope(next);
-              window.localStorage.setItem('scope:resources', next);
-            }}
-            items={[
-              { value: 'enrolled', label: 'My courses' },
-              { value: 'all', label: 'All subjects' },
-            ]}
-          />
-        </div>
+            halves. This is the supporting line.
+
+            There was a My courses / All subjects control here as well. It did
+            the same job as the subject select inside the School Resources tab,
+            one level up and with a different vocabulary, and defaulted to
+            hiding everything outside the student's own courses -- in a library
+            the whole year group uploads to, where a resource is just as likely
+            to be useful outside your subjects. Narrowing is still there, in
+            the select that sits with the other filters. */}
+        <p className="text-sm text-secondary">
+          Study notes shared on review.ykpao.com, and your school&apos;s own resources.
+        </p>
 
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-line">
@@ -80,7 +69,7 @@ export default function ResourceLibrary() {
           </TabButton>
         </div>
 
-        {tab === 'notes' ? <SharedNotesTab /> : <SchoolResourcesTab scope={scope} />}
+        {tab === 'notes' ? <SharedNotesTab /> : <SchoolResourcesTab />}
       </div>
     </div>
   );
@@ -441,7 +430,7 @@ function formatResourceDescription(resource: SchoolResource): string {
   return description || '—';
 }
 
-function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
+function SchoolResourcesTab() {
   const [resources, setResources] = useState<SchoolResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -489,7 +478,11 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
       params.set('order', sortOrder);
       params.set('page', String(pageForRequest));
       params.set('limit', String(limit));
-      params.set('scope', scope);
+      // Sent explicitly, and always 'all'. resolveCourseScope treats a missing
+      // scope as 'enrolled', so dropping the parameter along with the control
+      // would have quietly hidden every resource outside the student's own
+      // courses with nothing on screen to say so.
+      params.set('scope', 'all');
       // An empty (root) folderId is still sent explicitly -- its mere
       // presence switches the API into folder-scoped mode.
       if (isBrowserRequest) params.set('folderId', currentFolderId ?? '');
@@ -511,7 +504,7 @@ function SchoolResourcesTab({ scope }: { scope: 'enrolled' | 'all' }) {
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, currentFolderId, page, pageSize, query, scope, sortBy, sortOrder, subjectFilter, viewMode]);
+  }, [categoryFilter, currentFolderId, page, pageSize, query, sortBy, sortOrder, subjectFilter, viewMode]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {

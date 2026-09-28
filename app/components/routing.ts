@@ -30,6 +30,17 @@ export type RoutedTab = {
   /** A notebook page, opened inside Materials' workspace view. Unlike the two
    * question ids this is a cuid, not an integer. */
   pageId?: string | null;
+  /**
+   * A syllabus subject code ("0625", "9702"), for Practice and Mock exams.
+   *
+   * The course cards on the dashboard knew which subject the student had
+   * clicked and had nowhere to put it, so both buttons opened their tab
+   * unfiltered and the student re-picked the subject they had just named. The
+   * code is the identifier both surfaces can actually act on: Mock exams
+   * generates from it directly, and Practice resolves it against the bank's
+   * own subject list once that loads.
+   */
+  subjectCode?: string | null;
 };
 
 export const STUDY_VIEWS = new Set<StudyCoachView>([
@@ -101,6 +112,15 @@ const positiveInt = (raw: string | null): number | null => {
 const pageId = (raw: string | null): string | null =>
   raw && /^[a-z0-9]{16,40}$/i.test(raw) ? raw : null;
 
+/**
+ * Syllabus codes are short and alphanumeric ("0625", "9702"). Shape-checked
+ * for the same reason as `pageId`: this value is forwarded into a query the
+ * server authorises for itself, but there is no reason to pass on something
+ * that cannot be a code.
+ */
+const subjectCode = (raw: string | null): string | null =>
+  raw && /^[A-Za-z0-9][A-Za-z0-9-]{0,15}$/.test(raw) ? raw : null;
+
 /** A full location.search -> the destination it names, defaults filled in. */
 export const parseRoute = (search: string): RoutedTab | null => {
   const params = new URLSearchParams(search);
@@ -109,6 +129,7 @@ export const parseRoute = (search: string): RoutedTab | null => {
   const questionId = positiveInt(params.get('qid'));
   const bankQuestionId = positiveInt(params.get('bqid'));
   const notePageId = pageId(params.get('pageId'));
+  const subject = subjectCode(params.get('subject'));
 
   const route = base
     ?? (questionId || bankQuestionId ? { tab: 'practice' as const } : null)
@@ -124,6 +145,9 @@ export const parseRoute = (search: string): RoutedTab | null => {
   }
   if (resolved.tab === 'materials') {
     resolved.pageId = notePageId ?? resolved.pageId ?? null;
+  }
+  if (resolved.tab === 'practice' || resolved.tab === 'mock-exams') {
+    resolved.subjectCode = subject ?? resolved.subjectCode ?? null;
   }
   if (resolved.tab === 'practice') {
     resolved.questionId = questionId ?? resolved.questionId ?? null;
@@ -144,6 +168,9 @@ export const routeToQuery = (route: RoutedTab): string => {
   }
   if (route.tab === 'materials' && route.pageId) {
     params.set('pageId', route.pageId);
+  }
+  if ((route.tab === 'practice' || route.tab === 'mock-exams') && route.subjectCode) {
+    params.set('subject', route.subjectCode);
   }
   if (route.tab === 'practice') {
     if (route.questionId) params.set('qid', String(route.questionId));

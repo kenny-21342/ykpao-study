@@ -204,9 +204,23 @@ function fmtTime(totalSeconds: number) {
 // ===================================================================
 // Component
 // ===================================================================
-export default function MockExams() {
+export default function MockExams({
+  initialSubjectCode = null,
+}: {
+  /**
+   * Open straight onto the generator with this syllabus code chosen, for the
+   * course cards on the dashboard. A student who clicked "Mock exam" on their
+   * Physics card previously landed on the exam list and had to find the
+   * button, open the generator and pick Physics again.
+   *
+   * Read on mount only, so the caller keys this component on it.
+   */
+  initialSubjectCode?: string | null;
+} = {}) {
   const { confirm, confirmDialog } = useConfirm();
-  const [view, setView] = useState<View>({ name: 'list' });
+  const [view, setView] = useState<View>(
+    initialSubjectCode ? { name: 'configure' } : { name: 'list' },
+  );
   const [exams, setExams] = useState<ExamListItem[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -242,6 +256,7 @@ export default function MockExams() {
   if (view.name === 'configure') {
     return (
       <ConfigureView
+        initialSubjectCode={initialSubjectCode}
         onCancel={handleBackToList}
         onGenerated={handleGenerated}
       />
@@ -550,7 +565,15 @@ function shortDuration(minutes: number | null): string | null {
   return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 }
 
-function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGenerated: (id: string) => void }) {
+function ConfigureView({
+  initialSubjectCode = null,
+  onCancel,
+  onGenerated,
+}: {
+  initialSubjectCode?: string | null;
+  onCancel: () => void;
+  onGenerated: (id: string) => void;
+}) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(true);
 
@@ -589,7 +612,21 @@ function ConfigureView({ onCancel, onGenerated }: { onCancel: () => void; onGene
         if (cancelled) return;
         setSubjects(data.subjects ?? []);
         if (data.subjects?.length && !subjectCode) {
-          setSubjectCode(data.subjects[0].code);
+          /*
+           * A requested code wins over the first in the list, but only if
+           * generation can actually serve it -- this list is already narrowed
+           * to the subjects that have a usable paper, and preselecting one
+           * outside it is how 0606 got offered and then refused. A course in a
+           * subject with no paper falls back to the default, which is honest:
+           * the generator opens, just not on that subject.
+           */
+          const requested = initialSubjectCode
+            ? data.subjects.find(
+                (option: Subject) =>
+                  option.code.toLowerCase() === initialSubjectCode.toLowerCase(),
+              )
+            : undefined;
+          setSubjectCode(requested?.code ?? data.subjects[0].code);
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load subjects');

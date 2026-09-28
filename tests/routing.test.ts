@@ -24,6 +24,7 @@ const effective = (r: RoutedTab) => ({
   questionId: r.tab === 'practice' ? r.questionId ?? null : undefined,
   bankQuestionId: r.tab === 'practice' ? r.bankQuestionId ?? null : undefined,
   pageId: r.tab === 'materials' ? r.pageId ?? null : undefined,
+  subjectCode: r.tab === 'practice' || r.tab === 'mock-exams' ? r.subjectCode ?? null : undefined,
   practiceMode: r.tab === 'practice'
     ? (r.questionId || r.bankQuestionId ? 'practice' : r.practiceMode ?? 'browse')
     : undefined,
@@ -39,6 +40,10 @@ test('every destination survives a round trip through the URL', () => {
       routes.push({ tab, practiceMode: 'practice' });
       routes.push({ tab, questionId: 4211, practiceMode: 'practice' });
       routes.push({ tab, bankQuestionId: 47552, practiceMode: 'practice' });
+      routes.push({ tab, subjectCode: '0625', practiceMode: 'browse' });
+    }
+    if (tab === 'mock-exams') {
+      routes.push({ tab, subjectCode: '9702' });
     }
     if (tab === 'materials') {
       routes.push({ tab, pageId: 'cmt13awz4000004l965cg7idg' });
@@ -137,4 +142,29 @@ test('a malformed page id is dropped rather than forwarded', () => {
   // A bare malformed id names nothing at all, rather than silently landing on
   // Materials as though a real page had been asked for.
   assert.equal(parseRoute('?pageId=nope'), null);
+});
+
+test('a subject code only survives on the two tabs that can act on it', () => {
+  // Practice resolves it against the bank's subject list and Mock exams
+  // generates from it. Nothing else has a subject parameter, so writing one
+  // there would be a link that silently ignores half of itself -- which is the
+  // thing the course cards did before this existed.
+  assert.equal(routeToQuery({ tab: 'practice', subjectCode: '0625' }), 'tab=practice&subject=0625');
+  assert.equal(routeToQuery({ tab: 'mock-exams', subjectCode: '0625' }), 'tab=mock-exams&subject=0625');
+  assert.equal(routeToQuery({ tab: 'study', subjectCode: '0625' }), 'tab=study');
+  assert.equal(routeToQuery({ tab: 'materials', subjectCode: '0625' }), 'tab=materials');
+});
+
+test('a subject code that cannot be a syllabus code is dropped, not forwarded', () => {
+  assert.equal(parseRoute('tab=practice&subject=0625')?.subjectCode, '0625');
+  assert.equal(parseRoute('tab=practice&subject=9702')?.subjectCode, '9702');
+  // Shape-checked for the same reason as pageId: no reason to pass on
+  // something that cannot be an identifier.
+  for (const bad of ['', '../etc', 'a b', "0625'--", 'x'.repeat(40)]) {
+    assert.equal(
+      parseRoute(`tab=practice&subject=${encodeURIComponent(bad)}`)?.subjectCode,
+      null,
+      `expected ${JSON.stringify(bad)} to be rejected`,
+    );
+  }
 });

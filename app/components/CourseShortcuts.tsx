@@ -14,11 +14,16 @@ import { ArrowRight, BookOpen, ClipboardList, Library, Plus, Settings2 } from 'l
  * re-pick the curriculum and subject they had already told us about. A tester
  * asked for this directly, comparing it to the subject grid on Save My Exams.
  *
- * The Past Papers link carries a real filter, because a course scope holds the
- * board, qualification and subject code the browse cascade reads from the URL.
- * Practice and Mock exams open their tabs unfiltered -- those surfaces have no
- * subject parameter, and a link that silently ignored half of itself would be
- * worse than an honest one.
+ * All three ways in carry the subject. Past Papers always did, because a
+ * course scope holds the board, qualification and subject code the browse
+ * cascade reads from the URL. Practice and Mock exams used to open their tabs
+ * unfiltered, so a student who clicked "Practice" on their Physics card landed
+ * on the whole bank and picked Physics again, and "Mock exam" landed on the
+ * exam list rather than the generator. Both surfaces now take a syllabus code
+ * (`?subject=` on the tab), so the click means what it looks like it means.
+ *
+ * A course with no scope still has nothing to send; those two buttons then
+ * open their tab plainly, as before.
  */
 
 type Scope = {
@@ -54,8 +59,8 @@ export default function CourseShortcuts({
   onOpenPractice,
   onOpenMockExams,
 }: {
-  onOpenPractice: () => void;
-  onOpenMockExams: () => void;
+  onOpenPractice: (subjectCode?: string) => void;
+  onOpenMockExams: (subjectCode?: string) => void;
 }) {
   const [courses, setCourses] = useState<Course[] | null>(null);
 
@@ -162,18 +167,20 @@ export default function CourseShortcuts({
                     <ArrowRight className="h-3 w-3 text-muted" />
                   </Link>
                   <button
-                    onClick={onOpenPractice}
+                    onClick={() => onOpenPractice(scope?.subjectCode)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-accent-text"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Practice
+                    <ArrowRight className="h-3 w-3 text-muted" />
                   </button>
                   <button
-                    onClick={onOpenMockExams}
+                    onClick={() => onOpenMockExams(scope?.subjectCode)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:text-accent-text"
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Mock exam
+                    <ArrowRight className="h-3 w-3 text-muted" />
                   </button>
                 </div>
               </div>

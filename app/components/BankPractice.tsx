@@ -158,6 +158,8 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
 
 export default function BankPractice({
   initialQuestionId = null,
+  initialSubjectCode = null,
+  onSubjectApplied,
   onQuestionOpened,
 }: {
   /**
@@ -169,6 +171,15 @@ export default function BankPractice({
    * point rather than borrowing that one.
    */
   initialQuestionId?: number | null;
+  /**
+   * Open with this syllabus code ("0625") already chosen, for the course cards
+   * on the dashboard. A code rather than the bank's own subject id because the
+   * caller has the code and does not know the id -- that mapping lives in the
+   * bank's filter list, which this component is already loading.
+   */
+  initialSubjectCode?: string | null;
+  /** Fired once the code has been applied, so the caller can stop resending it. */
+  onSubjectApplied?: () => void;
   onQuestionOpened?: () => void;
 } = {}) {
   const { status: sessionStatus } = useSession();
@@ -188,6 +199,12 @@ export default function BankPractice({
    * when it holds tens of thousands.
    */
   const [scope, setScope] = useState<'enrolled' | 'all'>('enrolled');
+  /**
+   * The syllabus code a course card asked for, still waiting to be resolved
+   * against the bank's subject list. A ref because the filter fetch reads it
+   * and clearing it must not re-run that fetch.
+   */
+  const pendingSubjectCode = useRef(initialSubjectCode);
   const [topic, setTopic] = useState('');
   const [commandTerm, setCommandTerm] = useState('');
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
@@ -201,6 +218,12 @@ export default function BankPractice({
 
   const [selected, setSelected] = useState<FullQuestion | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    // A second course card sends a different code; re-arm so the next filter
+    // response applies it.
+    if (initialSubjectCode) pendingSubjectCode.current = initialSubjectCode;
+  }, [initialSubjectCode]);
 
   useEffect(() => {
     // Signed-out users simply have none; a 401 here is not an error worth
@@ -226,9 +249,42 @@ export default function BankPractice({
         // under the new one, and leaving it set filters the list down to
         // nothing while the control still displays a plausible-looking choice.
         setTopic((current) => (current && !(data.topics ?? []).includes(current) ? '' : current));
+
+        /*
+         * Resolve a syllabus code handed in by a course card.
+         *
+         * The select is keyed on the bank's own subject id and the caller only
+         * knows the code, so the translation needs this list. Done here rather
+         * than in an effect watching `filters`, which would be a setState
+         * cascading off another render.
+         *
+         * A code that is not in the list while scoped to the student's own
+         * courses widens the scope once and resolves on the refetch -- that is
+         * a link to a subject they are not enrolled in, and quietly showing
+         * them the unfiltered bank would look like the link was ignored.
+         */
+        if (!pendingSubjectCode.current) return;
+        const wanted = pendingSubjectCode.current;
+        const match = (data.subjects ?? []).find(
+          (option: Filters['subjects'][number]) =>
+            option.code.toLowerCase() === wanted.toLowerCase(),
+        );
+        if (match) {
+          pendingSubjectCode.current = null;
+          setSubject(String(match.id));
+          setPage(1);
+          onSubjectApplied?.();
+        } else if (scope === 'enrolled') {
+          setScope('all');
+        } else {
+          // In neither scope: nothing to select, so stop trying.
+          pendingSubjectCode.current = null;
+          onSubjectApplied?.();
+        }
       })
       .catch(() => setFilters(EMPTY_FILTERS));
-  }, [scope, subject]);
+  }, [scope, subject, onSubjectApplied]);
+
 
   useEffect(() => {
     // The bank needs a session, so there is nothing to ask for until we have
