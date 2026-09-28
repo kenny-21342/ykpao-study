@@ -45,8 +45,8 @@ export default function ResourceLibrary() {
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* No title here: MaterialsHub titles this screen for both of its
-            halves. This is the supporting line.
+        {/* No title or supporting line here: MaterialsHub carries both, on one
+            PageHeader, for both of this screen's halves.
 
             There was a My courses / All subjects control here as well. It did
             the same job as the subject select inside the School Resources tab,
@@ -55,9 +55,6 @@ export default function ResourceLibrary() {
             the whole year group uploads to, where a resource is just as likely
             to be useful outside your subjects. Narrowing is still there, in
             the select that sits with the other filters. */}
-        <p className="text-sm text-secondary">
-          Study notes shared on review.ykpao.com, and your school&apos;s own resources.
-        </p>
 
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-line">
