@@ -27,7 +27,17 @@ export function StatTile({
   className?: string;
 }) {
   return (
-    <div className={cn('px-4 py-3 first:pl-0 last:pr-0 min-w-0', className)}>
+    <div
+      className={cn(
+        // `flex-1 basis-40` is what makes the figures span the row instead of
+        // huddling at its left edge. Without it the tiles are content-width, so
+        // four short numbers filled under half of a laptop-width dashboard and
+        // the rest of the row read as missing content. The basis is also the
+        // wrap point: below roughly 4x10rem the row breaks to two columns.
+        'flex-1 basis-40 px-4 py-3 first:pl-0 last:pr-0 min-w-0',
+        className,
+      )}
+    >
       <p className="text-xs font-medium uppercase tracking-wide text-muted truncate">{label}</p>
       <p className="mt-1 text-xl font-semibold text-primary tabular-nums">{value}</p>
       {(delta || hint) && (
@@ -55,6 +65,9 @@ export function StatRow({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-wrap divide-x divide-subtle -mx-4', className)}>{children}</div>
+    // No negative margin: `first:pl-0` on the tile already pulls the first
+    // figure flush with the column, so the two together outdented the whole row
+    // 16px to the left of the heading above it and the card below it.
+    <div className={cn('flex flex-wrap divide-x divide-subtle', className)}>{children}</div>
   );
 }

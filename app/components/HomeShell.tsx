@@ -740,19 +740,12 @@ export default function SmartEduPlatform() {
                     <p className="mt-2 text-sm text-secondary">
                       {isSessionLoading ? 'One moment.' : dashboardFocus.body}
                     </p>
-                    {isAuthenticated && learningOverview && (
-                      <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-muted">
-                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
-                          {learningOverview.summary.tasksDue} tasks due
-                        </span>
-                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
-                          {learningOverview.dueReviews} reviews due
-                        </span>
-                        <span className="rounded-full border border-line bg-surface-raised px-2.5 py-1">
-                          {learningOverview.summary.topicsMastered} mastered
-                        </span>
-                      </div>
-                    )}
+                    {/* The pill row that used to sit here said the same three
+                        things as the nudge buttons at the foot of this card --
+                        "13 reviews due" appeared as the body line above, as a
+                        pill, and as a nudge, all in one card. The pills were
+                        the only one of the three that could not be clicked, so
+                        they are the ones that went. */}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {isSessionLoading ? null : dashboardFocus.primaryHref ? (
