@@ -176,7 +176,40 @@ export function pgQueryConfig(url: string): ReturnType<typeof pgConfig> & { opti
   const base = pgConfig(url);
   const timeout = idleSessionTimeoutMs();
   if (timeout === 0) return base;
+
+  // A connection pooler rejects startup parameters it does not recognise, and
+  // it rejects them outright rather than ignoring them: PgBouncer answers
+  // `08P01 unsupported startup parameter in options: idle_session_timeout` and
+  // every query on that connection fails. Measured on 28 Sep 2026 by sending
+  // it to Neon's pooled endpoint -- every database route returned 500 until
+  // the option was dropped.
+  //
+  // Skipping it there costs nothing, because the problem it solves does not
+  // exist behind a pooler. The timeout is here to reclaim a slot from a frozen
+  // serverless instance that cannot run its own reaper; a pooler multiplexes
+  // many clients onto few server connections and does that reclaiming itself.
+  // The direct endpoint still gets the timeout, which is what migrations and
+  // scripts use.
+  if (isPooledHost(url)) return base;
+
   // A startup-packet option, so it is set before the first query and applies
   // to a connection the pool never gets to touch again.
   return { ...base, options: `-c idle_session_timeout=${timeout}` };
+}
+
+/**
+ * Whether this URL points at a connection pooler rather than Postgres itself.
+ *
+ * Neon names its pooled endpoint `<endpoint>-pooler.<region>...`, and the same
+ * `-pooler` convention is what `scripts/apply-*.mjs` already refuses when a
+ * bulk write must not go through PgBouncer. Matching on the host keeps the
+ * knowledge in one place and means a deployment moved onto a pooler stops
+ * sending the option without anyone remembering to set an override.
+ */
+export function isPooledHost(url: string): boolean {
+  try {
+    return /-pooler\./.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
 }

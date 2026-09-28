@@ -179,3 +179,38 @@ test('a nonsense DB_IDLE_SESSION_TIMEOUT_MS falls back rather than disabling', (
   // capacity decision, not a preference: raising it re-creates that.
   assert.equal(idleSessionTimeoutMs(), 30_000);
 });
+
+/**
+ * A pooler rejects startup parameters it does not recognise — it does not
+ * ignore them. Sending `options: -c idle_session_timeout=...` to Neon's pooled
+ * endpoint on 28 Sep 2026 made every database route answer 500 with
+ * `08P01 unsupported startup parameter`. The timeout exists to reclaim a slot
+ * from a frozen serverless instance; behind a pooler that is the pooler's job,
+ * so dropping it there costs nothing.
+ */
+test('the idle-session timeout is not sent to a pooled endpoint', () => {
+  process.env.DB_IDLE_SESSION_TIMEOUT_MS = '30000';
+  delete process.env.DATABASE_SSL_CA;
+
+  const pooled = pgQueryConfig(
+    'postgresql://u:p@ep-damp-paper-b868wa1z-pooler.c-14.us-east-1.aws.neon.tech/neondb?sslmode=require',
+  );
+  assert.equal(
+    (pooled as { options?: string }).options,
+    undefined,
+    'a startup parameter sent through PgBouncer fails every query on the connection',
+  );
+
+  // The direct endpoint is what migrations and scripts use, and it still wants
+  // the timeout: that connection really is a frozen instance holding a slot.
+  const direct = pgQueryConfig(
+    'postgresql://u:p@ep-damp-paper-b868wa1z.c-14.us-east-1.aws.neon.tech/neondb?sslmode=require',
+  );
+  assert.match(
+    (direct as { options?: string }).options ?? '',
+    /idle_session_timeout=30000/,
+    'the direct endpoint lost the timeout that frees slots a frozen instance holds',
+  );
+
+  delete process.env.DB_IDLE_SESSION_TIMEOUT_MS;
+});
