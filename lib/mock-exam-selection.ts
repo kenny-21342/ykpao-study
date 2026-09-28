@@ -37,13 +37,18 @@
  * Those subjects pack to a mark total, as every subject did before.
  *
  * What is still lost is topic-aware curation. That was written when `bank_topics`
- * had no rows. Tagging has been running since, so the topic filter below does
- * bite for the subjects it has reached -- 271 topics over 39% of published
- * questions on 27 Sep, and rising while the pass continues, so treat any
- * figure written here as a floor rather than a measurement. Weighting a paper
- * across topics is still not done. Difficulty is now filled on about 15% of
- * published questions (it was 44 rows on 25 Sep), which is enough to be worth
- * revisiting as a selection input and was not before.
+ * had no rows. The tagging pass FINISHED on 28 Sep and its output is merged:
+ * 539 topics, and 90.1% of published questions carry at least one (it was 39%
+ * the day before). Difficulty is filled on 84.3% (15% the day before, 44 rows
+ * on 25 Sep). Both are now measurements rather than floors -- the pass is not
+ * still running, so a figure here stops being a moving target.
+ *
+ * So the input this needed exists. Weighting a paper across topics is STILL
+ * not done, and that is now the only thing standing between a generated paper
+ * and a curated one: the selection below filters by topic when asked, but
+ * chooses within it without regard to how a real syllabus distributes weight.
+ * `lib/feature-readiness.ts` says exactly this to students; keep the two in
+ * step.
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';

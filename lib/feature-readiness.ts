@@ -66,7 +66,7 @@ export const FEATURE_READINESS: Record<PreviewFeature, FeatureReadiness> = {
     badge: 'Preview',
     title: 'Mock exams are still in preview',
     body:
-      'Papers are drawn at random from past questions that have a mark scheme, to hit the mark total you ask for. They are not modelled on the structure of a real paper, and they are not topic-matched yet, so treat one as practice material rather than a realistic sitting.',
+      'A paper that names a paper number now follows the real one’s shape: a blueprint measured from that subject’s past papers, with the mark total and duration printed on the exam board’s own cover. A few subjects — mostly IB Mathematics, where our extraction merged a whole paper into one question — have no usable blueprint and still pack to the mark total you ask for. What is missing is topic balance: questions are not yet weighted across a syllabus, so a paper can lean on whatever the bank holds most of. Treat one as strong practice rather than a faithful sitting.',
   },
 };
 
