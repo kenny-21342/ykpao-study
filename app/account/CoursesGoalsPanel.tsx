@@ -13,12 +13,37 @@ type CatalogCourse = {
   curriculumScopes: Array<{ board: string; qualification: string; level: string; subjectCode: string }>;
 };
 
+/**
+ * What `/api/me/courses` computes for a course that has a target grade.
+ *
+ * `label` is written by `progressLabel`, which already words the no-evidence
+ * case honestly ("sit a mock exam to see if you are on track"), so this panel
+ * renders whatever it is handed rather than deciding the wording twice.
+ */
+type CourseTarget = {
+  status: 'on-track' | 'close' | 'below' | 'insufficient-data';
+  label: string;
+  grade: string;
+};
+
 type Preference = {
   targetGrade: string;
   examDate: string;
   currentLevel: string;
   recentResult: string;
   personalizationEnabled: boolean;
+};
+
+/**
+ * Deliberately not four different colours: only a genuine shortfall is worth
+ * colouring, and "no evidence yet" is ordinary muted text rather than a
+ * warning about something the student has not had the chance to do.
+ */
+const TARGET_TONE: Record<CourseTarget['status'], string> = {
+  'on-track': 'text-accent-text',
+  close: 'text-secondary',
+  below: 'text-danger',
+  'insufficient-data': 'text-muted',
 };
 
 export default function CoursesGoalsPanel() {
@@ -30,6 +55,7 @@ export default function CoursesGoalsPanel() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signals, setSignals] = useState<Array<{ courseId: string; topic: string; mastery: number | null; attempts: number; confidence: number }>>([]);
+  const [targets, setTargets] = useState<Record<string, CourseTarget>>({});
 
   useEffect(() => {
     fetch('/api/me/courses')
@@ -39,6 +65,7 @@ export default function CoursesGoalsPanel() {
         const enrolled = data.context?.enrolledCourses ?? [];
         setCatalog(data.catalog ?? []);
         setSignals(data.context?.weakTopics ?? []);
+        setTargets(data.targets ?? {});
         setSelected(new Set(enrolled.map((course: { id: string }) => course.id)));
         setPreferences(Object.fromEntries(enrolled.map((course: { id: string; targetGrade: string | null; examDate: string | null; currentLevel: string | null; recentResult: string | null; personalizationEnabled: boolean }) => [course.id, {
           targetGrade: course.targetGrade ?? '',
@@ -103,6 +130,7 @@ export default function CoursesGoalsPanel() {
         return (
           <div key={course.id} className="border-t border-line pt-4 space-y-3">
             <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-primary">{course.name}</h3><label className="text-xs text-muted inline-flex items-center gap-2"><input type="checkbox" checked={preference.personalizationEnabled} onChange={(event) => updatePreference(course.id, { personalizationEnabled: event.target.checked })} /> Use activity signals</label></div>
+            {targets[course.id] && <p className={`text-xs ${TARGET_TONE[targets[course.id].status]}`}>{targets[course.id].label}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={preference.targetGrade} onChange={(event) => updatePreference(course.id, { targetGrade: event.target.value })} placeholder="Target grade" className="px-3 py-2 bg-surface-raised border border-strong rounded-md text-sm" />
               <input type="date" value={preference.examDate} onChange={(event) => updatePreference(course.id, { examDate: event.target.value })} aria-label={`${course.name} exam date`} className="px-3 py-2 bg-surface-raised border border-strong rounded-md text-sm" />
