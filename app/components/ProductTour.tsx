@@ -99,11 +99,18 @@ export default function ProductTour({ onFinish }: { onFinish: () => void }) {
     <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="tour-title">
       {/* The dim is four panels around the anchor rather than one box with a
         * cut-out: a `box-shadow` spotlight renders differently across browsers
-        * and cannot be given a border that survives dark mode. */}
-      <div className="absolute inset-x-0 top-0 bg-black/50" style={{ height: Math.max(0, rect.top - pad) }} onClick={finish} />
-      <div className="absolute inset-x-0 bg-black/50" style={{ top: rect.top + rect.height + pad, bottom: 0 }} onClick={finish} />
-      <div className="absolute bg-black/50" style={{ top: Math.max(0, rect.top - pad), height: rect.height + pad * 2, left: 0, width: Math.max(0, rect.left - pad) }} onClick={finish} />
-      <div className="absolute bg-black/50" style={{ top: Math.max(0, rect.top - pad), height: rect.height + pad * 2, left: rect.left + rect.width + pad, right: 0 }} onClick={finish} />
+        * and cannot be given a border that survives dark mode.
+        *
+        * They deliberately do NOT dismiss on click. Click-outside-to-close is
+        * right for a modal the user opened, and wrong for a seven-step tour
+        * whose card moves to a different place on every step: a click aimed at
+        * Next that lands a few pixels wide ends the tour for good, and it is
+        * shown once per account. Escape and the two explicit controls are the
+        * ways out. */}
+      <div className="absolute inset-x-0 top-0 bg-black/50" style={{ height: Math.max(0, rect.top - pad) }} />
+      <div className="absolute inset-x-0 bg-black/50" style={{ top: rect.top + rect.height + pad, bottom: 0 }} />
+      <div className="absolute bg-black/50" style={{ top: Math.max(0, rect.top - pad), height: rect.height + pad * 2, left: 0, width: Math.max(0, rect.left - pad) }} />
+      <div className="absolute bg-black/50" style={{ top: Math.max(0, rect.top - pad), height: rect.height + pad * 2, left: rect.left + rect.width + pad, right: 0 }} />
 
       <div
         className="pointer-events-none absolute rounded-lg ring-2 ring-accent"

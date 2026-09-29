@@ -6,7 +6,6 @@ import { PLACEHOLDER_ANSWER, endOfDay, plainText, startOfDay } from '@/lib/learn
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 import { analyticsSubjectName, bankTopicName } from '@/lib/bank-analytics';
-import { toBankSubjectCodes } from '@/lib/bank-questions';
 import { summariseCommandTerms, weakestCommandTerm } from '@/lib/command-term-stats';
 import { calibrate, describeCalibration } from '@/lib/self-marking';
 import { describeCountdown, planWindow } from '@/lib/revision-timetable';
@@ -94,9 +93,14 @@ export async function GET(req: NextRequest) {
       where: {
         userId: user.id,
         isCorrect: false,
-        ...(codeFilter
-          ? { question: { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } } }
-          : {}),
+        // Deliberately NOT narrowed by `courseScope`. A mistake is the
+        // student's own history, not a catalogue entry: scoping it to the
+        // subjects they are enrolled in *today* silently discards work they
+        // already did, and there is no control in the UI to widen it back.
+        // Found on 29 Sep 2026 -- the notebook read "No recorded mistakes"
+        // while /api/weaknesses (which has never been scoped) showed the very
+        // same attempts in the coverage heatmap. Two views of one history
+        // disagreeing is worse than either rule on its own.
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -140,9 +144,8 @@ export async function GET(req: NextRequest) {
     prisma.bankQuestionAttempt.findMany({
       where: {
         userId: user.id,
-        ...(codeFilter
-          ? { question: { paper: { subject: { code: { in: toBankSubjectCodes(courseScope.subjectCodes) } } } } }
-          : {}),
+        // Unscoped for the same reason as the mistakes query above: this is a
+        // diagnostic over attempts the student has already made.
       },
       orderBy: { createdAt: 'desc' },
       take: 600,

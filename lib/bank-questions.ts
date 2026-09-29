@@ -360,14 +360,27 @@ export async function listBankFilters(
       where: paperWhere, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
       select: { paperNumber: true },
     }),
-    // Topics belong to a subject outright (`BankTopic.subjectId`), so with no
-    // subject chosen this would answer with all 539 in the bank. The
-    // browser now hides the control until a subject is picked, and this returns
-    // nothing in that state rather than a list that cannot be acted on.
+    /*
+     * Topics that this subject's questions are actually tagged with.
+     *
+     * Deliberately NOT `BankTopic.subjectId = subjectId`, which is the obvious
+     * reading and is wrong here: the bank files each IB subject as several
+     * rows, one per level, and the tagging pass attached every topic to only
+     * one of them. Physics HL (subject 60) has 1,610 published questions and
+     * 1,590 of them are tagged -- but all 16 of their topics are filed under
+     * Physics SL (subject 61), so matching on the topic's own subject returned
+     * an empty list and the control disappeared. 38 subject rows covering
+     * 10,963 published questions are in that state.
+     *
+     * Going through the question's paper instead asks the question the student
+     * is actually asking -- "which topics can I filter this list by?" -- and is
+     * indifferent to where the topic row happens to be filed. With no subject
+     * chosen this returns nothing rather than every topic in the bank, because
+     * the browser hides the control until one is picked.
+     */
     subjectId
       ? prisma.bankTopic.findMany({
           where: {
-            subjectId,
             questions: { some: { question: { status: 'published', paper: paperWhere } } },
           },
           orderBy: { name: 'asc' },
