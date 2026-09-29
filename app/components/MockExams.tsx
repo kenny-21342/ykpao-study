@@ -10,6 +10,7 @@ import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 import { useScreenContext } from './ScreenContext';
 import toast from 'react-hot-toast';
 import { normalizeOptionLetter } from '@/lib/bank-grading';
+import { hasStudentAnswer } from '@/lib/mock-exam-answers';
 import { Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
   CheckCircle2, XCircle, Sparkles, FileText, ChevronRight, Loader2, AlertCircle, Target, RefreshCw, X, Lightbulb, Flag,
   Image as ImageIcon,
@@ -1816,19 +1817,14 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
   /*
    * Answered, marked, and the gap between them.
    *
-   * `attemptedAt` is stamped on *every* item at submission, answered or not --
-   * the route writes it on the ungraded branch too, so the paper can be resumed
-   * and reviewed. It therefore says nothing about whether the student wrote
-   * anything, and using it made a paper with one answer report "10 attempted".
+   * `hasStudentAnswer` carries the reasoning about which field means what.
    *
    * `score === null` is the reliable marker for "not marked": every grading
    * path that succeeds writes a number, and all three ungraded branches write
    * null. That covers AI being off, a question with no transcript, and an
    * upstream failure.
    */
-  const answered = exam.items.filter(
-    (i) => (i.answer ?? '').trim().length > 0 || Boolean(i.answerLetter),
-  );
+  const answered = exam.items.filter(hasStudentAnswer);
   /*
    * Marking is judged over the answers the student *gave*, not over every item.
    *
