@@ -576,6 +576,12 @@ export async function POST(
         // `let`, because the branch assigning it is an async callback and
         // control-flow analysis would otherwise narrow the read to `null`.
         const visionUsage: { current: ProviderUsage | null } = { current: null };
+        // Which model actually answered. `chat()` fails over when the
+        // configured model is not being served, so the model asked for and the
+        // model that graded are not always the same one -- and a usage row
+        // naming a model that never ran is how you spend an afternoon
+        // debugging the wrong thing.
+        const servedModel: { current: string | null } = { current: null };
         // The text grader has a usage block too; it was simply never read, so
         // every text-graded item booked the same flat estimate as a vision one.
         const textUsage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
@@ -634,6 +640,7 @@ export async function POST(
               budgetMs: GRADING_BUDGET_MS,
               maxAttempts: 1,
               onUsage: (u) => { textUsage.current = u; },
+              onModel: (m) => { servedModel.current = m; },
             }
           );
 
@@ -690,7 +697,9 @@ export async function POST(
               ? visionUsage.current?.tokensOut ??
                 (visionUsage.current ? undefined : VISION_GRADE_TOKENS_ESTIMATE)
               : textUsage.current?.completionTokens ?? VISION_GRADE_TOKENS_ESTIMATE,
-            model: gradedWithVision ? visionAccess.credential.model : textCredential?.model,
+            model: gradedWithVision
+              ? visionAccess.credential.model
+              : servedModel.current ?? textCredential?.model,
           });
 
           return score;
@@ -701,7 +710,7 @@ export async function POST(
           await recordUsage({
             userId: user.id,
             feature: actualGradingMode === 'vision' ? 'mock-exam-grade-vision:error' : 'mock-exam-grade:error',
-            model: textCredential?.model,
+            model: servedModel.current ?? textCredential?.model,
           });
           // ...but the answer itself must still survive. This used to return
           // without writing anything, so a transient upstream failure threw

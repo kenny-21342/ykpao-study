@@ -1,5 +1,6 @@
 import { DeepSeekMessage, DeepSeekResponse } from '@/types/ai';
 import type { TextCredential } from '@/lib/ai-credentials';
+import { candidateModels, noteModelOutcome } from '@/lib/ai-model-pool';
 
 /**
  * Provider-agnostic chat client.
@@ -38,7 +39,15 @@ export class DeepSeekError extends Error {
  */
 const DEFAULT_BUDGET_MS = Number(process.env.AI_REQUEST_BUDGET_MS || 45_000);
 
-/** Attempts per call, including the first. Two is one bounded retry. */
+/**
+ * Attempts *per model*, including the first. Two is one bounded retry.
+ *
+ * Distinct from the candidate list in lib/ai-model-pool.ts: `maxAttempts`
+ * asks the same model again, which is right for a transient blip, and
+ * failover asks a different model, which is right when this one is not being
+ * served. Grading passes `maxAttempts: 1` because it fans out -- that must
+ * stop it retrying a model, not stop it reaching a working one.
+ */
 const DEFAULT_MAX_ATTEMPTS = 2;
 
 export type ChatOptions = {
@@ -63,6 +72,13 @@ export type ChatOptions = {
    * do) it is simply never called and the caller keeps its estimate.
    */
   onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void;
+  /**
+   * Called with the model that actually answered, which is not always
+   * `credential.model` once failover is in play. Callers that record usage
+   * should book this rather than the model they asked for, or `/usage` names a
+   * model that never ran and the next person to debug a grade is misled.
+   */
+  onModel?: (model: string) => void;
 };
 
 /** Transient upstream conditions worth one more attempt. */
@@ -107,96 +123,131 @@ export async function chat(
   const attempts = Math.max(1, maxAttempts);
   let lastError: DeepSeekError = new DeepSeekError('The AI request was not attempted', 503);
 
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    const remaining = deadline - Date.now();
-    // Not enough left to be worth starting: fail with what we know rather than
-    // firing a request the platform will kill mid-flight.
-    if (remaining < 1_000) break;
+  // Best first, and a model that recently answered "not being served" sits at
+  // the back. For a student's own key this is always exactly one model.
+  const candidates = candidateModels(credential);
 
-    // Reserve time for a retry when one is still available.
-    const attemptMs =
-      attempt < attempts ? Math.max(5_000, Math.floor(remaining * 0.6)) : remaining;
+  candidate: for (let ci = 0; ci < candidates.length; ci++) {
+    const model = candidates[ci];
+    const moreModels = ci < candidates.length - 1;
+    body.model = model;
 
-    const controller = new AbortController();
-    const onAbort = () => controller.abort();
-    signal?.addEventListener('abort', onAbort, { once: true });
-    const timer = setTimeout(() => controller.abort(), attemptMs);
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const remaining = deadline - Date.now();
+      // Not enough left to be worth starting: fail with what we know rather
+      // than firing a request the platform will kill mid-flight. No later
+      // candidate can help either, so stop walking them.
+      if (remaining < 1_000) break candidate;
 
-    try {
-      const res = await fetch(credential.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${credential.apiKey}`,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+      // Reserve time for another try when one is still available -- whether
+      // that is this model again or the next model along.
+      const isLastTry = !moreModels && attempt === attempts;
+      const attemptMs = isLastTry ? remaining : Math.max(5_000, Math.floor(remaining * 0.6));
 
-      if (!res.ok) {
-        // The upstream body can echo back the prompt (which may contain a
-        // student's answer) and sometimes account/billing detail. Log it for
-        // operators; never let it reach the client, since several routes return
-        // `error.message` verbatim.
-        const detail = await res.text();
-        console.error(
-          `AI request failed (${res.status}) [source=${credential.source}]:`,
-          detail.slice(0, 2000),
-        );
-        lastError = new DeepSeekError(
-          res.status === 429
-            ? 'The AI service is rate-limited right now. Please try again in a moment.'
-            : res.status === 401 || res.status === 403
-              ? credential.source === 'user'
-                ? 'Your AI provider rejected your API key (401/403). Check the key and endpoint in Account Settings → AI Provider.'
-                : 'The shared AI key was rejected by the provider. Please tell an administrator.'
-              : res.status === 404
+      const controller = new AbortController();
+      const onAbort = () => controller.abort();
+      signal?.addEventListener('abort', onAbort, { once: true });
+      const timer = setTimeout(() => controller.abort(), attemptMs);
+
+      try {
+        const res = await fetch(credential.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${credential.apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          // The upstream body can echo back the prompt (which may contain a
+          // student's answer) and sometimes account/billing detail. Log it for
+          // operators; never let it reach the client, since several routes
+          // return `error.message` verbatim.
+          const detail = await res.text();
+          console.error(
+            `AI request failed (${res.status}) [source=${credential.source} model=${model}]:`,
+            detail.slice(0, 2000),
+          );
+          noteModelOutcome(model, res.status);
+          lastError = new DeepSeekError(
+            res.status === 429
+              ? 'The AI service is rate-limited right now. Please try again in a moment.'
+              : res.status === 401 || res.status === 403
                 ? credential.source === 'user'
-                  ? `Your AI endpoint returned 404 for model “${credential.model}”. Check the API endpoint and model name in Account Settings → AI Provider.`
-                  : 'The AI endpoint returned 404.'
-                : `The AI provider returned an error (${res.status})`,
-          res.status
-        );
-        if (!isRetryableStatus(res.status)) throw lastError;
-      } else {
-        const data = (await res.json()) as DeepSeekResponse;
-        const content = data.choices?.[0]?.message?.content;
-        if (content) {
-          if (data.usage && options.onUsage) {
-            options.onUsage({
-              promptTokens: data.usage.prompt_tokens ?? 0,
-              completionTokens: data.usage.completion_tokens ?? 0,
-            });
+                  ? 'Your AI provider rejected your API key (401/403). Check the key and endpoint in Account Settings → AI Provider.'
+                  : 'The shared AI key was rejected by the provider. Please tell an administrator.'
+                : res.status === 404
+                  ? credential.source === 'user'
+                    ? `Your AI endpoint returned 404 for model “${model}”. Check the API endpoint and model name in Account Settings → AI Provider.`
+                    : 'The AI endpoint returned 404.'
+                  : `The AI provider returned an error (${res.status})`,
+            res.status
+          );
+          // A 401/403 is the key, not the model: no candidate will fix it, so
+          // fail now rather than spending the budget proving it three times.
+          if (res.status === 401 || res.status === 403) throw lastError;
+          // Otherwise asking *this* model again is only worth it for the
+          // transient statuses. When it is not, another model still might work.
+          if (!isRetryableStatus(res.status)) {
+            if (moreModels) continue candidate;
+            throw lastError;
           }
-          return content;
+        } else {
+          const data = (await res.json()) as DeepSeekResponse;
+          const content = data.choices?.[0]?.message?.content;
+          if (content) {
+            noteModelOutcome(model, 'ok');
+            options.onModel?.(model);
+            if (data.usage && options.onUsage) {
+              options.onUsage({
+                promptTokens: data.usage.prompt_tokens ?? 0,
+                completionTokens: data.usage.completion_tokens ?? 0,
+              });
+            }
+            return content;
+          }
+          lastError = new DeepSeekError('The AI provider returned an empty response', 502);
         }
-        lastError = new DeepSeekError('The AI provider returned an empty response', 502);
-      }
-    } catch (err) {
-      if (err instanceof DeepSeekError) throw err;
+      } catch (err) {
+        if (err instanceof DeepSeekError) throw err;
 
-      // The caller gave up (client disconnected): stop, don't retry.
-      if (signal?.aborted) {
-        throw new DeepSeekError('The request was cancelled', 499);
+        // The caller gave up (client disconnected): stop, don't retry.
+        if (signal?.aborted) {
+          throw new DeepSeekError('The request was cancelled', 499);
+        }
+        const timedOut = err instanceof Error && err.name === 'AbortError';
+        console.error(
+          `AI request error [model=${model}]:`,
+          timedOut ? `timed out after ${attemptMs}ms` : err,
+        );
+        lastError = timedOut
+          ? new DeepSeekError(
+              'The AI service did not respond in time. Please try again.',
+              504
+            )
+          : new DeepSeekError('Could not reach the AI service. Please try again.', 503);
+      } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
       }
-      const timedOut = err instanceof Error && err.name === 'AbortError';
-      console.error('AI request error:', timedOut ? `timed out after ${attemptMs}ms` : err);
-      lastError = timedOut
-        ? new DeepSeekError(
-            'The AI service did not respond in time. Please try again.',
-            504
-          )
-        : new DeepSeekError('Could not reach the AI service. Please try again.', 503);
-    } finally {
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', onAbort);
+
+      // Short, bounded backoff — only if there is real time left to use it,
+      // and only before asking the same model again. Moving to a different
+      // model needs no backoff: this one's trouble is not the next one's.
+      const left = deadline - Date.now();
+      if (attempt < attempts && left > 3_000) {
+        await sleep(Math.min(750 * attempt, left - 2_000));
+      }
     }
 
-    // Short, bounded backoff — only if there is real time left to use it.
-    const left = deadline - Date.now();
-    if (attempt < attempts && left > 3_000) {
-      await sleep(Math.min(750 * attempt, left - 2_000));
-    }
+    // Out of attempts on this model. A rate limit is the one failure that is
+    // not worth carrying to the next candidate: the quota belongs to the key,
+    // which every candidate shares, so walking the list during a throttle
+    // spends the same budget faster and makes the throttle last longer. The
+    // bounded retry above, with its backoff, is the right answer to a 429.
+    if (lastError.status === 429) break;
   }
 
   throw lastError;

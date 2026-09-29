@@ -213,6 +213,10 @@ export async function POST(req: NextRequest) {
         );
       }
     } else if (textAccess.ok) {
+      // The model that answered, which failover may make different from the one
+      // asked for. Declared outside the try because the catch books an error
+      // row too, and that row should name whatever actually ran.
+      const servedModel: { current: string | null } = { current: null };
       try {
         const userContent = `Grade the student's answer against the markscheme.
 
@@ -228,7 +232,13 @@ ${gradedAnswer}`;
             { role: 'system', content: SYSTEM_PROMPTS.grader },
             { role: 'user', content: userContent },
           ],
-          { credential: textAccess.credential, temperature: 0.2, maxTokens: 1500, onUsage: (u) => { usage.current = u; } }
+          {
+            credential: textAccess.credential,
+            temperature: 0.2,
+            maxTokens: 1500,
+            onUsage: (u) => { usage.current = u; },
+            onModel: (m) => { servedModel.current = m; },
+          }
         );
 
         await recordUsage({
@@ -236,14 +246,14 @@ ${gradedAnswer}`;
           feature: 'practice-grade',
           tokensIn: usage.current?.promptTokens ?? Math.ceil(userContent.length / 4),
           tokensOut: usage.current?.completionTokens ?? 800,
-          model: textAccess.credential.model,
+          model: servedModel.current ?? textAccess.credential.model,
         });
       } catch (err) {
         console.error('Grading failed:', err);
         await recordUsage({
           userId: user.id,
           feature: 'practice-grade:error',
-          model: textAccess.credential.model,
+          model: servedModel.current ?? textAccess.credential.model,
         });
         aiNotices.push(
           err instanceof Error && err.message
