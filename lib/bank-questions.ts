@@ -10,7 +10,6 @@
  * one, which for 89% of questions is the top fragment of the image.
  */
 import { subjectNameForCode } from '@/lib/course-catalog';
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
 
@@ -246,14 +245,6 @@ export type BankFilters = {
    * nothing. It lights up on its own once tagging has run.
    */
   topics: string[];
-  /**
-   * Command-term slugs that have published questions behind them.
-   *
-   * Like `topics`, the UI hides the control while this is empty rather than
-   * offering a filter that returns nothing: the links are written by a
-   * backfill that runs per subject.
-   */
-  commandTerms: string[];
 };
 
 export type BankQuestionSummary = {
@@ -327,58 +318,63 @@ export async function listBankFilters(
   subject?: string | null,
 ): Promise<BankFilters> {
   const where = publishedQuestionPaperWhere(subjectCodes);
-  const selected = subject?.trim() || null;
-  // Same shape the question query uses for its own subject filter, so the
-  // options offered and the results returned cannot disagree.
-  const subjectScope: Prisma.BankSubjectWhereInput | null = selected
-    ? { code: { equals: selected, mode: 'insensitive' } }
-    : null;
 
-  const [subjects, years, sessions, paperNumbers, topics, commandTerms] = await Promise.all([
+  /*
+   * The selected subject, as the *id* the browser actually sends.
+   *
+   * This used to read `{ code: { equals: selected } }`, but the subject select
+   * is keyed on `BankSubject.id` (see the `<option value={option.id}>` in
+   * BankPractice, and `subjectId: intParam(...)` in the questions branch of the
+   * route), so it was comparing a numeric id against a syllabus code and never
+   * matching. The visible symptom was the topic control behaving backwards:
+   * with no subject chosen it offered every topic in the corpus, and choosing a
+   * subject emptied the list, which the `topics.length > 0` guard then rendered
+   * as the control disappearing.
+   *
+   * It is separate from `subjectCodes`, which is the student's course scope:
+   * scope says what they may see, this says what they are looking at.
+   */
+  const selectedSubjectId = Number.parseInt(subject?.trim() || '', 10);
+  const subjectId = Number.isFinite(selectedSubjectId) && selectedSubjectId > 0 ? selectedSubjectId : null;
+
+  // Every paper-derived list is scoped to the selected subject too, so the year,
+  // session and paper controls offer what that syllabus actually has rather
+  // than the union across the whole bank -- an IB subject has no "Paper 41",
+  // and a CAIE one has no "May TZ2".
+  const paperWhere = subjectId ? { ...where, subjectId } : where;
+
+  const [subjects, years, sessions, paperNumbers, topics] = await Promise.all([
+    // Not narrowed by `subjectId`: this is the list the selection is made from.
     prisma.bankSubject.findMany({
       where: { papers: { some: where } },
       orderBy: [{ name: 'asc' }, { level: 'asc' }],
       select: { id: true, code: true, name: true, level: true, board: true },
     }),
     prisma.bankPaper.findMany({
-      where, distinct: ['year'], orderBy: { year: 'desc' }, select: { year: true },
+      where: paperWhere, distinct: ['year'], orderBy: { year: 'desc' }, select: { year: true },
     }),
     prisma.bankPaper.findMany({
-      where, distinct: ['session'], orderBy: { session: 'asc' }, select: { session: true },
+      where: paperWhere, distinct: ['session'], orderBy: { session: 'asc' }, select: { session: true },
     }),
     prisma.bankPaper.findMany({
-      where, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
+      where: paperWhere, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
       select: { paperNumber: true },
     }),
-    // This was the one filter with no scope on it at all -- not the course
-    // scope the others use, and not the selected subject -- so it answered with
-    // every topic in the corpus regardless of what was being browsed. It became
-    // obvious only once tagging filled the table: with 256 topics across 20
-    // subjects the control lists topics that cannot match a single question in
-    // the subject on screen.
-    prisma.bankTopic.findMany({
-      where: {
-        questions: { some: { question: { status: 'published', paper: where } } },
-        ...(subjectScope ? { subject: subjectScope } : {}),
-      },
-      orderBy: { name: 'asc' },
-      select: { name: true },
-      distinct: ['name'],
-    }),
-    prisma.bankSkill.findMany({
-      where: {
-        questions: {
-          some: {
-            question: {
-              status: 'published',
-              paper: subjectScope ? { ...where, subject: subjectScope } : where,
-            },
+    // Topics belong to a subject outright (`BankTopic.subjectId`), so with no
+    // subject chosen this would answer with all 539 in the bank. The
+    // browser now hides the control until a subject is picked, and this returns
+    // nothing in that state rather than a list that cannot be acted on.
+    subjectId
+      ? prisma.bankTopic.findMany({
+          where: {
+            subjectId,
+            questions: { some: { question: { status: 'published', paper: paperWhere } } },
           },
-        },
-      },
-      orderBy: { slug: 'asc' },
-      select: { slug: true },
-    }),
+          orderBy: { name: 'asc' },
+          select: { name: true },
+          distinct: ['name'],
+        })
+      : Promise.resolve([] as { name: string }[]),
   ]);
 
   return {
@@ -393,7 +389,6 @@ export async function listBankFilters(
     sessions: sessions.map((row) => row.session),
     paperNumbers: paperNumbers.map((row) => row.paperNumber),
     topics: topics.map((row) => row.name),
-    commandTerms: commandTerms.map((row) => row.slug),
   };
 }
 
@@ -410,8 +405,6 @@ export async function listBankQuestions(options: {
   session?: string | null;
   paperNumber?: number | null;
   topic?: string | null;
-  /** A command-term slug, e.g. 'evaluate'. */
-  commandTerm?: string | null;
   /** When set, only questions this user has starred. */
   bookmarkedBy?: string | null;
   page?: number;
@@ -426,9 +419,6 @@ export async function listBankQuestions(options: {
       ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
       : {}),
     ...(options.topic ? { topics: { some: { topic: { name: options.topic } } } } : {}),
-    ...(options.commandTerm
-      ? { skills: { some: { skill: { slug: options.commandTerm } } } }
-      : {}),
     paper: {
       ...publishedQuestionPaperWhere(options.subjectCodes),
       ...(options.subjectId ? { subjectId: options.subjectId } : {}),

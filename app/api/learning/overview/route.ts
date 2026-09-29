@@ -122,6 +122,13 @@ export async function GET(req: NextRequest) {
             },
             topics: { select: { topic: { select: { name: true } } }, take: 1 },
             tags: { select: { tag: { select: { label: true } } }, take: 1 },
+            // Whether a card can be raised for this mistake at all: a review
+            // card with a blank back is worse than none, so the notebook's
+            // "Add review" button is only offered when there is something to
+            // put on it. Mirrors `upsertBankMistakeReview`'s own guard.
+            markScheme: {
+              select: { answerLetter: true, answerMd: true, _count: { select: { strips: true } } },
+            },
           },
         },
       },
@@ -205,6 +212,10 @@ export async function GET(req: NextRequest) {
       corpus: 'legacy' as const,
       questionId: attempt.questionId,
       bankQuestionId: null as number | null,
+      // Always true for the legacy corpus: the reviews route falls back to
+      // "reconstruct a complete answer" when no mark scheme row is found, so a
+      // card can always be raised.
+      hasMarkScheme: true,
       question: plainText(attempt.question.content, 260),
       subject: attempt.question.paper.subject.name,
       subjectCode: attempt.question.paper.subject.code,
@@ -235,6 +246,11 @@ export async function GET(req: NextRequest) {
         corpus: 'bank' as const,
         questionId: null as number | null,
         bankQuestionId: question.id,
+        hasMarkScheme: Boolean(
+          question.markScheme?.answerLetter
+            || question.markScheme?.answerMd?.trim()
+            || (question.markScheme?._count.strips ?? 0) > 0,
+        ),
         question: plainText(question.bodyMd, 260),
         subject: analyticsSubjectName(paper.subject),
         subjectCode: paper.subject.code,

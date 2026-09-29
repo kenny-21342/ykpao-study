@@ -102,6 +102,8 @@ type Mistake = {
   corpus: 'legacy' | 'bank';
   questionId: number | null;
   bankQuestionId: number | null;
+  /** Whether there is a mark scheme to put on the back of a review card. */
+  hasMarkScheme: boolean;
   question: string;
   subject: string;
   subjectCode: string;
@@ -397,9 +399,21 @@ export default function StudyCoach({
       const res = await fetch('/api/learning/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: mistake.questionId }),
+        // A bank mistake carries `questionId: null` and a `bankQuestionId`.
+        // Sending the former regardless was why this 400'd for every bank
+        // mistake, which is what the disabled button was hiding.
+        body: JSON.stringify(
+          mistake.corpus === 'bank'
+            ? { bankQuestionId: mistake.bankQuestionId }
+            : { questionId: mistake.questionId },
+        ),
       });
-      if (!res.ok) throw new Error('Review item could not be created.');
+      if (!res.ok) {
+        // The route explains itself (no mark scheme yet, question missing);
+        // showing its reason beats a generic failure the student cannot act on.
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Review item could not be created.');
+      }
       await load();
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : 'Review item could not be created.');
@@ -706,7 +720,7 @@ function MistakesView({ mistakes, busy, onOpenQuestion, onOpenBankQuestion, onAd
       onOpenQuestion(mistake.questionId);
     }
   };
-  return <main className="max-w-5xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-primary">Mistake notebook</h3><p className="text-xs text-muted mt-1">Your latest unsuccessful attempt for each question</p></div>{mistakes.length === 0 ? <EmptyState icon={CheckCircle2} title="No recorded mistakes" body="Incorrect practice and mock-exam answers will appear here automatically." /> : <div className="border-y border-line divide-y divide-line">{mistakes.map((mistake) => <article key={mistake.attemptId} className="py-4 px-2"><div className="flex items-start gap-3"><button onClick={() => openMistake(mistake)} className="w-10 h-10 grid place-items-center rounded-md bg-danger-subtle text-danger flex-none"><AlertCircle className="w-5 h-5" /></button><button onClick={() => setExpanded(expanded === mistake.attemptId ? null : mistake.attemptId)} className="min-w-0 flex-1 text-left"><div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-primary">{mistake.code}</h4><span className="text-xs text-muted">{mistake.score ?? 0}/{mistake.maxScore ?? '-'}</span></div><p className="text-xs text-muted mt-1">{mistake.subject} · {mistake.topic} · {new Date(mistake.attemptedAt).toLocaleDateString()}</p><p className="text-sm text-secondary line-clamp-2 mt-2">{plainTextPreview(mistake.question)}</p></button><button onClick={() => mistake.reviewId ? undefined : onAddReview(mistake)} disabled={!!mistake.reviewId || busy === `mistake-${mistake.attemptId}` || (mistake.corpus === 'bank' && !mistake.reviewId)} title={mistake.corpus === 'bank' && !mistake.reviewId ? 'This question has no mark scheme to put on the back of a card' : undefined} aria-label={mistake.corpus === 'bank' && !mistake.reviewId ? 'This question has no mark scheme to put on the back of a card' : undefined} className="h-9 px-3 inline-flex items-center gap-2 rounded-md border border-strong text-xs font-semibold disabled:opacity-60">{busy === `mistake-${mistake.attemptId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mistake.reviewId ? <Check className="w-3.5 h-3.5 text-accent-text" /> : <Plus className="w-3.5 h-3.5" />}{mistake.reviewId ? 'In review' : 'Add review'}</button></div>{expanded === mistake.attemptId && <div className="ml-13 mt-4 grid md:grid-cols-2 gap-4"><div><p className="text-xs font-bold text-muted uppercase mb-2">Your answer</p><p className="text-sm text-secondary">{mistake.answer || 'No answer submitted.'}</p>{mistake.weaknesses.length > 0 && <ul className="mt-3 space-y-1">{mistake.weaknesses.map((weakness) => <li key={weakness} className="text-xs text-danger">· {weakness}</li>)}</ul>}</div><div><p className="text-xs font-bold text-muted uppercase mb-2">Feedback</p>{mistake.explanation ? <FormattedMessage content={mistake.explanation} /> : <p className="text-sm text-muted">Open the question to review the mark scheme.</p>}</div></div>}</article>)}</div>}</main>;
+  return <main className="max-w-5xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-primary">Mistake notebook</h3><p className="text-xs text-muted mt-1">Your latest unsuccessful attempt for each question</p></div>{mistakes.length === 0 ? <EmptyState icon={CheckCircle2} title="No recorded mistakes" body="Incorrect practice and mock-exam answers will appear here automatically." /> : <div className="border-y border-line divide-y divide-line">{mistakes.map((mistake) => <article key={mistake.attemptId} className="py-4 px-2"><div className="flex items-start gap-3"><button onClick={() => openMistake(mistake)} className="w-10 h-10 grid place-items-center rounded-md bg-danger-subtle text-danger flex-none"><AlertCircle className="w-5 h-5" /></button><button onClick={() => setExpanded(expanded === mistake.attemptId ? null : mistake.attemptId)} className="min-w-0 flex-1 text-left"><div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-primary">{mistake.code}</h4><span className="text-xs text-muted">{mistake.score ?? 0}/{mistake.maxScore ?? '-'}</span></div><p className="text-xs text-muted mt-1">{mistake.subject} · {mistake.topic} · {new Date(mistake.attemptedAt).toLocaleDateString()}</p><p className="text-sm text-secondary line-clamp-2 mt-2">{plainTextPreview(mistake.question)}</p></button><button onClick={() => mistake.reviewId ? undefined : onAddReview(mistake)} disabled={!!mistake.reviewId || busy === `mistake-${mistake.attemptId}` || !mistake.hasMarkScheme} title={!mistake.hasMarkScheme ? 'This question has no mark scheme to put on the back of a card' : undefined} aria-label={!mistake.hasMarkScheme ? 'This question has no mark scheme to put on the back of a card' : undefined} className="h-9 px-3 inline-flex items-center gap-2 rounded-md border border-strong text-xs font-semibold disabled:opacity-60">{busy === `mistake-${mistake.attemptId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mistake.reviewId ? <Check className="w-3.5 h-3.5 text-accent-text" /> : <Plus className="w-3.5 h-3.5" />}{mistake.reviewId ? 'In review' : 'Add review'}</button></div>{expanded === mistake.attemptId && <div className="ml-13 mt-4 grid md:grid-cols-2 gap-4"><div><p className="text-xs font-bold text-muted uppercase mb-2">Your answer</p><p className="text-sm text-secondary">{mistake.answer || 'No answer submitted.'}</p>{mistake.weaknesses.length > 0 && <ul className="mt-3 space-y-1">{mistake.weaknesses.map((weakness) => <li key={weakness} className="text-xs text-danger">· {weakness}</li>)}</ul>}</div><div><p className="text-xs font-bold text-muted uppercase mb-2">Feedback</p>{mistake.explanation ? <FormattedMessage content={mistake.explanation} /> : <p className="text-sm text-muted">Open the question to review the mark scheme.</p>}</div></div>}</article>)}</div>}</main>;
 }
 
 /**

@@ -69,9 +69,8 @@ export async function GET(request: NextRequest) {
     const subjectCodes = scopedSubjectCodes(courseScope);
 
     if (action === 'filters') {
-      // The selected subject narrows the topic and command-term lists. It is
-      // separate from `subjectCodes`, which is the student's course scope:
-      // scope says what they may see, this says what they are looking at.
+      // `subject` is the bank subject id the browser has selected; it narrows
+      // the topic, year, session and paper lists. See `listBankFilters`.
       return NextResponse.json({
         ...(await listBankFilters(subjectCodes, searchParams.get('subject'))),
         scope: courseScope,
@@ -99,7 +98,6 @@ export async function GET(request: NextRequest) {
       session: searchParams.get('session') || null,
       paperNumber: intParam(searchParams.get('paper')),
       topic: searchParams.get('topic') || null,
-      commandTerm: searchParams.get('term') || null,
       // Only a signed-in user has bookmarks; for anyone else the filter is a
       // no-op rather than an empty list, which would look like a broken page.
       bookmarkedBy: searchParams.get('bookmarked') === '1' && user ? user.id : null,

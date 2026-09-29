@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
-import { PLACEHOLDER_ANSWER, plainText, scheduleReview } from '@/lib/learning';
+import { PLACEHOLDER_ANSWER, plainText, scheduleReview, upsertBankMistakeReview } from '@/lib/learning';
+import { subjectNameForCode } from '@/lib/course-catalog';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
 
@@ -22,6 +23,12 @@ function toReviewStrips(
 
 const CreateReview = z.object({
   questionId: z.number().int().positive().optional(),
+  /**
+   * A crop-first bank question. Separate from `questionId` because the two
+   * corpora are separate tables with separate id sequences -- see
+   * `ReviewItem.bankQuestionId`, which the GET above already reads.
+   */
+  bankQuestionId: z.number().int().positive().optional(),
   prompt: z.string().trim().min(1).max(5000).optional(),
   answer: z.string().trim().min(1).max(5000).optional(),
   subject: z.string().trim().min(1).max(100).optional(),
@@ -113,8 +120,61 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid review item' }, { status: 400 });
   }
 
-  if (!body.questionId && (!body.prompt || !body.answer || !body.subject || !body.topic)) {
+  if (!body.questionId && !body.bankQuestionId && (!body.prompt || !body.answer || !body.subject || !body.topic)) {
     return NextResponse.json({ error: 'Manual reviews need prompt, answer, subject, and topic' }, { status: 400 });
+  }
+
+  /*
+   * The bank branch.
+   *
+   * This route used to understand only the legacy corpus, so "Add review" in
+   * the mistake notebook could never work for a bank mistake: those rows carry
+   * `questionId: null` and a `bankQuestionId`, so the POST fell through to the
+   * manual branch and 400'd. The button was disabled to hide that, which is why
+   * it read as doing nothing -- and it was disabled for *every* bank mistake,
+   * including the ones whose mark scheme is right there.
+   *
+   * `upsertBankMistakeReview` is the same helper the automatic path uses when a
+   * bank answer is marked wrong, so a card raised by hand here is identical to
+   * one raised on submission, and its own guard is what decides whether there
+   * is enough of a mark scheme to put on the back.
+   */
+  if (body.bankQuestionId) {
+    const question = await prisma.bankQuestion.findUnique({
+      where: { id: body.bankQuestionId },
+      select: {
+        id: true,
+        rootNumber: true,
+        bodyMd: true,
+        paper: { select: { subject: { select: { code: true, name: true } } } },
+        markScheme: {
+          select: { answerLetter: true, answerMd: true, _count: { select: { strips: true } } },
+        },
+      },
+    });
+    if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+
+    const review = await upsertBankMistakeReview({
+      userId: user.id,
+      bankQuestionId: question.id,
+      prompt: body.prompt ?? (question.bodyMd.trim() || `Question ${question.rootNumber} — see the original paper`),
+      answer: body.answer ?? question.markScheme?.answerMd,
+      answerLetter: question.markScheme?.answerLetter ?? null,
+      hasMarkSchemeStrips: (question.markScheme?._count.strips ?? 0) > 0,
+      subject: body.subject ?? subjectNameForCode(question.paper.subject.code) ?? question.paper.subject.name,
+      topic: body.topic ?? 'General',
+    });
+
+    // The helper declines when there is neither mark-scheme text nor strips:
+    // a card with a blank back is worse than no card, and the student should
+    // be told rather than shown a button that silently did nothing.
+    if (!review) {
+      return NextResponse.json(
+        { error: 'This question has no mark scheme yet, so there is nothing to put on the back of the card.' },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ review }, { status: 201 });
   }
 
   if (body.questionId) {

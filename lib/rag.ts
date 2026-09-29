@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { corpusCoverageForIntent, planCopilotQuery } from '@/lib/copilot-query';
 import type { CopilotIntent, CorpusCoverage } from '@/lib/copilot-types';
 import { indexedRoute } from '@/lib/rag-routes';
+import { searchTerms } from '@/lib/rag-terms';
 
 /**
  * RAG (Retrieval-Augmented Generation) context builder.
@@ -76,6 +77,23 @@ export async function retrieveContext(
   } : plannedIntent;
   const corpusCoverage = await corpusCoverageForIntent(intent, options.userId || '');
   if (!sanitized) {
+    return { sources: [], context: '', totalFound: 0, intent, corpusCoverage };
+  }
+
+  /*
+   * A question about what to do next is not a question about content, and the
+   * corpus holds no evidence for it. Retrieving anyway is worse than returning
+   * nothing: "What should I study today?" cited an IB Psychology question and
+   * two 0607 maths questions, because the lexical matcher takes any one term
+   * and `study` appears in "Describe one study related to one model of memory"
+   * and in "Each student studies at least one of the sciences". The student is
+   * then shown an Evidence panel of sources that have nothing to do with the
+   * answer, which costs more trust than an absent panel does.
+   *
+   * The answer itself is unaffected -- it is written from the student's own
+   * profile, tasks and weaknesses, not from retrieved chunks.
+   */
+  if (intent.name === 'planning' || intent.name === 'next-action') {
     return { sources: [], context: '', totalFound: 0, intent, corpusCoverage };
   }
 
@@ -500,6 +518,9 @@ async function searchNotes(query: string, userId?: string, courseId?: string, st
     // Use Postgres ILIKE for simplicity (works without FTS indexes).
     // For larger scale, add a tsvector column + GIN index.
     const terms = searchTerms(query);
+    // No subject matter in the query: retrieve nothing rather than let an
+    // empty `OR` or a meta word decide what the student sees as evidence.
+    if (terms.length === 0) return [];
     const notes = await prisma.note.findMany({
       where: {
         AND: [
@@ -540,6 +561,9 @@ async function searchCloudDocuments(query: string, userId?: string, strictCourse
   if (strictCourseScope) return [];
   try {
     const terms = searchTerms(query);
+    // No subject matter in the query: retrieve nothing rather than let an
+    // empty `OR` or a meta word decide what the student sees as evidence.
+    if (terms.length === 0) return [];
     const documents = await prisma.cloudDocument.findMany({
       where: {
         ownerId: userId,
@@ -568,6 +592,9 @@ async function searchCloudDocuments(query: string, userId?: string, strictCourse
 async function searchQuestions(query: string, subjectCodes?: string[]): Promise<RAGSource[]> {
   try {
     const terms = searchTerms(query);
+    // No subject matter in the query: retrieve nothing rather than let an
+    // empty `OR` or a meta word decide what the student sees as evidence.
+    if (terms.length === 0) return [];
     const where: Record<string, unknown> = {
       docType: 'qp',
       OR: terms.flatMap((term) => [
@@ -624,6 +651,9 @@ async function searchQuestions(query: string, subjectCodes?: string[]): Promise<
 async function searchMarkschemes(query: string, subjectCodes?: string[]): Promise<RAGSource[]> {
   try {
     const terms = searchTerms(query);
+    // No subject matter in the query: retrieve nothing rather than let an
+    // empty `OR` or a meta word decide what the student sees as evidence.
+    if (terms.length === 0) return [];
     const where: Record<string, unknown> = {
       docType: 'ms',
       OR: terms.map((term) => ({ content: { contains: term, mode: 'insensitive' } })),
@@ -662,6 +692,9 @@ async function searchMarkschemes(query: string, subjectCodes?: string[]): Promis
 async function searchResources(query: string): Promise<RAGSource[]> {
   try {
     const terms = searchTerms(query);
+    // No subject matter in the query: retrieve nothing rather than let an
+    // empty `OR` or a meta word decide what the student sees as evidence.
+    if (terms.length === 0) return [];
     const resources = await prisma.schoolResource.findMany({
       where: {
         OR: terms.flatMap((term) => [
@@ -699,15 +732,6 @@ function sanitizeQuery(q: string): string {
     .slice(0, 200);
 }
 
-function searchTerms(query: string) {
-  const stopWords = new Set(['about', 'after', 'again', 'could', 'explain', 'from', 'have', 'help', 'into', 'please', 'that', 'their', 'there', 'these', 'this', 'what', 'when', 'where', 'which', 'with', 'would', 'your']);
-  const terms = query
-    .toLowerCase()
-    .split(/\s+/)
-    .map((term) => term.replace(/[^a-z0-9-]/g, ''))
-    .filter((term) => term.length >= 3 && !stopWords.has(term));
-  return [...new Set(terms)].slice(0, 6).length > 0 ? [...new Set(terms)].slice(0, 6) : [query];
-}
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
