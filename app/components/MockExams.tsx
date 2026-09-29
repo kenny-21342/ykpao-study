@@ -1829,8 +1829,18 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
   const answered = exam.items.filter(
     (i) => (i.answer ?? '').trim().length > 0 || Boolean(i.answerLetter),
   );
-  const marked = exam.items.filter((i) => i.score !== null);
-  const unmarkedAnswers = answered.filter((i) => i.score === null).length;
+  /*
+   * Marking is judged over the answers the student *gave*, not over every item.
+   *
+   * An unanswered question is scored 0 by the official path, not left null --
+   * a blank earns no marks and that is a real, correct mark. So counting
+   * `score !== null` across all items said "9 of 10 were marked" for a paper
+   * where the student wrote one answer and that one answer could not be
+   * marked. The grade was then computed almost entirely from blanks and
+   * displayed as though it measured them.
+   */
+  const markedAnswers = answered.filter((i) => i.score !== null);
+  const unmarkedAnswers = answered.length - markedAnswers.length;
   const attempted = answered;
   const correctCount = exam.items.filter((i) => i.isCorrect).length;
   // The grade comes from the server, which reads real thresholds for the
@@ -1887,7 +1897,7 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
               </p>
               {/* The score is out of the whole paper, so an unmarked question
                   silently costs marks the student may well have earned. */}
-              {marked.length > 0 && unmarkedAnswers > 0 && (
+              {markedAnswers.length > 0 && unmarkedAnswers > 0 && (
                 <p className="text-accent-text text-sm mt-2 max-w-md leading-relaxed">
                   {unmarkedAnswers} of your {answered.length} answers could not be marked
                   automatically and count as zero here. Mark those yourself below.
@@ -1905,13 +1915,13 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
               reading the grade. The honest reading of an unmarked paper is
               that it is unmarked.
             */}
-            {marked.length === 0 ? (
+            {answered.length > 0 && markedAnswers.length === 0 ? (
               <div className="max-w-sm md:text-right">
                 <div className="text-3xl font-bold">Not marked</div>
                 <p className="text-accent-text text-sm mt-2 leading-relaxed">
-                  {answered.length === 0
-                    ? 'You did not answer any questions, so there is nothing to mark.'
-                    : 'None of your answers could be marked automatically, so this paper has no score. They are saved below — award yourself the marks against each mark scheme.'}
+                  None of your answers could be marked automatically, so this
+                  paper has no score. They are saved below — award yourself the
+                  marks against each mark scheme.
                 </p>
               </div>
             ) : (
