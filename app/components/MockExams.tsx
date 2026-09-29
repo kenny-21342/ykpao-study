@@ -149,6 +149,18 @@ type ExamDetail = {
     scale: 'caie' | 'ib';
     isFallback: boolean;
   } | null;
+  /**
+   * The same paper measured against the target grade set for this subject in
+   * /account. Null when no target is set, when the stored target is not on
+   * the board's scale, or before submission -- the three cases where there is
+   * nothing honest to show.
+   */
+  targetProgress?: {
+    target: { grade: string; requiredPercent: number; source: 'published' | 'school' | 'estimate'; isFallback: boolean };
+    requiredMarks: number;
+    shortfall: number;
+    met: boolean;
+  } | null;
   startedAt: string | null;
   submittedAt: string | null;
   createdAt: string;
@@ -1942,6 +1954,30 @@ function ResultsView({ examId, onExit, onRetake }: { examId: string; onExit: () 
                   </div>
                   <div className="text-xs text-accent-text mt-1 uppercase tracking-wide">Marks</div>
                 </div>
+                {/* The target line. A grade on its own says where the student
+                    landed; this says where they were aiming and what the gap
+                    is in the only unit they can act on -- marks. */}
+                {exam.targetProgress && (
+                  <div className="max-w-[11rem] border-l border-white/25 pl-6 text-left">
+                    <div className="text-xs uppercase tracking-wide text-accent-text">
+                      Target {exam.targetProgress.target.grade}
+                    </div>
+                    <div className="mt-1 text-lg font-bold">
+                      {exam.targetProgress.met
+                        ? 'Target met'
+                        : `${exam.targetProgress.shortfall} ${exam.targetProgress.shortfall === 1 ? 'mark' : 'marks'} short`}
+                    </div>
+                    <div className="mt-1 text-[11px] leading-tight text-accent-text">
+                      Needed {exam.targetProgress.requiredMarks}/{exam.totalMarks}
+                      {' '}({exam.targetProgress.target.requiredPercent}%)
+                      {exam.targetProgress.target.isFallback
+                        ? ' — estimated, no boundaries on file'
+                        : exam.targetProgress.target.source === 'published'
+                          ? ' — official boundary'
+                          : ' — school boundary'}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

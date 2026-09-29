@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
 import { optionLettersFor } from '@/lib/bank-grading';
-import { gradeForExam } from '@/lib/grade-boundaries';
+import { gradeForExam, progressToTarget, targetForSubject } from '@/lib/grade-boundaries';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,10 +90,53 @@ export async function GET(
         })
       : null;
 
+    /*
+     * The same paper measured against what the student is aiming for.
+     *
+     * `gradeForExam` says what the score earned; this says what the target
+     * would have taken, read from the same rows under the same rules so the
+     * two can never disagree. Null whenever there is nothing honest to show:
+     * no target set for the subject, a target that is not on the board's own
+     * scale, or a paper that was never submitted.
+     */
+    const targetGrade = exam.subjectCode
+      ? (await prisma.userCourse.findFirst({
+          where: {
+            userId: user.id,
+            targetGrade: { not: null },
+            course: { curriculumScopes: { some: { subjectCode: exam.subjectCode } } },
+          },
+          select: { targetGrade: true },
+        }))?.targetGrade ?? null
+      : null;
+
+    const target = exam.submittedAt
+      ? await targetForSubject(async ({ board, subjectCodes }) => {
+          try {
+            return await prisma.gradeBoundary.findMany({
+              where: { board, subjectCode: { in: subjectCodes } },
+              select: {
+                grade: true, minMark: true, totalMarks: true,
+                source: true, year: true, session: true, paperNumber: true,
+              },
+              orderBy: { year: 'desc' },
+              take: 200,
+            });
+          } catch {
+            return [];
+          }
+        }, { subjectCode: exam.subjectCode, targetGrade })
+      : null;
+
+    const targetProgress = target && exam.score != null
+      ? progressToTarget({ marks: exam.score, totalMarks: exam.totalMarks, target })
+      : null;
+
     return NextResponse.json({
       exam: {
         id: exam.id,
         grade,
+        targetProgress,
         title: exam.title,
         description: exam.description,
         subjectCode: exam.subjectCode,

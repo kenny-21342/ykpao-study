@@ -33,6 +33,25 @@ type Scope = {
   subjectCode: string;
 };
 
+/** Per-course progress toward a target grade; absent when no target is set. */
+type TargetProgress = {
+  status: 'on-track' | 'close' | 'at-risk' | 'insufficient-data';
+  label: string;
+  grade: string;
+  requiredPercent: number;
+  averagePercent: number | null;
+  sampleCount: number;
+};
+
+const TARGET_TONE: Record<TargetProgress['status'], string> = {
+  'on-track': 'border-accent-border bg-accent-subtle text-accent-text',
+  close: 'border-warning-border bg-warning-subtle text-warning',
+  'at-risk': 'border-danger-border bg-danger-subtle text-danger',
+  // Deliberately the quietest of the four: "not enough data" is an invitation,
+  // not a verdict, and colouring it like one would read as a warning.
+  'insufficient-data': 'border-line bg-surface text-muted',
+};
+
 type Course = {
   id: string;
   name: string;
@@ -63,13 +82,17 @@ export default function CourseShortcuts({
   onOpenMockExams: (subjectCode?: string) => void;
 }) {
   const [courses, setCourses] = useState<Course[] | null>(null);
+  const [targets, setTargets] = useState<Record<string, TargetProgress>>({});
 
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/me/courses', { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data) setCourses(data.context?.enrolledCourses ?? []);
+        if (data) {
+          setCourses(data.context?.enrolledCourses ?? []);
+          setTargets(data.targets ?? {});
+        }
       })
       .catch(() => {
         // A dashboard section that cannot load its own data simply does not
@@ -131,6 +154,7 @@ export default function CourseShortcuts({
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {courses.map((course) => {
             const scope = course.scopes[0];
+            const progress = targets[course.id];
             return (
               <div key={course.id} className={CARD}>
                 <div className="flex items-start justify-between gap-3">
@@ -156,6 +180,16 @@ export default function CourseShortcuts({
                     <BookOpen className="h-4.5 w-4.5" />
                   </div>
                 </div>
+
+                {/* The target, measured. A label on its own says what the
+                    student wants; this says whether they are getting it, in
+                    the unit the boundary is defined in. Rendered only when a
+                    target is set, so a card without one is unchanged. */}
+                {progress && (
+                  <p className={`rounded-md border px-2.5 py-1.5 text-xs font-medium ${TARGET_TONE[progress.status]}`}>
+                    {progress.label}
+                  </p>
+                )}
 
                 <div className="flex flex-wrap gap-1.5">
                   <Link
