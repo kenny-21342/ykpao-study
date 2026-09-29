@@ -37,6 +37,53 @@ const FormattedMessage = dynamic(() => import('./FormattedMessage'), { ssr: fals
  * Rendering `content` alone showed a blank card for every question on a
  * bank-built paper, so the images come first and prose is the fallback.
  */
+/**
+ * One crop of the original paper, with an honest loading state.
+ *
+ * `paper-ground` has to sit on the image itself (the crops are transparent
+ * PNGs with black ink, invisible on the dark theme), which means an image that
+ * has not arrived yet paints as a plain white rectangle the size of the
+ * question. Sitting a timed exam, that is indistinguishable from a blank
+ * question -- found on 29 Sep 2026 while sitting a paper on production, where
+ * three questions in a row looked empty until their crops caught up.
+ *
+ * So the ground is withheld until `onLoad`, a shimmer holds the space in the
+ * meantime, and the strips load eagerly: a question the student is looking at
+ * is never a candidate for deferring.
+ */
+function ExamStrip({
+  strip,
+  alt,
+}: {
+  strip: { url: string; width: number | null; height: number | null };
+  alt: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative">
+      {!loaded && (
+        <div
+          aria-hidden
+          className="absolute inset-0 motion-safe:animate-pulse bg-surface-raised rounded-sm"
+        />
+      )}
+      <img
+        src={strip.url}
+        alt={alt}
+        width={strip.width ?? undefined}
+        height={strip.height ?? undefined}
+        loading="eager"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        // Treat a failed crop as loaded: a permanent shimmer would claim the
+        // question is still coming when it is not.
+        onError={() => setLoaded(true)}
+        className={`block max-w-full ${loaded ? 'paper-ground' : 'opacity-0'}`}
+      />
+    </div>
+  );
+}
+
 function ExamContent({
   content,
   strips,
@@ -50,17 +97,7 @@ function ExamContent({
     return (
       <div className="overflow-x-auto">
         {strips.map((strip, index) => (
-          <img
-            key={`${strip.url}-${index}`}
-            src={strip.url}
-            alt={index === 0 ? alt : ''}
-            width={strip.width ?? undefined}
-            height={strip.height ?? undefined}
-            // The crops are scanned paper. Many are transparent PNGs with
-            // black ink, which is invisible on the dark theme, so the white
-            // ground travels with the image rather than the container.
-            className="block max-w-full paper-ground"
-          />
+          <ExamStrip key={`${strip.url}-${index}`} strip={strip} alt={index === 0 ? alt : ''} />
         ))}
       </div>
     );
