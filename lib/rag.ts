@@ -599,11 +599,21 @@ async function searchQuestions(query: string, subjectCodes?: string[]): Promise<
       take: 5,
     });
 
+    /*
+     * Text, but no link -- the same shape `searchMarkschemes` below has always
+     * had.
+     *
+     * These rows are the legacy text corpus. Their only deep link was
+     * `/?tab=questions-db&qid=`, which opens the old browser the platform no
+     * longer practises on, and the id cannot be repointed at the crop-first
+     * bank because the two are different rows of different tables. So the
+     * question still informs the answer; it just cannot send a student to a
+     * surface they were not meant to reach.
+     */
     return questions.map((q) => ({
       type: 'question' as const,
       title: `${q.paper.subject.code} Q${q.number}${q.part} (${q.paper.year} ${q.paper.session}) — ${q.topic}`,
       content: truncate(q.content, MAX_CHARS_PER_SOURCE),
-      url: `/?tab=questions-db&qid=${q.id}`,
       relevance: 0.6,
     }));
   } catch {

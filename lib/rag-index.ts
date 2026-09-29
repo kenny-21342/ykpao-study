@@ -317,71 +317,6 @@ function paperLabel(paperNumber: number, variant: number) {
   return variant > 0 ? `${paperNumber}${variant}` : `${paperNumber}`;
 }
 
-export async function indexPastPaperQuestion(questionId: number) {
-  const question = await prisma.pastPaperQuestion.findUnique({
-    where: { id: questionId },
-    include: { paper: { include: { subject: true } } },
-  });
-  if (!question) return prisma.ragDocument.deleteMany({ where: { documentKey: `past-paper-question:${questionId}` } });
-  const paper = question.paper;
-  const academic = academicMetadata(paper.subject.code, paper.subject.name, null);
-  const pairPaper = await prisma.pastPaper.findFirst({
-    where: {
-      subjectId: paper.subjectId,
-      year: paper.year,
-      session: paper.session,
-      paperNumber: paper.paperNumber,
-      variant: paper.variant,
-      docType: question.docType === 'ms' ? 'qp' : 'ms',
-    },
-    select: { id: true },
-  });
-  const paired = pairPaper
-    ? await prisma.pastPaperQuestion.findFirst({
-        where: {
-          paperId: pairPaper.id,
-          number: question.number,
-          part: question.part,
-          subPart: question.subPart,
-          docType: question.docType === 'ms' ? 'qp' : 'ms',
-        },
-        select: { id: true },
-      })
-    : null;
-  const referenceQuestionId = question.docType === 'qp' ? question.id : paired?.id;
-  const pairKey = [paper.subject.code, paper.year, paper.session, paper.paperNumber, paper.variant, question.number, question.part, question.subPart].join(':');
-  const kind = question.docType === 'ms' ? 'markscheme' : 'question';
-  return upsertIndexedDocument({
-    documentKey: `past-paper-question:${question.id}`,
-    sourceType: kind,
-    sourceRecordId: String(question.id),
-    title: `${paper.subject.code} ${paper.year} ${paper.session} Paper ${paperLabel(paper.paperNumber, paper.variant)} Q${question.number}${question.part}${question.subPart}${kind === 'markscheme' ? ' mark scheme' : ''}`,
-    text: `${question.content}\n${question.latex}`,
-    route: referenceQuestionId ? `/?tab=questions-db&qid=${referenceQuestionId}` : '/?tab=questions-db',
-    ...academic,
-    subjectCode: paper.subject.code,
-    topic: question.topic,
-    year: paper.year,
-    session: paper.session,
-    paper: paperLabel(paper.paperNumber, paper.variant),
-    documentType: kind === 'markscheme' ? 'mark-scheme' : 'question-paper',
-    visibility: 'platform',
-    extractionState: paper.processedAt ? 'ready' : 'partial',
-    extractedAt: paper.processedAt ? new Date(paper.processedAt) : null,
-    metadata: {
-      pairKey,
-      pairedSourceRecordId: paired ? String(paired.id) : null,
-      questionNumber: question.number,
-      part: question.part,
-      subPart: question.subPart,
-      marks: question.marks,
-      official: true,
-      paperId: paper.id,
-      paired: Boolean(paired),
-    },
-  });
-}
-
 /**
  * Index one bank question, and its mark scheme as a second document.
  *
@@ -649,11 +584,10 @@ async function pruneStaleDocuments(startedAt: Date, prefixes: string[]) {
 export async function reindexRagCorpus(options: { userId?: string; includeCompetition?: boolean } = {}) {
   const startedAt = new Date();
   const ownerFilter = options.userId ? { userId: options.userId } : undefined;
-  const [notes, cloudDocuments, resources, questions, bankQuestions, competition, announcements, discussionThreads, pastPapers] = await Promise.all([
+  const [notes, cloudDocuments, resources, bankQuestions, competition, announcements, discussionThreads, pastPapers] = await Promise.all([
     prisma.note.findMany({ where: ownerFilter, select: { id: true } }),
     prisma.cloudDocument.findMany({ where: options.userId ? { ownerId: options.userId } : undefined, select: { id: true } }),
     prisma.schoolResource.findMany({ select: { id: true } }),
-    prisma.pastPaperQuestion.findMany({ select: { id: true } }),
     // Only published questions. `needs_review` transcriptions are excluded by
     // indexBankQuestion anyway; filtering here saves enumerating ~19k of them.
     options.userId ? Promise.resolve([]) : prisma.bankQuestion.findMany({ where: { status: 'published' }, select: { id: true } }),
@@ -668,7 +602,6 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   await processIds(notes.map((row) => row.id), indexNote);
   await processIds(cloudDocuments.map((row) => row.id), indexCloudDocument);
   await processIds(resources.map((row) => row.id), indexSchoolResource);
-  await processIds(questions.map((row) => row.id), indexPastPaperQuestion);
   await processIds(bankQuestions.map((row) => row.id), indexBankQuestion);
   await processIds(competition.map((row) => row.id), indexCompetitionQuestion);
   await processIds(announcements.map((row) => row.id), indexAnnouncement);
@@ -678,11 +611,21 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   // A per-user rebuild sees only that user's rows, so everyone else's documents
   // would look stale to it. Pruning belongs to the full rebuild alone.
   //
-  // 'shared-note:' and 'page:' stay in this list even though nothing indexes
-  // them anymore -- the community shared-notes feature and, on 28 Sep 2026,
-  // the notebook were both removed. Keeping the prefixes is what gets their
-  // leftover documents pruned by the next full rebuild; dropping them would
-  // strand those documents in the index permanently.
+  // 'shared-note:', 'page:' and 'past-paper-question:' stay in this list even
+  // though nothing indexes them anymore -- the community shared-notes feature,
+  // the notebook, and on 29 Sep 2026 the legacy question documents were all
+  // removed. Keeping the prefixes is what gets their leftover documents pruned
+  // by the next full rebuild; dropping them would strand those documents in
+  // the index permanently.
+  //
+  // Why the legacy question documents went: their route was
+  // `/?tab=questions-db&qid=`, which opens the old text-corpus browser. The id
+  // in it belongs to that corpus and means nothing to the crop-first bank, so
+  // such a citation could not be repointed at the bank -- only stopped from
+  // being made. Indexing them meant a search result or an AI citation dropped a
+  // student into a browser the platform no longer practises on. The paper
+  // *catalogue* ('past-paper:') is untouched: it routes to /papers/[id], which
+  // is a live surface.
   const prefixes = options.userId
     ? []
     : [
@@ -705,7 +648,7 @@ export async function reindexRagCorpus(options: { userId?: string; includeCompet
   return {
     indexed:
       notes.length + cloudDocuments.length + resources.length +
-      questions.length + bankQuestions.length + competition.length +
+      bankQuestions.length + competition.length +
       announcements.length + discussionThreads.length + pastPapers.length,
     pruned,
     ...manifests,
