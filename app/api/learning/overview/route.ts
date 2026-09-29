@@ -165,7 +165,14 @@ export async function GET(req: NextRequest) {
     prisma.reviewItem.findMany({
       where: {
         userId: user.id,
-        ...(subjectFilter ? { subject: subjectFilter } : {}),
+        // Not narrowed by `courseScope` either, and this one was user-visible
+        // as a dead button. Review cards carry a subject *name* taken from the
+        // question ("Biology", "0610"), which never matches the enrolled IB
+        // catalogue names, so the lookup behind the notebook's "In review"
+        // state found nothing. Every row then offered "Add review" forever:
+        // the POST succeeded, the card was written, and the row never changed,
+        // which is indistinguishable from a broken button. 131 of 135 cards
+        // were also unreachable in the review queue itself.
       // Cards whose answer is the old placeholder string are unanswerable and
       // must not be served. `scripts/repair-placeholder-reviews.ts` clears the
       // rows; this keeps any that survive out of the queue, and costs nothing
