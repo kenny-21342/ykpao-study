@@ -20,6 +20,11 @@ on:
     # After the nightly backup, so a failure has a fresh snapshot behind it.
     - cron: '30 3 * * *'
   workflow_dispatch:
+    inputs:
+      folder_fixtures:
+        description: 'Run the folder specs (leaves folders in the LIVE library that only an admin can remove)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -94,7 +99,13 @@ jobs:
       # design and this suite runs as a student. Unattended, that left test
       # scaffolding sitting in a shelf the whole year group can see, every
       # night. So they run only when a human asks for them.
-      E2E_FOLDER_FIXTURES: ${{ github.event_name == 'workflow_dispatch' }}
+      #
+      # That ask is now the checkbox on the Run workflow button, not the mere
+      # fact of dispatching. Keying it to `github.event_name` meant the only
+      # way to run the suite by hand was also the way that dirtied production,
+      # so nobody could re-run a failed nightly without leaving litter -- and
+      # on 29 Sep that stopped a red nightly from being re-checked at all.
+      E2E_FOLDER_FIXTURES: ${{ inputs.folder_fixtures == true }}
     steps:
       - name: Validate configuration
         shell: bash

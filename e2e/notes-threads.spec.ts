@@ -1,44 +1,23 @@
 import { test, expect } from '@playwright/test';
 import { record, attachDiagnostics } from './helpers';
 
-test.describe('notes', () => {
-  test('the materials workspace renders for a signed-in student', async ({ page }, testInfo) => {
+test.describe('materials', () => {
+  test('the materials tab renders for a signed-in student', async ({ page }, testInfo) => {
     const r = record(page);
     await page.goto('/?tab=materials');
     await expect(page.getByRole('heading', { name: /^Materials$/ }).first()).toBeVisible({ timeout: 90_000 });
-    // The view toggle in the Materials header (other panes reuse these words).
-    //
-    // Addressed through the radiogroup rather than "the last div containing the
-    // heading". Two things broke that: the toggle moved into PageHeader's
-    // `actions`, which is a SIBLING of the div wrapping the h1, so the old
-    // locator could never reach it; and SegmentedControl renders role="radio"
-    // inside role="radiogroup", not plain buttons, so getByRole('button') would
-    // have missed it wherever it sat. The aria-label is the stable handle.
-    const toggle = page.getByRole('radiogroup', { name: /materials view/i });
-    const notebookTab = toggle.getByRole('radio', { name: 'Notebook', exact: true }).first();
-    const libraryTab = toggle.getByRole('radio', { name: 'Library', exact: true }).first();
-    await expect(notebookTab).toBeVisible();
-
-    // Switch to the library and back; both panes must mount without throwing.
-    await libraryTab.click();
-    await page.waitForTimeout(3000);
-    await notebookTab.click();
-    await page.waitForTimeout(3000);
-
     expect(r.pageErrors, 'uncaught exceptions in the materials tab').toEqual([]);
     await attachDiagnostics(testInfo, r, page);
   });
 
-  test('note and page APIs answer an authenticated student', async ({ page }) => {
+  // `935f6ec` removed the Notebook -> Section -> Page workspace, so /api/pages,
+  // /api/notebooks and /api/page-drawings are gone and the Notebook/Library
+  // toggle no longer exists. The assertions against them were left behind and
+  // failed the nightly run every night from 28 Sep. The legacy flat note API
+  // survived the removal, so it is what remains worth asserting here.
+  test('the note API answers an authenticated student', async ({ page }) => {
     const notes = await page.request.get('/api/notes');
     expect(notes.status(), 'GET /api/notes').toBe(200);
-
-    // /api/pages is a single-page read; without pageId a 400 is the contract.
-    const pages = await page.request.get('/api/pages');
-    expect(pages.status(), 'GET /api/pages without pageId').toBe(400);
-
-    const notebooks = await page.request.get('/api/notebooks');
-    expect(notebooks.status(), 'GET /api/notebooks').toBe(200);
   });
 });
 
