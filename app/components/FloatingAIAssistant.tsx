@@ -32,6 +32,7 @@ import { useConfirm } from './useConfirm';
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import type { AIActionProposalPayload, AIActionProposalView, CorpusCoverage, IntakeQuestion } from '@/lib/copilot-types';
+import { looksLikePlan } from '@/lib/plan-detection';
 import TutorModelPicker, { readSavedTutorModel } from '@/app/components/TutorModelPicker';
 import type { SharedModelChoice } from '@/lib/shared-models';
 
@@ -571,6 +572,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
                     {message.corpusCoverage && <CoverageIndicator coverage={message.corpusCoverage} />}
                     {message.needsInput && message.needsInput.length > 0 && <IntakeCard questions={message.needsInput} onSubmit={(details) => { setUserInput(details); window.setTimeout(() => inputRef.current?.focus(), 0); }} />}
                     {message.actionData?.eligibleCourses && message.actionData.eligibleCourses.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{message.actionData.eligibleCourses.map((course) => <button key={course.id} onClick={() => changeCourse(course.id)} className="rounded-md border border-accent-border bg-surface px-2 py-1 text-[11px] font-semibold text-accent-text hover:bg-accent-subtle">{course.name} · {course.level}</button>)}</div>}
+                    {message.role === 'assistant' && !message.actionData?.proposal && looksLikePlan(message.text) && <SchedulePlanButton answer={message.text} conversationId={conversationId} onProposal={(proposal) => setChatHistory((items) => items.map((item) => item.id === message.id ? { ...item, actionData: { ...item.actionData, proposal } } : item))} />}
                     {message.actionData && <ActionResult data={message.actionData} onNavigate={navigate} onProposalUpdate={(proposal) => setChatHistory((items) => items.map((item) => item.id === message.id ? { ...item, actionData: { ...item.actionData, proposal }, corpusCoverage: proposal.payload.corpusCoverage || item.corpusCoverage } : item))} />}
                     {message.sources && message.sources.length > 0 && (
                       <details className="mt-1.5 rounded-md border border-line bg-surface text-left">
@@ -628,6 +630,55 @@ function CoverageIndicator({ coverage }: { coverage: CorpusCoverage }) {
 function IntakeCard({ questions, onSubmit }: { questions: IntakeQuestion[]; onSubmit: (details: string) => void }) {
   const [values, setValues] = useState<Record<string, string>>({});
   return <div className="mt-2 rounded-md border border-warning-border bg-warning-subtle p-3 text-left"><p className="text-xs font-bold text-warning">A few details will make this plan useful</p><div className="mt-2 space-y-2">{questions.map((question) => <label key={question.key} className="block"><span className="mb-1 block text-[10px] font-semibold uppercase text-warning">{question.label}</span>{question.type === 'select' ? <select value={values[question.key] || ''} onChange={(event) => setValues((current) => ({ ...current, [question.key]: event.target.value }))} className="h-8 w-full rounded-sm border border-warning-border bg-surface px-2 text-xs"><option value="">Select</option>{question.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input type={question.type} value={values[question.key] || ''} onChange={(event) => setValues((current) => ({ ...current, [question.key]: event.target.value }))} placeholder={question.prompt} className="h-8 w-full rounded-sm border border-warning-border bg-surface px-2 text-xs" />}</label>)}</div><button onClick={() => onSubmit(`Planning details: ${questions.map((question) => `${question.label}: ${values[question.key] || 'not provided'}`).join('; ')}`)} className="mt-3 flex h-8 items-center gap-1.5 rounded-sm bg-warning px-2.5 text-[11px] font-bold text-white hover:bg-warning"><Send className="h-3.5 w-3.5" /> Use these details</button></div>;
+}
+
+/**
+ * "Schedule this plan" — the entrance to the proposal pipeline that chat never
+ * had. `app/api/ai/rag-chat/route.ts` attaches a draft proposal itself, but
+ * only when the intent classifier says `planning` *and* no intake question is
+ * outstanding, and those two conditions are mutually exclusive in practice (see
+ * `lib/plan-detection.ts` for the details). So a student who asks "what should
+ * I study today?" gets a good plan and no way to act on it.
+ *
+ * This button keys off the answer instead of the question: if the assistant
+ * wrote something plan-shaped, offer to schedule it. It only creates a draft —
+ * the existing `ProposalCard` below is what the student edits and confirms, so
+ * nothing reaches the schedule without a second, explicit press.
+ */
+function SchedulePlanButton({ answer, conversationId, onProposal }: { answer: string; conversationId: string | null; onProposal: (proposal: AIActionProposalView) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const schedule = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/ai/plan-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer, conversationId: conversationId || undefined }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'The plan could not be prepared.');
+      onProposal(data.proposal);
+    } catch (planError) {
+      setError(planError instanceof Error ? planError.message : 'The plan could not be prepared.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => void schedule()}
+        disabled={busy}
+        className="flex h-7 items-center gap-1.5 rounded-sm border border-accent-border bg-accent-subtle px-2 text-[10px] font-bold text-accent-text hover:bg-accent-subtle/70 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarRange className="h-3 w-3" />}
+        Schedule this plan
+      </button>
+      {error && <p className="mt-1 text-[10px] text-danger">{error}</p>}
+    </div>
+  );
 }
 
 function ProposalCard({ proposal, onUpdate, onNavigate }: { proposal: AIActionProposalView; onUpdate: (proposal: AIActionProposalView) => void; onNavigate: (tab: NavigableTab, questionId?: number, view?: 'today' | 'plan' | 'mistakes' | 'review' | 'mastery' | 'search') => void }) {

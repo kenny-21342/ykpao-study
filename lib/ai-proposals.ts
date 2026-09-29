@@ -297,3 +297,74 @@ export async function applyAIActionProposal(userId: string, proposalId: string) 
   });
   return { proposal: toProposalView(result.proposal), result: result.result };
 }
+
+/**
+ * Build a draft from a plan the assistant already wrote in chat.
+ *
+ * `createAIActionProposal` above builds tasks from the *corpus* — it reads the
+ * student's focus topics and candidate questions and ignores the assistant's
+ * prose entirely (`request` is only regex-scanned for a date and a weekly
+ * budget). That is the right behaviour for "make me a study week", but it is
+ * the wrong behaviour for "turn *this* answer into tasks": the student is
+ * pointing at specific advice, and rebuilding something else from the corpus
+ * would quietly substitute a different plan for the one they just read.
+ *
+ * So this path carries the parsed steps through verbatim, and attaches no
+ * questions and no mock exam. `applyAIActionProposal` handles that: with no
+ * `sourceRef.type === 'question'` task and no `payload.mockExam`, it creates
+ * `StudyTask` rows and nothing else, so the draft has no corpus dependency and
+ * cannot fail on an unavailable question.
+ */
+export async function createPlanProposal(input: {
+  userId: string;
+  conversationId?: string;
+  steps: { title: string; topic: string; taskType: ProposalTask['taskType']; dayOffset: number; durationMinutes: number }[];
+  subjectCode?: string;
+}): Promise<AIActionProposalView> {
+  const profile = await prisma.learningProfile.findUnique({ where: { userId: input.userId } });
+  const subject = input.subjectCode || profile?.subjectCode || 'Study';
+  const tasks = input.steps.map((step) => createTask({
+    title: step.title,
+    subject,
+    topic: step.topic,
+    taskType: step.taskType,
+    sourceRef: { type: 'chat-plan', label: 'From the assistant’s plan in chat' },
+    dueAt: taskDate(step.dayOffset),
+    durationMinutes: step.durationMinutes,
+  }));
+  const totalMinutes = tasks.reduce((sum, task) => sum + task.durationMinutes, 0);
+  const lastOffset = input.steps.reduce((max, step) => Math.max(max, step.dayOffset), 0);
+  const payload: AIActionProposalPayload = {
+    version: 1,
+    action: 'chat-plan',
+    title: 'Schedule this plan',
+    summary: `${tasks.length} ${tasks.length === 1 ? 'activity' : 'activities'} read from the answer above, ${totalMinutes} minutes in total. Edit anything before confirming.`,
+    milestones: milestoneDates(profile?.examDate ?? null),
+    tasks,
+    questions: [],
+    materials: [],
+    mockExam: undefined,
+    assumptions: [
+      lastOffset > 0
+        ? `Dates run from today over ${lastOffset + 1} days, taken from the plan’s own day and week labels.`
+        : 'Every task is scheduled for today, because the plan gave no days.',
+      'Durations stated in the plan are kept; anything unstated defaults to 30 minutes.',
+    ],
+    limitations: [
+      'These tasks came from the assistant’s wording, not from the official question bank, so none of them links to a specific past-paper question.',
+      'The plan was read by pattern rather than re-read by the model, so check the wording before confirming.',
+    ],
+    corpusCoverage: undefined,
+  };
+  const proposal = await prisma.aIActionProposal.create({
+    data: {
+      ownerId: input.userId,
+      conversationId: input.conversationId,
+      actionType: 'chat-plan',
+      payload: payload as unknown as Prisma.InputJsonValue,
+      idempotencyKey: randomUUID(),
+      expiresAt: new Date(Date.now() + PROPOSAL_TTL_MS),
+    },
+  });
+  return toProposalView(proposal);
+}
