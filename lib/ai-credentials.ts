@@ -306,8 +306,45 @@ export function siliconflowKey(): string {
   return process.env.V3_OPENAI_API_KEY || '';
 }
 
-/** The shared vision credential — SiliconFlow first, then Gemini, as before. */
+/**
+ * The shared vision credential — the gateway when it is configured for vision,
+ * then SiliconFlow, then Gemini.
+ *
+ * The gateway that serves the shared *text* models also serves vision on the
+ * same key and endpoint. Verified 29 Sep 2026 against gpt-6-astra, gpt-5.5 and
+ * gpt-5.6-sol: each read a question out of a PNG, returned the grader's full
+ * JSON schema and marked it correctly, at ~9-11s and ~625 prompt tokens for a
+ * 700x260 image. It needs no new provider code -- `callOpenAiCompatible`
+ * already sends `image_url` parts, which is exactly what the gateway accepts.
+ *
+ * That matters because the two existing shared vision paths are both in doubt:
+ * SiliconFlow's last successful call was 18 days before that date, and every
+ * current Gemini flash model answered 503 "experiencing high demand" except
+ * gemini-3.6-flash.
+ *
+ * Opt-in via `SHARED_AI_VISION_MODEL`, and first when set: naming a vision
+ * model is an explicit choice to route vision at the gateway, and leaving it
+ * unset gives exactly the previous behaviour. One env var switches it back.
+ *
+ * One caveat worth knowing before reading a refusal as a vision failure: these
+ * models decline to transcribe anything presented as a *code* from an image
+ * (the CAPTCHA guardrail), answering "I can't chat about this" with a 200. Ask
+ * them to read a question, not to read a code.
+ */
 export function sharedVisionCredential(): VisionCredential | null {
+  const gatewayModel = (process.env.SHARED_AI_VISION_MODEL || '').trim();
+  const gatewayKey = process.env.SHARED_AI_API_KEY || process.env.DEEPSEEK_API_KEY;
+  const gatewayBase = process.env.SHARED_AI_BASE_URL || process.env.DEEPSEEK_API_URL;
+  if (gatewayModel && gatewayKey && gatewayBase) {
+    return {
+      source: 'shared',
+      provider: 'openai-compatible',
+      apiKey: gatewayKey,
+      endpoint: toChatCompletionsUrl(gatewayBase),
+      model: gatewayModel,
+    };
+  }
+
   const siliconflow = siliconflowKey();
   if (siliconflow) {
     return {
