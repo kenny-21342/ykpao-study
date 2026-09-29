@@ -20,6 +20,9 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   onboardedAt   DateTime? // null = hasn't completed the welcome wizard yet
+  // null = hasn't seen the post-onboarding tour. Existing accounts were
+  // stamped by 20260929160000_user_tour_completed so only new ones get it.
+  tourCompletedAt DateTime?
   unlocks       String[]  @default([]) // easter-egg unlocks, e.g. ["competition"]
   // Orphaned: the BetterNotes sync layer that minted and read this was
   // removed. Kept only so no migration drops a column that still holds data;

@@ -21,14 +21,12 @@ import {
   CheckCircle2,
   ChevronDown,
   Circle,
-  FileSearch,
   GraduationCap,
   Layers,
   ListChecks,
   Loader2,
   Plus,
   RefreshCw,
-  Search,
   Settings2,
   Sparkles,
   Target,
@@ -42,7 +40,7 @@ import { plainTextPreview } from '@/lib/latex';
 import { describeFailedSources } from '@/lib/study-load-errors';
 import { useScreenContext } from './ScreenContext';
 
-type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery' | 'search';
+type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery';
 
 type StudyTask = {
   id: string;
@@ -170,15 +168,6 @@ type Overview = {
   summary: { topicsStarted: number; topicsMastered: number; tasksDue: number; activeReviews: number };
 };
 
-type SearchResult = {
-  id: string;
-  type: 'question' | 'markscheme' | 'note' | 'textbook' | 'resource';
-  title: string;
-  snippet: string;
-  url: string;
-  subject?: string | null;
-  topic?: string | null;
-};
 
 type TaskHandlers = {
   onOpenQuestion: (id: number) => void;
@@ -204,7 +193,6 @@ const NAV: Array<{ id: CoachView; label: string; icon: typeof CalendarDays }> = 
   { id: 'review', label: 'Review', icon: Brain },
   { id: 'decks', label: 'Cards', icon: Layers },
   { id: 'mastery', label: 'Coverage', icon: Target },
-  { id: 'search', label: 'Search', icon: Search },
 ];
 
 const DAYS = [
@@ -472,7 +460,7 @@ export default function StudyCoach({
             <button onClick={() => void load()} title="Refresh" aria-label="Refresh" className="w-9 h-9 grid place-items-center rounded-md border border-line hover:bg-surface-hover">
               <RefreshCw className="w-4 h-4" />
             </button>
-            <button onClick={() => setProfileOpen((open) => !open)} className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-line text-sm font-medium hover:bg-surface-hover">
+            <button onClick={() => setProfileOpen((open) => !open)} aria-expanded={profileOpen} className={`inline-flex items-center gap-2 h-9 px-3 rounded-md border text-sm font-medium ${profileOpen ? 'border-strong bg-surface-raised' : 'border-line hover:bg-surface-hover'}`}>
               <Settings2 className="w-4 h-4" />
               <span className="hidden sm:inline">Preferences</span>
             </button>
@@ -501,8 +489,21 @@ export default function StudyCoach({
 
       {confirmDialog}
 
+      {/* Outside the scroll container on purpose. This panel is styled as a
+        * band under the header (`border-b`, full width) and used to render as
+        * the first child of the scrolling region -- so opening it while
+        * scrolled down inserted it far above the viewport and the button
+        * looked like it did nothing. Coverage, which stacks the heatmap above
+        * the topic list, is long enough to hit this immediately. */}
+      {profileOpen && (
+        <ProfileEditor
+          profile={overview?.profile ?? null}
+          onSaved={async () => { setProfileOpen(false); await load(); }}
+          onClose={() => setProfileOpen(false)}
+        />
+      )}
+
       <div className="flex-1 overflow-y-auto">
-        {profileOpen && <ProfileEditor profile={overview?.profile ?? null} onSaved={async () => { setProfileOpen(false); await load(); }} />}
         {view === 'today' && overview && (
           <TodayView overview={overview} busy={busy} onComplete={updateTask} onOpenQuestion={onOpenQuestion} onOpenBankQuestion={onOpenBankQuestion} onOpenMockExams={onOpenMockExams} onGenerate={generatePlan} onReview={() => setView('review')} />
         )}
@@ -536,7 +537,6 @@ export default function StudyCoach({
         {view === 'mastery' && overview && (
           <MasteryView topics={overview.mastery} subjects={overview.subjects} selectedSubject={selectedSubject} setSelectedSubject={setSelectedSubject} onOpenQuestion={onOpenQuestion} queue={overview.adaptiveQueue} />
         )}
-        {view === 'search' && <SmartSearch onOpenQuestion={onOpenQuestion} />}
       </div>
     </div>
   );
@@ -803,39 +803,11 @@ function MasteryView({ topics, subjects, selectedSubject, setSelectedSubject, on
 
 function Progress({ value, color }: { value: number; color: string }) { return <div className="h-2 rounded-full bg-surface-raised overflow-hidden"><div className={`h-full ${color}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} /></div>; }
 
-function SmartSearch({ onOpenQuestion }: { onOpenQuestion: (id: number) => void }) {
-  const [query, setQuery] = useState(''); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const [searched, setSearched] = useState(false);
-  // Distinguished from "no results" so a 500 or a dropped connection doesn't
-  // masquerade as "No matching material" and send the student hunting for
-  // content that is actually there.
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const search = async (event?: React.FormEvent) => {
-    event?.preventDefault();
-    if (query.trim().length < 2) return;
-    setLoading(true); setSearched(true); setSearchError(null);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
-      if (!res.ok) {
-        setResults([]);
-        setSearchError(res.status === 429 ? 'Too many searches — wait a moment and try again.' : 'Search is unavailable right now. Please try again.');
-        return;
-      }
-      const data = await res.json();
-      setResults(data.results ?? []);
-    } catch {
-      setResults([]);
-      setSearchError('Could not reach the server. Check your connection and try again.');
-    } finally { setLoading(false); }
-  };
-  const open = (result: SearchResult) => { const match = result.id.match(/^(?:question|markscheme)-(\d+)$/); if (match) onOpenQuestion(Number(match[1])); else window.open(result.url, result.type === 'resource' ? '_blank' : '_self', 'noopener,noreferrer'); };
-  const typeIcon = (type: SearchResult['type']) => type === 'question' || type === 'markscheme' ? FileSearch : type === 'resource' ? BookOpen : FileSearch;
-  return <main className="max-w-4xl mx-auto p-4 md:p-6"><div className="mb-5"><h3 className="font-bold text-primary">Smart search</h3><p className="text-xs text-muted mt-1">Questions, mark schemes, notes, textbook pages, synced documents, and resources</p></div><form onSubmit={search} className="relative"><Search className="absolute left-4 top-3.5 w-5 h-5 text-muted" /><input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="e.g. inheritance, forces, or quadratic graphs" className="w-full h-12 pl-12 pr-28 border border-strong rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-ring/25" /><button disabled={loading || query.trim().length < 2} className="absolute right-1.5 top-1.5 h-9 px-4 bg-surface-inverse text-inverse rounded-md text-sm font-semibold disabled:opacity-50">{loading ? 'Searching...' : 'Search'}</button></form><div className="mt-6 border-y border-line divide-y divide-line">{results.map((result) => { const Icon = typeIcon(result.type); return <button key={result.id} onClick={() => open(result)} className="w-full flex items-start gap-4 py-4 px-2 text-left hover:bg-surface-hover"><span className="w-9 h-9 grid place-items-center bg-surface-raised rounded-md flex-none"><Icon className="w-4 h-4" /></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-sm font-bold text-primary">{result.title}</span><span className="text-[10px] uppercase font-bold text-accent-text">{result.type}</span></span><span className="block text-sm text-secondary line-clamp-2 mt-1">{plainTextPreview(result.snippet)}</span>{(result.subject || result.topic) && <span className="block text-xs text-muted mt-1.5">{[result.subject, result.topic].filter(Boolean).join(' · ')}</span>}</span><ArrowRight className="w-4 h-4 mt-2 text-muted flex-none" /></button>; })}</div>{searched && !loading && searchError && <EmptyState icon={AlertCircle} title="Search failed" body={searchError} />}{searched && !loading && !searchError && results.length === 0 && <EmptyState icon={Search} title="No matching material" body="Try a broader concept or a phrase from the question." />}{!searched && <div className="mt-10 text-center text-sm text-muted">Searches include your private notes only when you are signed in.</div>}</main>;
-}
 
-function ProfileEditor({ profile, onSaved }: { profile: LearningProfile | null; onSaved: () => Promise<void> }) {
+function ProfileEditor({ profile, onSaved, onClose }: { profile: LearningProfile | null; onSaved: () => Promise<void>; onClose: () => void }) {
   const [examDate, setExamDate] = useState(profile?.examDate?.slice(0, 10) ?? ''); const [weeklyMinutes, setWeeklyMinutes] = useState(profile?.weeklyStudyMinutes ?? 300); const [targetGrade, setTargetGrade] = useState(profile?.targetGrade ?? 'A'); const [availability, setAvailability] = useState<Record<string, number>>(profile?.availability ?? EMPTY_AVAILABILITY); const [saving, setSaving] = useState(false); const [error, setError] = useState<string | null>(null);
   const save = async (event: React.FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { const res = await fetch('/api/learning/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ examDate: examDate || null, weeklyStudyMinutes: Number(weeklyMinutes), targetGrade, availability }) }); if (!res.ok) throw new Error((await res.json()).error || 'Preferences could not be saved.'); await onSaved(); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Preferences could not be saved.'); } finally { setSaving(false); } };
-  return <form onSubmit={save} className="border-b border-line bg-surface-raised p-4 md:px-6"><div className="max-w-7xl mx-auto"><div className="grid md:grid-cols-[160px_140px_160px_1fr_auto] gap-3 items-end"><label className="text-xs font-semibold text-secondary">Exam date<input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="mt-1 input-field" /></label><label className="text-xs font-semibold text-secondary">Target grade<input value={targetGrade} onChange={(e) => setTargetGrade(e.target.value)} maxLength={12} className="mt-1 input-field" /></label><label className="text-xs font-semibold text-secondary">Weekly minutes<input type="number" min="60" max="2520" value={weeklyMinutes} onChange={(e) => setWeeklyMinutes(Number(e.target.value))} className="mt-1 input-field" /></label><div><p className="text-xs font-semibold text-secondary mb-1">Available minutes per day</p><div className="grid grid-cols-7 gap-1">{DAYS.map((day) => <label key={day.key} className="text-[10px] text-center text-muted">{day.label}<input type="number" min="0" max="360" value={availability[day.key] ?? 0} onChange={(e) => setAvailability({ ...availability, [day.key]: Number(e.target.value) })} className="mt-1 w-full h-9 px-1 text-center border border-strong rounded-sm bg-surface text-xs" /></label>)}</div></div><button disabled={saving} className="h-10 px-4 rounded-md bg-accent text-white text-sm font-semibold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button></div>{error && <p className="text-xs text-danger mt-2">{error}</p>}</div></form>;
+  return <form onSubmit={save} className="border-b border-line bg-surface-raised p-4 md:px-6"><div className="max-w-7xl mx-auto"><div className="grid md:grid-cols-[160px_140px_160px_1fr_auto] gap-3 items-end"><label className="text-xs font-semibold text-secondary">Exam date<input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="mt-1 input-field" /></label><label className="text-xs font-semibold text-secondary">Target grade<input value={targetGrade} onChange={(e) => setTargetGrade(e.target.value)} maxLength={12} className="mt-1 input-field" /></label><label className="text-xs font-semibold text-secondary">Weekly minutes<input type="number" min="60" max="2520" value={weeklyMinutes} onChange={(e) => setWeeklyMinutes(Number(e.target.value))} className="mt-1 input-field" /></label><div><p className="text-xs font-semibold text-secondary mb-1">Available minutes per day</p><div className="grid grid-cols-7 gap-1">{DAYS.map((day) => <label key={day.key} className="text-[10px] text-center text-muted">{day.label}<input type="number" min="0" max="360" value={availability[day.key] ?? 0} onChange={(e) => setAvailability({ ...availability, [day.key]: Number(e.target.value) })} className="mt-1 w-full h-9 px-1 text-center border border-strong rounded-sm bg-surface text-xs" /></label>)}</div></div><div className="flex items-center gap-2"><button disabled={saving} className="h-10 px-4 rounded-md bg-accent text-white text-sm font-semibold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button><button type="button" onClick={onClose} className="h-10 px-3 rounded-md border border-strong text-sm font-semibold text-secondary">Close</button></div></div>{error && <p className="text-xs text-danger mt-2">{error}</p>}</div></form>;
 }
 
 function EmptyState({ icon: Icon, title, body }: { icon: typeof Brain; title: string; body: string }) { return <div className="py-12 px-5 text-center"><Icon className="w-8 h-8 mx-auto text-muted" /><p className="text-sm font-semibold text-primary mt-3">{title}</p><p className="text-xs text-muted mt-1 max-w-sm mx-auto">{body}</p></div>; }

@@ -14,7 +14,7 @@
  * (one spelling per destination), which is what makes them inverses.
  */
 
-export type StudyCoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'mastery' | 'search';
+export type StudyCoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'mastery';
 export type PracticeMode = 'browse' | 'practice';
 export type MainTab = 'dashboard' | 'study' | 'practice' | 'materials' | 'mock-exams' | 'discussions';
 
@@ -40,8 +40,16 @@ export type RoutedTab = {
   subjectCode?: string | null;
 };
 
+/**
+ * `search` was a study view until 29 Sep 2026. It is gone, and deliberately
+ * not aliased: an old `?tab=study&view=search` link falls through the check at
+ * `parseRoute` and lands on `today`, which is a real page. Study's search box
+ * queried exactly the same `/api/search` as the Cmd+K palette, so it was a
+ * second front door to one room -- and its result opener passed bank question
+ * ids to the legacy question browser, which opens an unrelated question.
+ */
 export const STUDY_VIEWS = new Set<StudyCoachView>([
-  'today', 'plan', 'mistakes', 'review', 'mastery', 'search',
+  'today', 'plan', 'mistakes', 'review', 'mastery',
 ]);
 
 /** The one spelling each destination is written back as. */

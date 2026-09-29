@@ -150,7 +150,21 @@ function intakeQuestions(input: {
   if (!input.intent.subject && !input.intent.subjectCode && !profile?.subjectCode && input.courseCount !== 1) questions.push({ key: 'subject', label: 'Subject', prompt: 'Which subject should the plan cover?', type: 'text' });
   if (!input.intent.level && !profile?.level && input.courseCount === 0) questions.push({ key: 'level', label: 'Level', prompt: 'What level are you taking?', type: 'text' });
   if (!profile?.examDate && !/\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\bexam date\b/.test(text)) questions.push({ key: 'examDate', label: 'Exam date', prompt: 'When is the exam?', type: 'date' });
-  if (!/\b(target|aim|achieve|grade)\s*(a\*|a|b|c|[1-7])\b/i.test(input.message) && (!profile || profile.targetGrade === 'A')) questions.push({ key: 'targetGrade', label: 'Target grade', prompt: 'What grade are you aiming for?', type: 'text' });
+  /*
+   * Target grade is deliberately NOT asked for here.
+   *
+   * `LearningProfile.targetGrade` is written as 'A' when the row is created --
+   * and `GET /api/learning/profile` upserts the row, so every student has one
+   * before they have chosen anything. That makes a saved 'A' indistinguishable
+   * from an unanswered one, so the old condition (`profile.targetGrade === 'A'`)
+   * asked a student aiming for an A what grade they were aiming for, took their
+   * answer, stored 'A', and asked again next time. It could never be satisfied.
+   *
+   * It is also the weakest of these signals: a target grade reaches nothing but
+   * the course card's label and one line of the tutor's system prompt. If it is
+   * ever made to affect question difficulty or plan intensity, give it a
+   * nullable column first so "unset" is a state that can be observed.
+   */
   if (!profile?.currentLevel && !/\b(current|recent|score|result|mark|grade)\b/i.test(input.message)) questions.push({ key: 'currentLevel', label: 'Current level', prompt: 'What is your current level or recent result?', type: 'text' });
   if (!profile?.weeklyStudyMinutes && !/\b(minute|hour|hours|weekly|week)\b/i.test(input.message)) questions.push({ key: 'weeklyStudyMinutes', label: 'Weekly time', prompt: 'How many minutes can you study each week?', type: 'number' });
   return questions.slice(0, 6);

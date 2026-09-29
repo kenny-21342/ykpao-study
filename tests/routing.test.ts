@@ -11,7 +11,7 @@ import {
 } from '../app/components/routing.ts';
 
 const TABS: MainTab[] = ['dashboard', 'study', 'practice', 'materials', 'mock-exams', 'discussions'];
-const VIEWS: StudyCoachView[] = ['today', 'plan', 'mistakes', 'review', 'mastery', 'search'];
+const VIEWS: StudyCoachView[] = ['today', 'plan', 'mistakes', 'review', 'mastery'];
 
 /**
  * parseRoute fills defaults that a caller may have left off, so compare the
@@ -146,4 +146,13 @@ test('a subject code that cannot be a syllabus code is dropped, not forwarded', 
       `expected ${JSON.stringify(bad)} to be rejected`,
     );
   }
+});
+
+test('a retired study view falls back to today rather than a blank page', () => {
+  // `view=search` was a real destination until the Study search box was
+  // removed as a duplicate of the Cmd+K palette. Links to it are still out
+  // there, in old AI citations among other places.
+  const parsed = parseRoute('?tab=study&view=search');
+  assert.ok(parsed);
+  assert.equal(parsed.studyView, 'today');
 });

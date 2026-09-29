@@ -20,7 +20,7 @@ export async function GET() {
 
   await ensureCourseCatalog();
   const [freshUser, courses, enrollments] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id }, select: { onboardedAt: true } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { onboardedAt: true, tourCompletedAt: true } }),
     prisma.course.findMany({
       where: { OR: [{ catalogManaged: true }, { users: { some: { userId: user.id } } }] },
       include: { curriculumScopes: true },
@@ -31,6 +31,10 @@ export async function GET() {
 
   return NextResponse.json({
     onboarded: freshUser?.onboardedAt != null,
+    // The shell shows the guided tour when the student is onboarded but has
+    // not yet finished or dismissed it. Accounts that predate the feature were
+    // stamped by 20260929160000_user_tour_completed, so this is false for them.
+    tourCompleted: freshUser?.tourCompletedAt != null,
     enrolledCourseIds: enrollments.map((e) => e.courseId),
     enrollments,
     courses: courses.map((c) => ({
@@ -65,6 +69,13 @@ const Body = z.object({
    * requires at least one subject.
    */
   skip: z.literal(true).optional(),
+  /**
+   * Mark the post-onboarding tour finished or dismissed. Sent on its own, and
+   * deliberately separate from `skip`: a student who skips subject selection
+   * should still be shown around, and one who finishes the tour must not have
+   * their enrollments touched.
+   */
+  tourCompleted: z.literal(true).optional(),
 });
 
 /**
@@ -87,7 +98,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const { courseIds = [], courses = [], name, skip } = parsed;
+  const { courseIds = [], courses = [], name, skip, tourCompleted } = parsed;
+
+  // Stamped on its own, before the skip and enrollment paths, so finishing the
+  // tour never implies anything about subject selection either way.
+  if (tourCompleted) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { tourCompletedAt: new Date() },
+    });
+    return NextResponse.json({ ok: true, tourCompleted: true });
+  }
 
   // Skipping stamps `onboardedAt` and touches nothing else: no enrollments are
   // created and none are removed, so a user who skips keeps whatever they

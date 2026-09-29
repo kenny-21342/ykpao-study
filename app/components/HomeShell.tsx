@@ -18,6 +18,7 @@ import {
 import AppSidebar, { SidebarScrim, useSidebarChrome } from './AppSidebar';
 import FloatingAIAssistant from './FloatingAIAssistant';
 import OnboardingWizard from './OnboardingWizard';
+import ProductTour from './ProductTour';
 import QuestionsDatabase from './QuestionsDatabase';
 import BankPractice from './BankPractice';
 import MockExams from './MockExams';
@@ -294,6 +295,10 @@ export default function SmartEduPlatform() {
 
   // Onboarding wizard — show once for users who haven't completed it.
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // The walkthrough runs after onboarding, never beside it: two overlays at
+  // once is what makes a first visit feel like a fight. Accounts that predate
+  // the feature were stamped done by the migration, so this stays false.
+  const [showTour, setShowTour] = useState(false);
   // Bumped to force a dashboard refresh (e.g. after onboarding completes).
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -349,6 +354,8 @@ export default function SmartEduPlatform() {
       }
       if (onb && onb.onboarded === false) {
         setShowOnboarding(true);
+      } else if (onb && onb.tourCompleted === false) {
+        setShowTour(true);
       }
     });
     return () => { cancelled = true; };
@@ -681,7 +688,7 @@ export default function SmartEduPlatform() {
                   ? 'bg-accent text-white'
                   : 'text-secondary hover:bg-surface-hover'
               }`}
-              title="AI Tutor" aria-label="AI Tutor"
+              title="AI Tutor" aria-label="AI Tutor" data-tour="ai-tutor"
             >
               <Sparkles className="w-5 h-5" />
             </button>
@@ -975,11 +982,18 @@ export default function SmartEduPlatform() {
         <OnboardingWizard
           onComplete={() => {
             setShowOnboarding(false);
+            // Straight into the walkthrough: the wizard has just asked which
+            // subjects they take, and this is the moment to show them where
+            // those subjects live.
+            setShowTour(true);
             // Re-fetch dashboard now that the user has enrolled in courses.
             setRefreshTick((n) => n + 1);
           }}
         />
       )}
+
+      {/* Guided walkthrough of the shell, once per account. */}
+      {showTour && !showOnboarding && <ProductTour onFinish={() => setShowTour(false)} />}
     </div>
     </ScreenContextProvider>
   );

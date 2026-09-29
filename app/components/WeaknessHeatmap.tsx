@@ -6,15 +6,8 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-type TopicRow = {
-  key: string;
-  subject: string;
-  topic: string;
-  total: number;
-  correct: number;
-  accuracy: number;
-  mastery: number;
-};
+import { groupTopicsBySubject, type TopicRow } from '@/lib/weakness-grouping';
+
 
 type SubjectRow = {
   subject: string;
@@ -22,6 +15,7 @@ type SubjectRow = {
   correct: number;
   accuracy: number;
 };
+
 
 type Recommended = {
   id: number;
@@ -53,10 +47,19 @@ function bandFor(acc: number): { bg: string; text: string; label: string } {
   return { bg: 'bg-band-1', text: 'text-inverse', label: 'Critical' };
 }
 
+
 export default function WeaknessHeatmap() {
   const [data, setData] = useState<WeaknessData | null>(null);
   const [loading, setLoading] = useState(true);
   const [practicing, setPracticing] = useState(false);
+  const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set());
+  const toggleSubject = (subject: string) =>
+    setCollapsedSubjects((current) => {
+      const next = new Set(current);
+      if (next.has(subject)) next.delete(subject);
+      else next.add(subject);
+      return next;
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -122,6 +125,8 @@ export default function WeaknessHeatmap() {
       </div>
     );
   }
+
+  const grouped = groupTopicsBySubject(data.topics);
 
   const sourceSummary = data.sources
     ? [
@@ -204,18 +209,53 @@ export default function WeaknessHeatmap() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {data.topics.map((t) => {
-            const band = bandFor(t.accuracy);
+        {/* Grouped by subject rather than one flat grid. The API sorts topics
+          * worst-first, but a student with a full timetable has 140+ of them
+          * and most share an accuracy, so the ties made the order look
+          * arbitrary and the only clue to which subject a tile belonged was
+          * its tooltip. Each subject is now its own labelled, collapsible
+          * block, still weakest-first inside and between. */}
+        <div className="space-y-4">
+          {grouped.map((group) => {
+            const collapsed = collapsedSubjects.has(group.subject);
+            const band = bandFor(group.accuracy);
             return (
-              <div
-                key={t.key}
-                className={`rounded-lg p-3 ${band.bg} ${band.text} transition-transform hover:scale-[1.03] cursor-default`}
-                title={`${t.subject} · ${t.topic} — ${t.accuracy}% (${t.correct}/${t.total})`}
-              >
-                <p className="text-[11px] font-medium opacity-90 truncate">{t.topic}</p>
-                <p className="text-lg font-bold mt-0.5">{t.accuracy}%</p>
-                <p className="text-[10px] opacity-80">{t.total} attempts</p>
+              <div key={group.subject}>
+                <button
+                  type="button"
+                  onClick={() => toggleSubject(group.subject)}
+                  aria-expanded={!collapsed}
+                  className="mb-2 flex w-full items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-surface-hover"
+                >
+                  <ChevronRight
+                    className={`h-4 w-4 flex-none text-muted transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                  />
+                  <span className="text-sm font-bold text-primary">{group.subject}</span>
+                  <span className={`rounded-sm px-1.5 py-0.5 text-[10px] font-bold ${band.bg} ${band.text}`}>
+                    {group.accuracy}%
+                  </span>
+                  <span className="text-xs text-muted">
+                    {group.topics.length} {group.topics.length === 1 ? 'topic' : 'topics'}
+                  </span>
+                </button>
+                {!collapsed && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {group.topics.map((t) => {
+                      const topicBand = bandFor(t.accuracy);
+                      return (
+                        <div
+                          key={t.key}
+                          className={`rounded-lg p-3 ${topicBand.bg} ${topicBand.text} transition-transform hover:scale-[1.03] cursor-default`}
+                          title={`${t.subject} · ${t.topic} — ${t.accuracy}% (${t.correct}/${t.total})`}
+                        >
+                          <p className="text-[11px] font-medium opacity-90 truncate">{t.topic}</p>
+                          <p className="text-lg font-bold mt-0.5">{t.accuracy}%</p>
+                          <p className="text-[10px] opacity-80">{t.total} attempts</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

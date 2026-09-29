@@ -282,7 +282,7 @@ export default function AppSidebar({
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          title="Search (⌘K)" aria-label="Search (⌘K)"
+          title="Search (⌘K)" aria-label="Search (⌘K)" data-tour="search"
           className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 text-sm font-medium rounded-lg text-secondary hover:bg-surface-hover transition-all duration-200`}
         >
           <span className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
@@ -304,7 +304,7 @@ export default function AppSidebar({
             viewer at /papers/[id] navigates away from the shell anyway. */}
         <Link
           href="/papers"
-          title="Past Papers" aria-label="Past Papers"
+          title="Past Papers" aria-label="Past Papers" data-tour="nav-papers"
           className={itemClass(active === 'papers')}
           onClick={onCloseMobile}
         >
@@ -473,13 +473,13 @@ function NavItem({
 
   if (onNavigate) {
     return (
-      <button onClick={() => onNavigate(tab)} title={label} aria-label={label} className={className}>
+      <button onClick={() => onNavigate(tab)} title={label} aria-label={label} data-tour={`nav-${tab}`} className={className}>
         {body}
       </button>
     );
   }
   return (
-    <Link href={`/?tab=${tab}`} title={label} aria-label={label} className={className} onClick={onCloseMobile}>
+    <Link href={`/?tab=${tab}`} title={label} aria-label={label} data-tour={`nav-${tab}`} className={className} onClick={onCloseMobile}>
       {body}
     </Link>
   );
