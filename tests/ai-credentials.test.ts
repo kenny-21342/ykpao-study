@@ -201,6 +201,29 @@ function withoutSharedKey<T>(fn: () => T): T {
   }
 }
 
+/** Run a body with the shared key opened to every signed-in account. */
+function withOpenToAll<T>(fn: () => T): T {
+  const before = process.env.SHARED_AI_OPEN_TO_ALL;
+  process.env.SHARED_AI_OPEN_TO_ALL = 'on';
+  try {
+    return fn();
+  } finally {
+    if (before === undefined) delete process.env.SHARED_AI_OPEN_TO_ALL;
+    else process.env.SHARED_AI_OPEN_TO_ALL = before;
+  }
+}
+
+/** Run a body with the shared key restricted to granted accounts only. */
+function withoutOpenToAll<T>(fn: () => T): T {
+  const before = process.env.SHARED_AI_OPEN_TO_ALL;
+  delete process.env.SHARED_AI_OPEN_TO_ALL;
+  try {
+    return fn();
+  } finally {
+    if (before !== undefined) process.env.SHARED_AI_OPEN_TO_ALL = before;
+  }
+}
+
 test('a user with their own key uses it, not the owner’s', () => {
   withSharedKey(() => {
     const resolved = resolveFromRow(ownKeyRow());
@@ -219,7 +242,10 @@ test('a user with their own key uses it, not the owner’s', () => {
 });
 
 test('an account with no row at all gets nothing, even when a shared key exists', () => {
-  withSharedKey(() => {
+  // Only while the key is restricted to granted accounts. The open-to-all case
+  // is the test below, and is what production runs -- pinned explicitly here so
+  // this one cannot start passing or failing on an ambient environment.
+  withoutOpenToAll(() => withSharedKey(() => {
     const resolved = resolveFromRow(null);
     assert.equal(resolved.text, null);
     assert.equal(resolved.vision, null);
@@ -228,7 +254,46 @@ test('an account with no row at all gets nothing, even when a shared key exists'
     const gate = gateText(resolved);
     assert.equal(gate.ok, false);
     assert.equal(gate.ok === false && gate.reason, 'no-credentials');
-  });
+  }));
+});
+
+/*
+ * The path every new student takes on their first day.
+ *
+ * Signup creates no `user_ai_credentials` row, so a brand-new account reaches
+ * `resolveFromRow(null)`. With the key open to all -- which is what production
+ * runs, so the whole year group can mark work without an admin granting each
+ * one by hand -- that must resolve to the shared key rather than to nothing.
+ *
+ * Untested until now, and the only neighbouring test asserts the opposite for
+ * the restricted configuration, which is exactly how a regression here would
+ * slip through: AI would silently be off for every new account while the suite
+ * stayed green.
+ */
+test('a brand-new account with no row gets the shared key when it is open to all', () => {
+  withOpenToAll(() => withSharedKey(() => {
+    const resolved = resolveFromRow(null);
+    assert.equal(resolved.status.source, 'shared');
+    assert.equal(resolved.status.textEnabled, true, 'a new student must be able to have work marked');
+    assert.equal(resolved.text?.source, 'shared');
+    assert.equal(gateText(resolved).ok, true);
+  }));
+});
+
+test('opening the key to all does not override a student’s own key', () => {
+  withOpenToAll(() => withSharedKey(() => {
+    const resolved = resolveFromRow(ownKeyRow());
+    assert.equal(resolved.status.source, 'user');
+    assert.equal(resolved.text?.apiKey, 'sk-student-own-key');
+  }));
+});
+
+test('opening the key to all cannot conjure credentials that are not configured', () => {
+  withOpenToAll(() => withoutSharedKey(() => {
+    const resolved = resolveFromRow(null);
+    assert.equal(resolved.text, null);
+    assert.equal(resolved.status.textEnabled, false);
+  }));
 });
 
 test('an ungranted account never falls back to the owner’s key', () => {
