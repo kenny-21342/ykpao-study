@@ -590,6 +590,7 @@ async function searchQuestions(query: string, subjectCodes?: string[]): Promise<
         marks: true,
         paper: {
           select: {
+            id: true,
             subject: { select: { name: true, code: true } },
             year: true,
             session: true,
@@ -600,20 +601,19 @@ async function searchQuestions(query: string, subjectCodes?: string[]): Promise<
     });
 
     /*
-     * Text, but no link -- the same shape `searchMarkschemes` below has always
-     * had.
+     * Cite the paper, not the old question browser.
      *
-     * These rows are the legacy text corpus. Their only deep link was
-     * `/?tab=questions-db&qid=`, which opens the old browser the platform no
-     * longer practises on, and the id cannot be repointed at the crop-first
-     * bank because the two are different rows of different tables. So the
-     * question still informs the answer; it just cannot send a student to a
-     * surface they were not meant to reach.
+     * These rows are the legacy text corpus, and their deep link used to be
+     * `/?tab=questions-db&qid=`, which opens a browser the platform no longer
+     * practises on. The id cannot be repointed at the crop-first bank -- the
+     * two are different rows of different tables -- but every paper behind
+     * these questions has a file, so the paper itself is a real destination.
      */
     return questions.map((q) => ({
       type: 'question' as const,
       title: `${q.paper.subject.code} Q${q.number}${q.part} (${q.paper.year} ${q.paper.session}) — ${q.topic}`,
       content: truncate(q.content, MAX_CHARS_PER_SOURCE),
+      url: `/papers/${q.paper.id}`,
       relevance: 0.6,
     }));
   } catch {
