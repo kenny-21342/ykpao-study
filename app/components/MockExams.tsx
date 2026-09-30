@@ -16,6 +16,7 @@ import { Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
   Image as ImageIcon,
 } from 'lucide-react';
 import { Badge, Button, Card, CardRow, PageHeader, type BadgeTone } from './ui';
+import { readUploadResult } from '@/lib/upload-client';
 
 /*
  * next/image is deliberately not used for the crops below.
@@ -1425,8 +1426,7 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       setImages((prev) => ({ ...prev, [itemId]: data.fileUrl }));
       toast.success('Photo attached');
     } catch (uploadError) {

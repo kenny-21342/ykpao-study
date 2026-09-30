@@ -18,6 +18,7 @@ import {
 } from '@/lib/upload-constants';
 import { Contributor } from './ui';
 import type { ContributorUser } from './ui';
+import { readUploadResult } from '@/lib/upload-client';
 
 /** Which half of Materials is showing. Owned by `MaterialsHub`, which renders
  *  the tab strip in its header so the screen has one rule and not two. */
@@ -1220,8 +1221,7 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
       fd.append('file', file);
       if (destinationId) fd.append('resourceFolderId', destinationId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       setFileMeta({ url: data.fileUrl, name: data.fileName, size: data.fileSize, type: data.mimeType });
       if (!title) setTitle(data.fileName.replace(/\.[^.]+$/, ''));
     } catch (err) {
@@ -1307,8 +1307,7 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
       if (destinationId) fd.append('resourceParentFolderId', destinationId);
       if (!folderPath && destinationId) fd.append('resourceFolderId', destinationId);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
-      const upData = await upRes.json();
-      if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
+      const upData = await readUploadResult(upRes);
 
       updateItem(idx, { status: 'publishing' });
       // Use the folder's relative path (minus the top-level folder name) so

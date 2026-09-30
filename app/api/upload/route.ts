@@ -6,6 +6,7 @@ import { getStorage, KEY_PREFIX } from '@/lib/storage';
 import { reportError } from '@/lib/error-reporting';
 import { prisma } from '@/lib/prisma';
 import { resolveFolderPath } from '@/lib/school-resources';
+import { RESOURCE_UPLOAD_MAX_BYTES } from '@/lib/upload-constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,11 @@ const DOC_TYPES = new Map<string, string>([
   ['.md', 'text/markdown'],
 ]);
 
-const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+// One definition, shared with every client that checks before posting. The
+// check below still matters even though the platform rejects an oversized body
+// first: it is what answers in JSON for a body that is under the platform
+// ceiling but over ours.
+const MAX_BYTES = RESOURCE_UPLOAD_MAX_BYTES;
 
 type UploadKind = 'image' | 'file';
 

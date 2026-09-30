@@ -12,6 +12,7 @@ import PreviewNotice from './PreviewNotice';
 import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
 import QuestionScratchpadPanel from './QuestionScratchpadPanel';
+import { readUploadResult } from '@/lib/upload-client';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -466,8 +467,7 @@ export default function QuestionsDatabase({
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       setUploadedImageUrl(data.fileUrl);
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : 'Upload failed');

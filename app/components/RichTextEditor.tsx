@@ -15,6 +15,8 @@ import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { readUploadResult } from '@/lib/upload-client';
+import { RESOURCE_UPLOAD_MAX_BYTES, RESOURCE_UPLOAD_MAX_LABEL } from '@/lib/upload-constants';
 
 type RichTextEditorProps = {
   content: string;
@@ -164,10 +166,10 @@ export default function RichTextEditor({
     e.target.value = ''; // reset so the same file can be re-picked
     if (!file) return;
 
-    if (file.size > 25 * 1024 * 1024) {
+    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
       setNotice({
         title: 'Image too large',
-        message: 'Images must be 25 MB or smaller.',
+        message: `Images must be ${RESOURCE_UPLOAD_MAX_LABEL} or smaller.`,
         tone: 'warning',
       });
       return;
@@ -178,8 +180,7 @@ export default function RichTextEditor({
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       editor.chain().focus().setImage({ src: data.fileUrl, alt: file.name }).run();
     } catch (err) {
       setNotice({

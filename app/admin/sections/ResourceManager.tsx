@@ -9,6 +9,7 @@ import { adminFetch } from '../lib/fetch';
 import { LoadingSpinner, ErrorBox } from './AdminDashboard';
 import { useDebouncedValue } from '../../components/useDebouncedValue';
 import ResourceFolderPicker from '../../components/ResourceFolderPicker';
+import { readUploadResult } from '@/lib/upload-client';
 import {
   ALLOWED_RESOURCE_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
@@ -269,8 +270,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
       fd.append('file', file);
       if (destinationId) fd.append('resourceFolderId', destinationId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       setFileMeta({ url: data.fileUrl, name: data.fileName, size: data.fileSize, type: data.mimeType });
       if (!title) setTitle(data.fileName.replace(/\.[^.]+$/, ''));
     } catch (err) {
@@ -352,8 +352,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
       if (destinationId) fd.append('resourceParentFolderId', destinationId);
       if (!folderPath && destinationId) fd.append('resourceFolderId', destinationId);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
-      const upData = await upRes.json();
-      if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
+      const upData = await readUploadResult(upRes);
 
       updateItem(idx, { status: 'publishing' });
       // Keep the folder's relative path (minus the file name) so the server
@@ -725,8 +724,7 @@ function EditDialog({ resource, onClose, onDone, initialBreadcrumb }: {
       fd.append('file', file);
       if (folderId) fd.append('resourceFolderId', folderId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || !data.fileUrl) throw new Error(data.error || 'Upload failed');
+      const data = await readUploadResult(res);
       setReplacement({ url: data.fileUrl, name: data.fileName, size: data.fileSize, type: data.mimeType });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');

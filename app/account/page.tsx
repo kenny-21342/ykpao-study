@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import CoursesGoalsPanel from './CoursesGoalsPanel';
 import AiProviderPanel from './AiProviderPanel';
+import { readUploadResult } from '@/lib/upload-client';
+import { RESOURCE_UPLOAD_MAX_BYTES, RESOURCE_UPLOAD_MAX_LABEL } from '@/lib/upload-constants';
 
 export default function AccountSettingsPage() {
   const { data: session, status, update } = useSession();
@@ -119,8 +121,10 @@ export default function AccountSettingsPage() {
     file: File,
     kind: 'avatar' | 'bg',
   ) => {
-    if (file.size > 25 * 1024 * 1024) {
-      setError('Image too large (max 25 MB).');
+    // Checked here as well as on the server because the server never sees an
+    // oversized body at all -- the platform rejects it first, in plain text.
+    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
+      setError(`Image too large (max ${RESOURCE_UPLOAD_MAX_LABEL}).`);
       return;
     }
     const setUploader = kind === 'avatar' ? setUploadingAvatar : setUploadingBg;
@@ -130,8 +134,7 @@ export default function AccountSettingsPage() {
       const fd = new FormData();
       fd.append('file', file);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
-      const upData = await upRes.json();
-      if (!upRes.ok || !upData.fileUrl) throw new Error(upData.error || 'Upload failed');
+      const upData = await readUploadResult(upRes);
 
       const field = kind === 'avatar' ? 'image' : 'bgImage';
       const res = await fetch('/api/account', {
