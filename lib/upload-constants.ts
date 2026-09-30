@@ -38,6 +38,35 @@ export const RESOURCE_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 /** The ceiling above, as it should appear in a message to a person. */
 export const RESOURCE_UPLOAD_MAX_LABEL = '4 MB';
 
+/**
+ * What a person may *pick* when the file is an image.
+ *
+ * Larger than the wire ceiling above because an image does not travel as
+ * chosen: the browser decodes it, downscales it and re-encodes it to WebP
+ * before anything is posted (lib/image-compress.ts), so a 20 MB phone photo
+ * arrives as roughly a megabyte. The 4 MB ceiling still governs what may cross
+ * the wire -- this governs what may go into the compressor.
+ *
+ * Documents cannot be re-encoded, so they stay on RESOURCE_UPLOAD_MAX_BYTES.
+ */
+export const IMAGE_PICK_MAX_BYTES = 20 * 1024 * 1024;
+
+/** IMAGE_PICK_MAX_BYTES, as it should appear in a message to a person. */
+export const IMAGE_PICK_MAX_LABEL = '20 MB';
+
+/**
+ * What the compressor aims to come in under -- deliberately below the 4 MB
+ * wire ceiling, because multipart framing rides on top of the bytes and the
+ * compressor stops as soon as it is under target rather than hitting it exactly.
+ */
+export const IMAGE_COMPRESS_TARGET_BYTES = Math.floor(3.5 * 1024 * 1024);
+
+/** Longest edge kept when downscaling. Ample for a full-bleed background. */
+export const IMAGE_COMPRESS_MAX_EDGE = 2560;
+
+/** Extensions the compressor can decode, downscale and re-encode. */
+export const COMPRESSIBLE_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
 /** macOS metadata segments that must never be uploaded. */
 export function isHiddenUploadSegment(seg: string): boolean {
   return seg.startsWith('.') || seg === '__MACOSX';

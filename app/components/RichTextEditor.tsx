@@ -16,7 +16,7 @@ import { useState, useEffect, useRef } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { readUploadResult } from '@/lib/upload-client';
-import { RESOURCE_UPLOAD_MAX_BYTES, RESOURCE_UPLOAD_MAX_LABEL } from '@/lib/upload-constants';
+import { prepareImageForUpload } from '@/lib/image-compress';
 
 type RichTextEditorProps = {
   content: string;
@@ -166,19 +166,13 @@ export default function RichTextEditor({
     e.target.value = ''; // reset so the same file can be re-picked
     if (!file) return;
 
-    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-      setNotice({
-        title: 'Image too large',
-        message: `Images must be ${RESOURCE_UPLOAD_MAX_LABEL} or smaller.`,
-        tone: 'warning',
-      });
-      return;
-    }
-
     setUploadingImage(true);
     try {
+      // Downscaled and re-encoded rather than refused: the platform will not
+      // carry a full-size photo, but a student should not have to know that.
+      const upload = await prepareImageForUpload(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', upload);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await readUploadResult(res);
       editor.chain().focus().setImage({ src: data.fileUrl, alt: file.name }).run();

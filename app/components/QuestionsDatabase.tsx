@@ -13,6 +13,7 @@ import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
 import QuestionScratchpadPanel from './QuestionScratchpadPanel';
 import { readUploadResult } from '@/lib/upload-client';
+import { prepareImageForUpload } from '@/lib/image-compress';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -464,8 +465,11 @@ export default function QuestionsDatabase({
   const handleImageUpload = async (file: File) => {
     setOcrError(null);
     try {
+      // A photo of handwritten working is routinely far bigger than the
+      // platform will carry, so shrink it before posting.
+      const upload = await prepareImageForUpload(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', upload);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await readUploadResult(res);
       setUploadedImageUrl(data.fileUrl);

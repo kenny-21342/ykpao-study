@@ -13,13 +13,14 @@ import ResourceFolderPicker from './ResourceFolderPicker';
 import { useScreenContext } from './ScreenContext';
 import {
   ALLOWED_RESOURCE_EXTS as ALLOWED_EXTS,
-  RESOURCE_UPLOAD_MAX_BYTES,
   RESOURCE_UPLOAD_MAX_LABEL,
+  IMAGE_PICK_MAX_LABEL,
   isHiddenUploadSegment as isHiddenSegment,
 } from '@/lib/upload-constants';
 import { Contributor } from './ui';
 import type { ContributorUser } from './ui';
 import { readUploadResult } from '@/lib/upload-client';
+import { planImageCompression, prepareImageForUpload } from '@/lib/image-compress';
 
 /** Which half of Materials is showing. Owned by `MaterialsHub`, which renders
  *  the tab strip in its header so the screen has one rule and not two. */
@@ -1211,15 +1212,18 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-      setError(`File too large (max ${RESOURCE_UPLOAD_MAX_LABEL}).`);
+    // prepareImageForUpload decides: an oversized photo is shrunk to fit, an
+    // oversized document cannot be re-encoded and is refused below.
+    const plan = planImageCompression(file);
+    if (plan.action === 'reject') {
+      setError(plan.reason);
       return;
     }
     setUploading(true);
     setError(null);
     try {
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', await prepareImageForUpload(file));
       if (destinationId) fd.append('resourceFolderId', destinationId);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await readUploadResult(res);
@@ -1279,14 +1283,14 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
       const segments = rel.split('/');
       if (segments.some(isHiddenSegment)) { skipped++; continue; }
       if (!ALLOWED_EXTS.has(ext)) { skipped++; continue; }
-      if (f.size > RESOURCE_UPLOAD_MAX_BYTES) { tooBig++; continue; }
+      if (planImageCompression(f).action === 'reject') { tooBig++; continue; }
       accepted.push({ file: f, relativePath: rel, status: 'pending' });
     }
     if (accepted.length === 0) {
       setError(
         `No uploadable files in that folder.` +
         (skipped ? ` ${skipped} hidden/unsupported file${skipped === 1 ? '' : 's'} skipped.` : '') +
-        (tooBig ? ` ${tooBig} file${tooBig === 1 ? '' : 's'} over ${RESOURCE_UPLOAD_MAX_LABEL}.` : '')
+        (tooBig ? ` ${tooBig} file${tooBig === 1 ? '' : 's'} too large to upload.` : '')
       );
       return;
     }
@@ -1301,7 +1305,7 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
     try {
       updateItem(idx, { status: 'uploading', error: undefined });
       const fd = new FormData();
-      fd.append('file', item.file);
+      fd.append('file', await prepareImageForUpload(item.file));
       const parts = item.relativePath.split('/').filter(Boolean);
       const folderPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
       if (folderPath) fd.append('resourceFolderPath', folderPath);
@@ -1437,7 +1441,7 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
                     ) : (
-                      <span className="inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Click to choose a file (PDF, Word, Excel, PowerPoint, images — up to {RESOURCE_UPLOAD_MAX_LABEL})</span>
+                      <span className="inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Click to choose a file (PDF, Word, Excel, PowerPoint up to {RESOURCE_UPLOAD_MAX_LABEL}; images up to {IMAGE_PICK_MAX_LABEL})</span>
                     )}
                   </button>
                 ) : (
@@ -1523,7 +1527,7 @@ function UploadResourceDialog({ onClose, onUploaded, initialFolderId, initialBre
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-muted" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
                     <p className="text-xs text-muted mt-2">
-                      Supports PDF, Word, Excel, PowerPoint, TXT, Markdown, images. Hidden/system files and files over {RESOURCE_UPLOAD_MAX_LABEL} are skipped.
+                      Supports PDF, Word, Excel, PowerPoint, TXT, Markdown up to {RESOURCE_UPLOAD_MAX_LABEL}, and images up to {IMAGE_PICK_MAX_LABEL} (shrunk automatically). Hidden/system files and files that are too large are skipped.
                     </p>
                   </button>
                 ) : (

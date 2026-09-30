@@ -17,6 +17,7 @@ import { Plus, Clock, Award, Trash2, Play, ArrowRight, ArrowLeft,
 } from 'lucide-react';
 import { Badge, Button, Card, CardRow, PageHeader, type BadgeTone } from './ui';
 import { readUploadResult } from '@/lib/upload-client';
+import { prepareImageForUpload } from '@/lib/image-compress';
 
 /*
  * next/image is deliberately not used for the crops below.
@@ -1423,8 +1424,11 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
 
   const handleImageUpload = async (itemId: string, file: File) => {
     try {
+      // Mid-exam, with the clock running, is the worst possible moment to
+      // refuse a photo for being too big. Shrink it instead.
+      const upload = await prepareImageForUpload(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', upload);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await readUploadResult(res);
       setImages((prev) => ({ ...prev, [itemId]: data.fileUrl }));

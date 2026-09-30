@@ -11,7 +11,7 @@ import {
 import CoursesGoalsPanel from './CoursesGoalsPanel';
 import AiProviderPanel from './AiProviderPanel';
 import { readUploadResult } from '@/lib/upload-client';
-import { RESOURCE_UPLOAD_MAX_BYTES, RESOURCE_UPLOAD_MAX_LABEL } from '@/lib/upload-constants';
+import { prepareImageForUpload } from '@/lib/image-compress';
 
 export default function AccountSettingsPage() {
   const { data: session, status, update } = useSession();
@@ -121,18 +121,16 @@ export default function AccountSettingsPage() {
     file: File,
     kind: 'avatar' | 'bg',
   ) => {
-    // Checked here as well as on the server because the server never sees an
-    // oversized body at all -- the platform rejects it first, in plain text.
-    if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-      setError(`Image too large (max ${RESOURCE_UPLOAD_MAX_LABEL}).`);
-      return;
-    }
     const setUploader = kind === 'avatar' ? setUploadingAvatar : setUploadingBg;
     setUploader(true);
     setError(null);
     try {
+      // A phone photo is routinely 8-20 MB, far over what the platform will
+      // carry, so it is downscaled and re-encoded here rather than refused.
+      // Throws a readable message if it is beyond even that.
+      const upload = await prepareImageForUpload(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', upload);
       const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
       const upData = await readUploadResult(upRes);
 
