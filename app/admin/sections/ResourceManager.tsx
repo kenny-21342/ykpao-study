@@ -13,6 +13,7 @@ import { readUploadResult } from '@/lib/upload-client';
 import {
   ALLOWED_RESOURCE_EXTS,
   RESOURCE_UPLOAD_MAX_BYTES,
+  RESOURCE_UPLOAD_MAX_LABEL,
   isHiddenUploadSegment,
 } from '@/lib/upload-constants';
 
@@ -260,7 +261,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
     e.target.value = '';
     if (!file) return;
     if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-      setError('File too large (max 25 MB).');
+      setError(`File too large (max ${RESOURCE_UPLOAD_MAX_LABEL}).`);
       return;
     }
     setUploading(true);
@@ -330,7 +331,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
       setError(
         'No uploadable files in that folder.' +
         (skipped ? ` ${skipped} hidden/unsupported file${skipped === 1 ? '' : 's'} skipped.` : '') +
-        (tooBig ? ` ${tooBig} file${tooBig === 1 ? '' : 's'} over 25 MB.` : '')
+        (tooBig ? ` ${tooBig} file${tooBig === 1 ? '' : 's'} over ${RESOURCE_UPLOAD_MAX_LABEL}.` : '')
       );
       return;
     }
@@ -472,7 +473,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
                     {uploading ? (
                       <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</span>
                     ) : (
-                      <span className="inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Click to choose a file (PDF, Word, Excel, PowerPoint, images — up to 25 MB)</span>
+                      <span className="inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Click to choose a file (PDF, Word, Excel, PowerPoint, images — up to {RESOURCE_UPLOAD_MAX_LABEL})</span>
                     )}
                   </button>
                 ) : (
@@ -551,7 +552,7 @@ function UploadDialog({ onClose, onDone, initialFolderId, initialBreadcrumb }: {
                     <FolderUp className="w-6 h-6 mx-auto mb-2 text-muted" />
                     <span className="inline-flex items-center gap-2">Click to choose a folder — every supported file inside will be uploaded as a separate resource.</span>
                     <p className="text-xs text-muted mt-2">
-                      Supports PDF, Word, Excel, PowerPoint, TXT, Markdown, images. Hidden/system files and files over 25 MB are skipped.
+                      Supports PDF, Word, Excel, PowerPoint, TXT, Markdown, images. Hidden/system files and files over {RESOURCE_UPLOAD_MAX_LABEL} are skipped.
                     </p>
                   </button>
                 ) : (
@@ -714,7 +715,7 @@ function EditDialog({ resource, onClose, onDone, initialBreadcrumb }: {
     e.target.value = '';
     if (!file) return;
     if (file.size > RESOURCE_UPLOAD_MAX_BYTES) {
-      setError('File too large (max 25 MB).');
+      setError(`File too large (max ${RESOURCE_UPLOAD_MAX_LABEL}).`);
       return;
     }
     setUploading(true);
