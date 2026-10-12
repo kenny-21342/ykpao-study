@@ -77,7 +77,17 @@ type Strip = { sha: string; ordering: number; page: number };
 type Target = { markSchemeId: number; board: string; strips: Strip[] };
 
 const src = new Database(sourcePath, { readonly: true });
-const client = new pg.Client(pgConfig(url));
+/**
+ * A fresh connection. The 'error' listener matters: pg emits it for a dropped
+ * connection and, with no listener, Node treats that as an uncaught exception
+ * and kills the process -- which is how the first run died.
+ */
+const newClient = () => {
+  const c = new pg.Client(pgConfig(url));
+  c.on('error', (error) => console.warn(`  (database connection dropped: ${error.message})`));
+  return c;
+};
+let client = newClient();
 
 /** What a student can actually open: published, and strips or an MCQ letter. */
 const visibleCoverage = async () => {
@@ -183,6 +193,13 @@ try {
     process.exit(0);
   }
 
+  // The database session is NOT held open across the storage check. Checking
+  // thousands of objects takes minutes with the connection idle, and Neon
+  // closes idle connections ("terminating connection due to administrator
+  // command"). Everything needed from the database is already in memory, so
+  // end the session now and open a new one for the inserts.
+  await client.end().catch(() => undefined);
+
   // ---- the ordering guard: never reference an object that is not there ----
   if (skipStorageCheck) {
     console.warn('\n!! --no-storage-check: NOT confirming the images exist. Strips for missing images will render broken.');
@@ -216,6 +233,9 @@ try {
     }
     console.log('  all present.');
   }
+
+  client = newClient();
+  await client.connect();
 
   const stripCount = targets.reduce((n, t) => n + t.strips.length, 0);
   if (trial) {
