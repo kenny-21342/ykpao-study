@@ -14,6 +14,14 @@
  *   npx tsx scripts/upload-bank-assets.ts --db pdf_extraction/bank/extract.db \
  *                                         --assets pdf_extraction/bank/assets
  *   npx tsx scripts/upload-bank-assets.ts --dry-run
+ *   npx tsx scripts/upload-bank-assets.ts --shas backups/ms-strip-shas.txt
+ *
+ * --shas <file> restricts the run to the digests listed in the file, one per
+ * line. It exists for top-ups: the full published-only pass considers
+ * ~217,000 assets and spends a HEAD (~1.4s) on each, so adding a few
+ * thousand known files by re-running everything costs hours. The list is
+ * still intersected with the database, so a digest the local store does not
+ * know is reported rather than guessed at.
  *
  * Run it BEFORE merging rows, so a question never reaches production pointing
  * at an image that is not yet servable.
@@ -32,6 +40,7 @@ type Args = {
   all: boolean;
   concurrency: number;
   skipHead: boolean;
+  shas: string | null;
 };
 
 type AssetRow = { sha256: string; relative_path: string };
@@ -76,6 +85,7 @@ function parseArgs(argv: string[]): Args {
     all: false,
     concurrency: 12,
     skipHead: false,
+    shas: null,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
@@ -83,6 +93,7 @@ function parseArgs(argv: string[]): Args {
     else if (flag === '--skip-head') args.skipHead = true;
     else if (flag === '--all') args.all = true;
     else if (flag === '--db') args.db = argv[++i];
+    else if (flag === '--shas') args.shas = argv[++i];
     else if (flag === '--assets') args.assets = argv[++i];
     else if (flag === '--limit') args.limit = Number(argv[++i]);
     else if (flag === '--concurrency') args.concurrency = Number(argv[++i]);
@@ -101,9 +112,29 @@ async function main(): Promise<void> {
     )
     .all() as AssetRow[];
 
+  if (args.shas) {
+    const wanted = new Set(
+      (await readFile(path.resolve(args.shas), 'utf8')).split(/\s+/).filter((line) => line.length > 0)
+    );
+    // --shas implies --all for the lookup: a digest is wanted because something
+    // needs it, whatever the local row's status says.
+    const everything = database.prepare(EVERY_ASSET).all() as AssetRow[];
+    const known = new Map(everything.map((row) => [row.sha256, row]));
+    const unknown = [...wanted].filter((sha) => !known.has(sha));
+    if (unknown.length > 0) {
+      console.warn(`  ! ${unknown.length} digest(s) in ${args.shas} are not in the local store, e.g. ${unknown[0].slice(0, 12)}`);
+    }
+    rows.length = 0;
+    for (const sha of wanted) {
+      const row = known.get(sha);
+      if (row) rows.push(row);
+    }
+    console.log(`--shas: ${rows.length.toLocaleString()} of ${wanted.size.toLocaleString()} listed digests resolved`);
+  }
+
   console.log(
     `${rows.length.toLocaleString()} assets to consider ` +
-      `(${args.all ? 'every asset' : 'published rows only'})`
+      `(${args.shas ? `listed in ${args.shas}` : args.all ? 'every asset' : 'published rows only'})`
   );
   if (args.dryRun) console.log('(dry run — nothing will be written)');
 
