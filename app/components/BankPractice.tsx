@@ -43,7 +43,13 @@ type Summary = {
   totalMarks: number | null;
   hasText: boolean;
   hasMarkScheme: boolean;
-  glimpse: { topics: string[]; commandTerms: string[]; difficulty: number | null };
+  glimpse: {
+    topics: string[];
+    tags: string[];
+    commandTerms: string[];
+    difficulty: number | null;
+    difficultyReason: string | null;
+  };
   thumbnail: BankStrip | null;
   paper: {
     id: number;
@@ -81,7 +87,10 @@ function sessionLabel(session: string): string {
 const DIFFICULTY_NAMES = ['', 'Recall', 'Routine', 'Method selection', 'Synthesis', 'Extension'];
 
 function hasGlimpse(glimpse: Summary['glimpse']): boolean {
-  return glimpse.topics.length > 0 || glimpse.commandTerms.length > 0 || glimpse.difficulty !== null;
+  return (
+    glimpse.topics.length > 0 || glimpse.tags.length > 0 || glimpse.commandTerms.length > 0 ||
+    glimpse.difficulty !== null || glimpse.difficultyReason !== null
+  );
 }
 
 function paperLabel(paper: Summary['paper']): string {
@@ -901,7 +910,7 @@ export default function BankPractice({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">
                   Question {question.rootNumber}
-                  {question.totalMarks !== null && (
+                  {question.totalMarks !== null && question.totalMarks > 0 && (
                     <span className="ml-2 text-xs font-normal text-muted">
                       {question.totalMarks} marks
                     </span>
@@ -976,6 +985,18 @@ export default function BankPractice({
                     </dd>
                   </>
                 )}
+                {question.glimpse.tags.length > 0 && (
+                  <>
+                    <dt className="text-muted">Skills</dt>
+                    <dd className="flex flex-wrap gap-1">
+                      {question.glimpse.tags.map((label) => (
+                        <span key={label} className="rounded-full border border-line px-2 py-0.5 text-secondary">
+                          {label}
+                        </span>
+                      ))}
+                    </dd>
+                  </>
+                )}
                 {question.glimpse.commandTerms.length > 0 && (
                   <>
                     <dt className="text-muted">Asks you to</dt>
@@ -987,8 +1008,14 @@ export default function BankPractice({
                     <dt className="text-muted">Level</dt>
                     <dd className="text-primary">
                       {question.glimpse.difficulty}/5 · {DIFFICULTY_NAMES[question.glimpse.difficulty] ?? ''}
-                      {question.totalMarks !== null ? ` · ${question.totalMarks} marks` : ''}
+                      {question.totalMarks ? ` · ${question.totalMarks} marks` : ''}
                     </dd>
+                  </>
+                )}
+                {question.glimpse.difficultyReason && (
+                  <>
+                    <dt className="text-muted">Why</dt>
+                    <dd className="text-primary">{question.glimpse.difficultyReason}</dd>
                   </>
                 )}
               </dl>

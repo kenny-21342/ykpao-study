@@ -260,9 +260,13 @@ export type BankQuestionSummary = {
    */
   glimpse: {
     topics: string[];
+    /** Specific techniques and concepts, e.g. "projectile motion". */
+    tags: string[];
     commandTerms: string[];
     /** 1 (recall) to 5 (extension). */
     difficulty: number | null;
+    /** One sentence on what sets that level, written by the tagging pass. */
+    difficultyReason: string | null;
   };
   /** First strip only: enough for a list row, without loading the whole crop. */
   thumbnail: BankStrip | null;
@@ -578,7 +582,9 @@ export async function listBankQuestions(options: {
         totalMarks: true,
         bodyMd: true,
         difficulty: true,
+        difficultyRationale: true,
         topics: { select: { topic: { select: { name: true } } } },
+        tags: { select: { tag: { select: { label: true } } }, orderBy: { confidence: 'desc' }, take: 5 },
         skills: { select: { skill: { select: { slug: true } } } },
         markScheme: { select: { id: true, status: true } },
         strips: {
@@ -608,8 +614,10 @@ export async function listBankQuestions(options: {
       hasMarkScheme: row.markScheme?.status === 'published',
       glimpse: {
         topics: row.topics.map((link) => link.topic.name).sort(),
+        tags: row.tags.map((link) => link.tag.label),
         commandTerms: row.skills.map((link) => link.skill.slug).sort(),
         difficulty: row.difficulty,
+        difficultyReason: row.difficultyRationale?.trim() || null,
       },
       thumbnail: toStrips(row.strips)[0] ?? null,
       paper: paperView(row.paper, row.rootNumber),
