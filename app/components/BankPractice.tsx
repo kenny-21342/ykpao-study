@@ -57,6 +57,8 @@ type Summary = {
     session: string;
     paperNumber: number;
     variant: number;
+    /** Readable question code, e.g. "21M.1SL.TZ1.22" -- what the search box accepts. */
+    code: string;
   };
 };
 
@@ -220,6 +222,11 @@ export default function BankPractice({
    */
   const pendingSubjectCode = useRef(initialSubjectCode);
   const [topic, setTopic] = useState('');
+  /** What is in the search box, and the trimmed value the list was last asked for. */
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  /** Why a search returned nothing, when the server can say (e.g. an SL code under an HL subject). */
+  const [notice, setNotice] = useState<string | null>(null);
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
   /** Ids the signed-in user has starred, so a list row can draw a filled star. */
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
@@ -347,6 +354,9 @@ export default function BankPractice({
     if (session) params.set('session', session);
     if (paperNumber) params.set('paper', paperNumber);
     if (topic) params.set('topic', topic);
+    // A search needs a subject; the box is disabled without one, and this keeps
+    // a stale value from a restored session from reaching the server alone.
+    if (search && subject) params.set('q', search);
     if (onlyBookmarked) params.set('bookmarked', '1');
 
     (async () => {
@@ -359,6 +369,7 @@ export default function BankPractice({
         if (!res.ok) throw new Error(data?.error || 'Could not load questions');
         setQuestions(data.questions ?? []);
         setTotal(data.total ?? 0);
+        setNotice(data.notice ?? null);
         setListError(null);
       } catch (error) {
         // An aborted request is this effect superseding itself, not a failure.
@@ -374,7 +385,25 @@ export default function BankPractice({
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked, sessionStatus, restored]);
+  }, [page, subject, year, session, paperNumber, scope, topic, search, onlyBookmarked, sessionStatus, restored]);
+
+  // Typing searches 300 ms after the last keystroke. The guard against `search`
+  // matters on restore: both start equal, and without it this would fire once
+  // and put a restored page 3 back on page 1.
+  useEffect(() => {
+    if (!restored) return;
+    const next = searchInput.trim();
+    if (next === search) return;
+    const timer = setTimeout(() => {
+      setSearch(next);
+      setPage(1);
+      setSelected(null);
+      setListLoading(true);
+      scrollTopRef.current = 0;
+      pendingScrollRef.current = null;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, search, restored]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -462,6 +491,8 @@ export default function BankPractice({
         setSession(saved.session);
         setPaperNumber(saved.paperNumber);
         setTopic(saved.topic);
+        setSearchInput(saved.search);
+        setSearch(saved.search);
         setOnlyBookmarked(saved.onlyBookmarked);
         setPage(saved.page);
         scrollTopRef.current = saved.scrollTop;
@@ -491,11 +522,11 @@ export default function BankPractice({
     memoryRef.current = restored
       ? {
           ...EMPTY_MEMORY,
-          scope, subject, year, session, paperNumber, topic, onlyBookmarked, page, selectedId,
+          scope, subject, year, session, paperNumber, topic, search, onlyBookmarked, page, selectedId,
         }
       : null;
     writeMemory(memoryRef.current);
-  }, [restored, scope, subject, year, session, paperNumber, topic, onlyBookmarked, page, selectedId]);
+  }, [restored, scope, subject, year, session, paperNumber, topic, search, onlyBookmarked, page, selectedId]);
 
   // Scroll moves too often to be state, so flush the latest offset when the tab
   // is left (unmount) or the page is closed/hidden.
@@ -615,6 +646,7 @@ export default function BankPractice({
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-secondary">
             {selected.paper.subject} · {paperLabel(selected.paper)}
+            <span className="ml-2 font-mono text-xs text-muted">{selected.paper.code}</span>
           </p>
           <button
             type="button"
@@ -672,6 +704,8 @@ export default function BankPractice({
               // chosen under the old one may not be in the new list.
               setScope(option);
               setSubject('');
+              setSearchInput('');
+              setSearch('');
               setPage(1);
               setSelected(null);
               setListLoading(true);
@@ -712,7 +746,15 @@ export default function BankPractice({
         <select
           aria-label="Subject"
           value={subject}
-          onChange={(e) => changeFilter(setSubject)(e.target.value)}
+          onChange={(e) => {
+            // A code only means something inside a subject, so choosing "All
+            // subjects" drops the search with it.
+            if (!e.target.value) {
+              setSearchInput('');
+              setSearch('');
+            }
+            changeFilter(setSubject)(e.target.value);
+          }}
           className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
         >
           <option value="">All subjects</option>
@@ -773,6 +815,27 @@ export default function BankPractice({
         )}
       </div>
 
+      <label className="relative block">
+        <span className="sr-only">Search by question number or keyword</span>
+        <Search
+          className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          disabled={!subject}
+          maxLength={200}
+          placeholder={
+            subject
+              ? 'Question number or keyword, e.g. 21M.1SL.TZ1.22, Q22, momentum'
+              : 'Choose a subject to search by question number'
+          }
+          className="w-full rounded-md border border-strong bg-surface py-1.5 pl-8 pr-2 text-sm disabled:opacity-60"
+        />
+      </label>
+
       <p className="text-xs text-muted">
         {listLoading ? 'Loading…' : `${total.toLocaleString()} questions`}
       </p>
@@ -786,7 +849,9 @@ export default function BankPractice({
       {!listLoading && questions.length === 0 && !listError && (
         <div className="flex flex-col items-center gap-2 py-12 text-muted">
           <Search className="h-6 w-6" aria-hidden="true" />
-          <p className="text-sm">No questions match those filters.</p>
+          <p className="max-w-md text-center text-sm">
+            {notice ?? (search ? `No questions match "${search}" with those filters.` : 'No questions match those filters.')}
+          </p>
         </div>
       )}
 
@@ -833,6 +898,9 @@ export default function BankPractice({
                 </span>
                 <span className="block truncate text-xs text-muted">
                   {question.paper.subject} · {paperLabel(question.paper)}
+                </span>
+                <span className="block truncate font-mono text-[11px] text-muted">
+                  {question.paper.code}
                 </span>
               </span>
               {question.hasMarkScheme && (

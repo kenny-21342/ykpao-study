@@ -19,9 +19,13 @@ import { parsePositiveInt } from '@/lib/query-params';
 import { reportError } from '@/lib/error-reporting';
 import {
   getBankQuestion,
+  getBankSubject,
   listBankFilters,
   listBankQuestions,
 } from '@/lib/bank-questions';
+import {
+  conflictWithSubject, isEmptyQuery, parseQuestionQuery, type ParsedQuery,
+} from '@/lib/bank-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,9 +95,44 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: a page of questions.
+    const subjectId = intParam(searchParams.get('subject'));
+    const limit = parsePositiveInt(searchParams.get('limit'), 20, 100);
+
+    // Search by question code or keyword. It needs a subject, because a code is
+    // only meaningful inside one (the same "1SL" exists in every IB subject) and
+    // a keyword over the whole 66,000-question bank is the slow query this
+    // route has been rewritten to avoid.
+    const rawSearch = (searchParams.get('q') ?? '').trim().slice(0, 200);
+    let search: ParsedQuery | null = null;
+    if (rawSearch) {
+      const parsed = parseQuestionQuery(rawSearch);
+      if (!isEmptyQuery(parsed)) {
+        if (!subjectId) {
+          return NextResponse.json(
+            { error: 'Choose a subject to search by question number.' },
+            { status: 400 },
+          );
+        }
+        const subject = await getBankSubject(subjectId);
+        if (!subject) {
+          return NextResponse.json({ error: 'Unknown subject.' }, { status: 400 });
+        }
+        // Say what is wrong instead of returning an empty list that reads as
+        // "that question does not exist".
+        const notice = conflictWithSubject(parsed, subject);
+        if (notice) {
+          return NextResponse.json({
+            questions: [], total: 0, page: 1, limit, notice, scope: courseScope,
+          });
+        }
+        search = parsed;
+      }
+    }
+
     const result = await listBankQuestions({
       subjectCodes,
-      subjectId: intParam(searchParams.get('subject')),
+      subjectId,
+      search,
       year: intParam(searchParams.get('year')),
       session: searchParams.get('session') || null,
       paperNumber: intParam(searchParams.get('paper')),
@@ -102,7 +141,7 @@ export async function GET(request: NextRequest) {
       // no-op rather than an empty list, which would look like a broken page.
       bookmarkedBy: searchParams.get('bookmarked') === '1' && user ? user.id : null,
       page: parsePositiveInt(searchParams.get('page'), 1),
-      limit: parsePositiveInt(searchParams.get('limit'), 20, 100),
+      limit,
     });
 
     return NextResponse.json({ ...result, scope: courseScope });

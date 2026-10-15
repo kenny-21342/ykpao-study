@@ -9,6 +9,7 @@
  * Strips matter rather than `screenshotId`: that column holds only the first
  * one, which for 89% of questions is the top fragment of the image.
  */
+import { formatQuestionCode, storedSession, type ParsedQuery } from '@/lib/bank-search';
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
@@ -263,6 +264,8 @@ export type BankQuestionSummary = {
     session: string;
     paperNumber: number;
     variant: number;
+    /** The readable question code a student can type into the search box. */
+    code: string;
   };
 };
 
@@ -405,6 +408,84 @@ export async function listBankFilters(
   };
 }
 
+type PaperRow = {
+  id: number; year: number; session: string; paperNumber: number; variant: number;
+  timezone: string | null;
+  subject: { name: string; code: string; level: string | null; board: string };
+};
+
+function paperView(paper: PaperRow, rootNumber: number): BankQuestionSummary['paper'] {
+  return {
+    id: paper.id,
+    subject: bankSubjectName(paper.subject),
+    subjectCode: paper.subject.code,
+    year: paper.year,
+    session: paper.session,
+    paperNumber: paper.paperNumber,
+    variant: paper.variant,
+    code: formatQuestionCode(
+      {
+        board: paper.subject.board,
+        subjectCode: paper.subject.code,
+        level: paper.subject.level,
+        year: paper.year,
+        session: paper.session,
+        paperNumber: paper.paperNumber,
+        variant: paper.variant,
+        timezone: paper.timezone,
+      },
+      rootNumber,
+    ),
+  };
+}
+
+/** The subject a search is scoped to, for resolving sessions and checking conflicts. */
+export async function getBankSubject(subjectId: number) {
+  const subject = await prisma.bankSubject.findUnique({
+    where: { id: subjectId },
+    select: { board: true, code: true, level: true, name: true },
+  });
+  return subject ? { ...subject, name: bankSubjectName(subject) } : null;
+}
+
+/** Most ids one keyword arm may return. A subject holds a few thousand questions. */
+const KEYWORD_ARM_CAP = 3000;
+
+/**
+ * Questions in `base` whose topic name or text contains every word.
+ *
+ * Each word is two separate queries -- one through the topic link, one over the
+ * question text -- unioned by id, and the words are intersected. It is not one
+ * query with an OR across both tables: that shape forced a join over the whole
+ * topic table and was the cause of every slow search so far, and splitting the
+ * arms is what made them fast.
+ */
+async function idsMatchingWords(
+  base: Record<string, unknown>,
+  words: string[],
+): Promise<number[]> {
+  let ids: number[] | null = null;
+  for (const word of words) {
+    const [byTopic, byBody] = await Promise.all([
+      prisma.bankQuestion.findMany({
+        where: { ...base, topics: { some: { topic: { name: { contains: word, mode: 'insensitive' } } } } },
+        select: { id: true },
+        take: KEYWORD_ARM_CAP,
+      }),
+      prisma.bankQuestion.findMany({
+        where: { ...base, bodyMd: { contains: word, mode: 'insensitive' } },
+        select: { id: true },
+        take: KEYWORD_ARM_CAP,
+      }),
+    ]);
+    const matched = new Set<number>([...byTopic, ...byBody].map((row) => row.id));
+    const kept: number[] = ids === null ? [...matched] : ids.filter((id) => matched.has(id));
+    ids = kept;
+    if (kept.length === 0) break;
+  }
+  return ids ?? [];
+}
+
 /**
  * A page of questions across papers, for the Practice browser.
  *
@@ -420,26 +501,59 @@ export async function listBankQuestions(options: {
   topic?: string | null;
   /** When set, only questions this user has starred. */
   bookmarkedBy?: string | null;
+  /**
+   * A parsed question code and/or keywords. Needs `subjectId`: it is what says
+   * which board's session names to use, and it keeps the keyword search to one
+   * subject's few thousand questions.
+   */
+  search?: ParsedQuery | null;
   page?: number;
   limit?: number;
 }): Promise<{ questions: BankQuestionSummary[]; total: number; page: number; limit: number }> {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(100, Math.max(1, options.limit ?? 20));
 
-  const where = {
+  const search = options.search && options.subjectId ? options.search : null;
+  const subject = search && options.subjectId ? await getBankSubject(options.subjectId) : null;
+
+  // What the code narrows on the paper. ANDed with the dropdowns rather than
+  // overriding them: a loose "2023" typed with the year select on 2021 should
+  // show nothing, not silently ignore one of the two.
+  const searchPaper: Record<string, unknown> = {};
+  if (search && subject) {
+    if (search.year) searchPaper.year = search.year;
+    if (search.month) {
+      const stored = storedSession(subject.board, search.month);
+      if (stored) searchPaper.session = stored;
+    }
+    if (search.paperNumber !== undefined) searchPaper.paperNumber = search.paperNumber;
+    if (search.variant !== undefined) searchPaper.variant = search.variant;
+    if (search.timezone !== undefined) searchPaper.timezone = search.timezone;
+  }
+
+  const baseWhere = {
     status: 'published',
     ...(options.bookmarkedBy
       ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
       : {}),
     ...(options.topic ? { topics: { some: { topic: { name: options.topic } } } } : {}),
+    ...(search?.question !== undefined ? { rootNumber: search.question } : {}),
     paper: {
       ...publishedQuestionPaperWhere(options.subjectCodes),
       ...(options.subjectId ? { subjectId: options.subjectId } : {}),
       ...(options.year ? { year: options.year } : {}),
       ...(options.session ? { session: options.session } : {}),
       ...(options.paperNumber ? { paperNumber: options.paperNumber } : {}),
+      ...(Object.keys(searchPaper).length ? { AND: [searchPaper] } : {}),
     },
   };
+
+  let where: Record<string, unknown> = baseWhere;
+  if (search && search.words.length > 0) {
+    const ids = await idsMatchingWords(baseWhere, search.words);
+    if (ids.length === 0) return { total: 0, page, limit, questions: [] };
+    where = { ...baseWhere, id: { in: ids } };
+  }
 
   const [total, rows] = await Promise.all([
     prisma.bankQuestion.count({ where }),
@@ -461,7 +575,7 @@ export async function listBankQuestions(options: {
         },
         paper: {
           select: {
-            id: true, year: true, session: true, paperNumber: true, variant: true,
+            id: true, year: true, session: true, paperNumber: true, variant: true, timezone: true,
             subject: { select: { name: true, code: true, level: true, board: true } },
           },
         },
@@ -480,15 +594,7 @@ export async function listBankQuestions(options: {
       hasText: row.bodyMd.trim().length > 0,
       hasMarkScheme: row.markScheme?.status === 'published',
       thumbnail: toStrips(row.strips)[0] ?? null,
-      paper: {
-        id: row.paper.id,
-        subject: bankSubjectName(row.paper.subject),
-        subjectCode: row.paper.subject.code,
-        year: row.paper.year,
-        session: row.paper.session,
-        paperNumber: row.paper.paperNumber,
-        variant: row.paper.variant,
-      },
+      paper: paperView(row.paper, row.rootNumber),
     })),
   };
 }
@@ -515,7 +621,7 @@ export async function getBankQuestion(
       skills: { select: { skill: { select: { slug: true } } } },
       paper: {
         select: {
-          id: true, year: true, session: true, paperNumber: true, variant: true,
+          id: true, year: true, session: true, paperNumber: true, variant: true, timezone: true,
           subject: { select: { name: true, code: true, level: true, board: true } },
         },
       },
@@ -543,14 +649,6 @@ export async function getBankQuestion(
             answerLetter: question.markScheme.answerLetter,
           }
         : null,
-    paper: {
-      id: question.paper.id,
-      subject: bankSubjectName(question.paper.subject),
-      subjectCode: question.paper.subject.code,
-      year: question.paper.year,
-      session: question.paper.session,
-      paperNumber: question.paper.paperNumber,
-      variant: question.paper.variant,
-    },
+    paper: paperView(question.paper, question.rootNumber),
   };
 }
