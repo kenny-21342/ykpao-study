@@ -21,8 +21,12 @@ import PreviewNotice from './PreviewNotice';
 import { useSession } from 'next-auth/react';
 import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
+import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
 import type { BankQuestionView, BankStrip } from '@/lib/bank-questions';
+import {
+  EMPTY_MEMORY, memoryKey, parseMemory, serializeMemory, type PracticeFilterMemory,
+} from '@/lib/practice-filter-memory';
 import { PageHeader } from './ui';
 
 type Filters = {
@@ -120,7 +124,12 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
       const res = await fetch('/api/ai/hint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bankQuestionId: question.id, level: hints.length + 1 }),
+        body: JSON.stringify({
+          bankQuestionId: question.id,
+          level: hints.length + 1,
+          // So the next hint builds on these rather than restating them.
+          previousHints: hints.map((hint) => hint.text),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not fetch a hint');
@@ -135,10 +144,16 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   return (
     <div className="space-y-2 px-4 py-3">
       {hints.map((hint) => (
-        <p key={hint.level} className="text-sm text-secondary">
-          <span className="font-medium">Hint {hint.level}: </span>
-          {hint.text}
-        </p>
+        // The model answers in markdown and LaTeX (bold, numbered steps,
+        // \(T\cos\theta\)). Printed as a plain string, all of that showed as
+        // raw punctuation and the steps ran together in one paragraph -- the
+        // legacy browser renders the same hint through FormattedMessage.
+        <div key={hint.level} className="rounded-md border border-warning-border bg-surface px-3 py-2">
+          <p className="mb-1 text-[10px] font-bold uppercase text-warning">Hint {hint.level}</p>
+          <div className="text-sm text-secondary">
+            <FormattedMessage content={hint.text} />
+          </div>
+        </div>
       ))}
       {error && <p className="text-sm text-danger">{error}</p>}
       <button
@@ -180,7 +195,8 @@ export default function BankPractice({
   onSubjectApplied?: () => void;
   onQuestionOpened?: () => void;
 } = {}) {
-  const { status: sessionStatus } = useSession();
+  const { data: authSession, status: sessionStatus } = useSession();
+  const userId = authSession?.user?.id ?? null;
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [subject, setSubject] = useState('');
   const [year, setYear] = useState('');
@@ -216,6 +232,25 @@ export default function BankPractice({
   const [selected, setSelected] = useState<FullQuestion | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  /*
+   * Filter memory. See lib/practice-filter-memory.ts for why it exists.
+   *
+   * `restored` gates every fetch below: restoring sets the subject, topic and
+   * page in one go, and a request already in flight for the *default* filters
+   * would resolve afterwards and, among other things, clear a restored topic
+   * (the topic list is empty when no subject is chosen).
+   */
+  const [restored, setRestored] = useState(false);
+  const restoreStarted = useRef(false);
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  /** Latest list scroll offset. A ref: it changes on every scroll tick. */
+  const scrollTopRef = useRef(0);
+  /** A scroll offset waiting for the list to be on screen and loaded. */
+  const pendingScrollRef = useRef<number | null>(null);
+  const memoryRef = useRef<PracticeFilterMemory | null>(null);
+  /** The account the memory was restored for; nothing is written under another. */
+  const restoredUserRef = useRef<string | null>(null);
+
   useEffect(() => {
     // A second course card sends a different code; re-arm so the next filter
     // response applies it.
@@ -235,12 +270,17 @@ export default function BankPractice({
     // Refetched when the subject changes, not only the scope: topics are
     // per-subject, so the list has to follow the selection. Without this the
     // control offered all 256 topics in the corpus whatever was on screen.
+    if (!restored) return;
+    // Ignore a response that a newer subject/scope has already superseded;
+    // otherwise an old answer can land last and overwrite the topics list (and,
+    // through the reset below, a topic that was just restored).
+    let cancelled = false;
     const params = new URLSearchParams({ scope });
     if (subject) params.set('subject', subject);
     fetch(`/api/bank/questions?action=filters&${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data) return;
+        if (!data || cancelled) return;
         setFilters({ ...EMPTY_FILTERS, ...data });
         // A topic chosen under the previous subject usually does not exist
         // under the new one, and leaving it set filters the list down to
@@ -279,15 +319,20 @@ export default function BankPractice({
           onSubjectApplied?.();
         }
       })
-      .catch(() => setFilters(EMPTY_FILTERS));
-  }, [scope, subject, onSubjectApplied]);
+      .catch(() => {
+        if (!cancelled) setFilters(EMPTY_FILTERS);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, subject, onSubjectApplied, restored]);
 
 
   useEffect(() => {
     // The bank needs a session, so there is nothing to ask for until we have
     // one. Fetching while `loading` would also fire a 401 on first paint for
     // every signed-in student, before the session resolves.
-    if (sessionStatus !== 'authenticated') return;
+    if (sessionStatus !== 'authenticated' || !restored) return;
 
     // `stale` guards against responses arriving out of order. Changing two
     // filters quickly starts two requests, and the first one can answer last;
@@ -329,7 +374,7 @@ export default function BankPractice({
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked, sessionStatus]);
+  }, [page, subject, year, session, paperNumber, scope, topic, onlyBookmarked, sessionStatus, restored]);
 
   // Any filter change invalidates the current page number: page 7 of the old
   // result set is rarely page 7 of the new one, and is often past its end.
@@ -338,6 +383,8 @@ export default function BankPractice({
     setPage(1);
     setSelected(null);
     setListLoading(true);
+    scrollTopRef.current = 0;
+    pendingScrollRef.current = null;
   };
 
   /**
@@ -385,6 +432,91 @@ export default function BankPractice({
       setDetailLoading(false);
     }
   };
+
+  /*
+   * Restore on mount, once, as soon as the session says who is asking.
+   *
+   * A course card (`initialSubjectCode`) names a subject on purpose, so it wins
+   * over anything remembered; a deep link (`initialQuestionId`) keeps the
+   * remembered filters but not the remembered open question.
+   */
+  useEffect(() => {
+    if (restoreStarted.current || sessionStatus === 'loading') return;
+    restoreStarted.current = true;
+
+    if (sessionStatus === 'authenticated' && userId) {
+      restoredUserRef.current = userId;
+      let saved: PracticeFilterMemory | null = null;
+      try {
+        saved = parseMemory(window.sessionStorage.getItem(memoryKey(userId)));
+      } catch {
+        // Storage can throw (blocked, private window); start from the defaults.
+      }
+      if (saved && !initialSubjectCode) {
+        // sessionStorage is an external system that cannot be read during
+        // render (it does not exist on the server), so this is the sync point.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setScope(saved.scope);
+        setSubject(saved.subject);
+        setYear(saved.year);
+        setSession(saved.session);
+        setPaperNumber(saved.paperNumber);
+        setTopic(saved.topic);
+        setOnlyBookmarked(saved.onlyBookmarked);
+        setPage(saved.page);
+        scrollTopRef.current = saved.scrollTop;
+        pendingScrollRef.current = saved.scrollTop;
+        if (saved.selectedId && !initialQuestionId) void openQuestion(saved.selectedId);
+      }
+    }
+    setRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once; guarded by restoreStarted
+  }, [sessionStatus, userId]);
+
+  const writeMemory = (memory: PracticeFilterMemory | null) => {
+    if (!memory || !restoredUserRef.current) return;
+    try {
+      window.sessionStorage.setItem(
+        memoryKey(restoredUserRef.current),
+        serializeMemory({ ...memory, scrollTop: Math.round(scrollTopRef.current) }),
+      );
+    } catch {
+      // Quota or blocked storage: remembering is a convenience, never an error.
+    }
+  };
+
+  // Persist on every change of the remembered state.
+  const selectedId = selected?.id ?? null;
+  useEffect(() => {
+    memoryRef.current = restored
+      ? {
+          ...EMPTY_MEMORY,
+          scope, subject, year, session, paperNumber, topic, onlyBookmarked, page, selectedId,
+        }
+      : null;
+    writeMemory(memoryRef.current);
+  }, [restored, scope, subject, year, session, paperNumber, topic, onlyBookmarked, page, selectedId]);
+
+  // Scroll moves too often to be state, so flush the latest offset when the tab
+  // is left (unmount) or the page is closed/hidden.
+  useEffect(() => {
+    const flush = () => writeMemory(memoryRef.current);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
+
+  // Put the list back where it was once it is on screen and has rows to scroll.
+  useEffect(() => {
+    const target = pendingScrollRef.current;
+    if (target === null || selected || listLoading || questions.length === 0) return;
+    const element = listScrollRef.current;
+    if (!element) return;
+    pendingScrollRef.current = null;
+    element.scrollTop = target;
+  }, [selected, listLoading, questions]);
 
   // Consume a deep link once the session exists: the detail fetch is
   // session-gated, so firing it before that 401s on first paint.
@@ -472,7 +604,10 @@ export default function BankPractice({
         <div className="mx-auto max-w-4xl space-y-4 p-2 sm:p-4">
         <button
           type="button"
-          onClick={() => setSelected(null)}
+          onClick={() => {
+            pendingScrollRef.current = scrollTopRef.current;
+            setSelected(null);
+          }}
           className="text-sm text-accent-text hover:underline"
         >
           ← Back to questions
@@ -506,7 +641,13 @@ export default function BankPractice({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div
+      ref={listScrollRef}
+      onScroll={(event) => {
+        scrollTopRef.current = event.currentTarget.scrollTop;
+      }}
+      className="h-full overflow-y-auto"
+    >
       <div className="mx-auto max-w-5xl space-y-4 p-2 sm:p-4">
       {/* The sidebar badges Practice as "Preview" and every other entrance to
           the bank carries the matching banner -- /bank, /bank/papers/[id] and

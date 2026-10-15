@@ -379,6 +379,7 @@ export default function QuestionsDatabase({
           questionId: selectedQuestion.id,
           level,
           studentAnswer: answer || undefined,
+          previousHints: hints.map((hint) => hint.text),
         }),
       });
       const data = await res.json();

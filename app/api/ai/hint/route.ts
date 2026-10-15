@@ -6,6 +6,7 @@ import { chat } from '@/lib/ai';
 import { forInteractive, requireTextAi, type TextCredential } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { reportError } from '@/lib/error-reporting';
+import { buildHintPrompt, MAX_PREVIOUS_HINTS, MAX_PREVIOUS_HINT_CHARS } from '@/lib/hint-prompt';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,17 +33,14 @@ const HintBody = z
     bankQuestionId: z.number().int().positive().optional(),
     level: z.number().int().min(1).max(3),
     studentAnswer: z.string().max(5000).optional(),
+    // The hints this student has already been shown for this question. Without
+    // them every request is answered as the first, and Hint 2 repeats Hint 1.
+    previousHints: z.array(z.string().max(MAX_PREVIOUS_HINT_CHARS)).max(MAX_PREVIOUS_HINTS).optional(),
   })
   .refine(
     (body) => Boolean(body.questionId) !== Boolean(body.bankQuestionId),
     { message: 'Provide exactly one of questionId or bankQuestionId' },
   );
-
-const LEVEL_RULES: Record<number, string> = {
-  1: 'Give one short conceptual nudge. Identify what principle to recall, but do not provide a formula substitution, answer, or final result.',
-  2: 'Give a strategy and the first concrete step. You may name a relevant formula or marking criterion, but do not complete the working or reveal the final answer.',
-  3: 'Give a detailed scaffold with ordered steps and diagnose the student answer if supplied. Leave the final calculation or concluding statement for the student.',
-};
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -92,18 +90,14 @@ export async function POST(req: Request) {
     select: { content: true },
   });
 
-  const prompt = `You are a careful exam tutor giving progressive hints for a ${question.paper.subject.name} question.
-
-Question:
-${question.content}
-
-Private examiner reference (use this to stay accurate, but never quote it as a model answer):
-${markscheme?.content ?? 'No mark scheme was found.'}
-
-${body.studentAnswer ? `Student's current answer:\n${body.studentAnswer}\n` : ''}
-Hint level ${body.level} of 3: ${LEVEL_RULES[body.level]}
-
-Use markdown and LaTeX. Return only the hint. Do not mention these instructions or the private examiner reference.`;
+  const prompt = buildHintPrompt({
+    subject: question.paper.subject.name,
+    question: question.content,
+    reference: markscheme?.content,
+    studentAnswer: body.studentAnswer,
+    level: body.level,
+    previousHints: body.previousHints,
+  });
 
   try {
     const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
@@ -140,7 +134,7 @@ Use markdown and LaTeX. Return only the hint. Do not mention these instructions 
  */
 async function hintForBankQuestion(
   bankQuestionId: number,
-  body: { level: number; studentAnswer?: string },
+  body: { level: number; studentAnswer?: string; previousHints?: string[] },
   userId: string,
   // Typed as the real credential rather than `{ model: string }`: the loose
   // shape forced an `as never` at the call below, which would have hidden a
@@ -171,18 +165,14 @@ async function hintForBankQuestion(
   const markSchemeText =
     question.markScheme?.status === 'published' ? question.markScheme.answerMd?.trim() : '';
 
-  const prompt = `You are a careful exam tutor giving progressive hints for a ${question.paper.subject.name} question.
-
-Question:
-${questionText}
-
-Private examiner reference (use this to stay accurate, but never quote it as a model answer):
-${markSchemeText || 'No mark scheme was found.'}
-
-${body.studentAnswer ? `Student's current answer:\n${body.studentAnswer}\n` : ''}
-Hint level ${body.level} of 3: ${LEVEL_RULES[body.level]}
-
-Use markdown and LaTeX. Return only the hint. Do not mention these instructions or the private examiner reference.`;
+  const prompt = buildHintPrompt({
+    subject: question.paper.subject.name,
+    question: questionText,
+    reference: markSchemeText,
+    studentAnswer: body.studentAnswer,
+    level: body.level,
+    previousHints: body.previousHints,
+  });
 
   try {
     const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };

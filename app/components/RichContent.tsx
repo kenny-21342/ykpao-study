@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { renderLatexSpans, renderMathTextNodes, renderMarkdownWithMath } from '@/lib/latex';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import { linkifyTextNodes } from '@/lib/linkify';
 
 /**
  * Renders content produced by the TipTap RichTextEditor (read-only view),
@@ -27,7 +28,11 @@ export default function RichContent({ html, className }: { html: string; classNa
 
   return (
     <div
-      className={className}
+      // `rich-content` carries the same link, list, heading and table rules the
+      // editor gets from `.ProseMirror`. Without it a published post rendered as
+      // bare HTML: links were plain text and the font size chosen while writing
+      // had nothing to sit in.
+      className={className ? `rich-content ${className}` : 'rich-content'}
       dangerouslySetInnerHTML={{ __html: renderedHtml }}
     />
   );
@@ -59,6 +64,9 @@ function normalizeContent(src: string | undefined | null): string {
   root.innerHTML = s;
   renderLatexSpans(root);
   renderMathTextNodes(root);
+  // After the maths, so a formula's own characters are never mistaken for an
+  // address. Covers posts written before the editor autolinked as you type.
+  linkifyTextNodes(root);
   // KaTeX output is generated from validated delimiters, but sanitize the
   // final string as a defence-in-depth boundary before it reaches React's
   // `dangerouslySetInnerHTML`. This also protects future transforms added to

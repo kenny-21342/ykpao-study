@@ -1,51 +1,79 @@
 /* TipTap Editor Styles */
+/*
+ * READ-ONLY VIEW. Everything below that names `.rich-content` as well as
+ * `.ProseMirror` is the same rule, on purpose.
+ *
+ * Content written in the editor is displayed in two places: inside the editor
+ * (a `.ProseMirror` node) and everywhere else through `RichContent`. These rules
+ * were scoped to `.ProseMirror` alone, so a published discussion post got none
+ * of them: links were plain text, lists lost their bullets, headings were body
+ * size. Keeping the selectors together is what stops the two views drifting.
+ */
+.rich-content {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.rich-content > :first-child { margin-top: 0; }
+.rich-content > :last-child { margin-bottom: 0; }
+
 .ProseMirror {
   outline: none;
   min-height: 400px;
   padding: 1rem;
 }
 
-.ProseMirror p {
+.ProseMirror p,
+.rich-content p {
   margin: 0.5rem 0;
 }
 
-.ProseMirror h1 {
+.ProseMirror h1,
+.rich-content h1 {
   font-size: 2em;
   font-weight: bold;
   margin: 1rem 0 0.5rem 0;
 }
 
-.ProseMirror h2 {
+.ProseMirror h2,
+.rich-content h2 {
   font-size: 1.5em;
   font-weight: bold;
   margin: 0.75rem 0 0.5rem 0;
 }
 
-.ProseMirror h3 {
+.ProseMirror h3,
+.rich-content h3 {
   font-size: 1.25em;
   font-weight: bold;
   margin: 0.5rem 0 0.5rem 0;
 }
 
 .ProseMirror ul,
-.ProseMirror ol {
+.rich-content ul,
+.ProseMirror ol,
+.rich-content ol {
   padding-left: 1.5rem;
   margin: 0.5rem 0;
 }
 
-.ProseMirror ul {
+.ProseMirror ul,
+.rich-content ul {
   list-style-type: disc;
 }
 
-.ProseMirror ol {
+.ProseMirror ol,
+.rich-content ol {
   list-style-type: decimal;
 }
 
-.ProseMirror li {
+.ProseMirror li,
+.rich-content li {
   margin: 0.25rem 0;
 }
 
-.ProseMirror blockquote {
+.ProseMirror blockquote,
+.rich-content blockquote {
   border-left: 4px solid var(--border);
   padding-left: 1rem;
   margin: 1rem 0;
@@ -53,7 +81,8 @@
   font-style: italic;
 }
 
-.ProseMirror code {
+.ProseMirror code,
+.rich-content code {
   background-color: var(--surface-raised);
   padding: 0.2rem 0.4rem;
   border-radius: var(--radius-sm);
@@ -61,7 +90,8 @@
   font-size: 0.9em;
 }
 
-.ProseMirror pre {
+.ProseMirror pre,
+.rich-content pre {
   background-color: var(--surface-raised);
   color: var(--text-primary);
   padding: 1rem;
@@ -70,53 +100,63 @@
   margin: 1rem 0;
 }
 
-.ProseMirror pre code {
+.ProseMirror pre code,
+.rich-content pre code {
   background: none;
   padding: 0;
   color: inherit;
 }
 
-.ProseMirror mark {
+.ProseMirror mark,
+.rich-content mark {
   background-color: var(--warning-subtle);
   padding: 0.1rem 0.2rem;
   border-radius: var(--radius-sm);
 }
 
-.ProseMirror img {
+.ProseMirror img,
+.rich-content img {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-md);
   margin: 1rem 0;
 }
 
-.ProseMirror a {
+.ProseMirror a,
+.rich-content a {
   color: var(--accent-text);
   text-decoration: underline;
   cursor: pointer;
 }
 
-.ProseMirror a:hover {
+.ProseMirror a:hover,
+.rich-content a:hover {
   color: var(--accent);
 }
 
-.ProseMirror [data-text-align="left"] {
+.ProseMirror [data-text-align="left"],
+.rich-content [data-text-align="left"] {
   text-align: left;
 }
 
-.ProseMirror [data-text-align="center"] {
+.ProseMirror [data-text-align="center"],
+.rich-content [data-text-align="center"] {
   text-align: center;
 }
 
-.ProseMirror [data-text-align="right"] {
+.ProseMirror [data-text-align="right"],
+.rich-content [data-text-align="right"] {
   text-align: right;
 }
 
-.ProseMirror [data-text-align="justify"] {
+.ProseMirror [data-text-align="justify"],
+.rich-content [data-text-align="justify"] {
   text-align: justify;
 }
 
 /* LaTeX Formula Styling */
-.ProseMirror .latex-formula {
+.ProseMirror .latex-formula,
+.rich-content .latex-formula {
   display: inline-block;
   padding: 0.2rem 0.5rem;
   background-color: var(--accent-subtle);
@@ -126,7 +166,8 @@
   vertical-align: middle;
 }
 
-.ProseMirror .latex-formula .katex {
+.ProseMirror .latex-formula .katex,
+.rich-content .latex-formula .katex {
   font-size: 1.1em;
 }
 
@@ -150,43 +191,51 @@
 }
 
 /* Horizontal rule */
-.ProseMirror hr {
+.ProseMirror hr,
+.rich-content hr {
   border: none;
   border-top: 2px solid var(--border);
   margin: 2rem 0;
 }
 
 /* Table support (if added) */
-.ProseMirror table {
+.ProseMirror table,
+.rich-content table {
   border-collapse: collapse;
   margin: 1rem 0;
   width: 100%;
 }
 
 .ProseMirror th,
-.ProseMirror td {
+.rich-content th,
+.ProseMirror td,
+.rich-content td {
   border: 1px solid var(--border);
   padding: 0.5rem;
   text-align: left;
 }
 
-.ProseMirror th {
+.ProseMirror th,
+.rich-content th {
   background-color: var(--surface-raised);
   font-weight: bold;
 }
 
 /* Task list (if added) */
-.ProseMirror ul[data-type="taskList"] {
+.ProseMirror ul[data-type="taskList"],
+.rich-content ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
 }
 
-.ProseMirror ul[data-type="taskList"] li {
+.ProseMirror ul[data-type="taskList"] li,
+.rich-content ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
 }
 
-.ProseMirror ul[data-type="taskList"] li input[type="checkbox"] {
+.ProseMirror ul[data-type="taskList"] li input[type="checkbox"],
+.rich-content ul[data-type="taskList"] li input[type="checkbox"] {
   margin-right: 0.5rem;
   margin-top: 0.25rem;
 }

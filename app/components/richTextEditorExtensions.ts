@@ -20,7 +20,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
 import { Color } from '@tiptap/extension-color';
-import { TextStyle } from '@tiptap/extension-text-style';
+import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import { BoldItalicInputRule } from './boldItalicInputRule';
 import { LatexLintExtension } from './latexLintExtension';
 
@@ -51,6 +51,11 @@ export function createRichTextEditorExtensions(options?: {
     }),
     TextStyle,
     Color,
+    // Without this the toolbar's size dropdown set `textStyle.fontSize`, an
+    // attribute the schema did not declare, so ProseMirror dropped it: the
+    // chosen size never reached the document, the stored HTML or any post.
+    // Colour worked only because `Color` declares its own attribute.
+    FontSize,
     // `***text***` isn't matched by StarterKit's default Bold/Italic input
     // rules (their boundary lookaheads reject an adjacent extra `*`).
     BoldItalicInputRule,
