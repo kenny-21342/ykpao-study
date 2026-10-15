@@ -254,6 +254,16 @@ export type BankQuestionSummary = {
   totalMarks: number | null;
   hasText: boolean;
   hasMarkScheme: boolean;
+  /**
+   * What a student can read before opening the question: what it covers and how
+   * hard it is. All of it comes from the tagging pass, so any of it can be empty.
+   */
+  glimpse: {
+    topics: string[];
+    commandTerms: string[];
+    /** 1 (recall) to 5 (extension). */
+    difficulty: number | null;
+  };
   /** First strip only: enough for a list row, without loading the whole crop. */
   thumbnail: BankStrip | null;
   paper: {
@@ -567,6 +577,9 @@ export async function listBankQuestions(options: {
         rootNumber: true,
         totalMarks: true,
         bodyMd: true,
+        difficulty: true,
+        topics: { select: { topic: { select: { name: true } } } },
+        skills: { select: { skill: { select: { slug: true } } } },
         markScheme: { select: { id: true, status: true } },
         strips: {
           orderBy: { ordering: 'asc' },
@@ -593,6 +606,11 @@ export async function listBankQuestions(options: {
       totalMarks: row.totalMarks,
       hasText: row.bodyMd.trim().length > 0,
       hasMarkScheme: row.markScheme?.status === 'published',
+      glimpse: {
+        topics: row.topics.map((link) => link.topic.name).sort(),
+        commandTerms: row.skills.map((link) => link.skill.slug).sort(),
+        difficulty: row.difficulty,
+      },
       thumbnail: toStrips(row.strips)[0] ?? null,
       paper: paperView(row.paper, row.rootNumber),
     })),

@@ -43,6 +43,7 @@ type Summary = {
   totalMarks: number | null;
   hasText: boolean;
   hasMarkScheme: boolean;
+  glimpse: { topics: string[]; commandTerms: string[]; difficulty: number | null };
   thumbnail: BankStrip | null;
   paper: {
     id: number;
@@ -74,6 +75,13 @@ function sessionLabel(session: string): string {
   if (session === 'w') return 'Oct/Nov';
   if (session === 'm') return 'Feb/March';
   return session;
+}
+
+/** The tagging rubric's names, so the number means the same thing everywhere. */
+const DIFFICULTY_NAMES = ['', 'Recall', 'Routine', 'Method selection', 'Synthesis', 'Extension'];
+
+function hasGlimpse(glimpse: Summary['glimpse']): boolean {
+  return glimpse.topics.length > 0 || glimpse.commandTerms.length > 0 || glimpse.difficulty !== null;
 }
 
 function paperLabel(paper: Summary['paper']): string {
@@ -227,6 +235,8 @@ export default function BankPractice({
   const [search, setSearch] = useState('');
   /** Why a search returned nothing, when the server can say (e.g. an SL code under an HL subject). */
   const [notice, setNotice] = useState<string | null>(null);
+  /** Question ids whose Peek is open. Not remembered: it is a glance, not a setting. */
+  const [peeking, setPeeking] = useState<Set<number>>(new Set());
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
   /** Ids the signed-in user has starred, so a list row can draw a filled star. */
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
@@ -871,8 +881,9 @@ export default function BankPractice({
             // button -- a button inside a button is invalid and the inner one
             // stops responding. The row is a container; the open action and
             // the star are siblings inside it.
-            className="flex items-center border-b border-subtle last:border-0 transition-colors hover:bg-surface-hover"
+            className="border-b border-subtle last:border-0 transition-colors hover:bg-surface-hover"
           >
+            <div className="flex items-center">
             <button
               type="button"
               onClick={() => openQuestion(question.id)}
@@ -909,6 +920,25 @@ export default function BankPractice({
                 </span>
               )}
             </button>
+            {hasGlimpse(question.glimpse) && (
+              <button
+                type="button"
+                onClick={() =>
+                  setPeeking((current) => {
+                    const next = new Set(current);
+                    if (next.has(question.id)) next.delete(question.id);
+                    else next.add(question.id);
+                    return next;
+                  })
+                }
+                aria-expanded={peeking.has(question.id)}
+                aria-controls={`peek-${question.id}`}
+                aria-label={`Peek at question ${question.rootNumber}`}
+                className="shrink-0 self-stretch px-2 text-xs text-accent-text hover:underline"
+              >
+                {peeking.has(question.id) ? 'Hide' : 'Peek'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => toggleBookmark(question.id)}
@@ -927,6 +957,42 @@ export default function BankPractice({
                 aria-hidden="true"
               />
             </button>
+            </div>
+            {peeking.has(question.id) && (
+              // Text only: nothing here loads an image, so skimming twenty rows costs nothing.
+              <dl
+                id={`peek-${question.id}`}
+                className="grid gap-x-4 gap-y-1.5 px-3 pb-3 text-xs sm:grid-cols-[auto_1fr]"
+              >
+                {question.glimpse.topics.length > 0 && (
+                  <>
+                    <dt className="text-muted">Covers</dt>
+                    <dd className="flex flex-wrap gap-1">
+                      {question.glimpse.topics.map((name) => (
+                        <span key={name} className="rounded-full bg-accent-subtle px-2 py-0.5 text-accent-text">
+                          {name}
+                        </span>
+                      ))}
+                    </dd>
+                  </>
+                )}
+                {question.glimpse.commandTerms.length > 0 && (
+                  <>
+                    <dt className="text-muted">Asks you to</dt>
+                    <dd className="text-primary">{question.glimpse.commandTerms.join(', ')}</dd>
+                  </>
+                )}
+                {question.glimpse.difficulty !== null && (
+                  <>
+                    <dt className="text-muted">Level</dt>
+                    <dd className="text-primary">
+                      {question.glimpse.difficulty}/5 · {DIFFICULTY_NAMES[question.glimpse.difficulty] ?? ''}
+                      {question.totalMarks !== null ? ` · ${question.totalMarks} marks` : ''}
+                    </dd>
+                  </>
+                )}
+              </dl>
+            )}
           </li>
         ))}
       </ul>
