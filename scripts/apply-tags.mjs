@@ -28,11 +28,12 @@
  *   - Only questions that exist in production are touched. Links to the
  *     crop-failed questions that were deliberately never merged are skipped.
  *
- * --apply writes backups/tags-<timestamp>.jsonl first: the tag slugs it
- * creates, every link it creates, and the question ids whose reason it fills.
- * To undo: delete those links and tags, and set those reasons back to NULL.
+ * --apply appends to backups/tags-<timestamp>.jsonl after every batch: the tag
+ * slugs, links and question ids it created or filled. To undo: delete those
+ * links and tags, and set those reasons back to NULL. --apply commits per batch
+ * (resumable); --trial runs only the first few batches, then rolls back.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import pg from 'pg';
@@ -63,7 +64,7 @@ if (!existsSync(sourcePath)) {
 }
 
 const src = new Database(sourcePath, { readonly: true });
-const client = new pg.Client(pgConfig(url));
+const client = new pg.Client({ ...pgConfig(url), connectionTimeoutMillis: 30_000, keepAlive: true });
 client.on('error', (error) => console.error(`\n(connection error: ${error.message})`));
 
 const counts = async () => {
@@ -77,7 +78,10 @@ const counts = async () => {
 };
 const fmt = (value) => Number(value).toLocaleString();
 
+const log = (message) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${message}`);
+
 try {
+  log('connecting (gives up after 30 s)...');
   await client.connect();
   console.log(`connected: ${url.replace(/\/\/[^@]*@/, '//***@')}`);
   console.log(`source:    ${sourcePath}\n`);
@@ -87,6 +91,7 @@ try {
 
   // Papers are matched on sourcePath, questions on (paperId, rootNumber): the
   // same keys merge_to_neon.py and apply-topics.mjs use.
+  log('reading production paper and question ids...');
   const { rows: paperRows } = await client.query('SELECT id, "sourcePath" FROM bank_papers');
   const prodPaper = new Map(paperRows.map((row) => [row.sourcePath, row.id]));
   const { rows: questionRows } = await client.query('SELECT id, "paperId", "rootNumber" FROM bank_questions');
@@ -96,6 +101,7 @@ try {
     return paperId === undefined ? undefined : prodQuestion.get(`${paperId}:${rootNumber}`);
   };
 
+  log('reading the local extraction store...');
   const localTags = src.prepare('SELECT id, slug, label FROM bank_tags').all();
   const localLinks = src.prepare(`
     SELECT qt.tag_id, qt.confidence, p.source_path, q.root_number
@@ -131,27 +137,47 @@ try {
     process.exit(0);
   }
 
-  await client.query('BEGIN');
-  const backup = { tags: [], links: [], reasons: [] };
+  // --apply commits batch by batch, so a dropped connection loses at most one
+  // batch and a re-run carries on (everything is ON CONFLICT / only-if-empty).
+  // --trial does a small sample inside one transaction and rolls it back.
+  const sample = trial ? 3 : Infinity;
+  if (trial) await client.query('BEGIN');
 
-  // --- tags ----------------------------------------------------------------
+  mkdirSync('backups', { recursive: true });
+  const backupPath = join('backups', `tags-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
+  const record = (entry) => { if (apply) appendFileSync(backupPath, JSON.stringify(entry) + '\n'); };
+
+  // --- tags (batched: 38k one-row inserts was the slow part) ----------------
   const tagId = new Map();
-  for (const tag of localTags) {
-    if (!usedTags.has(tag.id)) continue;
+  const tagsToSend = localTags.filter((tag) => usedTags.has(tag.id));
+  let tagsInserted = 0;
+  for (let i = 0, n = 0; i < tagsToSend.length && n < sample; i += LINK_BATCH, n += 1) {
+    const slice = tagsToSend.slice(i, i + LINK_BATCH);
+    const params = [];
+    const tuples = slice.map((tag, r) => {
+      params.push(tag.slug, tag.label);
+      return `($${r * 2 + 1}::text, $${r * 2 + 2}::text)`;
+    });
     const { rows } = await client.query(
-      `INSERT INTO bank_tags (slug, label) VALUES ($1, $2)
+      `INSERT INTO bank_tags (slug, label) VALUES ${tuples.join(',')}
        ON CONFLICT (slug) DO UPDATE SET slug = EXCLUDED.slug
-       RETURNING id, (xmax = 0) AS inserted`,
-      [tag.slug, tag.label],
+       RETURNING id, slug, (xmax = 0) AS inserted`,
+      params,
     );
-    tagId.set(tag.id, rows[0].id);
-    if (rows[0].inserted) backup.tags.push(tag.slug);
+    const bySlug = new Map(rows.map((row) => [row.slug, row]));
+    for (const tag of slice) {
+      const row = bySlug.get(tag.slug);
+      tagId.set(tag.id, row.id);
+      if (row.inserted) { tagsInserted += 1; record({ kind: 'tag', slug: tag.slug }); }
+    }
+    log(`tags: ${fmt(Math.min(i + LINK_BATCH, tagsToSend.length))}/${fmt(tagsToSend.length)} (${fmt(tagsInserted)} new)`);
   }
-  console.log(`\ntags: ${fmt(backup.tags.length)} inserted, ${fmt(tagId.size - backup.tags.length)} already present`);
 
   // --- links ---------------------------------------------------------------
-  for (let i = 0; i < links.length; i += LINK_BATCH) {
-    const slice = links.slice(i, i + LINK_BATCH);
+  let linksInserted = 0;
+  const usable = links.filter((link) => tagId.has(link.localTag));
+  for (let i = 0, n = 0; i < usable.length && n < sample; i += LINK_BATCH, n += 1) {
+    const slice = usable.slice(i, i + LINK_BATCH);
     const params = [];
     const tuples = slice.map((link, r) => {
       params.push(link.questionId, tagId.get(link.localTag), link.confidence);
@@ -164,13 +190,14 @@ try {
        RETURNING "questionId", "tagId"`,
       params,
     );
-    for (const row of rows) backup.links.push([row.questionId, row.tagId]);
-    process.stdout.write(`\r  links: ${fmt(Math.min(i + LINK_BATCH, links.length))}/${fmt(links.length)} -- ${fmt(backup.links.length)} inserted`);
+    linksInserted += rows.length;
+    for (const row of rows) record({ kind: 'link', questionId: row.questionId, tagId: row.tagId });
+    log(`links: ${fmt(Math.min(i + LINK_BATCH, usable.length))}/${fmt(usable.length)} (${fmt(linksInserted)} new)`);
   }
-  if (links.length) process.stdout.write('\n');
 
   // --- reasons: only where there is none ------------------------------------
-  for (let i = 0; i < reasons.length; i += REASON_BATCH) {
+  let reasonsFilled = 0;
+  for (let i = 0, n = 0; i < reasons.length && n < sample; i += REASON_BATCH, n += 1) {
     const slice = reasons.slice(i, i + REASON_BATCH);
     const params = [];
     const tuples = slice.map((row, r) => {
@@ -184,32 +211,23 @@ try {
        RETURNING q.id`,
       params,
     );
-    for (const row of rows) backup.reasons.push(row.id);
-    process.stdout.write(`\r  reasons: ${fmt(Math.min(i + REASON_BATCH, reasons.length))}/${fmt(reasons.length)} -- ${fmt(backup.reasons.length)} filled`);
+    reasonsFilled += rows.length;
+    for (const row of rows) record({ kind: 'reason', questionId: row.id });
+    log(`reasons: ${fmt(Math.min(i + REASON_BATCH, reasons.length))}/${fmt(reasons.length)} (${fmt(reasonsFilled)} filled)`);
   }
-  if (reasons.length) process.stdout.write('\n');
 
   const after = await counts();
   console.log(`\nAFTER    tags: ${fmt(after.tags)}   links: ${fmt(after.links)}   reasons: ${fmt(after.reasons)}`);
 
-  if (apply) {
-    // Backup first, then commit: if the file cannot be written nothing has landed.
-    mkdirSync('backups', { recursive: true });
-    const backupPath = join('backups', `tags-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
-    writeFileSync(backupPath, [
-      JSON.stringify({ kind: 'tags', slugs: backup.tags }),
-      JSON.stringify({ kind: 'reasons', questionIds: backup.reasons }),
-      ...backup.links.map((pair) => JSON.stringify({ kind: 'link', questionId: pair[0], tagId: pair[1] })),
-    ].join('\n') + '\n');
-    await client.query('COMMIT');
-    console.log(`\nCommitted. Backup of everything created: ${backupPath}`);
-  } else {
+  if (trial) {
     await client.query('ROLLBACK');
-    console.log('\nTrial only: rolled back, nothing was written.');
+    console.log('\nTrial only (first few batches): rolled back, nothing was written.');
+  } else {
+    console.log(`\nDone. Backup of everything created: ${backupPath}`);
   }
 } catch (error) {
-  await client.query('ROLLBACK').catch(() => {});
-  console.error(`\nFAILED (rolled back): ${error.message}`);
+  if (trial) await client.query('ROLLBACK').catch(() => {});
+  console.error(`\nFAILED: ${error.message}${apply ? ' -- batches already committed stay; re-run --apply to continue.' : ''}`);
   process.exit(1);
 } finally {
   src.close();
