@@ -7,7 +7,7 @@ import {
 
 const sample: PracticeFilterMemory = {
   ...EMPTY_MEMORY,
-  scope: 'all', subject: '123', year: '2023', session: 'May', paperNumber: '1',
+  scope: 'all', subject: '123', year: '2023', session: 'May', paperNumber: '1,2', variant: '1,3', timezone: 'TZ1,TZ0', levels: '4,5',
   topic: 'Circular motion', onlyBookmarked: true, search: '22', page: 3,
   selectedId: 61174, scrollTop: 840,
 };
@@ -42,6 +42,10 @@ test('every field is validated; a tampered one rejects the whole payload', () =>
     { subject: 'abc' },
     { year: '20233' },
     { paperNumber: '1.5' },
+    { paperNumber: '1,,2' },
+    { variant: '1;2' },
+    { timezone: 'TZ9' },
+    { levels: '6' },
     { session: 'x'.repeat(40) },
     { topic: 'x'.repeat(201) },
     { search: 'x'.repeat(201) },

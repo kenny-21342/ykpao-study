@@ -1528,6 +1528,7 @@ model BankQuestion {
   strips                 BankQuestionStrip[]
   assets                 BankQuestionAsset[]
   topics                 BankQuestionTopic[]
+  partRows               BankQuestionPart[]
   tags                   BankQuestionTag[]
   skills                 BankQuestionSkill[]
   reviewFlags            BankReviewFlag[]
@@ -1916,4 +1917,32 @@ model ErrorEvent {
   @@index([createdAt])
   @@index([fingerprint])
   @@map("error_events")
+}
+
+// One row per sub-part of a multi-part question ("a", "b(ii)"), each with its
+// own topic and difficulty. The question-level `difficulty` and topics stay as
+// they are: a question with fewer than two parts has no rows here and is
+// described by those. `topic` is the topic NAME, not a foreign key, because the
+// existing filters already key on name (a topic row is filed under one level of
+// a subject but applies to both).
+model BankQuestionPart {
+  id               Int      @id @default(autoincrement())
+  questionId       Int
+  label            String
+  ordering         Int
+  marks            Int?
+  topic            String?
+  difficulty       Int? // 1-5
+  difficultySource String?  @default("llm")
+  rationale        String?
+  model            String?
+  promptVersion    String?
+  createdAt        DateTime @default(now())
+
+  question BankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, label])
+  @@index([topic])
+  @@index([difficulty])
+  @@map("bank_question_parts")
 }

@@ -34,6 +34,8 @@ type Filters = {
   years: number[];
   sessions: string[];
   paperNumbers: number[];
+  variants: number[];
+  timezones: string[];
   topics: string[];
 };
 
@@ -49,6 +51,7 @@ type Summary = {
     commandTerms: string[];
     difficulty: number | null;
     difficultyReason: string | null;
+    parts: Array<{ label: string; marks: number | null; topic: string | null; difficulty: number | null }>;
   };
   thumbnail: BankStrip | null;
   paper: {
@@ -72,7 +75,7 @@ type Summary = {
 type FullQuestion = BankQuestionView & { paper: Summary['paper'] };
 
 const EMPTY_FILTERS: Filters = {
-  subjects: [], years: [], sessions: [], paperNumbers: [], topics: [],
+  subjects: [], years: [], sessions: [], paperNumbers: [], variants: [], timezones: [], topics: [],
 };
 
 /** "s" and "w" are how the corpus stores it; neither is what to show. */
@@ -85,6 +88,7 @@ function sessionLabel(session: string): string {
 
 type ListFilters = {
   scope: string; subject: string; year: string; session: string; paperNumber: string;
+  variant: string; timezone: string; levels: string;
   topic: string; search: string; onlyBookmarked: boolean;
 };
 
@@ -95,6 +99,9 @@ function listQuery(filters: ListFilters, page: number, limit: number): URLSearch
   if (filters.year) params.set('year', filters.year);
   if (filters.session) params.set('session', filters.session);
   if (filters.paperNumber) params.set('paper', filters.paperNumber);
+  if (filters.variant) params.set('variant', filters.variant);
+  if (filters.timezone) params.set('tz', filters.timezone);
+  if (filters.levels) params.set('levels', filters.levels);
   if (filters.topic) params.set('topic', filters.topic);
   // A search needs a subject; the box is disabled without one, and this keeps
   // a stale value from a restored session from reaching the server alone.
@@ -114,10 +121,57 @@ type ExportResult = {
 /** The tagging rubric's names, so the number means the same thing everywhere. */
 const DIFFICULTY_NAMES = ['', 'Recall', 'Routine', 'Method selection', 'Synthesis', 'Extension'];
 
+/** Toggle `value` in a comma-list string, keeping the list sorted and unique. */
+function toggleInList(list: string, value: string): string {
+  const items = list ? list.split(',') : [];
+  const next = items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
+  return next.sort().join(',');
+}
+
+/**
+ * A row of toggle chips for a multi-select filter.
+ *
+ * Chips rather than a multi-select <select>: a native one needs ctrl/cmd-click,
+ * which a phone cannot do, and these lists are three to seven items long.
+ */
+function ChipGroup({
+  label, options, value, onChange,
+}: {
+  label: string;
+  options: Array<{ value: string; label: string; title?: string }>;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const chosen = value ? value.split(',') : [];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={label}>
+      <span className="text-xs text-muted">{label}</span>
+      {options.map((option) => {
+        const on = chosen.includes(option.value);
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={on}
+            aria-label={option.title ? `${label} ${option.label}: ${option.title}` : `${label} ${option.label}`}
+            title={option.title}
+            onClick={() => onChange(toggleInList(value, option.value))}
+            className={`rounded-full border px-2.5 py-0.5 text-xs ${
+              on ? 'border-transparent bg-accent text-white' : 'border-strong text-secondary hover:bg-surface-hover'
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function hasGlimpse(glimpse: Summary['glimpse']): boolean {
   return (
     glimpse.topics.length > 0 || glimpse.tags.length > 0 || glimpse.commandTerms.length > 0 ||
-    glimpse.difficulty !== null || glimpse.difficultyReason !== null
+    glimpse.difficulty !== null || glimpse.difficultyReason !== null || glimpse.parts.length > 0
   );
 }
 
@@ -249,6 +303,9 @@ export default function BankPractice({
   const [year, setYear] = useState('');
   const [session, setSession] = useState('');
   const [paperNumber, setPaperNumber] = useState('');
+  const [variant, setVariant] = useState('');
+  const [timezone, setTimezone] = useState('');
+  const [levels, setLevels] = useState('');
   const [page, setPage] = useState(1);
   /**
    * Whose subjects to browse.
@@ -407,7 +464,7 @@ export default function BankPractice({
     const controller = new AbortController();
 
     const params = listQuery(
-      { scope, subject, year, session, paperNumber, topic, search, onlyBookmarked },
+      { scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked },
       page,
       20,
     );
@@ -438,7 +495,7 @@ export default function BankPractice({
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, scope, topic, search, onlyBookmarked, sessionStatus, restored]);
+  }, [page, subject, year, session, paperNumber, variant, timezone, levels, scope, topic, search, onlyBookmarked, sessionStatus, restored]);
 
   // Typing searches 300 ms after the last keystroke. The guard against `search`
   // matters on restore: both start equal, and without it this would fire once
@@ -543,6 +600,9 @@ export default function BankPractice({
         setYear(saved.year);
         setSession(saved.session);
         setPaperNumber(saved.paperNumber);
+        setVariant(saved.variant);
+        setTimezone(saved.timezone);
+        setLevels(saved.levels);
         setTopic(saved.topic);
         setSearchInput(saved.search);
         setSearch(saved.search);
@@ -575,11 +635,11 @@ export default function BankPractice({
     memoryRef.current = restored
       ? {
           ...EMPTY_MEMORY,
-          scope, subject, year, session, paperNumber, topic, search, onlyBookmarked, page, selectedId,
+          scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, page, selectedId,
         }
       : null;
     writeMemory(memoryRef.current);
-  }, [restored, scope, subject, year, session, paperNumber, topic, search, onlyBookmarked, page, selectedId]);
+  }, [restored, scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, page, selectedId]);
 
   // Scroll moves too often to be state, so flush the latest offset when the tab
   // is left (unmount) or the page is closed/hidden.
@@ -666,7 +726,7 @@ export default function BankPractice({
     setExportError(null);
     try {
       const res = await fetch(
-        `/api/bank/questions?${listQuery({ scope, subject, year, session, paperNumber, topic, search, onlyBookmarked }, 1, EXPORT_MAX)}`,
+        `/api/bank/questions?${listQuery({ scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked }, 1, EXPORT_MAX)}`,
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not select those questions');
@@ -863,7 +923,7 @@ export default function BankPractice({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <select
           aria-label="Subject"
           value={subject}
@@ -905,17 +965,6 @@ export default function BankPractice({
             <option key={option} value={option}>{sessionLabel(option)}</option>
           ))}
         </select>
-        <select
-          aria-label="Paper"
-          value={paperNumber}
-          onChange={(e) => changeFilter(setPaperNumber)(e.target.value)}
-          className="rounded-md border border-strong px-2 py-1.5 text-sm bg-surface"
-        >
-          <option value="">All papers</option>
-          {filters.paperNumbers.map((option) => (
-            <option key={option} value={option}>Paper {option}</option>
-          ))}
-        </select>
         {/* Topics belong to a subject, so the control only appears once one is
           * chosen -- offering the union across every subject listed topics that
           * could not match a single question on screen. Still gated on the list
@@ -926,7 +975,7 @@ export default function BankPractice({
             aria-label="Topic"
             value={topic}
             onChange={(e) => changeFilter(setTopic)(e.target.value)}
-            className="col-span-2 rounded-md border border-strong px-2 py-1.5 text-sm bg-surface sm:col-span-4"
+            className="col-span-2 rounded-md border border-strong px-2 py-1.5 text-sm bg-surface sm:col-span-3"
           >
             <option value="">All topics</option>
             {filters.topics.map((option) => (
@@ -934,6 +983,45 @@ export default function BankPractice({
             ))}
           </select>
         )}
+      </div>
+
+      <div className="space-y-2">
+        {filters.paperNumbers.length > 0 && (
+          <ChipGroup
+            label="Paper"
+            options={filters.paperNumbers.map((n) => ({ value: String(n), label: String(n) }))}
+            value={paperNumber}
+            onChange={changeFilter(setPaperNumber)}
+          />
+        )}
+        {filters.variants.length > 0 && (
+          <ChipGroup
+            label="Variant"
+            options={filters.variants.map((n) => ({ value: String(n), label: String(n) }))}
+            value={variant}
+            onChange={changeFilter(setVariant)}
+          />
+        )}
+        {filters.timezones.length > 0 && (
+          <ChipGroup
+            label="Time zone"
+            options={filters.timezones.map((zone) => ({
+              value: zone,
+              label: zone === 'TZ0' ? 'None' : zone,
+              title: zone === 'TZ0' ? 'Sittings with no time zone' : undefined,
+            }))}
+            value={timezone}
+            onChange={changeFilter(setTimezone)}
+          />
+        )}
+        {/* Matched against each sub-part first, so "level 4-5" finds a question
+            whose part (d) is an extension even when part (a) is recall. */}
+        <ChipGroup
+          label="Level"
+          options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n), title: DIFFICULTY_NAMES[n] }))}
+          value={levels}
+          onChange={changeFilter(setLevels)}
+        />
       </div>
 
       <label className="relative block">
@@ -1136,6 +1224,25 @@ export default function BankPractice({
                     <dd className="text-primary">
                       {question.glimpse.difficulty}/5 · {DIFFICULTY_NAMES[question.glimpse.difficulty] ?? ''}
                       {question.totalMarks ? ` · ${question.totalMarks} marks` : ''}
+                    </dd>
+                  </>
+                )}
+                {question.glimpse.parts.length > 0 && (
+                  <>
+                    <dt className="text-muted">Parts</dt>
+                    <dd>
+                      <ul className="space-y-0.5">
+                        {question.glimpse.parts.map((part) => (
+                          <li key={part.label} className="text-primary">
+                            <span className="font-mono">({part.label})</span>
+                            {part.marks ? <span className="text-muted"> {part.marks}m</span> : null}
+                            {part.difficulty !== null && (
+                              <span className="text-muted"> · {DIFFICULTY_NAMES[part.difficulty] ?? part.difficulty}</span>
+                            )}
+                            {part.topic && <span className="text-muted"> · {part.topic}</span>}
+                          </li>
+                        ))}
+                      </ul>
                     </dd>
                   </>
                 )}

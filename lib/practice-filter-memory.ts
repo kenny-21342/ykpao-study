@@ -16,7 +16,7 @@
  * written by an older build can have a different shape.
  */
 
-export const MEMORY_VERSION = 1;
+export const MEMORY_VERSION = 2;
 
 export type PracticeFilterMemory = {
   v: typeof MEMORY_VERSION;
@@ -25,7 +25,14 @@ export type PracticeFilterMemory = {
   subject: string;
   year: string;
   session: string;
+  /** Multi-select, stored as a comma list: "1,2". '' = any. */
   paperNumber: string;
+  /** Comma list of paper variants: "1,3". */
+  variant: string;
+  /** Comma list of time zones: "TZ1,TZ2" (TZ0 = no zone). */
+  timezone: string;
+  /** Comma list of levels 1-5, matched against sub-parts. */
+  levels: string;
   topic: string;
   onlyBookmarked: boolean;
   /** Free-text / question-number search box. */
@@ -44,6 +51,9 @@ export const EMPTY_MEMORY: PracticeFilterMemory = {
   year: '',
   session: '',
   paperNumber: '',
+  variant: '',
+  timezone: '',
+  levels: '',
   topic: '',
   onlyBookmarked: false,
   search: '',
@@ -62,6 +72,12 @@ const MAX_RAW_LENGTH = 2000;
 
 const digits = (value: unknown, max: number): string | null =>
   typeof value === 'string' && /^\d*$/.test(value) && value.length <= max ? value : null;
+
+/** '' or a comma list whose every item matches `item`, within a length bound. */
+const list = (value: unknown, item: RegExp, max: number): string | null =>
+  typeof value === 'string' && value.length <= max && (value === '' || value.split(',').every((piece) => item.test(piece)))
+    ? value
+    : null;
 
 const text = (value: unknown, max: number): string | null =>
   typeof value === 'string' && value.length <= max ? value : null;
@@ -93,11 +109,14 @@ export function parseMemory(raw: string | null | undefined): PracticeFilterMemor
 
   const subject = digits(record.subject, 9);
   const year = digits(record.year, 4);
-  const paperNumber = digits(record.paperNumber, 3);
+  const paperNumber = list(record.paperNumber, /^\d$/, 20);
+  const variant = list(record.variant, /^\d$/, 20);
+  const timezone = list(record.timezone, /^TZ[0-3]$/, 20);
+  const levels = list(record.levels, /^[1-5]$/, 9);
   const session = text(record.session, 16);
   const topic = text(record.topic, 200);
   const search = text(record.search, 200);
-  if ([subject, year, paperNumber, session, topic, search].some((field) => field === null)) return null;
+  if ([subject, year, paperNumber, variant, timezone, levels, session, topic, search].some((field) => field === null)) return null;
 
   const page = record.page;
   if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > 100_000) return null;
@@ -122,6 +141,9 @@ export function parseMemory(raw: string | null | undefined): PracticeFilterMemor
     year: year!,
     session: session!,
     paperNumber: paperNumber!,
+    variant: variant!,
+    timezone: timezone!,
+    levels: levels!,
     topic: topic!,
     onlyBookmarked: record.onlyBookmarked,
     search: search!,

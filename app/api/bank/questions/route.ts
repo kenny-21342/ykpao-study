@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
+import { parseIntList, parseZoneList } from '@/lib/bank-filter-clauses';
 import { parsePositiveInt } from '@/lib/query-params';
 import { reportError } from '@/lib/error-reporting';
 import {
@@ -135,7 +136,11 @@ export async function GET(request: NextRequest) {
       search,
       year: intParam(searchParams.get('year')),
       session: searchParams.get('session') || null,
-      paperNumber: intParam(searchParams.get('paper')),
+      // `paper` may be a comma list ("1,2"): papers are multi-select.
+      paperNumbers: parseIntList(searchParams.get('paper'), 8, 0, 9),
+      variants: parseIntList(searchParams.get('variant'), 6, 1, 9),
+      timezones: parseZoneList(searchParams.get('tz')),
+      levels: parseIntList(searchParams.get('levels'), 5, 1, 5),
       topic: searchParams.get('topic') || null,
       // Only a signed-in user has bookmarks; for anyone else the filter is a
       // no-op rather than an empty list, which would look like a broken page.

@@ -9,6 +9,7 @@
  * Strips matter rather than `screenshotId`: that column holds only the first
  * one, which for 89% of questions is the top fragment of the image.
  */
+import { paperClauses, questionClauses } from '@/lib/bank-filter-clauses';
 import { formatQuestionCode, storedSession, type ParsedQuery } from '@/lib/bank-search';
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { prisma } from '@/lib/prisma';
@@ -236,6 +237,10 @@ export type BankFilters = {
   years: number[];
   sessions: string[];
   paperNumbers: number[];
+  /** Paper variants offered for the subject (1, 2, 3...). Empty when it has none. */
+  variants: number[];
+  /** 'TZ1'..'TZ3', plus 'TZ0' for sittings with no time zone. Empty when it has none. */
+  timezones: string[];
   /**
    * Topics that actually have published questions behind them.
    *
@@ -267,6 +272,8 @@ export type BankQuestionSummary = {
     difficulty: number | null;
     /** One sentence on what sets that level, written by the tagging pass. */
     difficultyReason: string | null;
+    /** Sub-parts with their own topic and level; empty for single-part questions. */
+    parts: Array<{ label: string; marks: number | null; topic: string | null; difficulty: number | null }>;
   };
   /** First strip only: enough for a list row, without loading the whole crop. */
   thumbnail: BankStrip | null;
@@ -360,7 +367,7 @@ export async function listBankFilters(
   // and a CAIE one has no "May TZ2".
   const paperWhere = subjectId ? { ...where, subjectId } : where;
 
-  const [subjects, years, sessions, paperNumbers, topics] = await Promise.all([
+  const [subjects, years, sessions, paperNumbers, variants, zones, topics] = await Promise.all([
     // Not narrowed by `subjectId`: this is the list the selection is made from.
     prisma.bankSubject.findMany({
       where: { papers: { some: where } },
@@ -376,6 +383,13 @@ export async function listBankFilters(
     prisma.bankPaper.findMany({
       where: paperWhere, distinct: ['paperNumber'], orderBy: { paperNumber: 'asc' },
       select: { paperNumber: true },
+    }),
+    prisma.bankPaper.findMany({
+      where: { ...paperWhere, variant: { gt: 0 } }, distinct: ['variant'], orderBy: { variant: 'asc' },
+      select: { variant: true },
+    }),
+    prisma.bankPaper.findMany({
+      where: paperWhere, distinct: ['timezone'], orderBy: { timezone: 'asc' }, select: { timezone: true },
     }),
     /*
      * Topics that this subject's questions are actually tagged with.
@@ -418,6 +432,12 @@ export async function listBankFilters(
     years: years.map((row) => row.year),
     sessions: sessions.map((row) => row.session),
     paperNumbers: paperNumbers.map((row) => row.paperNumber),
+    variants: variants.map((row) => row.variant),
+    // Offered only when there is a real choice: a subject whose papers all lack
+    // a time zone (every CAIE paper) has nothing to filter on.
+    timezones: zones.some((row) => row.timezone)
+      ? zones.map((row) => row.timezone ?? 'TZ0')
+      : [],
     topics: topics.map((row) => row.name),
   };
 }
@@ -512,6 +532,12 @@ export async function listBankQuestions(options: {
   year?: number | null;
   session?: string | null;
   paperNumber?: number | null;
+  /** Multi-select forms of the paper filters. */
+  paperNumbers?: number[];
+  variants?: number[];
+  timezones?: string[];
+  /** Any of these levels (1-5), matched against sub-parts then the question. */
+  levels?: number[];
   topic?: string | null;
   /** When set, only questions this user has starred. */
   bookmarkedBy?: string | null;
@@ -545,12 +571,13 @@ export async function listBankQuestions(options: {
     if (search.timezone !== undefined) searchPaper.timezone = search.timezone;
   }
 
+  const extraQuestionClauses = questionClauses({ topic: options.topic, levels: options.levels });
+
   const baseWhere = {
     status: 'published',
     ...(options.bookmarkedBy
       ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
       : {}),
-    ...(options.topic ? { topics: { some: { topic: { name: options.topic } } } } : {}),
     ...(search?.question !== undefined ? { rootNumber: search.question } : {}),
     paper: {
       ...publishedQuestionPaperWhere(options.subjectCodes),
@@ -558,8 +585,12 @@ export async function listBankQuestions(options: {
       ...(options.year ? { year: options.year } : {}),
       ...(options.session ? { session: options.session } : {}),
       ...(options.paperNumber ? { paperNumber: options.paperNumber } : {}),
+      ...paperClauses({
+        paperNumbers: options.paperNumbers, variants: options.variants, timezones: options.timezones,
+      }),
       ...(Object.keys(searchPaper).length ? { AND: [searchPaper] } : {}),
     },
+    ...(extraQuestionClauses.length ? { AND: extraQuestionClauses } : {}),
   };
 
   let where: Record<string, unknown> = baseWhere;
@@ -585,6 +616,10 @@ export async function listBankQuestions(options: {
         difficultyRationale: true,
         topics: { select: { topic: { select: { name: true } } } },
         tags: { select: { tag: { select: { label: true } } }, orderBy: { confidence: 'desc' }, take: 5 },
+        partRows: {
+          orderBy: { ordering: 'asc' }, take: 30,
+          select: { label: true, marks: true, topic: true, difficulty: true },
+        },
         skills: { select: { skill: { select: { slug: true } } } },
         markScheme: { select: { id: true, status: true } },
         strips: {
@@ -618,6 +653,7 @@ export async function listBankQuestions(options: {
         commandTerms: row.skills.map((link) => link.skill.slug).sort(),
         difficulty: row.difficulty,
         difficultyReason: row.difficultyRationale?.trim() || null,
+        parts: row.partRows,
       },
       thumbnail: toStrips(row.strips)[0] ?? null,
       paper: paperView(row.paper, row.rootNumber),
