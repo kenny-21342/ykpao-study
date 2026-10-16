@@ -83,6 +83,34 @@ function sessionLabel(session: string): string {
   return session;
 }
 
+type ListFilters = {
+  scope: string; subject: string; year: string; session: string; paperNumber: string;
+  topic: string; search: string; onlyBookmarked: boolean;
+};
+
+/** The list request for a set of filters; shared by the list and "select all matching". */
+function listQuery(filters: ListFilters, page: number, limit: number): URLSearchParams {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit), scope: filters.scope });
+  if (filters.subject) params.set('subject', filters.subject);
+  if (filters.year) params.set('year', filters.year);
+  if (filters.session) params.set('session', filters.session);
+  if (filters.paperNumber) params.set('paper', filters.paperNumber);
+  if (filters.topic) params.set('topic', filters.topic);
+  // A search needs a subject; the box is disabled without one, and this keeps
+  // a stale value from a restored session from reaching the server alone.
+  if (filters.search && filters.subject) params.set('q', filters.search);
+  if (filters.onlyBookmarked) params.set('bookmarked', '1');
+  return params;
+}
+
+/** Most questions one worksheet may hold; matches the server's limit. */
+const EXPORT_MAX = 100;
+
+type ExportResult = {
+  url: string; filename: string; pages: number; questions: number; requested: number;
+  withoutMarkScheme: number; missingImages: number;
+};
+
 /** The tagging rubric's names, so the number means the same thing everywhere. */
 const DIFFICULTY_NAMES = ['', 'Recall', 'Routine', 'Method selection', 'Synthesis', 'Extension'];
 
@@ -246,6 +274,17 @@ export default function BankPractice({
   const [notice, setNotice] = useState<string | null>(null);
   /** Question ids whose Peek is open. Not remembered: it is a glance, not a setting. */
   const [peeking, setPeeking] = useState<Set<number>>(new Set());
+
+  /** Worksheet export: what is ticked, and the state of the dialog. */
+  const [ticked, setTicked] = useState<Set<number>>(new Set());
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportTitle, setExportTitle] = useState('Practice worksheet');
+  const [exportMarkScheme, setExportMarkScheme] = useState(false);
+  const [exportOnePerPage, setExportOnePerPage] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
+  const [selectBusy, setSelectBusy] = useState(false);
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
   /** Ids the signed-in user has starred, so a list row can draw a filled star. */
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
@@ -367,16 +406,11 @@ export default function BankPractice({
     let stale = false;
     const controller = new AbortController();
 
-    const params = new URLSearchParams({ page: String(page), limit: '20', scope });
-    if (subject) params.set('subject', subject);
-    if (year) params.set('year', year);
-    if (session) params.set('session', session);
-    if (paperNumber) params.set('paper', paperNumber);
-    if (topic) params.set('topic', topic);
-    // A search needs a subject; the box is disabled without one, and this keeps
-    // a stale value from a restored session from reaching the server alone.
-    if (search && subject) params.set('q', search);
-    if (onlyBookmarked) params.set('bookmarked', '1');
+    const params = listQuery(
+      { scope, subject, year, session, paperNumber, topic, search, onlyBookmarked },
+      page,
+      20,
+    );
 
     (async () => {
       try {
@@ -615,6 +649,74 @@ export default function BankPractice({
       subjectCode: paper.subjectCode,
     });
   }, [selected, updateData]);
+
+  const toggleTicked = (id: number) => {
+    setExportResult(null);
+    setTicked((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /** Tick up to EXPORT_MAX questions matching the current filters, across pages. */
+  const selectMatching = async () => {
+    setSelectBusy(true);
+    setExportError(null);
+    try {
+      const res = await fetch(
+        `/api/bank/questions?${listQuery({ scope, subject, year, session, paperNumber, topic, search, onlyBookmarked }, 1, EXPORT_MAX)}`,
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Could not select those questions');
+      setExportResult(null);
+      setTicked((current) => {
+        const next = new Set(current);
+        for (const row of data.questions ?? []) {
+          if (next.size >= EXPORT_MAX) break;
+          next.add(row.id);
+        }
+        return next;
+      });
+    } catch (error) {
+      setExportError((error as Error).message);
+    } finally {
+      setSelectBusy(false);
+    }
+  };
+
+  const createWorksheet = async () => {
+    setExportBusy(true);
+    setExportError(null);
+    setExportResult(null);
+    try {
+      const res = await fetch('/api/bank/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: [...ticked],
+          title: exportTitle,
+          includeMarkScheme: exportMarkScheme,
+          layout: exportOnePerPage ? 'onePerPage' : 'flow',
+        }),
+      });
+      // Read as text first: a platform error (timeout, size) is not JSON.
+      const raw = await res.text();
+      let data: (ExportResult & { dataBase64?: string; error?: string }) | null = null;
+      try { data = JSON.parse(raw); } catch { /* not JSON */ }
+      if (!res.ok || !data) throw new Error(data?.error || 'Could not build the worksheet. Try fewer questions.');
+      if (!data.url && data.dataBase64) {
+        const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+        data.url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      }
+      setExportResult(data);
+    } catch (error) {
+      setExportError((error as Error).message);
+    } finally {
+      setExportBusy(false);
+    }
+  };
 
   const lastPage = Math.max(1, Math.ceil(total / 20));
 
@@ -855,9 +957,25 @@ export default function BankPractice({
         />
       </label>
 
-      <p className="text-xs text-muted">
-        {listLoading ? 'Loading…' : `${total.toLocaleString()} questions`}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          {listLoading ? 'Loading…' : `${total.toLocaleString()} questions`}
+        </p>
+        {total > 0 && (
+          <button
+            type="button"
+            onClick={selectMatching}
+            disabled={selectBusy || listLoading}
+            className="text-xs text-accent-text hover:underline disabled:opacity-50"
+          >
+            {selectBusy
+              ? 'Selecting…'
+              : total > EXPORT_MAX
+                ? `Select the first ${EXPORT_MAX} matching`
+                : `Select all ${total.toLocaleString()} matching`}
+          </button>
+        )}
+      </div>
 
       {listError && (
         <p className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
@@ -893,6 +1011,15 @@ export default function BankPractice({
             className="border-b border-subtle last:border-0 transition-colors hover:bg-surface-hover"
           >
             <div className="flex items-center">
+            <label className="shrink-0 self-stretch flex items-center px-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ticked.has(question.id)}
+                onChange={() => toggleTicked(question.id)}
+                aria-label={`Select question ${question.rootNumber} for export`}
+                className="h-4 w-4"
+              />
+            </label>
             <button
               type="button"
               onClick={() => openQuestion(question.id)}
@@ -1048,6 +1175,84 @@ export default function BankPractice({
         </div>
       )}
       </div>
+
+      {ticked.size > 0 && (
+        // Sticky inside the scrolling list, so it stays in view while ticking down a page.
+        <div className="sticky bottom-0 border-t border-line bg-surface px-3 py-2 shadow-lg">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 text-sm">
+            <span className="tabular-nums text-primary">
+              {ticked.size} selected{ticked.size >= EXPORT_MAX ? ' (the most one worksheet holds)' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => setExportOpen((open) => !open)}
+              aria-expanded={exportOpen}
+              className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover"
+            >
+              Export PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTicked(new Set()); setExportOpen(false); setExportResult(null); setExportError(null); }}
+              className="text-xs text-secondary hover:underline"
+            >
+              Clear
+            </button>
+          </div>
+          {exportOpen && (
+            <div className="mx-auto mt-2 max-w-5xl space-y-2 border-t border-subtle pt-2 text-sm">
+              <label className="block">
+                <span className="text-xs text-muted">Title printed on every page</span>
+                <input
+                  value={exportTitle}
+                  onChange={(e) => setExportTitle(e.target.value)}
+                  maxLength={100}
+                  className="mt-0.5 w-full rounded-md border border-strong bg-surface px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-secondary">
+                <input type="checkbox" checked={exportMarkScheme} onChange={(e) => setExportMarkScheme(e.target.checked)} />
+                Add the mark schemes at the end
+              </label>
+              <label className="flex items-center gap-2 text-xs text-secondary">
+                <input type="checkbox" checked={exportOnePerPage} onChange={(e) => setExportOnePerPage(e.target.checked)} />
+                One question per page, with room to write
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={createWorksheet}
+                  disabled={exportBusy}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-strong px-3 py-1.5 text-xs font-medium hover:bg-surface-hover disabled:opacity-60"
+                >
+                  {exportBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                  {exportBusy ? 'Building the PDF… this can take a minute' : 'Create PDF'}
+                </button>
+                {exportResult && (
+                  <a
+                    href={exportResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={exportResult.filename}
+                    className="text-xs font-semibold text-accent-text hover:underline"
+                  >
+                    Download PDF ({exportResult.pages} pages)
+                  </a>
+                )}
+              </div>
+              {exportResult && (exportResult.withoutMarkScheme > 0 || exportResult.missingImages > 0 || exportResult.questions < exportResult.requested) && (
+                <p className="text-xs text-muted">
+                  {exportResult.withoutMarkScheme > 0 && `${exportResult.withoutMarkScheme} question(s) have no mark scheme and say so in the PDF. `}
+                  {exportResult.missingImages > 0 && `${exportResult.missingImages} image(s) could not be loaded. `}
+                  {exportResult.questions < exportResult.requested && `${exportResult.requested - exportResult.questions} selected question(s) were not available. `}
+                </p>
+              )}
+              {exportResult && <p className="text-xs text-muted">The link works for an hour.</p>}
+            </div>
+          )}
+          {exportError && <p className="mx-auto mt-2 max-w-5xl text-xs text-danger">{exportError}</p>}
+        </div>
+      )}
     </div>
   );
 }

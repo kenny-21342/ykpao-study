@@ -21,6 +21,8 @@ export const KEY_PREFIX = {
   bankAssets: 'bank_assets',
   /** Nightly database snapshots written by /api/cron/backup. */
   backups: 'backups',
+  /** Generated worksheets: `exports/<userId>/<hash>-<epoch>.pdf`, deleted after a day. */
+  exports: 'exports',
 } as const;
 
 export class InvalidStorageKeyError extends Error {
