@@ -1178,7 +1178,7 @@ export default function BankPractice({
 
       {ticked.size > 0 && (
         // Sticky inside the scrolling list, so it stays in view while ticking down a page.
-        <div className="sticky bottom-0 border-t border-line bg-surface px-3 py-2 shadow-lg">
+        <div className="sticky bottom-0 border-t border-line bg-surface px-3 py-2">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 text-sm">
             <span className="tabular-nums text-primary">
               {ticked.size} selected{ticked.size >= EXPORT_MAX ? ' (the most one worksheet holds)' : ''}
