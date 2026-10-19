@@ -59,6 +59,9 @@ export async function readPaperFile(storedPath: string): Promise<PaperFile | nul
 /** Back-compatible name for the PDF-only callers. */
 export const readPaperPdf = readPaperFile;
 
+/** Signing window for viewing a paper; the signature lasts twice this. */
+export const PAPER_URL_WINDOW_SECONDS = 24 * 60 * 60;
+
 /**
  * A short-lived URL the browser can fetch the PDF from directly.
  *
@@ -71,7 +74,7 @@ export const readPaperPdf = readPaperFile;
  */
 export async function paperDownloadUrl(
   storedPath: string,
-  options: { filename: string; download: boolean }
+  options: { filename: string; download: boolean; stable?: boolean }
 ): Promise<string | null> {
   const key = paperKey(storedPath);
   if (!key) return null;
@@ -82,6 +85,17 @@ export async function paperDownloadUrl(
       // the track instead of playing it in an <audio> element.
       contentType: contentTypeForKey(key),
       contentDisposition: contentDisposition(options.filename, options.download),
+      // A paper never changes under its id, so the same URL can be handed out
+      // for a day and the browser keeps the bytes it already has. Without this
+      // every signature was unique to the second and no-store besides, so
+      // flipping between a paper and its mark scheme re-downloaded both.
+      ...(options.stable
+        ? {
+            cacheControl: `private, max-age=${PAPER_URL_WINDOW_SECONDS}`,
+            stableWindowSeconds: PAPER_URL_WINDOW_SECONDS,
+            expiresInSeconds: PAPER_URL_WINDOW_SECONDS * 2,
+          }
+        : {}),
     });
   } catch (error) {
     console.error('[paper-files] failed to sign a URL for %s:', key, error);

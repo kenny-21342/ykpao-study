@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import {
   BookOpen,
   ChevronRight,
@@ -82,6 +83,35 @@ function searchFromSelection(selection: Selection): string {
   return query ? `?${query}` : '';
 }
 
+/**
+ * The cascade is remembered for as long as the browser tab is open.
+ *
+ * It lives in the URL, so it survived reload and back/forward -- but opening a
+ * paper and coming back through a plain link to /papers arrives with no query,
+ * and the student was standing at step 1 again. sessionStorage rather than
+ * localStorage: it outlasts navigation and tab switches and ends with the tab,
+ * so the next person on a shared computer starts clean. Keyed by user.
+ */
+const SELECTION_KEY = (userId: string) => `papers:selection:v1:${userId}`;
+
+function parseStoredSelection(raw: string | null): Selection | null {
+  if (!raw || raw.length > 500) return null;
+  try {
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    const text = (item: unknown, max: number) =>
+      item === null ? null : typeof item === 'string' && item.length > 0 && item.length <= max ? item : undefined;
+    const curriculum = text(value.curriculum, 60);
+    const subject = text(value.subject, 60);
+    const session = text(value.session, 30);
+    const year = value.year;
+    if (curriculum === undefined || subject === undefined || session === undefined) return null;
+    if (year !== null && !(Number.isInteger(year) && (year as number) >= 1990 && (year as number) <= 2100)) return null;
+    return { curriculum, subject, year: year as number | null, session };
+  } catch {
+    return null;
+  }
+}
+
 function Skeleton({ count, height = 'h-20' }: { count: number; height?: string }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -122,7 +152,11 @@ function Step({
 }
 
 export default function PaperBrowser() {
+  const { data: authSession, status: sessionStatus } = useSession();
+  const userId = authSession?.user?.id ?? null;
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
+  /** True once the URL / remembered cascade has been read; nothing is saved before. */
+  const [ready, setReady] = useState(false);
   const [catalogue, setCatalogue] = useState<CatalogueResponse>({
     curricula: [],
     subjects: [],
@@ -141,6 +175,39 @@ export default function PaperBrowser() {
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
+
+  // Arriving with no query (a plain link back to /papers): put the remembered
+  // cascade back, and into the URL so it stays linkable. A query in the URL
+  // always wins -- that is someone following a shared link.
+  useEffect(() => {
+    if (ready || sessionStatus === 'loading') return;
+    if (userId && window.location.search === '') {
+      let stored: Selection | null = null;
+      try {
+        stored = parseStoredSelection(window.sessionStorage.getItem(SELECTION_KEY(userId)));
+      } catch {
+        // Storage can throw (blocked, private window); start from step 1.
+      }
+      if (stored) {
+        window.history.replaceState(null, '', `${window.location.pathname}${searchFromSelection(stored)}`);
+        // sessionStorage cannot be read during render (it does not exist on the server).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelection(stored);
+      }
+    }
+    setReady(true);
+  }, [ready, sessionStatus, userId]);
+
+  useEffect(() => {
+    if (!ready || !userId) return;
+    try {
+      const empty = Object.values(selection).every((value) => value === null || value === '');
+      if (empty) window.sessionStorage.removeItem(SELECTION_KEY(userId));
+      else window.sessionStorage.setItem(SELECTION_KEY(userId), JSON.stringify(selection));
+    } catch {
+      // Remembering is a convenience, never an error.
+    }
+  }, [ready, userId, selection]);
 
   const selectionKey = useMemo(() => JSON.stringify(selection), [selection]);
 

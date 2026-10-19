@@ -18,6 +18,8 @@ type PaperResponse = {
 export default function PaperViewer({ paperId }: { paperId: number }) {
   const [data, setData] = useState<PaperResponse | null>(null);
   const [activeId, setActiveId] = useState(paperId);
+  /** Documents opened so far: each stays mounted so switching back is instant. */
+  const [opened, setOpened] = useState<Set<number>>(() => new Set([paperId]));
   const [error, setError] = useState<string | null>(null);
   const { update } = useScreenContext();
 
@@ -118,7 +120,10 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         {data.instance.documents.map((document) => (
           <button
             key={document.id}
-            onClick={() => setActiveId(document.id)}
+            onClick={() => {
+              setActiveId(document.id);
+              setOpened((current) => (current.has(document.id) ? current : new Set(current).add(document.id)));
+            }}
             className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               document.id === active.id
                 ? 'border-accent text-accent-text'
@@ -154,13 +159,27 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
               <a href={`/api/papers/${active.id}/file?download=1`}>Download the track instead.</a>
             </audio>
           </div>
-        ) : (
-          <PDFViewer
-            key={active.id}
-            fileUrl={`/api/papers/${active.id}/file`}
-            fileName={active.filename}
-          />
-        )}
+        ) : null}
+        {/* Every PDF opened so far stays mounted, stacked in one grid cell, and
+            only the active one is visible. Remounting (the old `key={active.id}`)
+            threw the paper away on every tab switch and downloaded it again.
+            `invisible` rather than `hidden`: display:none can make the browser's
+            PDF plugin reload when it is shown again. */}
+        <div className={active.docType === 'au' ? 'hidden' : 'grid'}>
+          {data.instance.documents
+            .filter((document) => document.docType !== 'au' && (opened.has(document.id) || document.id === active.id))
+            .map((document) => (
+              <div
+                key={document.id}
+                className={`col-start-1 row-start-1 ${
+                  document.id === active.id ? '' : 'invisible pointer-events-none'
+                }`}
+                aria-hidden={document.id !== active.id}
+              >
+                <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} />
+              </div>
+            ))}
+        </div>
       </div>
     </div>
   );

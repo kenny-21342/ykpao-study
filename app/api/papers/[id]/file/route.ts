@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
-import { contentDisposition, paperDownloadUrl, readPaperFile } from '@/lib/paper-files';
+import {
+  contentDisposition, PAPER_URL_WINDOW_SECONDS, paperDownloadUrl, readPaperFile,
+} from '@/lib/paper-files';
 import { contentTypeForKey } from '@/lib/storage';
 import { parseEntityId } from '@/lib/query-params';
 
@@ -48,11 +50,18 @@ export async function GET(
   const signedUrl = await paperDownloadUrl(paper.filepath, {
     filename: paper.filename,
     download,
+    // Inline viewing is what gets repeated (paper <-> mark scheme); a download
+    // is a one-off and keeps its fresh, uncached URL.
+    stable: !download,
   });
   if (signedUrl) {
     return NextResponse.redirect(signedUrl, {
       status: 307,
-      headers: { 'Cache-Control': 'private, no-store' },
+      // `private`: this route is session-gated, so a shared cache must not hand
+      // the redirect to someone who is signed out.
+      headers: {
+        'Cache-Control': download ? 'private, no-store' : `private, max-age=${PAPER_URL_WINDOW_SECONDS}`,
+      },
     });
   }
 
