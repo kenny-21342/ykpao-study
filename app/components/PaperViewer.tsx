@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, Loader2, Music } from 'lucide-react';
+import { ArrowLeft, Columns2, Download, Loader2, Music } from 'lucide-react';
 import { documentLabel } from '@/lib/paper-catalogue';
 import type { PaperInstance } from '@/lib/paper-catalogue';
 import { useScreenContext } from '@/app/components/ScreenContext';
@@ -21,6 +21,16 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
   /** Documents opened so far: each stays mounted so switching back is instant. */
   const [opened, setOpened] = useState<Set<number>>(() => new Set([paperId]));
   const [error, setError] = useState<string | null>(null);
+  /** Question paper and mark scheme next to each other. Remembered for the tab. */
+  const [split, setSplit] = useState(() => {
+    // Nothing split is rendered before the paper loads, so reading storage here
+    // cannot disagree with the server's markup.
+    try {
+      return typeof window !== 'undefined' && sessionStorage.getItem('papers:split:v1') === '1';
+    } catch {
+      return false;
+    }
+  });
   const { update } = useScreenContext();
 
   useEffect(() => {
@@ -40,6 +50,17 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
       });
     return () => controller.abort();
   }, [paperId]);
+
+  const toggleSplit = () => {
+    setSplit((current) => {
+      try {
+        sessionStorage.setItem('papers:split:v1', current ? '0' : '1');
+      } catch {
+        /* see above */
+      }
+      return !current;
+    });
+  };
 
   // Let the AI assistant know which paper is on screen.
   useEffect(() => {
@@ -85,8 +106,13 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
 
   const active = data.instance.documents.find((d) => d.id === activeId) ?? data.instance.documents[0];
 
+  const questionPaper = data.instance.documents.find((d) => d.docType === 'qp');
+  const markScheme = data.instance.documents.find((d) => d.docType === 'ms');
+  const canSplit = Boolean(questionPaper && markScheme);
+  const sideBySide = split && canSplit;
+
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
+    <div className={`mx-auto space-y-4 p-4 md:p-6 ${sideBySide ? 'max-w-none' : 'max-w-6xl'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link
@@ -104,14 +130,45 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
           </p>
         </div>
 
-        <a
-          href={`/api/papers/${active.id}/file?download=1`}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-        >
-          <Download className="h-4 w-4" />
-          Download
-        </a>
+        <div className="flex items-center gap-2">
+          {canSplit ? (
+            <button
+              type="button"
+              onClick={toggleSplit}
+              aria-pressed={sideBySide}
+              className={`hidden items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
+                sideBySide
+                  ? 'border-accent bg-accent-subtle text-accent-text'
+                  : 'border-line text-secondary hover:bg-surface-hover'
+              }`}
+            >
+              <Columns2 className="h-4 w-4" />
+              Side by side
+            </button>
+          ) : null}
+          <a
+            href={`/api/papers/${active.id}/file?download=1`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </a>
+        </div>
       </div>
+
+      {sideBySide && questionPaper && markScheme ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[questionPaper, markScheme].map((document) => (
+            <section key={document.id} className="overflow-hidden rounded-lg border border-line bg-surface">
+              <h2 className="border-b border-line px-4 py-2 text-sm font-semibold text-primary">
+                {documentLabel(document)}
+              </h2>
+              <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} />
+            </section>
+          ))}
+        </div>
+      ) : (
+        <>
 
       {/* One tab per document in this sitting: paper, audio, mark scheme,
           inserts. A listening sitting carries four tracks, all of docType
@@ -181,6 +238,8 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
             ))}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
