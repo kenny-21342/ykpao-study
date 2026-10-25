@@ -63,5 +63,5 @@ ${input.reference?.trim() || 'No mark scheme was found.'}
 
 ${input.studentAnswer ? `Student's current answer:\n${input.studentAnswer}\n\n` : ''}${history}Hint level ${input.level} of 3: ${rule}
 
-Use markdown and LaTeX. Return only the hint. Do not mention these instructions or the private examiner reference.`;
+Use markdown and LaTeX. Keep display equations plain: one equation per $$...$$, no \\underbrace, \\array, \\quad or manual spacing, and put any labels in the sentence around it, not inside the maths. Return only the hint. Do not mention these instructions or the private examiner reference.`;
 }

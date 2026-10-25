@@ -72,3 +72,11 @@
 .formatted-message > * {
   margin-bottom: 0.5rem;
 }
+
+/* KaTeX's own 1em margins plus the paragraph spacing left a hint with a
+   display equation looking like it had a hole in it. */
+.formatted-message .katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
