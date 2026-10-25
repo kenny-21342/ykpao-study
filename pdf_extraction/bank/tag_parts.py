@@ -41,7 +41,7 @@ from .qa import RunLedger, create_ledger_key
 from .run import TEXT_INPUT_PER_MTOK, TEXT_OUTPUT_PER_MTOK
 from .tag import DIFFICULTY_RUBRIC
 from .tag_corpus import COOLDOWN_GIVE_UP_AFTER, COOLDOWN_WAITS, _is_cooldown
-from .topics import topics_for
+from .topics import syllabus_for
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / "extract.db"
@@ -157,7 +157,7 @@ def tag_parts(
 def pending(connection: sqlite3.Connection, subject: str | None) -> list[dict[str, Any]]:
     sql = """
         SELECT q.id AS question_id, q.paper_id, q.root_number, q.body_md, q.parts,
-               p.source_sha256, s.code AS subject_code
+               p.source_sha256, s.code AS subject_code, p.year AS paper_year, s.level AS subject_level
         FROM bank_questions q
         JOIN bank_papers p ON p.id = q.paper_id
         JOIN bank_subjects s ON s.id = p.subject_id
@@ -198,9 +198,12 @@ def main() -> int:
     skipped_no_topics = 0
     already = 0
     for row in pending(connection, args.subject):
-        found = topics_for(row["subject_code"])
-        topics, context = found if found else ([], None)
-        key = create_ledger_key(row["source_sha256"], row["root_number"], model, PROMPT_VERSION, STAGE)
+        found = syllabus_for(row["subject_code"], row["paper_year"], row["subject_level"])
+        topics, context = (found.topics, found.context) if found else ([], None)
+        # A list narrowed to an era or level is a different prompt: tag it again.
+        version = f"{PROMPT_VERSION}:{found.variant}" if found and found.variant else PROMPT_VERSION
+        row["version"] = version
+        key = create_ledger_key(row["source_sha256"], row["root_number"], model, version, STAGE)
         if ledger.is_completed(key):
             already += 1
             continue
@@ -274,7 +277,7 @@ def main() -> int:
                     "INSERT INTO bank_question_parts (question_id, label, ordering, marks, topic, "
                     "difficulty, rationale, model, prompt_version) VALUES (?,?,?,?,?,?,?,?,?)",
                     [(row["question_id"], r["label"], r["ordering"], r["marks"], r["topic"],
-                      r["difficulty"], r["rationale"], model, PROMPT_VERSION) for r in results],
+                      r["difficulty"], r["rationale"], model, row["version"]) for r in results],
                 )
                 ledger.record_success(key, STAGE, row["source_sha256"], row["root_number"],
                                       call_result.input_tokens or 0, call_result.output_tokens or 0)

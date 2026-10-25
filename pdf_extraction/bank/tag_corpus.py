@@ -38,7 +38,7 @@ from .qa import RunLedger, create_ledger_key
 from .run import TEXT_INPUT_PER_MTOK, TEXT_OUTPUT_PER_MTOK
 from .tag import PROMPT_VERSION as TAG_PROMPT_VERSION
 from .tag import tag_and_rate
-from .topics import configured_subjects, topics_for
+from .topics import configured_subjects, syllabus_for, topics_for
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / "extract.db"
@@ -83,7 +83,8 @@ def pending_rows(connection: sqlite3.Connection, subject: str | None) -> list[sq
     """
     sql = """
         SELECT q.id AS question_id, q.paper_id, q.root_number, q.body_md,
-               p.source_sha256, s.code AS subject_code
+               p.source_sha256, s.code AS subject_code,
+               p.year AS paper_year, s.level AS subject_level
         FROM bank_questions q
         JOIN bank_papers p ON p.id = q.paper_id
         JOIN bank_subjects s ON s.id = p.subject_id
@@ -103,6 +104,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--subject", default=None, help="syllabus code, e.g. 0625")
+    parser.add_argument("--year", type=int, default=None, help="only papers from this exam year")
     parser.add_argument("--apply", action="store_true", help="make the calls. THIS SPENDS MONEY.")
     parser.add_argument("--limit", type=int, default=0, help="stop after this many questions")
     parser.add_argument("--concurrency", type=int, default=12)
@@ -126,6 +128,8 @@ def main() -> int:
     ledger = RunLedger(connection=connection)
 
     rows = pending_rows(connection, args.subject)
+    if args.year:
+        rows = [row for row in rows if row["paper_year"] == args.year]
     # Group by subject so the syllabus topic list is loaded once, and so a
     # subject with none configured can be refused as a whole rather than
     # billed question by question for topics that will all be discarded.
@@ -137,14 +141,16 @@ def main() -> int:
     skipped_subjects: list[tuple[str, int]] = []
     already = 0
     for code, subject_rows in sorted(by_subject.items(), key=lambda kv: -len(kv[1])):
-        found = topics_for(code)
-        if not found and not args.allow_untagged_topics:
+        if not topics_for(code) and not args.allow_untagged_topics:
             skipped_subjects.append((code, len(subject_rows)))
             continue
-        topics, context = found if found else (None, None)
         for row in subject_rows:
+            # The list that applies to this paper: its syllabus era and level.
+            found = syllabus_for(code, row["paper_year"], row["subject_level"])
+            topics, context = (found.topics, found.context) if found else (None, None)
+            version = f"{TAG_PROMPT_VERSION}:{found.variant}" if found and found.variant else TAG_PROMPT_VERSION
             key = create_ledger_key(row["source_sha256"], row["root_number"],
-                                    model, TAG_PROMPT_VERSION, "tag")
+                                    model, version, "tag")
             if ledger.is_completed(key):
                 already += 1
                 continue

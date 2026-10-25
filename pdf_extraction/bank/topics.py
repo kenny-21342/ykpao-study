@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import NamedTuple
 
 _REGISTRY = Path(__file__).resolve().parent / "syllabus_topics.json"
 
@@ -58,6 +59,51 @@ def topics_for(subject: str | None) -> tuple[list[str], str] | None:
     if not topics:
         return None
     return topics, str(entry.get("context") or subject)
+
+
+class Syllabus(NamedTuple):
+    topics: list[str]
+    context: str
+    #: "" for the subject's base list; otherwise names the era/level it was
+    #: narrowed to, so a re-tag under a different list gets its own ledger key.
+    variant: str
+
+
+def syllabus_for(subject: str | None, year: int | None = None, level: str | None = None) -> Syllabus | None:
+    """The topic list that applies to one paper: its syllabus era and level.
+
+    A subject's syllabus changes (IB Physics was rewritten for first assessment
+    in 2025: 2016-style "Mechanics" became "A.1 Kinematics" ...), and Standard
+    level students do not study the Higher-level-only topics. Tagging a 2025 SL
+    paper with the 2016 flat list, or an SL question with an HL-only topic, is
+    wrong however confident the model is. `eras` (newest `from_year` that is not
+    after `year`) and `hl_only` in the registry say which list applies.
+
+    `level` is the subject row's: 'SL' drops the HL-only topics; 'HL' and the
+    combined 'HLSL' keep every topic.
+    """
+    if not subject:
+        return None
+    entry = _load().get(_slug(subject))
+    if not entry:
+        return None
+    variant = ""
+    source = entry
+    if year is not None:
+        eras = sorted((e for e in entry.get("eras", []) if int(e.get("from_year", 9999)) <= year),
+                      key=lambda e: int(e["from_year"]))
+        if eras:
+            source = eras[-1]
+            variant = f"era{source['from_year']}"
+    topics = [str(topic) for topic in source.get("topics", []) if str(topic).strip()]
+    if not topics:
+        return None
+    if (level or "").upper() == "SL":
+        hl_only = {str(topic) for topic in source.get("hl_only", [])}
+        if hl_only:
+            topics = [topic for topic in topics if topic not in hl_only]
+            variant = f"{variant}-SL" if variant else "SL"
+    return Syllabus(topics, str(source.get("context") or entry.get("context") or subject), variant)
 
 
 def configured_subjects() -> list[str]:
