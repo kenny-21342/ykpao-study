@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from 'react';
 import PreviewNotice from './PreviewNotice';
 import { useSession } from 'next-auth/react';
-import { GraduationCap, Loader2, Search, Star } from 'lucide-react';
+import { EyeOff, GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
@@ -89,7 +89,7 @@ function sessionLabel(session: string): string {
 type ListFilters = {
   scope: string; subject: string; year: string; session: string; paperNumber: string;
   variant: string; timezone: string; levels: string;
-  topic: string; search: string; onlyBookmarked: boolean;
+  topic: string; search: string; onlyBookmarked: boolean; hideDone: boolean;
 };
 
 /** The list request for a set of filters; shared by the list and "select all matching". */
@@ -107,6 +107,7 @@ function listQuery(filters: ListFilters, page: number, limit: number): URLSearch
   // a stale value from a restored session from reaching the server alone.
   if (filters.search && filters.subject) params.set('q', filters.search);
   if (filters.onlyBookmarked) params.set('bookmarked', '1');
+  if (filters.hideDone) params.set('hideDone', '1');
   return params;
 }
 
@@ -343,6 +344,7 @@ export default function BankPractice({
   const [exportResult, setExportResult] = useState<ExportResult | null>(null);
   const [selectBusy, setSelectBusy] = useState(false);
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
+  const [hideDone, setHideDone] = useState(false);
   /** Ids the signed-in user has starred, so a list row can draw a filled star. */
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
 
@@ -464,7 +466,7 @@ export default function BankPractice({
     const controller = new AbortController();
 
     const params = listQuery(
-      { scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked },
+      { scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, hideDone },
       page,
       20,
     );
@@ -495,7 +497,7 @@ export default function BankPractice({
       stale = true;
       controller.abort();
     };
-  }, [page, subject, year, session, paperNumber, variant, timezone, levels, scope, topic, search, onlyBookmarked, sessionStatus, restored]);
+  }, [page, subject, year, session, paperNumber, variant, timezone, levels, scope, topic, search, onlyBookmarked, hideDone, sessionStatus, restored]);
 
   // Typing searches 300 ms after the last keystroke. The guard against `search`
   // matters on restore: both start equal, and without it this would fire once
@@ -607,6 +609,7 @@ export default function BankPractice({
         setSearchInput(saved.search);
         setSearch(saved.search);
         setOnlyBookmarked(saved.onlyBookmarked);
+        setHideDone(saved.hideDone);
         setPage(saved.page);
         scrollTopRef.current = saved.scrollTop;
         pendingScrollRef.current = saved.scrollTop;
@@ -635,11 +638,11 @@ export default function BankPractice({
     memoryRef.current = restored
       ? {
           ...EMPTY_MEMORY,
-          scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, page, selectedId,
+          scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, hideDone, page, selectedId,
         }
       : null;
     writeMemory(memoryRef.current);
-  }, [restored, scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, page, selectedId]);
+  }, [restored, scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, hideDone, page, selectedId]);
 
   // Scroll moves too often to be state, so flush the latest offset when the tab
   // is left (unmount) or the page is closed/hidden.
@@ -726,7 +729,7 @@ export default function BankPractice({
     setExportError(null);
     try {
       const res = await fetch(
-        `/api/bank/questions?${listQuery({ scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked }, 1, EXPORT_MAX)}`,
+        `/api/bank/questions?${listQuery({ scope, subject, year, session, paperNumber, variant, timezone, levels, topic, search, onlyBookmarked, hideDone }, 1, EXPORT_MAX)}`,
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not select those questions');
@@ -920,6 +923,22 @@ export default function BankPractice({
             aria-hidden="true"
           />
           Starred
+        </button>
+        <button
+          type="button"
+          aria-pressed={hideDone}
+          onClick={() => {
+            setHideDone((current) => !current);
+            setPage(1);
+            setSelected(null);
+            setListLoading(true);
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
+            hideDone ? 'bg-surface text-primary' : 'text-secondary'
+          }`}
+        >
+          <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+          Hide done
         </button>
       </div>
 

@@ -35,6 +35,8 @@ export type PracticeFilterMemory = {
   levels: string;
   topic: string;
   onlyBookmarked: boolean;
+  /** Hide questions this user has already attempted. */
+  hideDone: boolean;
   /** Free-text / question-number search box. */
   search: string;
   page: number;
@@ -56,6 +58,7 @@ export const EMPTY_MEMORY: PracticeFilterMemory = {
   levels: '',
   topic: '',
   onlyBookmarked: false,
+  hideDone: false,
   search: '',
   page: 1,
   selectedId: null,
@@ -106,6 +109,8 @@ export function parseMemory(raw: string | null | undefined): PracticeFilterMemor
   if (record.v !== MEMORY_VERSION) return null;
   if (record.scope !== 'enrolled' && record.scope !== 'all') return null;
   if (typeof record.onlyBookmarked !== 'boolean') return null;
+  // Absent in payloads saved before the toggle existed; those still restore.
+  if (record.hideDone !== undefined && typeof record.hideDone !== 'boolean') return null;
 
   const subject = digits(record.subject, 9);
   const year = digits(record.year, 4);
@@ -146,6 +151,7 @@ export function parseMemory(raw: string | null | undefined): PracticeFilterMemor
     levels: levels!,
     topic: topic!,
     onlyBookmarked: record.onlyBookmarked,
+    hideDone: record.hideDone === true,
     search: search!,
     page,
     selectedId,

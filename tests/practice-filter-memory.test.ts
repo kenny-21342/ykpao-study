@@ -8,7 +8,7 @@ import {
 const sample: PracticeFilterMemory = {
   ...EMPTY_MEMORY,
   scope: 'all', subject: '123', year: '2023', session: 'May', paperNumber: '1,2', variant: '1,3', timezone: 'TZ1,TZ0', levels: '4,5',
-  topic: 'Circular motion', onlyBookmarked: true, search: '22', page: 3,
+  topic: 'Circular motion', onlyBookmarked: true, hideDone: true, search: '22', page: 3,
   selectedId: 61174, scrollTop: 840,
 };
 
@@ -75,4 +75,10 @@ test('no question open and no scroll is a valid, ordinary state', () => {
   const parsed = parseMemory(serializeMemory({ ...sample, selectedId: null, scrollTop: 0 }));
   assert.equal(parsed?.selectedId, null);
   assert.equal(parsed?.scrollTop, 0);
+});
+
+test('a payload saved before the hide-done toggle still restores, with it off', () => {
+  const { hideDone: _omitted, ...old } = JSON.parse(serializeMemory(sample));
+  assert.equal(parseMemory(JSON.stringify(old))?.hideDone, false);
+  assert.equal(parseMemory(JSON.stringify({ ...old, hideDone: 'yes' })), null);
 });

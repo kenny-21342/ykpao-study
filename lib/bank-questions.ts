@@ -541,6 +541,8 @@ export async function listBankQuestions(options: {
   topic?: string | null;
   /** When set, only questions this user has starred. */
   bookmarkedBy?: string | null;
+  /** When set, leave out questions this user has already attempted. */
+  hideDoneBy?: string | null;
   /**
    * A parsed question code and/or keywords. Needs `subjectId`: it is what says
    * which board's session names to use, and it keeps the keyword search to one
@@ -577,6 +579,9 @@ export async function listBankQuestions(options: {
     status: 'published',
     ...(options.bookmarkedBy
       ? { bookmarks: { some: { userId: options.bookmarkedBy } } }
+      : {}),
+    ...(options.hideDoneBy
+      ? { attempts: { none: { userId: options.hideDoneBy } } }
       : {}),
     ...(search?.question !== undefined ? { rootNumber: search.question } : {}),
     paper: {
