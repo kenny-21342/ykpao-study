@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chat } from '@/lib/ai';
+import { chat, streamChat } from '@/lib/ai';
 import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
 import { loadSharedModels, nextSharedModel, resolveSharedModel } from '@/lib/shared-models';
 import { retrieveContext } from '@/lib/rag';
@@ -124,6 +124,8 @@ const Body = z.object({
   // Which shared model to answer with. Bounded here only for shape; the value
   // itself is checked against the catalogue below, never trusted.
   model: z.string().min(1).max(100).optional(),
+  /** Reply as newline-delimited JSON events, text first, instead of one JSON body. */
+  stream: z.boolean().optional(),
 });
 
 const MODE_RULES = {
@@ -468,21 +470,32 @@ FORMATTING RULES:
    * spend, or a first model's failure, to the wrong one.
    */
   let answeredWith = credential.model;
-  const complete = (model: string, budgetMs: number) => {
+  /** True once any model text has been sent on, after which a retry would print twice. */
+  let emitted = false;
+  const complete = async (model: string, budgetMs: number, onDelta?: (piece: string) => void) => {
     usage.current = null;
-    return chat(messages, {
+    const options = {
       credential: { ...credential, model },
       temperature: 0.4,
       maxTokens: 2000,
       budgetMs,
-      onUsage: (u) => { usage.current = u; },
-    });
+      onUsage: (u: { promptTokens: number; completionTokens: number }) => { usage.current = u; },
+    };
+    if (!onDelta) return chat(messages, options);
+    let text = '';
+    for await (const piece of streamChat(messages, { ...options, signal: req.signal })) {
+      emitted = true;
+      text += piece;
+      onDelta(piece);
+    }
+    return text;
   };
 
-  try {
+  /** The model call, with the one retry on a different shared model. */
+  const produce = async (onDelta?: (piece: string) => void): Promise<string> => {
     let answer: string;
     try {
-      answer = await complete(credential.model, TUTOR_BUDGET_MS);
+      answer = await complete(credential.model, TUTOR_BUDGET_MS, onDelta);
     } catch (firstError) {
       /**
        * One retry, on a different model.
@@ -510,7 +523,7 @@ FORMATTING RULES:
           // tight timeout is a backstop rather than the expected path.
           ? nextSharedModel(await loadSharedModels({ timeoutMs: 1_500 }), credential.model, interactive.model)
           : null;
-      if (!alternative) throw firstError;
+      if (!alternative || emitted) throw firstError;
 
       console.warn(
         `[rag-chat] ${credential.model} failed, retrying on ${alternative}:`,
@@ -521,9 +534,14 @@ FORMATTING RULES:
       // model that is failing every request looks healthy.
       await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: credential.model });
       answeredWith = alternative;
-      answer = await complete(alternative, Math.min(TUTOR_BUDGET_MS, remainingMs));
+      answer = await complete(alternative, Math.min(TUTOR_BUDGET_MS, remainingMs), onDelta);
     }
 
+    return answer;
+  };
+
+  /** Records usage, persists the reply and builds the payload the client renders. */
+  const finish = async (answer: string) => {
     await recordUsage({
       userId: user.id,
       feature: 'rag-chat',
@@ -587,7 +605,7 @@ FORMATTING RULES:
       proposalId: proposal?.id,
     });
 
-    return NextResponse.json({
+    return {
       answer: responseAnswer,
       mode: parsed.mode,
       sources,
@@ -615,8 +633,11 @@ FORMATTING RULES:
       conversationTitle: conversation.title,
       userMessageId: userMessage.id,
       assistantMessageId: assistantMessage.id,
-    });
-  } catch (err) {
+    };
+  };
+
+  /** The same bookkeeping for a failed call, whichever way it was delivered. */
+  const recordFailure = async (err: unknown) => {
     console.error('RAG chat failed:', err);
     // The attempt is a usage event even when it produced nothing — recording
     // it under the :error label is what makes the admin's error counts mean
@@ -624,9 +645,46 @@ FORMATTING RULES:
     // so a small number of :error rows are succeeded-then-failed-to-save.
     await recordUsage({ userId: user.id, feature: 'rag-chat:error', model: answeredWith });
     await reportError(err, { routePath: '/api/ai/rag-chat', source: 'route' });
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'AI request failed', conversationId: conversation.id },
-      { status: 500 }
-    );
+    return err instanceof Error ? err.message : 'AI request failed';
+  };
+
+  if (!parsed.stream) {
+    try {
+      return NextResponse.json(await finish(await produce()));
+    } catch (err) {
+      return NextResponse.json({ error: await recordFailure(err), conversationId: conversation.id }, { status: 500 });
+    }
   }
+
+  // Streamed: one JSON object per line. `delta` events carry text as it is
+  // produced; the last line is `done` (the same payload the non-streamed reply
+  // returns, whose `answer` replaces what was streamed) or `error`.
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) => {
+        try { controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`)); } catch { /* the client left */ }
+      };
+      try {
+        // The heading the finished answer carries, so the text does not jump
+        // when `done` swaps it in.
+        if (learnerContext.activeCourse) {
+          send({ type: 'delta', text: `**${learnerContext.activeCourse.name} · ${learnerContext.activeCourse.level}**\n\n` });
+        }
+        const answer = await produce((piece) => send({ type: 'delta', text: piece }));
+        send({ type: 'done', ...(await finish(answer)) });
+      } catch (err) {
+        send({ type: 'error', error: await recordFailure(err), conversationId: conversation.id });
+      } finally {
+        try { controller.close(); } catch { /* already closed */ }
+      }
+    },
+  });
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-store, no-transform',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }

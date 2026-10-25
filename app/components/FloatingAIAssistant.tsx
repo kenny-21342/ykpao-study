@@ -420,11 +420,63 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
           screenContext: screenCtx.toPromptString() || undefined,
           mode,
           model: model || undefined,
+          stream: true,
         }),
       });
-      const data = await response.json().catch(() => null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any = null;
+      if ((response.headers.get('content-type') ?? '').includes('ndjson') && response.body) {
+        // The tutor is replying as it writes: show the text as it arrives and
+        // let the closing `done` event supply everything else (sources, ids,
+        // proposals), exactly as the single JSON reply used to.
+        const streamId = nextLocalId('stream');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let text = '';
+        let lastPaint = 0;
+        const failure: { current: { error?: string; conversationId?: string } | null } = { current: null };
+        const paint = () => setChatHistory([...previous, optimistic, { id: streamId, role: 'assistant', text }]);
+        const handle = (line: string) => {
+          if (!line.trim()) return;
+          let event: { type?: string; text?: string; error?: string; conversationId?: string } | null = null;
+          try { event = JSON.parse(line); } catch { return; }
+          if (event?.type === 'delta' && typeof event.text === 'string') {
+            text += event.text;
+            // Re-rendering markdown and maths on every token is wasted work.
+            const now = performance.now();
+            if (now - lastPaint > 80) { lastPaint = now; paint(); }
+          } else if (event?.type === 'done') {
+            data = event;
+          } else if (event?.type === 'error') {
+            failure.current = event;
+          }
+        };
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          lines.forEach(handle);
+        }
+        handle(buffer);
+        if (!data) {
+          const reason = failure.current?.error || 'The connection dropped before the reply finished.';
+          if (failure.current?.conversationId) setConversationId(failure.current.conversationId);
+          setChatHistory([...previous, optimistic, {
+            id: streamId,
+            role: 'assistant',
+            text: text ? `${text}\n\n_The reply was interrupted: ${reason}_` : reason,
+          }]);
+          return;
+        }
+      } else {
+        data = await response.json().catch(() => null);
+        if (data?.conversationId) setConversationId(data.conversationId);
+        if (!response.ok) throw new Error(data?.error || 'AI request failed');
+      }
       if (data?.conversationId) setConversationId(data.conversationId);
-      if (!response.ok) throw new Error(data?.error || 'AI request failed');
       setConversationTitle(data.conversationTitle || conversationTitle);
       if (data.resolvedCourse?.id) setActiveCourseId(data.resolvedCourse.id);
       // Hold the question the clarification interrupted, so choosing a course
@@ -585,7 +637,7 @@ export default function FloatingAIAssistant({ isOpen, onClose }: FloatingAIAssis
                   </div>
                 </div>
               ))}
-              {(isLoading || actionLoading) && <div className="flex items-center gap-2 text-xs text-muted"><Loader2 className="h-4 w-4 animate-spin text-accent-text" />{actionLoading ? 'Updating your study system' : 'Thinking'}</div>}
+              {((isLoading && !(chatHistory[chatHistory.length - 1]?.id.startsWith('stream-'))) || actionLoading) && <div className="flex items-center gap-2 text-xs text-muted"><Loader2 className="h-4 w-4 animate-spin text-accent-text" />{actionLoading ? 'Updating your study system' : 'Thinking'}</div>}
               <div ref={chatEndRef} />
             </div>
           </div>

@@ -88,6 +88,22 @@ function isRetryableStatus(status: number): boolean {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** What a student or admin is told for a failed upstream call; never the upstream body. */
+function upstreamErrorMessage(status: number, credential: TextCredential, model: string): string {
+  if (status === 429) return 'The AI service is rate-limited right now. Please try again in a moment.';
+  if (status === 401 || status === 403) {
+    return credential.source === 'user'
+      ? 'Your AI provider rejected your API key (401/403). Check the key and endpoint in Account Settings → AI Provider.'
+      : 'The shared AI key was rejected by the provider. Please tell an administrator.';
+  }
+  if (status === 404) {
+    return credential.source === 'user'
+      ? `Your AI endpoint returned 404 for model “${model}”. Check the API endpoint and model name in Account Settings → AI Provider.`
+      : 'The AI endpoint returned 404.';
+  }
+  return `The AI provider returned an error (${status})`;
+}
+
 export async function chat(
   messages: DeepSeekMessage[],
   options: ChatOptions
@@ -171,20 +187,7 @@ export async function chat(
             detail.slice(0, 2000),
           );
           noteModelOutcome(model, res.status);
-          lastError = new DeepSeekError(
-            res.status === 429
-              ? 'The AI service is rate-limited right now. Please try again in a moment.'
-              : res.status === 401 || res.status === 403
-                ? credential.source === 'user'
-                  ? 'Your AI provider rejected your API key (401/403). Check the key and endpoint in Account Settings → AI Provider.'
-                  : 'The shared AI key was rejected by the provider. Please tell an administrator.'
-                : res.status === 404
-                  ? credential.source === 'user'
-                    ? `Your AI endpoint returned 404 for model “${model}”. Check the API endpoint and model name in Account Settings → AI Provider.`
-                    : 'The AI endpoint returned 404.'
-                  : `The AI provider returned an error (${res.status})`,
-            res.status
-          );
+          lastError = new DeepSeekError(upstreamErrorMessage(res.status, credential, model), res.status);
           // A 401/403 is the key, not the model: no candidate will fix it, so
           // fail now rather than spending the budget proving it three times.
           if (res.status === 401 || res.status === 403) throw lastError;
@@ -251,6 +254,145 @@ export async function chat(
   }
 
   throw lastError;
+}
+
+/**
+ * `chat()`, but yielding the reply as the provider produces it.
+ *
+ * One attempt on `credential.model`, no retry and no failover: once a piece has
+ * been yielded the caller has already shown it, so asking again would print the
+ * answer twice. The caller decides what to do when this throws before the first
+ * piece (the tutor route retries on another shared model then). Throws the same
+ * `DeepSeekError`s as `chat()`, with the same client-safe messages.
+ *
+ * A provider that ignores `stream: true` and answers with plain JSON is handled:
+ * the whole reply arrives as one piece.
+ */
+export async function* streamChat(
+  messages: DeepSeekMessage[],
+  options: ChatOptions,
+): AsyncGenerator<string, void, void> {
+  const {
+    credential,
+    temperature = 0.7,
+    maxTokens = 2000,
+    budgetMs = DEFAULT_BUDGET_MS,
+    signal,
+  } = options;
+
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) {
+    throw new DeepSeekError(
+      'No AI credentials were supplied for this request. Add an API key in Account Settings → AI Provider.',
+      503,
+    );
+  }
+  const model = credential.model;
+
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  signal?.addEventListener('abort', onAbort, { once: true });
+  // One ceiling for the whole reply, not an idle timeout: a stream that keeps
+  // trickling for minutes is as bad for the platform's maxDuration as a hang.
+  const timer = setTimeout(() => controller.abort(), Math.max(1_000, budgetMs));
+
+  let yielded = false;
+  try {
+    const res = await fetch(credential.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${credential.apiKey}`,
+      },
+      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: true }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error(
+        `AI stream failed (${res.status}) [source=${credential.source} model=${model}]:`,
+        detail.slice(0, 2000),
+      );
+      noteModelOutcome(model, res.status);
+      throw new DeepSeekError(upstreamErrorMessage(res.status, credential, model), res.status);
+    }
+
+    const reportUsage = (usage?: { prompt_tokens?: number; completion_tokens?: number }) => {
+      if (usage && options.onUsage) {
+        options.onUsage({ promptTokens: usage.prompt_tokens ?? 0, completionTokens: usage.completion_tokens ?? 0 });
+      }
+    };
+
+    if (!(res.headers.get('content-type') ?? '').includes('text/event-stream') || !res.body) {
+      const data = (await res.json()) as DeepSeekResponse;
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new DeepSeekError('The AI provider returned an empty response', 502);
+      noteModelOutcome(model, 'ok');
+      options.onModel?.(model);
+      reportUsage(data.usage);
+      yielded = true;
+      yield content;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+
+    const parse = (line: string): string | null => {
+      if (!line.startsWith('data:')) return null;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') return null;
+      try {
+        const chunk = JSON.parse(payload) as {
+          choices?: Array<{ delta?: { content?: unknown } }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
+        if (chunk.usage) usage = chunk.usage;
+        const piece = chunk.choices?.[0]?.delta?.content;
+        return typeof piece === 'string' && piece.length > 0 ? piece : null;
+      } catch {
+        return null; // a keep-alive or a half-written line; the next read completes it
+      }
+    };
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        const piece = parse(line.trim());
+        if (piece) {
+          yielded = true;
+          yield piece;
+        }
+      }
+    }
+    const tail = parse(buffer.trim());
+    if (tail) {
+      yielded = true;
+      yield tail;
+    }
+
+    if (!yielded) throw new DeepSeekError('The AI provider returned an empty response', 502);
+    noteModelOutcome(model, 'ok');
+    options.onModel?.(model);
+    reportUsage(usage);
+  } catch (err) {
+    if (err instanceof DeepSeekError) throw err;
+    if (signal?.aborted) throw new DeepSeekError('The request was cancelled', 499);
+    const timedOut = err instanceof Error && err.name === 'AbortError';
+    console.error(`AI stream error [model=${model}]:`, timedOut ? `timed out after ${budgetMs}ms` : err);
+    throw timedOut
+      ? new DeepSeekError('The AI service did not respond in time. Please try again.', 504)
+      : new DeepSeekError('Could not reach the AI service. Please try again.', 503);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
+  }
 }
 
 export async function chatJSON<T = unknown>(
