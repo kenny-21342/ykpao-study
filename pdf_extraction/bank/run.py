@@ -183,6 +183,26 @@ class WorkResult:
     stage: str = "transcribe"
 
 
+def _question_paper_roots(connection, identity) -> frozenset[int] | None:
+    """Question numbers of the question paper this mark scheme belongs to.
+
+    A prose mark scheme uses them to tell its real answer section from the
+    generic notes in front of it. None when the paper is not in the store yet,
+    in which case detection behaves exactly as it always did.
+    """
+    rows = connection.execute(
+        """SELECT DISTINCT q.root_number FROM bank_papers p
+           JOIN bank_subjects s ON s.id = p.subject_id
+           JOIN bank_questions q ON q.paper_id = p.id
+           WHERE p.doc_type = 'qp' AND s.code = ? AND s.board = ? AND p.year = ?
+             AND p.session = ? AND p.paper_number = ? AND p.variant = ?
+             AND coalesce(p.timezone, '') = coalesce(?, '')""",
+        (identity.code, identity.board, identity.year, identity.session,
+         identity.paper_number, identity.variant, identity.timezone),
+    ).fetchall()
+    return frozenset(int(row[0]) for row in rows) or None
+
+
 def prepare_document(
     pdf_path: Path | str,
     connection,
@@ -214,7 +234,10 @@ def prepare_document(
 
     # --- Stage 1: spans (free) --------------------------------------------
     prepare_started = time.perf_counter()
-    spans = detect_root_spans(pdf_path, doc_type)
+    spans = detect_root_spans(
+        pdf_path, doc_type,
+        expected_roots=_question_paper_roots(connection, identity) if doc_type == "ms" else None,
+    )
     detect_seconds = time.perf_counter() - prepare_started
 
     previous = connection.execute(

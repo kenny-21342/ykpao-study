@@ -200,11 +200,14 @@ def detect_root_spans(
     doc_type: DocType,
     *,
     evidence: DocumentEvidence | None = None,
+    expected_roots: frozenset[int] | None = None,
 ) -> DocumentSpans:
     """Locate every top-level question in one PDF.
 
     ``evidence`` may be passed in when the caller has already parsed the
-    document, since that parse is the expensive part.
+    document, since that parse is the expensive part. ``expected_roots`` is the
+    set of question numbers the matching question paper has; a prose mark scheme
+    uses it to tell its real answer section from the instruction pages in front.
     """
     path = Path(path)
     if doc_type == "ms":
@@ -218,12 +221,12 @@ def detect_root_spans(
             return spans
         # Older mark schemes predate the tabular layout; the prose detector
         # is the better fallback for those.
-        prose = _detect_prose_spans(path, doc_type, evidence)
+        prose = _detect_prose_spans(path, doc_type, evidence, expected_roots)
         return _with_diagnostic(
             replace(prose, table_bboxes=spans.table_bboxes),
             {"reason": "ms_table_detection_empty"},
         )
-    return _detect_prose_spans(path, doc_type, evidence)
+    return _detect_prose_spans(path, doc_type, evidence, expected_roots)
 
 
 # ---------------------------------------------------------------------------
@@ -293,10 +296,79 @@ def _detect_answer_key(path: Path) -> DocumentSpans | None:
 # ---------------------------------------------------------------------------
 
 
+_PUNCTUATED_NUMBER = re.compile(r"\s*\d{1,2}[.)]\s*")
+_BARE_NUMBER = re.compile(r"\s*\d{1,2}\s*")
+
+
+def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None = None) -> list:
+    """Pick the question headings ("1.", "2.") of an IB prose mark scheme.
+
+    IB markbands print score levels as bare numbers, so only punctuated numbers
+    count as headings. The front of the same document -- the generic marking
+    notes -- often carries a few punctuated numbers of its own ("1.", "2.",
+    "10."). Taking numbers greedily while they keep rising let those spend the
+    sequence: the notes' "10." made every real "3." to "9." look like going
+    backwards, so they were dropped, and the notes' "1." and "2." became the
+    stored answers to questions 1 and 2.
+
+    Instead the headings are split into rising runs (a restart is a new run),
+    and the run that matches the question paper best is kept: most expected
+    question numbers, then most headings, then the later one, because the
+    answers come after the notes. A number the run skipped is recovered from a
+    bare candidate that sits between its neighbours in the same left margin.
+    """
+    ordered = sorted(candidates, key=lambda candidate: candidate.position)
+    runs: list[list] = []
+    for candidate in ordered:
+        if not _PUNCTUATED_NUMBER.fullmatch(candidate.text):
+            continue
+        if runs and candidate.number > runs[-1][-1].number:
+            runs[-1].append(candidate)
+        else:
+            runs.append([candidate])
+    if not runs:
+        return []
+
+    def rank(index: int) -> tuple[int, int, int]:
+        run = runs[index]
+        overlap = len({c.number for c in run} & expected_roots) if expected_roots else 0
+        return (overlap, len(run), index)
+
+    chosen = list(runs[max(range(len(runs)), key=rank)])
+
+    margin = sorted(candidate.bbox[0] for candidate in chosen)[len(chosen) // 2]
+    bare = [c for c in ordered if _BARE_NUMBER.fullmatch(c.text) and abs(c.bbox[0] - margin) <= 4]
+    filled = list(chosen)
+    for before, after in zip(chosen, chosen[1:]):
+        for number in range(before.number + 1, after.number):
+            if expected_roots is not None and number not in expected_roots:
+                continue
+            between = [c for c in bare
+                       if c.number == number and before.position < c.position < after.position]
+            if between:
+                filled.append(between[0])
+    return sorted(filled, key=lambda candidate: candidate.position)
+
+
+
+def _legacy_numbered_roots(candidates) -> list:
+    """The punctuated headings taken greedily while they keep rising."""
+    numbered = sorted((c for c in candidates if _PUNCTUATED_NUMBER.fullmatch(c.text)),
+                      key=lambda candidate: candidate.position)
+    selected = []
+    last_number = 0
+    for candidate in numbered:
+        if candidate.number > last_number:
+            selected.append(candidate)
+            last_number = candidate.number
+    return selected
+
+
 def _detect_prose_spans(
     path: Path,
     doc_type: str,
     evidence: DocumentEvidence | None,
+    expected_roots: frozenset[int] | None = None,
 ) -> DocumentSpans:
     evidence = evidence or extract_document_evidence(path)
     detection = detect_roots(evidence)
@@ -306,20 +378,20 @@ def _detect_prose_spans(
         # rubric rows. Actual question headings in these prose mark schemes
         # are punctuated ("1.", "2."). Build regions from those headings so
         # the intervening markband remains with its question.
-        numbered = sorted(
-            (candidate for candidate in detection.candidates
-             if re.fullmatch(r"\s*\d{1,2}[.)]\s*", candidate.text)),
-            key=lambda candidate: candidate.position,
-        )
-        if numbered:
-            selected = []
-            last_number = 0
-            for candidate in numbered:
-                if candidate.number > last_number:
-                    selected.append(DetectedRoot(candidate))
-                    last_number = candidate.number
-            detection = DetectionResult(tuple(selected), detection.candidates,
-                                        detection.diagnostics)
+        legacy = _legacy_numbered_roots(detection.candidates)
+        selected = legacy
+        if expected_roots:
+            # The run-aware choice is used only where it covers more of the
+            # question paper's numbers than the sequence the detector always
+            # took, so it cannot lose a question that used to be found.
+            chain = select_numbered_ms_roots(detection.candidates, expected_roots)
+            covered = lambda chosen: len({c.number for c in chosen} & expected_roots)  # noqa: E731
+            if chain and covered(chain) > covered(legacy):
+                selected = chain
+        numbered = bool(selected)
+        if selected:
+            detection = DetectionResult(tuple(DetectedRoot(candidate) for candidate in selected),
+                                        detection.candidates, detection.diagnostics)
     root_regions = build_source_regions(evidence, detection, dpi=RENDER_DPI)
 
     spans: list[RootSpan] = []
