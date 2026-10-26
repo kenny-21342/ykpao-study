@@ -73,6 +73,16 @@ def _is_cooldown(error: BaseException) -> bool:
     return "http 429" in text or "cooling down" in text or "rate-limited" in text
 
 
+def tag_version(row) -> str:
+    """The prompt version a question is tagged under.
+
+    A list narrowed to a syllabus era or level is a different prompt, so it gets
+    its own ledger key. Skipping and recording must use the same one.
+    """
+    found = syllabus_for(row["subject_code"], row["paper_year"], row["subject_level"])
+    return f"{TAG_PROMPT_VERSION}:{found.variant}" if found and found.variant else TAG_PROMPT_VERSION
+
+
 def pending_rows(connection: sqlite3.Connection, subject: str | None) -> list[sqlite3.Row]:
     """Published, transcribed questions with no successful tag ledger row.
 
@@ -148,9 +158,8 @@ def main() -> int:
             # The list that applies to this paper: its syllabus era and level.
             found = syllabus_for(code, row["paper_year"], row["subject_level"])
             topics, context = (found.topics, found.context) if found else (None, None)
-            version = f"{TAG_PROMPT_VERSION}:{found.variant}" if found and found.variant else TAG_PROMPT_VERSION
             key = create_ledger_key(row["source_sha256"], row["root_number"],
-                                    model, version, "tag")
+                                    model, tag_version(row), "tag")
             if ledger.is_completed(key):
                 already += 1
                 continue
@@ -191,7 +200,7 @@ def main() -> int:
 
     def key_of(row):
         return create_ledger_key(row["source_sha256"], row["root_number"],
-                                 model, TAG_PROMPT_VERSION, "tag")
+                                 model, tag_version(row), "tag")
 
     # Work is submitted a window at a time rather than all at once.
     #
