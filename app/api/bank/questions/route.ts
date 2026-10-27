@@ -146,6 +146,7 @@ export async function GET(request: NextRequest) {
       // no-op rather than an empty list, which would look like a broken page.
       bookmarkedBy: searchParams.get('bookmarked') === '1' && user ? user.id : null,
       hideDoneBy: searchParams.get('hideDone') === '1' && user ? user.id : null,
+      doneFor: user?.id ?? null,
       page: parsePositiveInt(searchParams.get('page'), 1),
       limit,
     });

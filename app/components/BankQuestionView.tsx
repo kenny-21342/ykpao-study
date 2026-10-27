@@ -419,7 +419,14 @@ function CommandTermPanel({ slugs }: { slugs: string[] }) {
   );
 }
 
-export default function BankQuestionCard({ question }: { question: Question }) {
+export default function BankQuestionCard({
+  question,
+  onAttempted,
+}: {
+  question: Question;
+  /** Called once an answer has been saved, so the list can mark the row done. */
+  onAttempted?: () => void;
+}) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
 
@@ -465,7 +472,13 @@ export default function BankQuestionCard({ question }: { question: Question }) {
 
       <CommandTermPanel slugs={question.commandTerms} />
 
-      <AnswerPanel question={question} onAnswered={() => setShowAnswer(true)} />
+      <AnswerPanel
+        question={question}
+        onAnswered={() => {
+          setShowAnswer(true);
+          onAttempted?.();
+        }}
+      />
 
       {question.markScheme &&
         (question.markScheme.strips.length > 0 || question.markScheme.answerLetter) && (

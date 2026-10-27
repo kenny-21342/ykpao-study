@@ -259,6 +259,8 @@ export type BankQuestionSummary = {
   totalMarks: number | null;
   hasText: boolean;
   hasMarkScheme: boolean;
+  /** The signed-in student has attempted this question. False when signed out. */
+  done: boolean;
   /**
    * What a student can read before opening the question: what it covers and how
    * hard it is. All of it comes from the tagging pass, so any of it can be empty.
@@ -557,6 +559,8 @@ export async function listBankQuestions(options: {
   bookmarkedBy?: string | null;
   /** When set, leave out questions this user has already attempted. */
   hideDoneBy?: string | null;
+  /** Whose attempts mark a row done. Independent of `hideDoneBy`. */
+  doneFor?: string | null;
   /**
    * A parsed question code and/or keywords. Needs `subjectId`: it is what says
    * which board's session names to use, and it keeps the keyword search to one
@@ -633,6 +637,10 @@ export async function listBankQuestions(options: {
         bodyMd: true,
         difficulty: true,
         difficultyRationale: true,
+        // One row is enough to know it has been attempted.
+        ...(options.doneFor
+          ? { attempts: { where: { userId: options.doneFor }, take: 1, select: { id: true } } }
+          : {}),
         topics: { select: { topic: { select: { name: true } } } },
         tags: { select: { tag: { select: { label: true } } }, orderBy: { confidence: 'desc' }, take: 5 },
         partRows: {
@@ -666,6 +674,7 @@ export async function listBankQuestions(options: {
       totalMarks: row.totalMarks,
       hasText: row.bodyMd.trim().length > 0,
       hasMarkScheme: row.markScheme?.status === 'published',
+      done: ((row as { attempts?: unknown[] }).attempts?.length ?? 0) > 0,
       glimpse: {
         topics: row.topics.map((link) => link.topic.name).sort(),
         tags: row.tags.map((link) => link.tag.label),

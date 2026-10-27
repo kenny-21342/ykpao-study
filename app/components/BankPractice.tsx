@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from 'react';
 import PreviewNotice from './PreviewNotice';
 import { useSession } from 'next-auth/react';
-import { EyeOff, GraduationCap, Loader2, Search, Star } from 'lucide-react';
+import { CheckCircle2, EyeOff, GraduationCap, Loader2, Search, Star } from 'lucide-react';
 import BankQuestionCard from './BankQuestionView';
 import FormattedMessage from './FormattedMessage';
 import { useScreenContext } from './ScreenContext';
@@ -45,6 +45,7 @@ type Summary = {
   totalMarks: number | null;
   hasText: boolean;
   hasMarkScheme: boolean;
+  done: boolean;
   glimpse: {
     topics: string[];
     tags: string[];
@@ -849,7 +850,12 @@ export default function BankPractice({
             {bookmarked.has(selected.id) ? 'Starred' : 'Star'}
           </button>
         </div>
-        <BankQuestionCard question={selected} />
+        <BankQuestionCard
+          question={selected}
+          onAttempted={() =>
+            setQuestions((current) => current.map((item) => (item.id === selected.id ? { ...item, done: true } : item)))
+          }
+        />
           <div className="rounded-lg border border-line bg-surface">
             <AssistancePanel question={selected} />
           </div>
@@ -1146,6 +1152,13 @@ export default function BankPractice({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">
                   Question {question.rootNumber}
+                  {question.done && (
+                    <CheckCircle2
+                      className="ml-1.5 inline h-4 w-4 align-text-bottom text-accent-text"
+                      aria-label="Attempted"
+                      role="img"
+                    />
+                  )}
                   {question.totalMarks !== null && question.totalMarks > 0 && (
                     <span className="ml-2 text-xs font-normal text-muted">
                       {question.totalMarks} marks
