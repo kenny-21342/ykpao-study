@@ -113,13 +113,14 @@ try {
   let toDelete = 0;
   let toAdd = 0;
   let changed = 0;
+  const changedIds = [];
   for (const [questionId, names] of wanted) {
     const current = have.get(questionId) ?? [];
     const stale = current.filter((row) => !names.has(row.name)).length;
     const missing = [...names.keys()].filter((name) => !current.some((row) => row.name === name)).length;
     toDelete += stale;
     toAdd += missing;
-    if (stale || missing) changed += 1;
+    if (stale || missing) { changed += 1; changedIds.push(questionId); }
   }
   console.log(`production: ${fmt(existing.length)} links now; would delete ${fmt(toDelete)}, add ${fmt(toAdd)}, over ${fmt(changed)} questions`);
 
@@ -152,8 +153,9 @@ try {
   let deleted = 0;
   let added = 0;
   const sampleBatches = trial ? 3 : Infinity;
-  for (let i = 0, n = 0; i < ids.length && n < sampleBatches; i += BATCH, n += 1) {
-    const slice = ids.slice(i, i + BATCH);
+  // Only the questions that actually change, so a trial exercises real edits.
+  for (let i = 0, n = 0; i < changedIds.length && n < sampleBatches; i += BATCH, n += 1) {
+    const slice = changedIds.slice(i, i + BATCH);
     await client.query('BEGIN');
     try {
       for (const questionId of slice) {
@@ -181,7 +183,7 @@ try {
       await client.query('ROLLBACK').catch(() => {});
       throw error;
     }
-    log(`questions ${fmt(Math.min(i + BATCH, ids.length))}/${fmt(ids.length)}: ${fmt(deleted)} deleted, ${fmt(added)} added`);
+    log(`questions ${fmt(Math.min(i + BATCH, changedIds.length))}/${fmt(changedIds.length)}: ${fmt(deleted)} deleted, ${fmt(added)} added`);
   }
   console.log(trial ? '\nTrial only (first batches): rolled back, nothing was written.' : `\nDone. Deleted links are in ${backupPath}`);
 } catch (error) {
