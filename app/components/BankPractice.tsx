@@ -401,6 +401,8 @@ export default function BankPractice({
     let cancelled = false;
     const params = new URLSearchParams({ scope });
     if (subject) params.set('subject', subject);
+    // Topics follow the exam year: a syllabus changes between years.
+    if (subject && year) params.set('year', year);
     fetch(`/api/bank/questions?action=filters&${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -449,7 +451,7 @@ export default function BankPractice({
     return () => {
       cancelled = true;
     };
-  }, [scope, subject, onSubjectApplied, restored]);
+  }, [scope, subject, year, onSubjectApplied, restored]);
 
 
   useEffect(() => {

@@ -340,6 +340,13 @@ export function toBankSubjectCodes(catalogCodes: string[]): string[] {
 export async function listBankFilters(
   subjectCodes: string[] | null,
   subject?: string | null,
+  /**
+   * The exam year on screen. A syllabus changes between years (IB Physics from
+   * 2025 has themes A-E instead of the 2016 topics), so the topic list follows
+   * the year: it offers only topics that questions of that year carry. Every
+   * other list stays whole, or choosing a year would remove the other years.
+   */
+  year?: number | null,
 ): Promise<BankFilters> {
   const where = publishedQuestionPaperWhere(subjectCodes);
 
@@ -412,7 +419,14 @@ export async function listBankFilters(
     subjectId
       ? prisma.bankTopic.findMany({
           where: {
-            questions: { some: { question: { status: 'published', paper: paperWhere } } },
+            questions: {
+              some: {
+                question: {
+                  status: 'published',
+                  paper: year ? { ...paperWhere, year } : paperWhere,
+                },
+              },
+            },
           },
           orderBy: { name: 'asc' },
           select: { name: true },

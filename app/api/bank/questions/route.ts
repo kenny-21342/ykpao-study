@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       // `subject` is the bank subject id the browser has selected; it narrows
       // the topic, year, session and paper lists. See `listBankFilters`.
       return NextResponse.json({
-        ...(await listBankFilters(subjectCodes, searchParams.get('subject'))),
+        ...(await listBankFilters(subjectCodes, searchParams.get('subject'), intParam(searchParams.get('year')))),
         scope: courseScope,
       });
     }
