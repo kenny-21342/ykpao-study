@@ -83,7 +83,8 @@ def tag_version(row) -> str:
     return f"{TAG_PROMPT_VERSION}:{found.variant}" if found and found.variant else TAG_PROMPT_VERSION
 
 
-def pending_rows(connection: sqlite3.Connection, subject: str | None) -> list[sqlite3.Row]:
+def pending_rows(connection: sqlite3.Connection, subject: str | None,
+                 include_review: bool = False) -> list[sqlite3.Row]:
     """Published, transcribed questions with no successful tag ledger row.
 
     The ledger key includes the model and prompt version, so changing either
@@ -98,10 +99,10 @@ def pending_rows(connection: sqlite3.Connection, subject: str | None) -> list[sq
         FROM bank_questions q
         JOIN bank_papers p ON p.id = q.paper_id
         JOIN bank_subjects s ON s.id = p.subject_id
-        WHERE q.status = 'published'
+        WHERE q.status IN ('published'{review})
           AND COALESCE(q.body_md, '') <> ''
           AND p.doc_type = 'qp'
-    """
+    """.format(review=", 'needs_review'" if include_review else "")
     params: list[str] = []
     if subject:
         sql += " AND lower(s.code) = lower(?)"
@@ -114,6 +115,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--subject", default=None, help="syllabus code, e.g. 0625")
+    parser.add_argument("--include-review", action="store_true",
+                        help="also tag questions still marked needs_review here (production may have published them)")
     parser.add_argument("--year", type=int, default=None, help="only papers from this exam year")
     parser.add_argument("--apply", action="store_true", help="make the calls. THIS SPENDS MONEY.")
     parser.add_argument("--limit", type=int, default=0, help="stop after this many questions")
@@ -137,7 +140,7 @@ def main() -> int:
     connection.execute("PRAGMA busy_timeout = 30000")
     ledger = RunLedger(connection=connection)
 
-    rows = pending_rows(connection, args.subject)
+    rows = pending_rows(connection, args.subject, args.include_review)
     if args.year:
         rows = [row for row in rows if row["paper_year"] == args.year]
     # Group by subject so the syllabus topic list is loaded once, and so a

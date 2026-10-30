@@ -440,7 +440,14 @@ export default function BankQuestionCard({
           Question {question.rootNumber}
         </h2>
         <div className="flex items-center gap-3 text-xs text-muted">
-          {question.totalMarks !== null && <span>{question.totalMarks} marks</span>}
+          {/* The extractor stores 0 for a multiple-choice question it could not
+              read a mark total from; "0 marks" is wrong, and the list already
+              hides it. A question with a single answer letter is worth one. */}
+          {question.totalMarks !== null && question.totalMarks > 0 ? (
+            <span>{question.totalMarks === 1 ? '1 mark' : `${question.totalMarks} marks`}</span>
+          ) : question.markScheme?.answerLetter ? (
+            <span>1 mark</span>
+          ) : null}
           <button
             type="button"
             onClick={() => setZoomed('question')}

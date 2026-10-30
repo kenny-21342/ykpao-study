@@ -178,7 +178,13 @@ function hasGlimpse(glimpse: Summary['glimpse']): boolean {
 }
 
 function paperLabel(paper: Summary['paper']): string {
-  const variant = paper.variant ? `/${paper.variant}` : '';
+  // Cambridge numbers its papers 1/1, 4/2 ... ; an IB paper's variant is the
+  // letter of paper 1A / 1B (the same reading `formatQuestionCode` uses), so
+  // "Paper 1/1" under an IB code like 25M.1ASL read as the wrong paper.
+  const cambridge = /^\d{4}$/.test(paper.subjectCode);
+  const variant = paper.variant
+    ? cambridge ? `/${paper.variant}` : String.fromCharCode(64 + paper.variant)
+    : '';
   return `${paper.year} ${sessionLabel(paper.session)} · Paper ${paper.paperNumber}${variant}`;
 }
 
@@ -1377,7 +1383,7 @@ export default function BankPractice({
                     download={exportResult.filename}
                     className="text-xs font-semibold text-accent-text hover:underline"
                   >
-                    Download PDF ({exportResult.pages} pages)
+                    Download PDF ({exportResult.pages} {exportResult.pages === 1 ? 'page' : 'pages'})
                   </a>
                 )}
               </div>
