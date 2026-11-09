@@ -39,6 +39,7 @@ import WeaknessHeatmap from './WeaknessHeatmap';
 import { plainTextPreview } from '@/lib/latex';
 import { describeFailedSources } from '@/lib/study-load-errors';
 import { useScreenContext } from './ScreenContext';
+import PageSheet from './PageSheet';
 
 type CoachView = 'today' | 'plan' | 'mistakes' | 'review' | 'decks' | 'mastery';
 
@@ -455,7 +456,7 @@ export default function StudyCoach({
   }
 
   return (
-    <div className="h-full flex flex-col bg-surface-raised">
+    <PageSheet>
       <div className="border-b border-line bg-surface px-4 md:px-6">
         <div className="flex items-center justify-between gap-4 min-h-16">
           <div className="min-w-0">
@@ -544,7 +545,7 @@ export default function StudyCoach({
           <MasteryView topics={overview.mastery} subjects={overview.subjects} selectedSubject={selectedSubject} setSelectedSubject={setSelectedSubject} onOpenQuestion={onOpenQuestion} queue={overview.adaptiveQueue} />
         )}
       </div>
-    </div>
+    </PageSheet>
   );
 }
 

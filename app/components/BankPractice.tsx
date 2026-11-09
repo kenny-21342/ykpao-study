@@ -147,7 +147,7 @@ function ChipGroup({
   const chosen = value ? value.split(',') : [];
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={label}>
-      <span className="text-xs text-muted">{label}</span>
+      <span className="w-16 text-xs text-secondary">{label}</span>
       {options.map((option) => {
         const on = chosen.includes(option.value);
         return (
@@ -1018,7 +1018,10 @@ export default function BankPractice({
         )}
       </div>
 
-      <div className="space-y-2">
+      {/* A student can set a background photo; bare labels and outline-only
+          chips vanished into it. A solid panel keeps them readable on any
+          image while the photo still shows around the content. */}
+      <div className="space-y-2 rounded-lg border border-line bg-surface p-3">
         {filters.paperNumbers.length > 0 && (
           <ChipGroup
             label="Paper"
@@ -1074,12 +1077,12 @@ export default function BankPractice({
               ? 'Question number or keyword, e.g. 21M.1SL.TZ1.22, Q22, momentum'
               : 'Choose a subject to search by question number'
           }
-          className="w-full rounded-md border border-strong bg-surface py-1.5 pl-8 pr-2 text-sm disabled:opacity-60"
+          className="w-full rounded-md border border-strong bg-surface py-1.5 pl-8 pr-2 text-sm disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-muted"
         />
       </label>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2">
+        <p className="text-xs text-secondary">
           {listLoading ? 'Loading…' : `${total.toLocaleString()} questions`}
         </p>
         {total > 0 && (
@@ -1105,7 +1108,7 @@ export default function BankPractice({
       )}
 
       {!listLoading && questions.length === 0 && !listError && (
-        <div className="flex flex-col items-center gap-2 py-12 text-muted">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-line bg-surface py-12 text-secondary">
           <Search className="h-6 w-6" aria-hidden="true" />
           <p className="max-w-md text-center text-sm">
             {notice ?? (search ? `No questions match "${search}" with those filters.` : 'No questions match those filters.')}

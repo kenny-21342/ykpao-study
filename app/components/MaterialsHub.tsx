@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import ResourceLibrary, { MaterialsTabs, type MaterialsTab } from './ResourceLibrary';
 import { PageHeader } from './ui';
+import PageSheet from './PageSheet';
 
 /**
  * Materials. One half now, not two.
@@ -25,8 +26,7 @@ export default function MaterialsHub() {
   const [tab, setTab] = useState<MaterialsTab>('notes');
 
   return (
-    <div className="h-full overflow-hidden bg-surface-raised">
-      <div className="flex h-full min-h-0 flex-col">
+    <PageSheet>
         {/* px matches the library's own, so the title, the tabs and the content
             below all start on the same left edge. */}
         <div className="border-b border-line bg-surface px-6 md:px-8">
@@ -43,7 +43,6 @@ export default function MaterialsHub() {
         <div className="min-h-0 flex-1 overflow-hidden">
           <ResourceLibrary tab={tab} />
         </div>
-      </div>
-    </div>
+    </PageSheet>
   );
 }

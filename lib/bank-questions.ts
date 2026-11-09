@@ -102,6 +102,9 @@ export function bankSubjectName(subject: {
 function qualificationLabel(board: string, level: string | null): string | null {
   if (board === 'IB') {
     if (level === 'HL' || level === 'SL') return `IB ${level}`;
+    // Papers sat by both levels are filed under their own row; without this it
+    // reads as a second, unexplained "(IB)" next to the HL and SL entries.
+    if (level === 'HLSL') return 'IB HL & SL';
     return 'IB';
   }
   if (level === 'igcse') return 'IGCSE';
