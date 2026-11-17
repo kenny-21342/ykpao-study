@@ -119,6 +119,9 @@ def main() -> int:
                         help="also tag questions still marked needs_review here (production may have published them)")
     parser.add_argument("--year", type=int, default=None, help="only papers from this exam year")
     parser.add_argument("--apply", action="store_true", help="make the calls. THIS SPENDS MONEY.")
+    parser.add_argument("--resume-across-models", action="store_true",
+                        help="count a question already tagged by ANY model as done, so switching "
+                             "models tags only what is missing instead of everything again")
     parser.add_argument("--limit", type=int, default=0, help="stop after this many questions")
     parser.add_argument("--concurrency", type=int, default=12)
     parser.add_argument("--max-spend", type=float, default=60.0)
@@ -163,7 +166,10 @@ def main() -> int:
             topics, context = (found.topics, found.context) if found else (None, None)
             key = create_ledger_key(row["source_sha256"], row["root_number"],
                                     model, tag_version(row), "tag")
-            if ledger.is_completed(key):
+            if ledger.is_completed(key) or (
+                args.resume_across_models
+                and ledger.is_root_completed(row["source_sha256"], row["root_number"], "tag")
+            ):
                 already += 1
                 continue
             work.append((row, topics, context))

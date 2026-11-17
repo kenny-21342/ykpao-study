@@ -185,6 +185,9 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--concurrency", type=int, default=12)
     parser.add_argument("--max-spend", type=float, default=25.0)
+    parser.add_argument("--resume-across-models", action="store_true",
+                        help="count a question already rated by ANY model as done (switching models "
+                             "otherwise starts the whole run again)")
     args = parser.parse_args()
 
     settings = text_settings()
@@ -204,7 +207,10 @@ def main() -> int:
         version = f"{PROMPT_VERSION}:{found.variant}" if found and found.variant else PROMPT_VERSION
         row["version"] = version
         key = create_ledger_key(row["source_sha256"], row["root_number"], model, version, STAGE)
-        if ledger.is_completed(key):
+        if ledger.is_completed(key) or (
+            args.resume_across_models
+            and ledger.is_root_completed(row["source_sha256"], row["root_number"], STAGE)
+        ):
             already += 1
             continue
         if not found:
