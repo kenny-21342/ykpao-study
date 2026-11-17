@@ -77,6 +77,13 @@ def main():
     parser.add_argument("--source", default="pdf_extraction/bank/extract.db", help="Source SQLite file")
     parser.add_argument("--dry-run", action="store_true", help="Show counts without writing")
     parser.add_argument(
+        "--hold-flagged",
+        action="store_true",
+        help="Also set already-published questions to needs_review when they carry an "
+             "open high/medium flag. Off by default: a plain merge re-ran this against "
+             "the whole bank on 17 Nov 2026 and hid 67,101 published questions.",
+    )
+    parser.add_argument(
         "--refresh-strips",
         action="store_true",
         help=(
@@ -228,6 +235,9 @@ def main():
             self.seen = 0
 
         def add(self, values):
+            # Postgres text cannot hold a NUL byte; one stray 0x00 in a model
+            # transcript fails the whole batch and then its own row.
+            values = tuple(v.replace("\x00", "") if isinstance(v, str) else v for v in values)
             self.pending.append(values)
             if len(self.pending) >= self.size:
                 self.flush()
@@ -405,13 +415,38 @@ def main():
     # rows that is what timed the socket out mid-merge. A named cursor is
     # server-side, so psycopg2 fetches itersize rows at a time and the
     # connection never goes quiet for long.
+    #
+    # A named cursor still holds one transaction open for the whole scan, and a
+    # proxy in the path (Clash fake-IP) drops that long-lived socket with
+    # "SSL SYSCALL error: EOF detected". So page by primary key instead: each
+    # page is a short query of its own, and a dropped connection costs one
+    # page, not the scan -- the page is retried on a fresh connection.
     existing_assets = {}
-    with dst.cursor(name="bank_assets_scan") as cur:
-        cur.itersize = 20000
-        cur.execute('SELECT id, sha256 FROM bank_assets')
-        for asset_id, sha in cur:
+    last_id = 0
+    page_failures = 0
+    while True:
+        try:
+            with dst.cursor() as cur:
+                cur.execute(
+                    'SELECT id, sha256 FROM bank_assets WHERE id > %s ORDER BY id LIMIT 20000',
+                    (last_id,),
+                )
+                page = cur.fetchall()
+            dst.rollback()  # end the read transaction between pages
+            page_failures = 0
+        except Exception as exc:
+            page_failures += 1
+            if page_failures > 8:
+                raise
+            print(f"  [DB] asset scan page failed ({type(exc).__name__}); reconnecting")
+            ensure_connection()
+            continue
+        if not page:
+            break
+        for asset_id, sha in page:
             if sha:
                 existing_assets[sha] = asset_id
+        last_id = page[-1][0]
     print(f"  (found {len(existing_assets)} assets already in Postgres)")
 
     # RETURNING id is what forced one round trip per row: it ties each new id
@@ -572,9 +607,18 @@ def main():
     skipped_ms = 0
 
     # Pre-load existing mark schemes by (paperId, rootNumber)
+    # A question carries at most one mark scheme (unique on questionId), and
+    # older production rows were stored under the *question* paper rather than
+    # the mark scheme paper, so (paperId, rootNumber) alone misses them. Match
+    # on the question too: inserting a second row for such a question is a
+    # unique violation, and skipping it silently would leave the row unmapped
+    # and drop its strips and assets further down.
     with dst.cursor() as cur:
-        cur.execute('SELECT id, "paperId", "rootNumber" FROM bank_mark_schemes')
-        existing_ms = {(row[1], row[2]): row[0] for row in cur.fetchall()}
+        cur.execute('SELECT id, "paperId", "rootNumber", "questionId" FROM bank_mark_schemes')
+        _ms_rows = cur.fetchall()
+    existing_ms = {(row[1], row[2]): row[0] for row in _ms_rows}
+    existing_ms_by_question = {row[3]: row[0] for row in _ms_rows}
+    del _ms_rows
 
     batch = BatchInserter(
         """
@@ -605,6 +649,10 @@ def main():
         wanted_ms.append((row["id"], ms_key))
         if ms_key in existing_ms:
             ms_id_map[row["id"]] = existing_ms[ms_key]
+            skipped_ms += 1
+            continue
+        if new_question_id in existing_ms_by_question:
+            ms_id_map[row["id"]] = existing_ms_by_question[new_question_id]
             skipped_ms += 1
             continue
 
@@ -682,30 +730,30 @@ def main():
         cur.execute('SELECT id, slug FROM bank_tags')
         existing_tags = {row[1]: row[0] for row in cur.fetchall()}
 
+    # Batched, committing as it goes. The old loop inserted one tag per round
+    # trip and committed once at the end: ~8,000 new tags at 2-3 a second is
+    # close to an hour with no output, and any dropped connection rolled the lot
+    # back. Ids are recovered afterwards by slug, which is unique.
+    tag_batch = BatchInserter(
+        """
+        INSERT INTO bank_tags (slug, label)
+        VALUES %s
+        ON CONFLICT (slug) DO NOTHING
+        """,
+        "tag", len([r for r in rows if r["slug"] not in existing_tags]),
+    )
+    for row in rows:
+        if row["slug"] in existing_tags:
+            tag_id_map[row["id"]] = existing_tags[row["slug"]]
+            continue
+        tag_batch.add((row["slug"], row["label"]))
+    tag_batch.finish()
     with dst.cursor() as cur:
-        for row in rows:
-            old_id = row["id"]
-            slug = row["slug"]
-            if slug in existing_tags:
-                tag_id_map[old_id] = existing_tags[slug]
-                continue
-
-            try:
-                cur.execute("""
-                    INSERT INTO bank_tags (slug, label)
-                    VALUES (%s, %s)
-                    ON CONFLICT (slug) DO NOTHING
-                    RETURNING id
-                """, (slug, row["label"]))
-                result = cur.fetchone()
-                if result:
-                    tag_id_map[old_id] = result[0]
-                    existing_tags[slug] = result[0]
-            except Exception as e:
-                print(f"\n  ⚠ tag {row['slug']}: {e}")
-                safe_rollback()
-                continue
-    dst.commit()
+        cur.execute('SELECT id, slug FROM bank_tags')
+        existing_tags = {r[1]: r[0] for r in cur.fetchall()}
+    for row in rows:
+        if row["slug"] in existing_tags:
+            tag_id_map[row["id"]] = existing_tags[row["slug"]]
     print(f"  ✓ {len(rows)} tags")
 
     # ---- Merge skills ----
@@ -757,19 +805,21 @@ def main():
     print("Merging bank_question_topics...")
     rows = src.execute('SELECT question_id, topic_id, confidence FROM bank_question_topics').fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_qid = question_id_map.get(row["question_id"])
-            new_tid = topic_id_map.get(row["topic_id"])
-            if not new_qid or not new_tid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_question_topics ("questionId", "topicId", confidence)
-                VALUES (%s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_qid, new_tid, row["confidence"]))
-    dst.commit()
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_question_topics ("questionId", "topicId", confidence)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "question topic", len(rows),
+    )
+    for row in rows:
+        new_qid = question_id_map.get(row["question_id"])
+        new_tid = topic_id_map.get(row["topic_id"])
+        if not new_qid or not new_tid:
+            continue
+        batch.add((new_qid, new_tid, row["confidence"]))
+    batch.finish()
     print(f"  ✓ {len(rows)} question-topic links")
 
     # ---- Merge question tags junction ----
@@ -777,19 +827,21 @@ def main():
     print("Merging bank_question_tags...")
     rows = src.execute('SELECT question_id, tag_id, confidence FROM bank_question_tags').fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_qid = question_id_map.get(row["question_id"])
-            new_tid = tag_id_map.get(row["tag_id"])
-            if not new_qid or not new_tid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_question_tags ("questionId", "tagId", confidence)
-                VALUES (%s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_qid, new_tid, row["confidence"]))
-    dst.commit()
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_question_tags ("questionId", "tagId", confidence)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "question tag", len(rows),
+    )
+    for row in rows:
+        new_qid = question_id_map.get(row["question_id"])
+        new_tid = tag_id_map.get(row["tag_id"])
+        if not new_qid or not new_tid:
+            continue
+        batch.add((new_qid, new_tid, row["confidence"]))
+    batch.finish()
     print(f"  ✓ {len(rows)} question-tag links")
 
     # ---- Merge question skills junction ----
@@ -802,19 +854,21 @@ def main():
     except sqlite3.OperationalError:
         rows = []
 
-    with dst.cursor() as cur:
-        for row in rows:
-            new_qid = question_id_map.get(row["question_id"])
-            new_sid = skill_id_map.get(row["skill_id"])
-            if not new_qid or not new_sid:
-                continue
-
-            cur.execute("""
-                INSERT INTO bank_question_skills ("questionId", "skillId", confidence)
-                VALUES (%s, %s, %s)
-                ON CONFLICT DO NOTHING
-            """, (new_qid, new_sid, row["confidence"]))
-    dst.commit()
+    batch = BatchInserter(
+        """
+        INSERT INTO bank_question_skills ("questionId", "skillId", confidence)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+        """,
+        "question skill", len(rows),
+    )
+    for row in rows:
+        new_qid = question_id_map.get(row["question_id"])
+        new_sid = skill_id_map.get(row["skill_id"])
+        if not new_qid or not new_sid:
+            continue
+        batch.add((new_qid, new_sid, row["confidence"]))
+    batch.finish()
     print(f"  ✓ {len(rows)} question-skill links")
 
     # ---- Merge question assets ----
@@ -977,23 +1031,26 @@ def main():
         if removed:
             print(f"  ✓ removed {removed} paper-only copies of question flags")
 
+        # Only with --hold-flagged; see that option's help for why.
         # A later extraction may discover a new serious crop issue on a row
         # already published in Postgres. The question insert above is
         # intentionally DO NOTHING to preserve manual reviews, so new open
         # blocking flags must hold that row explicitly.
-        with dst.cursor() as cur:
-            cur.execute('''
-                UPDATE bank_questions AS q
-                SET status = 'needs_review', "reviewedBy" = NULL, "reviewedAt" = NULL
-                WHERE q.status = 'published'
-                  AND EXISTS (
-                    SELECT 1 FROM bank_review_flags AS flag
-                    WHERE flag.status = 'open' AND flag.severity IN ('high', 'medium')
-                      AND (flag."questionId" = q.id OR
-                           (flag."questionId" IS NULL AND flag."paperId" = q."paperId"))
-                  )
-            ''')
-            held_again = cur.rowcount
+        held_again = 0
+        if args.hold_flagged:
+            with dst.cursor() as cur:
+                cur.execute('''
+                    UPDATE bank_questions AS q
+                    SET status = 'needs_review', "reviewedBy" = NULL, "reviewedAt" = NULL
+                    WHERE q.status = 'published'
+                      AND EXISTS (
+                        SELECT 1 FROM bank_review_flags AS flag
+                        WHERE flag.status = 'open' AND flag.severity IN ('high', 'medium')
+                          AND (flag."questionId" = q.id OR
+                               (flag."questionId" IS NULL AND flag."paperId" = q."paperId"))
+                      )
+                ''')
+                held_again = cur.rowcount
         dst.commit()
         if held_again:
             print(f"  ! held {held_again} previously published questions with open blocking flags")

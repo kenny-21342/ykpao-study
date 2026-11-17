@@ -138,8 +138,11 @@ try {
         const slice = rows.slice(i, i + BATCH);
         const params = [];
         const tuples = slice.map((row, r) => {
-          params.push(row.questionId, row.label, row.ordering, row.marks ?? null, row.topic ?? null,
-            row.difficulty ?? null, row.rationale ?? null, row.model ?? null, row.prompt_version ?? null);
+          // Postgres text cannot hold a NUL byte; a stray 0x00 in a model's
+          // rationale otherwise fails the whole batch.
+          const clean = (v) => (typeof v === 'string' ? v.replaceAll('\0', '') : v);
+          params.push(row.questionId, clean(row.label), row.ordering, row.marks ?? null, clean(row.topic) ?? null,
+            row.difficulty ?? null, clean(row.rationale) ?? null, row.model ?? null, row.prompt_version ?? null);
           const b = r * 9;
           return `($${b + 1}::int,$${b + 2}::text,$${b + 3}::int,$${b + 4}::int,$${b + 5}::text,$${b + 6}::int,$${b + 7}::text,$${b + 8}::text,$${b + 9}::text)`;
         });

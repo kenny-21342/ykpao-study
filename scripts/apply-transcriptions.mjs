@@ -160,7 +160,9 @@ try {
     ${subjectClause}
     WHERE q.body_md IS NOT NULL AND trim(q.body_md) <> ''
     ${flagJoin('question')}
-  `).all(subject ? { subject } : {});
+  `).all(subject ? { subject } : {})
+    // Postgres text cannot hold a NUL byte; one stray 0x00 fails the batch.
+    .map((r) => ({ ...r, body_md: r.body_md.replaceAll('\0', '') }));
 
   // Keyed through the question's paper, not the mark scheme's own.
   //
@@ -180,7 +182,8 @@ try {
     ${subjectClause}
     WHERE m.answer_md IS NOT NULL AND trim(m.answer_md) <> ''
     ${flagJoin('mark_scheme')}
-  `).all(subject ? { subject } : {});
+  `).all(subject ? { subject } : {})
+    .map((r) => ({ ...r, answer_md: r.answer_md.replaceAll('\0', '') }));
 
   // A model that refuses is not a model that failed, and that is the problem.
   //
