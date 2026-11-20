@@ -52,7 +52,9 @@ const texts = local
       GROUP BY m.answer_md HAVING count(*) >= 2`,
   )
   .all()
-  .map((r) => r.t.replaceAll('\0', ''));
+  .map((r) => r.t.replaceAll('\0', ''))
+  // Empty or near-empty text is an unfinished transcription, not the generic notes.
+  .filter((t) => t.trim().length >= 40);
 console.log(`${texts.length} distinct generic-notes texts read from the local store`);
 
 const client = new pg.Client(pgConfig(url));
