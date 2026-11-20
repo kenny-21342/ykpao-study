@@ -34,7 +34,11 @@ def improved(report: list[dict]) -> list[dict]:
         expected = set(item["expected"])
         if not expected or item.get("new") is None:
             continue
-        if len(expected & set(item["new"])) > len(expected & set(item["old"])):
+        gained = len(expected & set(item["new"])) - len(expected & set(item["old"]))
+        # Equal coverage still counts when the old headings include numbers the
+        # question paper does not have: the generic notes' own numbered list.
+        shed = len(set(item["old"]) - expected) - len(set(item["new"]) - expected)
+        if gained > 0 or (gained == 0 and shed > 0):
             out.append(item)
     return out
 

@@ -204,8 +204,9 @@ try {
         row.questionId,
         row.paperId,
         row.question_root,
-        row.answer_md ?? '',
-        row.marking_points ?? '[]',
+        // Postgres text cannot hold NUL; a transcription occasionally does.
+        String(row.answer_md ?? '').replaceAll('\0', ''),
+        String(row.marking_points ?? '[]').replaceAll('\0', ''),
         row.total_marks,
         row.answer_letter,
         row.confidence ?? 0,

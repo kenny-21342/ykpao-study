@@ -298,6 +298,10 @@ def _detect_answer_key(path: Path) -> DocumentSpans | None:
 
 _PUNCTUATED_NUMBER = re.compile(r"\s*\d{1,2}[.)]\s*")
 _BARE_NUMBER = re.compile(r"\s*\d{1,2}\s*")
+# IB science mark schemes print the question and its first sub-part in one cell
+# ("1. a", "3. b"). Without this the only punctuated numbers left are the
+# generic marking notes' own numbered list, which then become the "answers".
+_NUMBERED_MS_HEADING = re.compile(r"\s*\d{1,2}[.)]\s*(?:[a-z](?:\s*\(?[ivx]{1,4}\)?)?)?\s*")
 
 
 def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None = None) -> list:
@@ -320,7 +324,11 @@ def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None =
     ordered = sorted(candidates, key=lambda candidate: candidate.position)
     runs: list[list] = []
     for candidate in ordered:
-        if not _PUNCTUATED_NUMBER.fullmatch(candidate.text):
+        if not _NUMBERED_MS_HEADING.fullmatch(candidate.text):
+            continue
+        if runs and candidate.number == runs[-1][-1].number:
+            # "1. a", "1. b", "1. c": one question printed once per sub-part.
+            # The first of them is the heading; the rest stay inside it.
             continue
         if runs and candidate.number > runs[-1][-1].number:
             runs[-1].append(candidate)
@@ -329,10 +337,17 @@ def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None =
     if not runs:
         return []
 
-    def rank(index: int) -> tuple[int, int, int]:
+    def rank(index: int) -> tuple[int, int, int, int]:
         run = runs[index]
-        overlap = len({c.number for c in run} & expected_roots) if expected_roots else 0
-        return (overlap, len(run), index)
+        numbers = {c.number for c in run}
+        overlap = len(numbers & expected_roots) if expected_roots else 0
+        # Numbers the question paper does not have are the generic notes'
+        # numbered list ("11.", "12.", "13."), not answers.
+        extras = len(numbers - expected_roots) if expected_roots else 0
+        # With no question paper to compare against, the notes' list is the run
+        # whose headings all sit on one page; real answers run across the paper.
+        pages = len({c.page for c in run}) if not expected_roots else 0
+        return (overlap - extras, pages, len(run), index)
 
     chosen = list(runs[max(range(len(runs)), key=rank)])
 
@@ -347,6 +362,19 @@ def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None =
                        if c.number == number and before.position < c.position < after.position]
             if between:
                 filled.append(between[0])
+    # Some papers switch to a bare "7", "8", "9" for the last questions (no full
+    # stop), so nothing punctuated follows them. Continue the sequence past the
+    # final chosen heading, one number at a time, in the same left margin.
+    if expected_roots and chosen:
+        last = chosen[-1]
+        for number in range(last.number + 1, max(expected_roots) + 1):
+            if number not in expected_roots:
+                continue
+            after = [c for c in bare if c.number == number and c.position > last.position]
+            if not after:
+                break
+            last = after[0]
+            filled.append(last)
     return sorted(filled, key=lambda candidate: candidate.position)
 
 
@@ -380,13 +408,25 @@ def _detect_prose_spans(
         # the intervening markband remains with its question.
         legacy = _legacy_numbered_roots(detection.candidates)
         selected = legacy
+        if not expected_roots:
+            chain = select_numbered_ms_roots(detection.candidates, None)
+            spread = lambda chosen: len({c.page for c in chosen})  # noqa: E731
+            # Only when the sequence the detector always took is one page of
+            # numbers (the notes) and the chosen run spans the paper.
+            if chain and spread(legacy) <= 2 and spread(chain) > spread(legacy) + 1:
+                selected = chain
         if expected_roots:
             # The run-aware choice is used only where it covers more of the
             # question paper's numbers than the sequence the detector always
             # took, so it cannot lose a question that used to be found.
             chain = select_numbered_ms_roots(detection.candidates, expected_roots)
             covered = lambda chosen: len({c.number for c in chosen} & expected_roots)  # noqa: E731
-            if chain and covered(chain) > covered(legacy):
+            extras = lambda chosen: len({c.number for c in chosen} - expected_roots)  # noqa: E731
+            # The notes' own "1." .. "13." can cover every question number too,
+            # so equal coverage is not enough: take the run with fewer headings
+            # the question paper does not have.
+            if chain and (covered(chain) > covered(legacy)
+                          or (covered(chain) == covered(legacy) and extras(chain) < extras(legacy))):
                 selected = chain
         numbered = bool(selected)
         if selected:
