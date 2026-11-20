@@ -220,7 +220,11 @@ try {
       while (next < digests.length) {
         const sha = digests[next++];
         const key = bankAssetKey(sha);
-        const meta = key ? await store.head(key).catch(() => null) : null;
+        // A timeout is not proof of absence: retry errors, count only a clean "not found".
+        let meta = null;
+        for (let attempt = 0; key && attempt < 4; attempt++) {
+          try { meta = await store.head(key); break; } catch { /* retry */ }
+        }
         if (!meta) absent.push(sha);
       }
     }));
