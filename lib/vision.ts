@@ -790,3 +790,36 @@ export async function askAboutImage(
         });
   return result ?? null;
 }
+
+/**
+ * Compare a question's scan with its transcription, for `scripts/audit-bank-text.mts`.
+ *
+ * `imagePaths` are paths the server built itself (bank asset keys), so they go
+ * through `resolveTrustedImage`. Returns the model's raw reply, or null when no
+ * image could be read or the provider gave nothing -- the caller must treat that
+ * as "not audited", never as a pass.
+ */
+export async function auditTranscription(
+  imagePaths: string[],
+  transcription: string,
+  credential: VisionCredential,
+): Promise<{ reply: string; usage: ProviderUsage | null } | null> {
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
+  const { TEXT_AUDIT_PROMPT } = await import("./text-audit.ts");
+  const resolved: ResolvedImage[] = [];
+  for (const path of imagePaths.slice(0, 4)) {
+    const image = await resolveTrustedImage(path);
+    if (image) resolved.push(image);
+  }
+  if (resolved.length === 0) return null;
+  const prompt = TEXT_AUDIT_PROMPT + transcription.slice(0, 6000);
+  const result =
+    credential.provider === "gemini"
+      ? await callGemini(credential, resolved, "You audit exam-question transcriptions.", prompt)
+      : await callOpenAiCompatible(credential, resolved, "You audit exam-question transcriptions.", prompt, {
+          maxRetries: 3,
+          maxTokens: 1500,
+        });
+  return result ? { reply: result.content, usage: result.usage } : null;
+}
+

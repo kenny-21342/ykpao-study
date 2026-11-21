@@ -1503,6 +1503,10 @@ model BankQuestion {
   paperId             Int
   rootNumber          Int
   bodyMd              String
+  // Transcription audited against the scan: clean | minor | major; null = not yet.
+  textAudit           String?
+  textAuditNote       String?
+  textAuditedAt       DateTime?
   // Mirrors PastPaperQuestion.hasDiagram -- routes grading to gradeWithVision
   // instead of OCR-then-text-grade, since a diagram/graph/circuit answer has
   // no text for OCR to usefully extract.

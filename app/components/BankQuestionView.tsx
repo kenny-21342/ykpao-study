@@ -13,6 +13,7 @@
 
 import PhotoAnswerButtons from './PhotoAnswerButtons';
 import RegionAsk from './RegionAsk';
+import FormattedMessage from './FormattedMessage';
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
@@ -446,6 +447,11 @@ export default function BankQuestionCard({
   const [showAnswer, setShowAnswer] = useState(false);
   const [zoomed, setZoomed] = useState<'question' | 'markScheme' | 'guidance' | null>(null);
   const [showGuidance, setShowGuidance] = useState(false);
+  // Text is the default only where it has been checked against the scan and
+  // matched. An unchecked transcription can be missing a sub-part or an option,
+  // and a student cannot tell: the scan stays the source of truth until then.
+  const text = question.text ?? null;
+  const [view, setView] = useState<'scan' | 'text'>(text?.audit === 'clean' ? 'text' : 'scan');
 
   return (
     <article className="rounded-lg border border-line bg-surface">
@@ -487,12 +493,41 @@ export default function BankQuestionCard({
       </header>
 
       <div className="p-2 sm:p-4">
-        <StripStack
-          strips={question.strips}
-          alt={`Question ${question.rootNumber} from the original paper`}
-          onZoom={() => setZoomed('question')}
-          ask={{ bankQuestionId: question.id, from: 'question' }}
-        />
+        {text && (
+          <div role="tablist" aria-label="How to show this question" className="mb-2 inline-flex rounded-md border border-strong p-0.5 text-xs font-semibold">
+            {(['text', 'scan'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={view === mode}
+                onClick={() => setView(mode)}
+                className={`rounded-md px-2.5 py-1 ${view === mode ? 'bg-accent-subtle text-accent-text' : 'text-secondary hover:bg-surface-hover'}`}
+              >
+                {mode === 'text' ? (text.audit === 'clean' ? 'Text' : 'Text (beta)') : 'Original scan'}
+              </button>
+            ))}
+          </div>
+        )}
+        {text && view === 'text' ? (
+          <div>
+            {text.audit !== 'clean' && (
+              <p className="mb-2 rounded-md bg-surface-raised px-3 py-2 text-xs text-muted">
+                This text was read from the scan by a computer and may have missed something. If anything looks missing, check the original scan.
+              </p>
+            )}
+            <div className="text-sm text-primary">
+              <FormattedMessage content={text.html} />
+            </div>
+          </div>
+        ) : (
+          <StripStack
+            strips={question.strips}
+            alt={`Question ${question.rootNumber} from the original paper`}
+            onZoom={() => setZoomed('question')}
+            ask={{ bankQuestionId: question.id, from: 'question' }}
+          />
+        )}
       </div>
 
       <CommandTermPanel slugs={question.commandTerms} />

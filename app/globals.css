@@ -339,6 +339,31 @@ body {
   background: var(--surface-raised);
 }
 
+/* Tables and figures inside a transcribed question (raw HTML from the transcription). */
+.formatted-message table:not(.question-table) {
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.formatted-message table:not(.question-table) th,
+.formatted-message table:not(.question-table) td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.75rem;
+}
+.formatted-message table:not(.question-table) th {
+  background: var(--surface-raised);
+  font-weight: 600;
+}
+.formatted-message .question-figure {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
 .input-field {
   width: 100%;
   height: 2.25rem;

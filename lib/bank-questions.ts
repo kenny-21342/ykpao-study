@@ -9,6 +9,7 @@
  * Strips matter rather than `screenshotId`: that column holds only the first
  * one, which for 89% of questions is the top fragment of the image.
  */
+import { withFigures } from '@/lib/bank-figures';
 import { paperClauses, questionClauses } from '@/lib/bank-filter-clauses';
 import { formatQuestionCode, storedSession, type ParsedQuery } from '@/lib/bank-search';
 import { subjectNameForCode } from '@/lib/course-catalog';
@@ -68,6 +69,13 @@ export type BankQuestionView = {
    * a single-part question, where the hint is about the question itself.
    */
   parts?: Array<{ label: string; marks: number | null }>;
+  /**
+   * The transcription, ready to render: markdown with LaTeX, tables as HTML and
+   * figures already turned into `<img>` tags pointing at bank assets. Null when
+   * the question has no text. `audit` says whether it has been checked against
+   * the scan -- only 'clean' text is shown by default.
+   */
+  text?: { html: string; audit: 'clean' | 'minor' | 'major' | null } | null;
 };
 
 export type BankPaperView = {
@@ -739,6 +747,7 @@ export async function getBankQuestion(
       },
       skills: { select: { skill: { select: { slug: true } } } },
       partRows: { select: { label: true, marks: true }, orderBy: { ordering: 'asc' } },
+      assets: { select: { placeholder: true, asset: { select: { sha256: true, width: true, height: true } } } },
       paper: {
         select: {
           id: true, year: true, session: true, paperNumber: true, variant: true, timezone: true,
@@ -774,6 +783,14 @@ export async function getBankQuestion(
     // whatever order the join comes back in.
     commandTerms: question.skills.map((link) => link.skill.slug).sort(),
     parts: question.partRows.map((part) => ({ label: part.label, marks: part.marks })),
+    text: question.bodyMd.trim()
+      ? {
+          html: withFigures(question.bodyMd, question.assets),
+          audit: question.textAudit === 'clean' || question.textAudit === 'minor' || question.textAudit === 'major'
+            ? question.textAudit
+            : null,
+        }
+      : null,
     strips: toStrips(question.strips),
     markScheme,
     guidance: markScheme ? null : await paperGuidance(question.paperId),
