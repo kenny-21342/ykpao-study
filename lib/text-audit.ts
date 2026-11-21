@@ -13,6 +13,7 @@ Decide whether a student could answer the question correctly using ONLY the tran
 
 Do NOT report any of these -- they are expected:
 - mark allocations such as [3] or (2 marks), and the "Total" line
+- the question's own number (e.g. "2.") -- the app shows it separately
 - answer lines, dotted lines or blank working space
 - formatting choices (bold, spacing, table layout) that do not change the content
 - text that belongs to a different question on the same page

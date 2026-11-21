@@ -58,7 +58,7 @@ const started = Date.now();
 
 async function one(row: (typeof todo)[number]) {
   const { rows } = await client.query<{ sha256: string }>(
-    `SELECT a.sha256 FROM bank_question_strips s JOIN bank_assets a ON a.id = s.asset_id
+    `SELECT a.sha256 FROM bank_question_strips s JOIN bank_assets a ON a.id = s."assetId"
       WHERE s."questionId" = $1 ORDER BY s.ordering`,
     [row.id],
   );
