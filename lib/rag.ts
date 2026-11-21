@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { corpusCoverageForIntent, planCopilotQuery } from '@/lib/copilot-query';
 import type { CopilotIntent, CorpusCoverage } from '@/lib/copilot-types';
 import { indexedRoute } from '@/lib/rag-routes';
-import { searchTerms } from '@/lib/rag-terms';
+import { passageMatchesQuery, searchTerms } from '@/lib/rag-terms';
 
 /**
  * RAG (Retrieval-Augmented Generation) context builder.
@@ -139,7 +139,9 @@ export async function retrieveContext(
   ]);
 
   // Merge, re-rank by relevance, and take top N.
+  const legacyTerms = searchTerms(sanitized);
   const all = [...notes, ...cloudDocuments, ...questions, ...markschemes, ...resources]
+    .filter((source) => passageMatchesQuery(`${source.title} ${source.content}`, legacyTerms))
     .sort((a, b) => b.relevance - a.relevance)
     .slice(0, maxSources);
 
@@ -440,7 +442,12 @@ async function retrieveIndexedContext(
 
     const byDocument = new Map<string, IndexedRow>();
     for (const row of rows) if (!byDocument.has(row.documentId)) byDocument.set(row.documentId, row);
-    const ranked = [...byDocument.values()].sort((a, b) => b.rank - a.rank);
+    // Drop passages that only share an incidental word with the question.
+    const queryTerms = searchTerms(query);
+    const ranked = [...byDocument.values()]
+      .filter((row) => passageMatchesQuery(`${row.title} ${row.content}`, queryTerms))
+      .sort((a, b) => b.rank - a.rank);
+    if (ranked.length === 0) return { sources: [], context: '', totalFound: 0 };
     const selected: IndexedRow[] = [];
     const perType = new Map<string, number>();
     for (const row of ranked) {

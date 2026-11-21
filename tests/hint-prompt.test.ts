@@ -48,3 +48,14 @@ test('a missing mark scheme is stated, and a student answer is included when giv
 test('an invalid level fails loudly instead of building a prompt with no rule', () => {
   assert.throws(() => buildHintPrompt({ ...base, level: 4 }), /Hint level/);
 });
+
+test('a part-specific hint is confined to that part', () => {
+  const prompt = buildHintPrompt({ subject: 'Physics', question: '(a) Find F. (b) Find d.', part: '(b)', level: 1 });
+  assert.match(prompt, /for part \(b\) ONLY/);
+  assert.match(prompt, /do not give hints for, or the working of, any other part/);
+});
+
+test('a hint with no part keeps the whole-question wording', () => {
+  const prompt = buildHintPrompt({ subject: 'Physics', question: 'Find F.', level: 1 });
+  assert.doesNotMatch(prompt, /ONLY/);
+});

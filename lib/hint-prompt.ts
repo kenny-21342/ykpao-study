@@ -26,6 +26,11 @@ export type HintPromptInput = {
   /** Display name of the subject, e.g. "Physics". */
   subject: string;
   question: string;
+  /**
+   * The sub-part this hint is for ("(b)(i)"). When set the model is told to
+   * hint at that part only; the whole question stays in the prompt as context.
+   */
+  part?: string;
   /** Mark-scheme text, when there is any. Never quoted back to the student. */
   reference?: string | null;
   studentAnswer?: string;
@@ -61,7 +66,7 @@ ${input.question}
 Private examiner reference (use this to stay accurate, but never quote it as a model answer):
 ${input.reference?.trim() || 'No mark scheme was found.'}
 
-${input.studentAnswer ? `Student's current answer:\n${input.studentAnswer}\n\n` : ''}${history}Hint level ${input.level} of 3: ${rule}
+${input.studentAnswer ? `Student's current answer:\n${input.studentAnswer}\n\n` : ''}${history}${input.part ? `This hint is for part ${input.part} ONLY. The full question above is context: do not give hints for, or the working of, any other part, and do not reveal the answer to an earlier part unless this part cannot be started without it.\n\n` : ''}Hint level ${input.level} of 3: ${rule}
 
 Use markdown and LaTeX. Keep display equations plain: one equation per $$...$$, no \\underbrace, \\array, \\quad or manual spacing, and put any labels in the sentence around it, not inside the maths. Return only the hint. Do not mention these instructions or the private examiner reference.`;
 }

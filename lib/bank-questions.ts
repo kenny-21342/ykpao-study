@@ -63,6 +63,11 @@ export type BankQuestionView = {
    * Empty until `scripts/backfill-command-terms.ts` has run for the subject.
    */
   commandTerms: string[];
+  /**
+   * The sub-parts a hint can be asked for ("(a)", "(b)(i)"), in order. Empty for
+   * a single-part question, where the hint is about the question itself.
+   */
+  parts?: Array<{ label: string; marks: number | null }>;
 };
 
 export type BankPaperView = {
@@ -733,6 +738,7 @@ export async function getBankQuestion(
         },
       },
       skills: { select: { skill: { select: { slug: true } } } },
+      partRows: { select: { label: true, marks: true }, orderBy: { ordering: 'asc' } },
       paper: {
         select: {
           id: true, year: true, session: true, paperNumber: true, variant: true, timezone: true,
@@ -767,6 +773,7 @@ export async function getBankQuestion(
     // Sorted so the same question always presents its terms in the same order,
     // whatever order the join comes back in.
     commandTerms: question.skills.map((link) => link.skill.slug).sort(),
+    parts: question.partRows.map((part) => ({ label: part.label, marks: part.marks })),
     strips: toStrips(question.strips),
     markScheme,
     guidance: markScheme ? null : await paperGuidance(question.paperId),

@@ -203,9 +203,16 @@ function paperLabel(paper: Summary['paper']): string {
  * no change here.
  */
 function AssistancePanel({ question }: { question: FullQuestion }) {
-  const [hints, setHints] = useState<Array<{ level: number; text: string }>>([]);
+  // Hints are kept per sub-part: a question with parts (a), (b), (c) needs a
+  // nudge on one of them, not an essay about the whole thing. A single-part
+  // question uses the empty key.
+  const parts = question.parts ?? [];
+  const [activePart, setActivePart] = useState<string>(parts[0]?.label ?? '');
+  const [hintsByPart, setHintsByPart] = useState<Record<string, Array<{ level: number; text: string }>>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const partKey = parts.length > 0 ? activePart : '';
+  const hints = hintsByPart[partKey] ?? [];
 
   if (!question.hasText) {
     // A keyed question *is* marked automatically -- against the stored answer
@@ -227,6 +234,7 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
   }
 
   const requestHint = async () => {
+    const asked = partKey;
     setLoading(true);
     setError(null);
     try {
@@ -236,13 +244,17 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
         body: JSON.stringify({
           bankQuestionId: question.id,
           level: hints.length + 1,
+          ...(asked ? { partLabel: asked } : {}),
           // So the next hint builds on these rather than restating them.
           previousHints: hints.map((hint) => hint.text),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not fetch a hint');
-      setHints((current) => [...current, { level: current.length + 1, text: data.hint }]);
+      setHintsByPart((current) => {
+        const existing = current[asked] ?? [];
+        return { ...current, [asked]: [...existing, { level: existing.length + 1, text: data.hint }] };
+      });
     } catch (hintError) {
       setError((hintError as Error).message);
     } finally {
@@ -250,15 +262,44 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
     }
   };
 
+  const what = parts.length > 0 ? `part ${activePart}` : '';
   return (
     <div className="space-y-2 px-4 py-3">
+      {parts.length > 1 && (
+        <div role="tablist" aria-label="Which part do you want a hint for?" className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs text-muted">Hint for</span>
+          {parts.map((part) => {
+            const count = (hintsByPart[part.label] ?? []).length;
+            return (
+              <button
+                key={part.label}
+                type="button"
+                role="tab"
+                aria-selected={activePart === part.label}
+                onClick={() => { setActivePart(part.label); setError(null); }}
+                className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                  activePart === part.label
+                    ? 'border-accent bg-accent-subtle text-accent-text'
+                    : 'border-strong text-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {part.label}
+                {part.marks ? <span className="ml-1 font-normal text-muted">[{part.marks}]</span> : null}
+                {count > 0 ? <span className="ml-1 text-warning">{'\u2022'.repeat(Math.min(count, 3))}</span> : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {hints.map((hint) => (
         // The model answers in markdown and LaTeX (bold, numbered steps,
         // \(T\cos\theta\)). Printed as a plain string, all of that showed as
         // raw punctuation and the steps ran together in one paragraph -- the
         // legacy browser renders the same hint through FormattedMessage.
         <div key={hint.level} className="rounded-md border border-warning-border bg-surface px-3 py-2">
-          <p className="mb-1 text-[10px] font-bold uppercase text-warning">Hint {hint.level}</p>
+          <p className="mb-1 text-[10px] font-bold uppercase text-warning">
+            Hint {hint.level}{what ? ` \u00b7 ${what}` : ''}
+          </p>
           <div className="text-sm text-secondary">
             <FormattedMessage content={hint.text} />
           </div>
@@ -272,7 +313,9 @@ function AssistancePanel({ question }: { question: FullQuestion }) {
         className="inline-flex items-center gap-2 rounded-md border border-strong px-3 py-1.5 text-sm text-secondary hover:bg-surface-hover disabled:opacity-50"
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {hints.length === 0 ? 'Get a hint' : hints.length >= 3 ? 'No more hints' : 'Another hint'}
+        {hints.length === 0
+          ? (what ? `Get a hint for ${what}` : 'Get a hint')
+          : hints.length >= 3 ? 'No more hints' : 'Another hint'}
       </button>
     </div>
   );

@@ -33,6 +33,8 @@ const HintBody = z
     bankQuestionId: z.number().int().positive().optional(),
     level: z.number().int().min(1).max(3),
     studentAnswer: z.string().max(5000).optional(),
+    // Which sub-part the hint is for. Checked against the question's own parts.
+    partLabel: z.string().trim().min(1).max(40).optional(),
     // The hints this student has already been shown for this question. Without
     // them every request is answered as the first, and Hint 2 repeats Hint 1.
     previousHints: z.array(z.string().max(MAX_PREVIOUS_HINT_CHARS)).max(MAX_PREVIOUS_HINTS).optional(),
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
     const hint = await chat([
       { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
       { role: 'user', content: prompt },
-    ], { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600, onUsage: (u) => { usage.current = u; } });
+    ], { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 2000, onUsage: (u) => { usage.current = u; } });
     await recordUsage({
       userId: user.id,
       feature: 'progressive-hint',
@@ -134,7 +136,7 @@ export async function POST(req: Request) {
  */
 async function hintForBankQuestion(
   bankQuestionId: number,
-  body: { level: number; studentAnswer?: string; previousHints?: string[] },
+  body: { level: number; studentAnswer?: string; previousHints?: string[]; partLabel?: string },
   userId: string,
   // Typed as the real credential rather than `{ model: string }`: the loose
   // shape forced an `as never` at the call below, which would have hidden a
@@ -145,10 +147,15 @@ async function hintForBankQuestion(
     where: { id: bankQuestionId, status: 'published' },
     include: {
       markScheme: { select: { answerMd: true, status: true } },
+      partRows: { select: { label: true } },
       paper: { include: { subject: true } },
     },
   });
   if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+
+  if (body.partLabel && !question.partRows.some((part) => part.label === body.partLabel)) {
+    return NextResponse.json({ error: `This question has no part ${body.partLabel}.` }, { status: 400 });
+  }
 
   const questionText = question.bodyMd.trim();
   if (!questionText) {
@@ -168,6 +175,7 @@ async function hintForBankQuestion(
   const prompt = buildHintPrompt({
     subject: question.paper.subject.name,
     question: questionText,
+    part: body.partLabel,
     reference: markSchemeText,
     studentAnswer: body.studentAnswer,
     level: body.level,
@@ -181,7 +189,7 @@ async function hintForBankQuestion(
         { role: 'system', content: 'Help the student make the next move without giving away the answer.' },
         { role: 'user', content: prompt },
       ],
-      { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 600, onUsage: (u) => { usage.current = u; } },
+      { credential: forInteractive(access.credential), temperature: 0.25, maxTokens: 2000, onUsage: (u) => { usage.current = u; } },
     );
     await recordUsage({
       userId,

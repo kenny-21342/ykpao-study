@@ -69,3 +69,37 @@ export function searchTerms(query: string): string[] {
   // additionally for every chunk containing the word "study".
   return content.slice(0, 6);
 }
+
+/**
+ * How many of a query's content terms a passage must actually contain to be
+ * shown as evidence.
+ *
+ * The retriever matches on any single term (that is what keeps a long
+ * question from returning nothing), so a physics question about a rod came
+ * back citing a computer-science question about compressing a sound file and
+ * an economics question: each shared one incidental word. Ranking cannot fix
+ * that -- the rows are simply not about the question -- so require real
+ * overlap, and show no Evidence panel when nothing has it.
+ */
+export function requiredTermMatches(termCount: number): number {
+  if (termCount <= 1) return termCount;
+  return Math.min(3, Math.ceil(termCount / 2));
+}
+
+/** True when `text` contains enough distinct query terms (prefix match, as the index does). */
+export function passageMatchesQuery(text: string, terms: string[]): boolean {
+  const need = requiredTermMatches(terms.length);
+  if (need === 0) return true;
+  const words = new Set(text.toLowerCase().replace(/[^a-z0-9-]+/g, ' ').split(' ').filter(Boolean));
+  let hits = 0;
+  for (const term of terms) {
+    for (const word of words) {
+      if (word.startsWith(term)) {
+        hits += 1;
+        break;
+      }
+    }
+    if (hits >= need) return true;
+  }
+  return false;
+}

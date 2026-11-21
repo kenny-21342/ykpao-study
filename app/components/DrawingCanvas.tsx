@@ -531,22 +531,42 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           <div className="relative">
             <button
               onClick={() => setShowColorPicker((s) => !s)}
-              className="w-8 h-8 rounded-md border border-line flex items-center justify-center"
-              title="Color" aria-label="Color"
-              style={{ backgroundColor: tool === 'eraser' ? '#fff' : color }}
+              className="w-8 h-8 rounded-md border border-strong flex items-center justify-center"
+              title="Color" aria-label="Pen colour" aria-expanded={showColorPicker}
+              style={{
+                backgroundColor: tool === 'eraser' ? '#fff' : color,
+                // An outline on top of the fill: near-black ink on a dark toolbar
+                // otherwise reads as an empty box.
+                boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.75)',
+              }}
             >
               {tool === 'eraser' && <span className="text-[10px] text-muted">Erase</span>}
             </button>
             {showColorPicker && (
-              <div className="absolute top-9 left-0 z-10 bg-surface rounded-md shadow-overlay border border-line p-2 grid grid-cols-4 gap-1.5">
+              <div
+                role="listbox"
+                aria-label="Pen colours"
+                className="absolute top-9 left-0 z-10 bg-surface rounded-md shadow-overlay border border-line p-2"
+                // Explicit sizes: the swatches collapsed on top of each other when
+                // the grid shrank to fit its absolutely-positioned container.
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 28px)', gap: 8 }}
+              >
                 {COLORS.map((c) => (
                   <button
                     key={c}
+                    type="button"
+                    role="option"
+                    aria-selected={color === c}
+                    aria-label={`Colour ${c}`}
                     onClick={() => { setColor(c); setShowColorPicker(false); if (tool === 'eraser') setTool('pen'); }}
-                    className="w-6 h-6 rounded-full border-2"
+                    className="shrink-0 rounded-full"
                     style={{
+                      width: 28,
+                      height: 28,
                       backgroundColor: c,
-                      borderColor: color === c ? '#1A7F4B' : 'transparent',
+                      boxShadow: color === c
+                        ? '0 0 0 2px var(--surface, #161616), 0 0 0 4px #1A7F4B'
+                        : 'inset 0 0 0 1px rgba(128,128,128,0.6)',
                     }}
                   />
                 ))}
@@ -561,13 +581,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                 <button
                   key={s}
                   onClick={() => setPenSize(s)}
+                  type="button"
+                  aria-label={`Pen size ${s}`}
+                  aria-pressed={penSize === s}
                   className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                    penSize === s ? 'bg-accent-subtle' : 'hover:bg-surface-hover'
+                    penSize === s ? 'bg-accent-subtle ring-1 ring-accent' : 'hover:bg-surface-hover'
                   }`}
                 >
+                  {/* Neutral dot: tinting it with the pen colour made it vanish for
+                      near-black ink on a dark toolbar. */}
                   <span
                     className="rounded-full"
-                    style={{ width: `${s + 1}px`, height: `${s + 1}px`, backgroundColor: color }}
+                    style={{ width: `${s + 2}px`, height: `${s + 2}px`, backgroundColor: 'var(--text-primary)' }}
                   />
                 </button>
               ))}
@@ -634,10 +659,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
-            className={`border border-line rounded-md bg-surface touch-none ${
+            className={`border border-line rounded-md touch-none ${
               tool === 'pen' ? 'cursor-crosshair' : tool === 'eraser' ? 'cursor-cell' : 'cursor-text'
             }`}
-            style={{ width, height }}
+            // White paper in both themes: ink defaults to near-black, the eraser paints
+            // white and the saved image is flattened onto white.
+            style={{ width, height, backgroundColor: '#ffffff' }}
           />
           {/* Text boxes overlay */}
           {textBoxes.map((tb) => (
