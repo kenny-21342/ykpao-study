@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardR
 import { useConfirm } from './useConfirm';
 import { getStroke } from 'perfect-freehand';
 import {
-  Pencil, Eraser, Type, Trash2, Undo2, Redo2, Upload,
+  Pencil, Eraser, Type, Trash2, Undo2, Redo2, Upload, Camera,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +77,58 @@ type DrawingCanvasProps = {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+
+/** Largest edge a photographed page keeps. A 12 MP phone photo is ~48 MB decoded. */
+const MAX_PHOTO_EDGE = 2000;
+
+/**
+ * Draw a photo onto the canvas without changing its shape.
+ *
+ * It used to be stretched to the canvas's own width and height, so an upright
+ * photo of a page was squashed into a landscape box and its writing distorted.
+ * Fit it inside instead, centred.
+ */
+function drawFitted(ctx: CanvasRenderingContext2D, img: HTMLImageElement, width: number, height: number) {
+  const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  ctx.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
+}
+
+/** Decode a chosen photo, shrinking it first when it is larger than a screen needs. */
+function loadPhoto(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const longest = Math.max(img.naturalWidth, img.naturalHeight);
+      if (longest <= MAX_PHOTO_EDGE) {
+        resolve(img);
+        return;
+      }
+      const factor = MAX_PHOTO_EDGE / longest;
+      const small = document.createElement('canvas');
+      small.width = Math.round(img.naturalWidth * factor);
+      small.height = Math.round(img.naturalHeight * factor);
+      const sctx = small.getContext('2d');
+      if (!sctx) {
+        resolve(img);
+        return;
+      }
+      sctx.drawImage(img, 0, 0, small.width, small.height);
+      const shrunk = new Image();
+      shrunk.onload = () => resolve(shrunk);
+      shrunk.onerror = () => reject(new Error('Could not read that photo'));
+      shrunk.src = small.toDataURL('image/jpeg', 0.88);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read that photo'));
+    };
+    img.src = url;
+  });
+}
 
 const COLORS = [
   '#1a1a1a', '#dc2626', '#2563eb', '#059669',
@@ -177,7 +229,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       ctx.clearRect(0, 0, width, height);
 
       if (bgImage) {
-        ctx.drawImage(bgImage, 0, 0, width, height);
+        drawFitted(ctx, bgImage, width, height);
       }
 
       for (const stroke of strokesRef.current) {
@@ -381,7 +433,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
       // Background image
       if (bgImage) {
-        tctx.drawImage(bgImage, 0, 0, width, height);
+        drawFitted(tctx, bgImage, width, height);
       }
 
       // Strokes
@@ -415,18 +467,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
     // File upload (user-drawn images on paper)
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const [photoError, setPhotoError] = useState<string | null>(null);
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
+      // Reset so choosing the same photo twice (retake) still fires a change.
+      e.target.value = '';
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          setBgImage(img);
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
+      setPhotoError(null);
+      try {
+        setBgImage(await loadPhoto(file));
+      } catch (error) {
+        setPhotoError((error as Error).message);
+      }
     };
 
     // -----------------------------------------------------------------------
@@ -614,10 +667,32 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
           <Divider />
 
-          {/* Upload */}
-          <ToolButton onClick={() => fileInputRef.current?.click()} title="Upload image">
-            <Upload className="w-4 h-4" />
-          </ToolButton>
+          {/* Photo of written work: straight from the camera, or from files/gallery. */}
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            title="Take a photo of your work" aria-label="Take a photo of your work"
+            className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted hover:bg-surface-hover"
+          >
+            <Camera className="w-4 h-4" /> <span>Take photo</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload a photo or image" aria-label="Upload a photo or image"
+            className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted hover:bg-surface-hover"
+          >
+            <Upload className="w-4 h-4" /> <span>Upload</span>
+          </button>
+          {/* `capture` opens the rear camera on phones and tablets; desktops fall back to a file picker. */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleUpload}
+            className="hidden"
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -642,6 +717,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             </button>
           )}
         </div>
+
+        {photoError && <p role="alert" className="mb-2 text-xs text-danger">{photoError}</p>}
 
         {/* Canvas.
             `inline-block` shrink-wraps the canvas's own pixel width, which is

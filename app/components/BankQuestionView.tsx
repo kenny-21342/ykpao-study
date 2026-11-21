@@ -11,6 +11,8 @@
  */
 /* eslint-disable @next/next/no-img-element */
 
+import PhotoAnswerButtons from './PhotoAnswerButtons';
+import RegionAsk from './RegionAsk';
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
@@ -31,14 +33,17 @@ function StripStack({
   strips,
   alt,
   onZoom,
+  ask,
 }: {
   strips: BankStrip[];
   alt: string;
   onZoom: () => void;
+  /** When set, the student can select part of the page and ask the AI about it. */
+  ask?: { bankQuestionId: number; from: 'question' | 'markscheme' };
 }) {
   const widest = Math.max(...strips.map((strip) => strip.width ?? 0), 1);
 
-  return (
+  const stack = (
     // Wide crops scroll inside their own box; the page never scrolls sideways.
     // The zoom control lives in the card header rather than wrapping these
     // images: a button containing several thousand pixels of content reads
@@ -70,6 +75,14 @@ function StripStack({
         ))}
       </div>
     </div>
+  );
+
+  return ask ? (
+    <RegionAsk bankQuestionId={ask.bankQuestionId} from={ask.from}>
+      {stack}
+    </RegionAsk>
+  ) : (
+    stack
   );
 }
 
@@ -349,6 +362,9 @@ function AnswerPanel({
             placeholder="Write your working, then mark it against the mark scheme."
             className="w-full rounded-md border border-strong px-3 py-2 text-sm bg-surface text-primary"
           />
+          <PhotoAnswerButtons
+            onText={(text) => setAnswer((current) => (current.trim() ? `${current.trim()}\n${text}` : text))}
+          />
           <QuestionScratchpadPanel questionRef={{ bankQuestionId: question.id }} />
           <button
             type="button"
@@ -475,6 +491,7 @@ export default function BankQuestionCard({
           strips={question.strips}
           alt={`Question ${question.rootNumber} from the original paper`}
           onZoom={() => setZoomed('question')}
+          ask={{ bankQuestionId: question.id, from: 'question' }}
         />
       </div>
 
@@ -511,6 +528,7 @@ export default function BankQuestionCard({
                   strips={question.markScheme.strips}
                   alt={`Mark scheme for question ${question.rootNumber}`}
                   onZoom={() => setZoomed('markScheme')}
+                  ask={{ bankQuestionId: question.id, from: 'markscheme' }}
                 />
               ) : (
                 // A multiple-choice key is a letter, not an image.
@@ -560,6 +578,7 @@ export default function BankQuestionCard({
                 strips={question.guidance.strips}
                 alt="Marking guidance for this paper"
                 onZoom={() => setZoomed('guidance')}
+                ask={{ bankQuestionId: question.id, from: 'markscheme' }}
               />
             </div>
           )}

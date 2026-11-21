@@ -747,3 +747,46 @@ async function transcribeStrips(
   if (!result) return null;
   return { text: result.content, usage: result.usage };
 }
+
+const ASK_REGION_SYSTEM = `You are a patient exam tutor. The student has selected part of a page (a question, a diagram, a graph or a mark scheme) and is asking about it. Answer the question they ask about exactly what is in the image. Describe what you see only as far as needed to answer. If the selected area is cut off, blurry or does not contain what they ask about, say so plainly instead of guessing. If it shows a mark scheme, explain the reasoning but do not invent marks that are not shown. Use markdown, and LaTeX in $...$ or $$...$$ for any maths. Keep display equations plain, one per $$...$$. Be concise.`;
+
+/**
+ * Answer a student's question about a region they selected from a page.
+ *
+ * Diagrams are the reason this exists: "what does the arrow here mean" or "why is
+ * this line dashed" cannot be put into words well enough to ask a text model, but
+ * can be pointed at. The image is a crop the browser made from a page the student
+ * is already allowed to see; `resolveImage` only accepts data URLs, uploads and
+ * absolute URLs, so nothing in the bank can be read through this by path.
+ *
+ * Returns null when the image cannot be read or the provider gives nothing.
+ */
+export async function askAboutImage(
+  imageInput: string,
+  params: { question: string; context?: string; history?: Array<{ role: "user" | "assistant"; text: string }> },
+  credential: VisionCredential,
+): Promise<{ content: string; usage: ProviderUsage | null } | null> {
+  if (!credential?.apiKey || !credential.endpoint || !credential.model) return null;
+  const resolved = await resolveImage(imageInput);
+  if (!resolved) return null;
+
+  const earlier = (params.history ?? [])
+    .slice(-6)
+    .map((turn) => `${turn.role === "user" ? "Student" : "Tutor"}: ${turn.text.slice(0, 1500)}`)
+    .join("\n");
+  const user = [
+    params.context ? `About the page this was taken from:\n${params.context}\n` : "",
+    earlier ? `Conversation so far:\n${earlier}\n` : "",
+    `Student's question about the selected area:\n${params.question}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const result =
+    credential.provider === "gemini"
+      ? await callGemini(credential, [resolved], ASK_REGION_SYSTEM, user)
+      : await callOpenAiCompatible(credential, [resolved], ASK_REGION_SYSTEM, user, {
+          maxRetries: credential.source === "user" ? 2 : 4,
+        });
+  return result ?? null;
+}
