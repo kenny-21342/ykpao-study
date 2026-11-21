@@ -428,7 +428,8 @@ export default function BankQuestionCard({
   onAttempted?: () => void;
 }) {
   const [showAnswer, setShowAnswer] = useState(false);
-  const [zoomed, setZoomed] = useState<'question' | 'markScheme' | null>(null);
+  const [zoomed, setZoomed] = useState<'question' | 'markScheme' | 'guidance' | null>(null);
+  const [showGuidance, setShowGuidance] = useState(false);
 
   return (
     <article className="rounded-lg border border-line bg-surface">
@@ -534,7 +535,41 @@ export default function BankQuestionCard({
       {!(
         question.markScheme &&
         (question.markScheme.strips.length > 0 || question.markScheme.answerLetter)
-      ) && (
+      ) && question.guidance && (
+        <div className="border-t border-subtle">
+          <p className="px-4 pt-3 text-sm text-muted">
+            This question has no answer of its own. The paper&rsquo;s marking
+            guidance is below &mdash; it is not the answer to this question.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowGuidance((open) => !open)}
+            aria-expanded={showGuidance}
+            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-secondary hover:bg-surface-hover"
+          >
+            {showGuidance ? 'Hide marking guidance for this paper' : 'Show marking guidance for this paper'}
+            {showGuidance ? (
+              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+          {showGuidance && (
+            <div className="border-t border-subtle bg-surface-raised p-2 sm:p-4">
+              <StripStack
+                strips={question.guidance.strips}
+                alt="Marking guidance for this paper"
+                onZoom={() => setZoomed('guidance')}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!(
+        question.markScheme &&
+        (question.markScheme.strips.length > 0 || question.markScheme.answerLetter)
+      ) && !question.guidance && (
         <div className="border-t border-subtle px-4 py-3">
           <p className="text-sm text-muted">
             No mark scheme for this question yet. The question paper is complete
@@ -545,11 +580,19 @@ export default function BankQuestionCard({
 
       {zoomed && (
         <ZoomOverlay
-          strips={zoomed === 'question' ? question.strips : question.markScheme!.strips}
+          strips={
+            zoomed === 'question'
+              ? question.strips
+              : zoomed === 'guidance'
+                ? question.guidance!.strips
+                : question.markScheme!.strips
+          }
           alt={
             zoomed === 'question'
               ? `Question ${question.rootNumber} from the original paper`
-              : `Mark scheme for question ${question.rootNumber}`
+              : zoomed === 'guidance'
+                ? 'Marking guidance for this paper'
+                : `Mark scheme for question ${question.rootNumber}`
           }
           onClose={() => setZoomed(null)}
         />

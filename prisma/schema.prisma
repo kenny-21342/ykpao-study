@@ -1489,6 +1489,7 @@ model BankPaper {
   questions   BankQuestion[]
   markSchemes BankMarkScheme[]
   reviewFlags BankReviewFlag[]
+  guides      BankPaperGuide[]
 
   @@unique([sourcePath])
   @@index([subjectId])
@@ -1663,6 +1664,7 @@ model BankAsset {
   markSchemeAssets BankMarkSchemeAsset[]
   questionStrips   BankQuestionStrip[]
   markSchemeStrips BankMarkSchemeStrip[]
+  paperGuides      BankPaperGuide[]
 
   @@map("bank_assets")
 }
@@ -1698,6 +1700,24 @@ model BankMarkSchemeStrip {
   @@id([markSchemeId, ordering])
   @@index([assetId])
   @@map("bank_mark_scheme_strips")
+}
+
+/// The pages of a paper's own mark-scheme PDF, shown as marking guidance on
+/// questions that have no per-question mark scheme (a Literature marking guide,
+/// a table-format scheme that never parsed). Keyed by the QUESTION paper so the
+/// lookup from a question is one indexed read.
+model BankPaperGuide {
+  paperId  Int
+  ordering Int
+  assetId  Int
+  page     Int
+
+  paper BankPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  asset BankAsset @relation(fields: [assetId], references: [id])
+
+  @@id([paperId, ordering])
+  @@index([assetId])
+  @@map("bank_paper_guides")
 }
 
 model BankQuestionAsset {

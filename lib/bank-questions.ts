@@ -31,6 +31,13 @@ export type BankQuestionView = {
   strips: BankStrip[];
   markScheme: { id: number; strips: BankStrip[]; answerLetter: string | null } | null;
   /**
+   * The paper's own mark-scheme pages, present only when this question has no
+   * mark scheme of its own to show. It is the marking guidance for the whole
+   * paper (level descriptors, or a scheme that never parsed per question), not
+   * this question's answer, and the view labels it that way.
+   */
+  guidance?: { strips: BankStrip[] } | null;
+  /**
    * Whether a transcription exists for this question.
    *
    * The crop-only corpus run produced 68,849 published questions at no model
@@ -692,6 +699,20 @@ export async function listBankQuestions(options: {
   };
 }
 
+/**
+ * The paper's mark-scheme pages, or null when none were built for it.
+ * See `bank_paper_guides` and pdf_extraction/bank/build_paper_guides.py.
+ */
+async function paperGuidance(paperId: number): Promise<{ strips: BankStrip[] } | null> {
+  const rows = await prisma.bankPaperGuide.findMany({
+    where: { paperId },
+    orderBy: { ordering: 'asc' },
+    include: { asset: { select: { sha256: true, width: true, height: true } } },
+  });
+  const strips = toStrips(rows);
+  return strips.length > 0 ? { strips } : null;
+}
+
 /** One question with its whole crop, and its mark scheme if there is one. */
 export async function getBankQuestion(
   questionId: number
@@ -723,6 +744,19 @@ export async function getBankQuestion(
 
   if (!question) return null;
 
+  // Only a scheme the app can actually draw counts: the view shows strips or a
+  // letter, so a text-only row is "no mark scheme" and falls back to guidance.
+  const markScheme =
+    question.markScheme &&
+    question.markScheme.status === 'published' &&
+    (question.markScheme.strips.length > 0 || question.markScheme.answerLetter)
+      ? {
+          id: question.markScheme.id,
+          strips: toStrips(question.markScheme.strips),
+          answerLetter: question.markScheme.answerLetter,
+        }
+      : null;
+
   return {
     id: question.id,
     rootNumber: question.rootNumber,
@@ -734,14 +768,8 @@ export async function getBankQuestion(
     // whatever order the join comes back in.
     commandTerms: question.skills.map((link) => link.skill.slug).sort(),
     strips: toStrips(question.strips),
-    markScheme:
-      question.markScheme && question.markScheme.status === 'published'
-        ? {
-            id: question.markScheme.id,
-            strips: toStrips(question.markScheme.strips),
-            answerLetter: question.markScheme.answerLetter,
-          }
-        : null,
+    markScheme,
+    guidance: markScheme ? null : await paperGuidance(question.paperId),
     paper: paperView(question.paper, question.rootNumber),
   };
 }
