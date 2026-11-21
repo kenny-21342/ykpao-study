@@ -79,4 +79,14 @@
   margin: 0.6em 0;
   overflow-x: auto;
   overflow-y: hidden;
+  /* A tall fraction's descender is clipped by overflow-y without this. */
+  padding-bottom: 0.15em;
+}
+
+/* KaTeX defaults to 1.21em, which makes a worked equation wider than a phone.
+   Shrink it where space is tight; wider ones still scroll sideways. */
+@media (max-width: 640px) {
+  .formatted-message .katex {
+    font-size: 1.05em;
+  }
 }

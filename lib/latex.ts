@@ -88,7 +88,9 @@ export function renderMarkdownWithMath(src: string): string {
   for (const span of findMathSpans(src)) {
     s += src.slice(last, span.start);
     store.push(renderTeX(span.latex, span.display));
-    s += `${NUL}MATH${store.length - 1}${NUL}`;
+    // Display math is a block element, so it gets its own placeholder kind: the
+    // line-break pass below must not add `<br/>` around it (see there).
+    s += `${NUL}${span.display ? 'DMATH' : 'MATH'}${store.length - 1}${NUL}`;
     last = span.end;
   }
   s += src.slice(last);
@@ -148,6 +150,11 @@ export function renderMarkdownWithMath(src: string): string {
     }
   );
 
+  // A display equation is already its own block with margins. The blank lines a
+  // model writes around it would otherwise become stacked `<br/>`s and leave a
+  // hole above and below every equation, so drop the whitespace touching it.
+  s = s.replace(new RegExp(`\\s*(${NUL}DMATH\\d+${NUL})\\s*`, 'g'), '$1');
+
   // Line breaks.
   s = s.replace(/\n{2,}/g, '<br/><br/>');
   s = s.replace(/\n/g, '<br/>');
@@ -167,7 +174,7 @@ export function renderMarkdownWithMath(src: string): string {
   );
 
   // 4) Restore math.
-  s = s.replace(new RegExp(`${NUL}MATH(\\d+)${NUL}`, 'g'), (_m, i) => store[Number(i)] ?? '');
+  s = s.replace(new RegExp(`${NUL}D?MATH(\\d+)${NUL}`, 'g'), (_m, i) => store[Number(i)] ?? '');
 
   return s;
 }
