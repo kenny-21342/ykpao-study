@@ -93,8 +93,13 @@ export default function RootLayout({
             }}
           />
         </SessionProvider>
-        <Analytics />
-        <SpeedInsights />
+        {/* Vercel-only scripts: off the platform (the VPS) they 404 and spam the console. */}
+        {process.env.VERCEL ? (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        ) : null}
       </body>
     </html>
   );
