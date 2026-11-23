@@ -13,6 +13,8 @@
  *
  * Needs the shared AI vision route (SHARED_AI_BASE_URL / _API_KEY / _VISION_MODEL).
  */
+import { readFileSync } from 'node:fs';
+
 import pg from 'pg';
 
 import { sharedVisionCredential } from '../lib/ai-credentials.ts';
@@ -29,6 +31,9 @@ const limit = Number(value('--limit') ?? 50);
 const concurrency = Math.max(1, Math.min(12, Number(value('--concurrency') ?? 4)));
 const subject = value('--subject');
 const random = args.includes('--random');
+// --ids FILE: audit exactly these question ids (a JSON array), e.g. the ones a detector flagged.
+const idsFile = value('--ids');
+const onlyIds: number[] | null = idsFile ? (JSON.parse(readFileSync(idsFile, 'utf8')) as number[]) : null;
 
 const url = process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL;
 if (!url) throw new Error('Set DIRECT_DATABASE_URL.');
@@ -44,7 +49,7 @@ const { rows: todo } = await client.query<{ id: number; bodyMd: string; code: st
      JOIN bank_papers p ON p.id = q."paperId"
      JOIN bank_subjects s ON s.id = p."subjectId"
     WHERE q.status = 'published' AND length(trim(q."bodyMd")) > 0 AND q."textAudit" IS NULL
-      AND p."docType" = 'qp' ${subject ? 'AND s.code = $2' : ''}
+      AND p."docType" = 'qp' ${subject ? 'AND s.code = $2' : ''} ${onlyIds ? `AND q.id = ANY('{${onlyIds.map(Number).join(',')}}'::int[])` : ''}
     ${random ? 'ORDER BY random()' : 'ORDER BY q.id'} LIMIT $1`,
   subject ? [limit, subject] : [limit],
 );
