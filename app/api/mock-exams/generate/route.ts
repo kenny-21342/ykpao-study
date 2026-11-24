@@ -146,34 +146,75 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: allowance.message }, { status: 429 });
       }
 
-      const predicted = await createPredictedPaper({
-        userId: user.id,
-        credential: access.credential,
-        subjectCode: resolvedSubjectCode,
-        topics,
-        // The board's figures when a paper was named, not the client's.
-        // A predicted Physics Paper 3 is 80 marks in 1h15m; this used to send
-        // the form's untouched defaults and build a 50-mark, 90-minute paper
-        // under a heading promising the syllabus total.
-        totalMarks: examTotalMarks,
-        durationMinutes: examDuration,
-        difficulty,
-        questionCount,
-        title,
-        paperNumber,
+      // The model call can take minutes when the provider is busy. A response
+      // that stays silent that long is dropped by the proxies many students
+      // browse through (the browser then reports a bare "Failed to fetch"), so
+      // answer at once and keep the connection warm with whitespace, which JSON
+      // ignores, until the paper is ready. The status is therefore always 200
+      // from here; a failure arrives as { error } in the body and the client
+      // checks for it. Every refusal that can be decided up front (credential,
+      // allowance) was already returned above with its real status.
+      const encoder = new TextEncoder();
+      const resolvedCourse = learnerContext.activeCourse;
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(encoder.encode(' '));
+          const beat = setInterval(() => {
+            try { controller.enqueue(encoder.encode(' ')); } catch { /* client went away */ }
+          }, 8_000);
+          try {
+            const predicted = await createPredictedPaper({
+              userId: user.id,
+              credential: access.credential,
+              subjectCode: resolvedSubjectCode,
+              topics,
+              // The board's figures when a paper was named, not the client's.
+              // A predicted Physics Paper 3 is 80 marks in 1h15m; this used to send
+              // the form's untouched defaults and build a 50-mark, 90-minute paper
+              // under a heading promising the syllabus total.
+              totalMarks: examTotalMarks,
+              durationMinutes: examDuration,
+              difficulty,
+              questionCount,
+              title,
+              paperNumber,
+            });
+            await recordUsage({
+              userId: user.id,
+              feature: 'mock-exam-generate',
+              // The provider's own counts where it reports them. The flat 1500 that
+              // used to sit here booked no input tokens at all, so a predicted paper
+              // over a large candidate catalogue -- by far the biggest prompt the app
+              // sends -- was recorded as costing nothing.
+              tokensIn: predicted.usage?.promptTokens,
+              tokensOut: predicted.usage?.completionTokens ?? 1500,
+              model: access.credential.model,
+            });
+
+            controller.enqueue(encoder.encode(JSON.stringify({
+              exam: predicted.exam,
+              prediction: predicted.prediction,
+              resolvedCourse,
+            })));
+          } catch (error) {
+            console.error('Predicted paper generation failed:', error);
+            controller.enqueue(encoder.encode(JSON.stringify({
+              error: error instanceof Error ? error.message : 'Failed to generate mock exam',
+            })));
+          } finally {
+            clearInterval(beat);
+            controller.close();
+          }
+        },
       });
-      await recordUsage({
-        userId: user.id,
-        feature: 'mock-exam-generate',
-        // The provider's own counts where it reports them. The flat 1500 that
-        // used to sit here booked no input tokens at all, so a predicted paper
-        // over a large candidate catalogue -- by far the biggest prompt the app
-        // sends -- was recorded as costing nothing.
-        tokensIn: predicted.usage?.promptTokens,
-        tokensOut: predicted.usage?.completionTokens ?? 1500,
-        model: access.credential.model,
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          // no-transform stops the proxy's compressor from holding the heartbeat back.
+          'Cache-Control': 'no-store, no-transform',
+          'X-Accel-Buffering': 'no',
+        },
       });
-      return NextResponse.json({ exam: predicted.exam, prediction: predicted.prediction, resolvedCourse: learnerContext.activeCourse });
     }
 
     // Selection is a query, not a model call.

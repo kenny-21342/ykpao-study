@@ -773,7 +773,8 @@ function ConfigureView({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate exam');
+      // A predicted paper streams: its status is 200 and a failure is in the body.
+      if (!res.ok || data.error || !data.exam) throw new Error(data.error || 'Failed to generate exam');
       onGenerated(data.exam.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate exam');
