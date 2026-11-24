@@ -83,11 +83,18 @@ def matches_subject(path: Path, subject: str) -> bool:
     return name.startswith(f"{wanted}-")
 
 
-def collect(subject: str | None = None) -> list[Path]:
+def collect(subject: str | None = None, only: list[str] | None = None,
+            only_paths: set[str] | None = None) -> list[Path]:
     papers = sorted((ROOT / "my_raw_pdfs").rglob("*.pdf"))
     papers += sorted((ROOT / "IB PAST PAPERS - YEAR").rglob("*.pdf"))
     if subject:
         papers = [path for path in papers if matches_subject(path, subject)]
+    if only:
+        # Exact file names (case-insensitive), for re-running a handful of papers.
+        wanted = {name.lower() for name in only}
+        papers = [path for path in papers if path.name.lower() in wanted]
+    if only_paths is not None:
+        papers = [path for path in papers if str(path) in only_paths]
     skip = quarantined()
     if skip:
         repo = ROOT.parent
@@ -363,6 +370,10 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--subject", default=None,
                         help="syllabus code (0625) or IB subject slug (biology)")
+    parser.add_argument("--only", action="append", default=None,
+                        help="restrict to this PDF file name (repeatable)")
+    parser.add_argument("--only-paths", default=None,
+                        help="file of absolute PDF paths, one per line; restrict to exactly these")
     parser.add_argument("--chunk", type=int, default=0,
                         help="stop after this many documents")
     parser.add_argument("--force", action="store_true",
@@ -415,7 +426,8 @@ def main() -> int:
             )
             return 1
 
-    papers = collect(args.subject)
+    only_paths = (set(Path(args.only_paths).read_text().split("\n")) - {""}) if args.only_paths else None
+    papers = collect(args.subject, args.only, only_paths)
     total = len(papers)
     if args.subject:
         print(f"subject {args.subject}: {total} documents", flush=True)
