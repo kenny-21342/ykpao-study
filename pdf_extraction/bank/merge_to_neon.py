@@ -1064,23 +1064,32 @@ def main():
         FROM bank_run_ledger
     """).fetchall()
 
-    with dst.cursor() as cur:
-        for row in rows:
-            cur.execute("""
-                INSERT INTO bank_run_ledger ("workKey", stage, "sourceSha256", "rootNumber", status, detail, "inputTokens", "outputTokens", "completedAt")
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT ("workKey") DO UPDATE SET
-                    status = EXCLUDED.status,
-                    detail = EXCLUDED.detail,
-                    "inputTokens" = EXCLUDED."inputTokens",
-                    "outputTokens" = EXCLUDED."outputTokens",
-                    "completedAt" = EXCLUDED."completedAt"
-            """, (
-                row["work_key"], row["stage"], row["source_sha256"], row["root_number"],
-                row["status"], row["detail"], row["input_tokens"], row["output_tokens"],
-                row["completed_at"],
-            ))
-    dst.commit()
+    # One INSERT per row meant ~250,000 round trips inside a single
+    # transaction; the session was dropped ("SSL SYSCALL error: EOF") on both
+    # 25 Nov merges. Send batches and commit each, reconnecting between them.
+    ledger_sql = """
+        INSERT INTO bank_run_ledger ("workKey", stage, "sourceSha256", "rootNumber", status, detail, "inputTokens", "outputTokens", "completedAt")
+        VALUES %s
+        ON CONFLICT ("workKey") DO UPDATE SET
+            status = EXCLUDED.status,
+            detail = EXCLUDED.detail,
+            "inputTokens" = EXCLUDED."inputTokens",
+            "outputTokens" = EXCLUDED."outputTokens",
+            "completedAt" = EXCLUDED."completedAt"
+    """
+    LEDGER_BATCH = 1000
+    for offset in range(0, len(rows), LEDGER_BATCH):
+        ensure_connection()
+        chunk = [
+            (r["work_key"], r["stage"], r["source_sha256"], r["root_number"], r["status"],
+             r["detail"], r["input_tokens"], r["output_tokens"], r["completed_at"])
+            for r in rows[offset:offset + LEDGER_BATCH]
+        ]
+        with dst.cursor() as cur:
+            execute_values(cur, ledger_sql, chunk, page_size=len(chunk))
+        dst.commit()
+        if (offset // LEDGER_BATCH) % 50 == 0:
+            print(f"  ...{min(offset + LEDGER_BATCH, len(rows))}/{len(rows)} ledger rows")
     print(f"  ✓ {len(rows)} ledger entries")
 
     # ---- Done ----
