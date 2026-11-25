@@ -255,7 +255,8 @@ def transcribe_question(
                                        chunk_index=index, chunk_count=len(chunks),
                                        figure_ordinals=figure_ordinals),
             image_paths=paths,
-            validator=lambda payload: _validate(payload, root_number, is_mark_scheme),
+            validator=lambda payload, _later=index > 0: _validate(
+                payload, root_number, is_mark_scheme, allow_empty=_later),
             max_attempts=settings.get("max_attempts", 3),
             timeout_seconds=settings.get("timeout_seconds", 300),
             max_tokens=settings.get("max_tokens") or 4000,
@@ -263,11 +264,25 @@ def transcribe_question(
         )
         results.append(result)
 
+    def _blank(content: dict[str, Any]) -> bool:
+        field = "answer_md" if is_mark_scheme else "body_md"
+        return not (str(content.get(field) or "").strip()
+                    or (is_mark_scheme and _structured_answer(content)))
+
+    # Only a later batch may be blank (the first must carry the root's text).
+    kept = [item for index, item in enumerate(results)
+            if index == 0 or not _blank(item.content)]
+    dropped = len(results) - len(kept)
     if is_mark_scheme:
-        pieces = [_parse_mark_scheme_response(item.content, root_number) for item in results]
+        pieces = [_parse_mark_scheme_response(item.content, root_number) for item in kept]
     else:
-        pieces = [_parse_question_response(item.content, root_number) for item in results]
+        pieces = [_parse_question_response(item.content, root_number) for item in kept]
     transcription = _join_pieces(pieces)
+    if dropped:
+        transcription = replace(
+            transcription,
+            notes=((transcription.notes + "; " if transcription.notes else "")
+                   + f"{dropped} trailing image batch(es) had no text (blank answer space)"))
     result = CallResult(
         content=transcription.to_dict(), model=results[-1].model,
         response_id=results[-1].response_id,
@@ -387,8 +402,14 @@ def _join_pieces(pieces):
     )
 
 
-def _validate(payload: dict[str, Any], root_number: int, is_mark_scheme: bool) -> None:
-    """Reject a reply that cannot become a row, so the call retries."""
+def _validate(payload: dict[str, Any], root_number: int, is_mark_scheme: bool,
+              allow_empty: bool = False) -> None:
+    """Reject a reply that cannot become a row, so the call retries.
+
+    ``allow_empty`` is for continuation batches of a long root: the last page
+    is often only blank answer lines, and "no text here" is then the right
+    answer, not a malformed one.
+    """
     if not isinstance(payload, dict):
         raise ProviderError("response was not a JSON object")
 
@@ -396,7 +417,7 @@ def _validate(payload: dict[str, Any], root_number: int, is_mark_scheme: bool) -
     body = payload.get(body_field)
     if (not isinstance(body, str) or not body.strip()) and not (
         is_mark_scheme and _structured_answer(payload)
-    ):
+    ) and not (allow_empty and isinstance(body, str)):
         raise ProviderError(f"{body_field} is missing or empty")
 
     reported = str(payload.get("root_number", "")).strip()
