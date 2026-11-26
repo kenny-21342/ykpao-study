@@ -25,7 +25,7 @@ from typing import Any, Literal
 
 import fitz
 
-from ..question_images.detector import DetectionResult, DetectedRoot, detect_roots
+from ..question_images.detector import DetectionResult, DetectedRoot, RootCandidate, detect_roots
 from ..question_images.evidence import (
     DocumentEvidence,
     extract_document_evidence,
@@ -362,6 +362,19 @@ def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None =
                        if c.number == number and before.position < c.position < after.position]
             if between:
                 filled.append(between[0])
+    # Older Physics/Chemistry paper 3 schemes print Section A's numbers bare
+    # ("1" .. "7") and only the options punctuated ("8." ..). Walk backwards from
+    # the first chosen heading the same way, one number at a time.
+    if chosen:
+        first = min(filled, key=lambda candidate: candidate.position)
+        for number in range(first.number - 1, 0, -1):
+            if expected_roots is not None and number not in expected_roots:
+                break
+            before = [c for c in bare if c.number == number and c.position < first.position]
+            if not before:
+                break
+            first = before[-1]
+            filled.append(first)
     # Some papers switch to a bare "7", "8", "9" for the last questions (no full
     # stop), so nothing punctuated follows them. Continue the sequence past the
     # final chosen heading, one number at a time, in the same left margin.
@@ -377,6 +390,114 @@ def select_numbered_ms_roots(candidates, expected_roots: frozenset[int] | None =
             filled.append(last)
     return sorted(filled, key=lambda candidate: candidate.position)
 
+
+
+# The general marking-instructions page IB prints in front of its answers
+# ("Subject Details: Chemistry HL Paper 2 Markscheme", then "1. Each row in the
+# "Question" column relates to ...", "9. Words that are underlined are
+# essential for the mark", ...). Its numbered list was read as answers 1-17: 859
+# published questions ended up "answered" by a marking instruction, and the
+# list's last item could run on into the real answer to question 1.
+_NOTES_TITLE = re.compile(r"^\s*Subject Details\b", re.IGNORECASE)
+_NOTES_PHRASES = re.compile(
+    r"(column relates to the smallest subpart|in the [\"“”]?Answers[\"“”]? column|"
+    r"marking point in the|are not necessary to gain the mark|essential for the mark|"
+    r"many candidates are writing in a second language|error carried forward|"
+    r"may have more marking points than the total allows)",
+    re.IGNORECASE,
+)
+# The answer grid's header row, which is where the answers begin when the notes
+# end part-way down a page.
+_ANSWER_TABLE_HEADER = re.compile(r"^\s*Question\b.*\bAnswers\b", re.IGNORECASE)
+
+
+def ms_notes_cutoffs(evidence: DocumentEvidence) -> dict[int, float]:
+    """Pages that carry the generic marking notes, and where on each they end.
+
+    Maps page number to the y-coordinate above which every line is notes:
+    the answer table's header if it starts on that page, else the whole page.
+    A page counts as notes when it has the "Subject Details" title or at least
+    two of the instructions' stock phrases -- one phrase alone also appears in
+    real answers ("Accept ... ECF").
+    """
+    cutoffs: dict[int, float] = {}
+    for page in evidence.pages:
+        texts = [line.text for line in page.lines]
+        titled = any(_NOTES_TITLE.match(text) for text in texts)
+        phrases = sum(1 for text in texts if _NOTES_PHRASES.search(text))
+        if not titled and phrases < 2:
+            continue
+        header = next((line.bbox[1] for line in page.lines
+                       if _ANSWER_TABLE_HEADER.match(line.text)), None)
+        cutoffs[page.number] = header if header is not None else float("inf")
+    return cutoffs
+
+
+# A real answer heading is a number followed by a sub-part: "1. (a)", "1. a i".
+# A marking-instructions item never is ("8. Do not penalize ...").
+_SUBPART_START = re.compile(r"^\s*(?:\d{1,2}\s*[.)]?\s+)?\(?[a-h]\)?(?:\s|$)|^\s*\(?[ivx]{1,4}\)(?:\s|$)")
+
+
+def _drop_notes_candidates(detection: DetectionResult, cutoffs: dict[int, float],
+                           evidence: DocumentEvidence) -> DetectionResult:
+    rows: dict[int, list] = {page.number: page.lines for page in evidence.pages}
+
+    def opens_a_subpart(candidate) -> bool:
+        text = candidate.text
+        if _SUBPART_START.match(re.sub(r"^\s*\d{1,2}\s*[.)]?", "", text, count=1)) and re.sub(
+                r"^\s*\d{1,2}\s*[.)]?\s*", "", text, count=1):
+            return True
+        top = candidate.bbox[1]
+        right = candidate.bbox[2]
+        # The "(a)" is often its own cell on the same row, just to the right.
+        return any(abs(line.bbox[1] - top) < 4 and right - 2 <= line.bbox[0] <= right + 90
+                   and _SUBPART_START.match(line.text)
+                   for line in rows.get(candidate.page, ()))
+
+    def keep(candidate) -> bool:
+        cutoff = cutoffs.get(candidate.page)
+        return cutoff is None or candidate.bbox[1] >= cutoff or opens_a_subpart(candidate)
+
+    return DetectionResult(
+        tuple(root for root in detection.roots if keep(root.candidate)),
+        tuple(candidate for candidate in detection.candidates if keep(candidate)),
+        detection.diagnostics,
+    )
+
+
+_TABLE_ROW_NUMBER = re.compile(r"\s*(\d{1,2})\s*[.)]\s*")
+
+
+def _answer_table_candidates(evidence: DocumentEvidence, cutoffs: dict[int, float],
+                             existing) -> list:
+    """Question numbers printed in the answer grid's left column, as candidates.
+
+    The grid repeats the question number on every sub-part row ("1.", "1.",
+    "1.", "2.", ...). The generic detector rejects a number that repeats, so on
+    these papers it found nothing past the notes, and every real answer was
+    glued under the notes' last item. Only lines in the left margin, below the
+    notes, and not already a candidate are added; the run selection that
+    follows treats the repeats as one question.
+    """
+    seen = {(c.page, round(c.bbox[1])) for c in existing}
+    added = []
+    for page in evidence.pages:
+        cutoff = cutoffs.get(page.number)
+        if cutoff == float("inf"):
+            continue
+        for line in page.lines:
+            match = _TABLE_ROW_NUMBER.fullmatch(line.text)
+            if not match or line.bbox[0] > 120 or line.furniture_reason is not None:
+                continue
+            if cutoff is not None and line.bbox[1] < cutoff:
+                continue
+            if (page.number, round(line.bbox[1])) in seen:
+                continue
+            added.append(RootCandidate(
+                number=int(match.group(1)), page=page.number, bbox=line.bbox, line_id=line.id,
+                text=line.text, score=4.0, signals=("answer_table_row",), section="", section_index=0,
+            ))
+    return added
 
 
 def _legacy_numbered_roots(candidates) -> list:
@@ -401,6 +522,13 @@ def _detect_prose_spans(
     evidence = evidence or extract_document_evidence(path)
     detection = detect_roots(evidence)
     if doc_type == "ms" and "IB PAST PAPERS - YEAR" in path.parts:
+        notes = ms_notes_cutoffs(evidence)
+        if notes:
+            detection = _drop_notes_candidates(detection, notes, evidence)
+            extra = _answer_table_candidates(evidence, notes, detection.candidates)
+            if extra:
+                detection = DetectionResult(detection.roots, detection.candidates + tuple(extra),
+                                            detection.diagnostics)
         # IB markbands print score levels 0, 1, 2, ... as bare numbers. The
         # question detector accepts those as roots and chops a real answer into
         # rubric rows. Actual question headings in these prose mark schemes
@@ -428,6 +556,18 @@ def _detect_prose_spans(
             if chain and (covered(chain) > covered(legacy)
                           or (covered(chain) == covered(legacy) and extras(chain) < extras(legacy))):
                 selected = chain
+        if notes and not selected:
+            # Grids that print the question number bare ("1", "1", "2" ...) in
+            # the "Q" column have no punctuated heading at all. With the notes
+            # gone, the first of each rising number in the left margin is it.
+            margin = [c for c in detection.candidates
+                      if _BARE_NUMBER.fullmatch(c.text) or _PUNCTUATED_NUMBER.fullmatch(c.text)]
+            margin = [c for c in margin if c.bbox[0] <= 120]
+            last = 0
+            for candidate in sorted(margin, key=lambda c: c.position):
+                if candidate.number == last + 1:
+                    selected.append(candidate)
+                    last = candidate.number
         numbered = bool(selected)
         if selected:
             detection = DetectionResult(tuple(DetectedRoot(candidate) for candidate in selected),

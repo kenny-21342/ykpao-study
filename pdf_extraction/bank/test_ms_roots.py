@@ -52,3 +52,38 @@ class Selection(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NotesPages(unittest.TestCase):
+    """The "Subject Details" marking-instructions page is dropped before roots are chosen."""
+
+    @staticmethod
+    def _evidence(pages):
+        from types import SimpleNamespace as NS
+        return NS(pages=[NS(number=number, lines=[NS(text=t, bbox=(40, y, 500, y + 10)) for t, y in lines])
+                         for number, lines in pages])
+
+    def test_titled_notes_page_is_dropped_whole(self):
+        from .spans import ms_notes_cutoffs
+        evidence = self._evidence([
+            (3, [("Subject Details: Chemistry HL Paper 2 Markscheme", 60),
+                 ("1.  Each row in the “Question” column relates to the smallest subpart of the question.", 90),
+                 ("9.  Words that are underlined are essential for the mark.", 300)]),
+            (4, [("Question    Answers    Notes    Total", 50), ("1.  (a)  CaCO3 + 2HCl", 70)]),
+        ])
+        self.assertEqual(ms_notes_cutoffs(evidence), {3: float("inf")})
+
+    def test_notes_ending_mid_page_keep_the_answers_below_the_table_header(self):
+        from .spans import ms_notes_cutoffs
+        evidence = self._evidence([
+            (3, [("16. Words inside chevrons « » in the “Answers” column are not necessary to gain the mark.", 80),
+                 ("17. Ignore missing state symbols. An alternative word is indicated in the “Answers” column.", 120),
+                 ("Question    Answers    Notes    Total", 400),
+                 ("1.  (a)  CaCO3 + 2HCl", 430)]),
+        ])
+        self.assertEqual(ms_notes_cutoffs(evidence), {3: 400})
+
+    def test_one_stock_phrase_in_a_real_answer_is_not_a_notes_page(self):
+        from .spans import ms_notes_cutoffs
+        evidence = self._evidence([(5, [("3. (b) Accept answers using error carried forward (ECF).", 100)])])
+        self.assertEqual(ms_notes_cutoffs(evidence), {})

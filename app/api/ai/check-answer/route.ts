@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
+import { graderGuidance, graderMaxTokens, graderNoThinking } from '@/lib/subject-guidance';
 import { forInteractive, requireTextAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import type { GradeResult } from '@/types/ai';
@@ -21,6 +22,8 @@ const Body = z.object({
   markscheme: z.string().max(8000).optional(),
   answer: z.string().min(1).max(8000),
   marks: z.number().int().positive().max(100).optional(),
+  /** Course or subject (e.g. `ib-economics`); selects examiner guidance. */
+  subject: z.string().max(80).optional(),
 });
 
 /** POST /api/ai/check-answer — grade a student answer with DeepSeek. */
@@ -59,7 +62,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const { question, markscheme, answer, marks } = parsed;
+  const { question, markscheme, answer, marks, subject } = parsed;
+  const guidanceInput = { subject, marks, questionText: question };
 
   const userContent = `Grade the student's answer against the markscheme.
 
@@ -73,10 +77,15 @@ ${answer}`;
     const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
     const result = await chatJSON<GradeResult>(
       [
-        { role: 'system', content: SYSTEM_PROMPTS.grader },
+        { role: 'system', content: SYSTEM_PROMPTS.grader + graderGuidance(guidanceInput) },
         { role: 'user', content: userContent },
       ],
-      { credential: forInteractive(access.credential), temperature: 0.2, maxTokens: 1500, onUsage: (u) => { usage.current = u; } }
+      {
+        credential: forInteractive(access.credential),
+        temperature: 0.2,
+        maxTokens: graderMaxTokens(guidanceInput, 1500),
+        noThinking: graderNoThinking(guidanceInput),
+        onUsage: (u) => { usage.current = u; } }
     );
 
     const max = marks ?? result.maxScore ?? 1;
