@@ -31,7 +31,7 @@ const STATE_PATH = path.join(__dirname, '.auth', 'student.json');
  * Point it at a deployment, or at a local server backed by a Neon branch of
  * production:
  *
- *   E2E_BASE_URL=https://study.busypizza.bond npm run e2e
+ *   E2E_BASE_URL=https://study.ykpao.com npm run e2e
  *
  * Timeouts are generous because several routes on this app are genuinely slow
  * (/api/onboarding alone can take 65s).
@@ -40,7 +40,7 @@ const baseURL = process.env.E2E_BASE_URL;
 if (!baseURL) {
   throw new Error(
     'E2E_BASE_URL is required. Point it at a running deployment, e.g.\n' +
-      '  E2E_BASE_URL=https://study.busypizza.bond npm run e2e\n' +
+      '  E2E_BASE_URL=https://study.ykpao.com npm run e2e\n' +
       'Set E2E_EMAIL and E2E_PASSWORD too — auth.setup.ts signs in with them.',
   );
 }

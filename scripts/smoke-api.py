@@ -52,7 +52,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 APP = REPO / "app"
 
-DEFAULT_BASE = "https://study.busypizza.bond"
+DEFAULT_BASE = "https://study.ykpao.com"
 
 SAFE_METHODS = ("GET", "HEAD")
 WRITE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
