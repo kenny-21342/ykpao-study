@@ -58,6 +58,13 @@ export type ChatOptions = {
   credential: TextCredential;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * Ask a reasoning model not to think first. A planning call that returns a
+   * short JSON list gains nothing from it, and on deepseek-flash the thinking
+   * alone used the whole max_tokens and left no answer. Sent only to DeepSeek
+   * endpoints, and dropped if the provider rejects it.
+   */
+  noThinking?: boolean;
   jsonResponse?: boolean;
   /** Total wall-clock budget for the call, retries and backoff included. */
   budgetMs?: number;
@@ -113,6 +120,7 @@ export async function chat(
     temperature = 0.7,
     maxTokens = 2000,
     jsonResponse = false,
+    noThinking = false,
     budgetMs = DEFAULT_BUDGET_MS,
     maxAttempts = DEFAULT_MAX_ATTEMPTS,
     signal,
@@ -133,6 +141,9 @@ export async function chat(
   };
   if (jsonResponse) {
     body.response_format = { type: 'json_object' };
+  }
+  if (noThinking && /deepseek/i.test(credential.endpoint)) {
+    body.thinking = { type: 'disabled' };
   }
 
   const deadline = Date.now() + Math.max(1_000, budgetMs);
@@ -182,6 +193,13 @@ export async function chat(
           // operators; never let it reach the client, since several routes
           // return `error.message` verbatim.
           const detail = await res.text();
+          // The provider does not know the thinking switch: ask again without
+          // it rather than failing a call that would otherwise have worked.
+          if (res.status === 400 && body.thinking) {
+            console.error('AI provider rejected the thinking switch; retrying without it:', detail.slice(0, 300));
+            delete body.thinking;
+            continue;
+          }
           console.error(
             `AI request failed (${res.status}) [source=${credential.source} model=${model}]:`,
             detail.slice(0, 2000),
@@ -211,6 +229,18 @@ export async function chat(
             }
             return content;
           }
+          // Say *why* it was empty: a reasoning model that spends its whole
+          // max_tokens thinking returns finish_reason "length" and no text,
+          // which looks identical to a provider fault without this line.
+          const choice = data.choices?.[0] as { finish_reason?: string } | undefined;
+          const usage = data.usage as
+            | { completion_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } }
+            | undefined;
+          console.error(
+            `AI returned no content [model=${model} attempt=${attempt} finish_reason=${choice?.finish_reason ?? 'n/a'} ` +
+              `max_tokens=${maxTokens} completion_tokens=${usage?.completion_tokens ?? 'n/a'} ` +
+              `reasoning_tokens=${usage?.completion_tokens_details?.reasoning_tokens ?? 'n/a'}]`,
+          );
           lastError = new DeepSeekError('The AI provider returned an empty response', 502);
         }
       } catch (err) {
@@ -395,21 +425,95 @@ export async function* streamChat(
   }
 }
 
+/**
+ * Remove the things models put in "JSON" that JSON.parse rejects: // and
+ * block comments, and trailing commas. String-aware, so a URL or a "//" inside
+ * a value is left alone.
+ */
+export function repairJson(text: string): string {
+  // Two passes, because a comment can sit between a trailing comma and its
+  // closer ("3, // note\n]"): comments go first, then the commas.
+  return stripTrailingCommas(stripComments(text));
+}
+
+function stripComments(text: string): string {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === '\\') out += text[++i] ?? '';
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; out += ch; continue; }
+    if (ch === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const close = text.indexOf('*/', i + 2);
+      i = close === -1 ? text.length : close + 1;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
+function stripTrailingCommas(text: string): string {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === '\\') out += text[++i] ?? '';
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; out += ch; continue; }
+    if (ch === ',') {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      if (text[j] === '}' || text[j] === ']') continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 export async function chatJSON<T = unknown>(
   messages: DeepSeekMessage[],
   options: Omit<ChatOptions, 'jsonResponse'>
 ): Promise<T> {
   const raw = await chat(messages, { ...options, jsonResponse: true });
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if (start !== -1 && end !== -1) {
-      return JSON.parse(raw.slice(start, end + 1)) as T;
+  const attempts: string[] = [raw];
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start !== -1 && end !== -1) attempts.push(raw.slice(start, end + 1));
+  attempts.push(...attempts.map(repairJson));
+
+  let firstError: unknown;
+  for (const candidate of attempts) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch (err) {
+      firstError ??= err;
     }
-    throw new DeepSeekError('The AI provider did not return valid JSON', 502);
   }
+  // Operators need to see what the model actually wrote; the client only gets
+  // the generic message below.
+  const position = Number(/position (\d+)/.exec(String((firstError as Error)?.message))?.[1]);
+  console.error(
+    'chatJSON: unparseable reply',
+    Number.isFinite(position)
+      ? JSON.stringify(raw.slice(Math.max(0, position - 80), position + 80))
+      : JSON.stringify(raw.slice(0, 160)),
+  );
+  throw new DeepSeekError('The AI provider did not return valid JSON', 502);
 }
 
 export const SYSTEM_PROMPTS = {

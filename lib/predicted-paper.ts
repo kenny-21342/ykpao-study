@@ -612,7 +612,12 @@ ${JSON.stringify(catalogue)}`,
     {
       credential: input.credential,
       temperature: 0.35,
-      maxTokens: 3000,
+      // Reasoning tokens count against this; 3000 left no room for the answer.
+      maxTokens: 8000,
+      noThinking: true,
+      // A reasoning model needs well over the 45s default for a plan this size;
+      // the route streams heartbeats and allows 300s, so the client holds on.
+      budgetMs: 150_000,
       onUsage: (u) => { planUsage.current = u; },
     }
   );
