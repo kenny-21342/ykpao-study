@@ -603,6 +603,8 @@ export async function gradeWithVision(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
+  /** Subject examiner guidance (lib/subject-guidance.ts), appended to the system prompt. */
+  systemExtra?: string;
   /**
    * How long the whole grade may take, and how long one attempt may. Callers
    * that own their invocation should pass what they can actually afford --
@@ -649,12 +651,13 @@ ${typed}`
     maxRetries: credential.source === "user" ? 2 : 5,
     budgetMs: params.budgetMs ?? VISION_GRADE_BUDGET_MS,
     requestTimeoutMs: params.requestTimeoutMs ?? VISION_GRADE_REQUEST_TIMEOUT_MS,
-    maxTokens: VISION_GRADE_MAX_TOKENS,
+    // An essay model answer needs more room than the default allows.
+    maxTokens: params.systemExtra ? Math.max(VISION_GRADE_MAX_TOKENS, 6000) : VISION_GRADE_MAX_TOKENS,
   };
   const result =
     credential.provider === "gemini"
-      ? await callGemini(credential, [resolved], VISION_GRADE_SYSTEM, userText, retryOpts)
-      : await callOpenAiCompatible(credential, [resolved], VISION_GRADE_SYSTEM, userText, retryOpts);
+      ? await callGemini(credential, [resolved], VISION_GRADE_SYSTEM + (params.systemExtra ?? ''), userText, retryOpts)
+      : await callOpenAiCompatible(credential, [resolved], VISION_GRADE_SYSTEM + (params.systemExtra ?? ''), userText, retryOpts);
   if (!result) return null;
 
   const grade = parseGradeJson(result.content);

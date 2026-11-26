@@ -13,6 +13,7 @@ import { GRADING_CONCURRENCY, MAX_EXAM_ITEMS, MAX_KEYED_EXAM_ITEMS } from '@/lib
 import { reportError } from '@/lib/error-reporting';
 import { EXAM_ITEM_INCLUDE, normalizeExamItem } from '@/lib/mock-exam-items';
 import { gradeAgainstKey } from '@/lib/bank-grading';
+import { graderGuidance, graderMaxTokens, graderNoThinking } from '@/lib/subject-guidance';
 
 export const dynamic = 'force-dynamic';
 
@@ -489,6 +490,10 @@ export async function POST(
         }
 
         const max = normalized.marks || 1;
+        // Subject examiner rules (IB Economics markbands, diagram and
+        // calculation conventions) and the output room an essay needs.
+        const guidanceInput = { subject: exam.subjectCode, marks: max, questionText: questionContent };
+        const graderSystemExtra = graderGuidance(guidanceInput);
 
         // A multiple-choice question with a stored key needs no model: compare
         // the letter and be done. This is most of the science papers in the
@@ -601,6 +606,7 @@ export async function POST(
                   markscheme,
                   totalMarks: max,
                   credential: visionAccess.credential,
+                  systemExtra: graderSystemExtra,
                   budgetMs: GRADING_BUDGET_MS,
                   requestTimeoutMs: Math.max(10_000, GRADING_BUDGET_MS - 10_000),
                 });
@@ -610,7 +616,7 @@ export async function POST(
               })()
             : await chatJSON<GradeResult>(
             [
-              { role: 'system', content: SYSTEM_PROMPTS.grader },
+              { role: 'system', content: SYSTEM_PROMPTS.grader + graderSystemExtra },
               {
                 role: 'user',
                 content: `Grade the student's answer against the markscheme.
@@ -630,7 +636,8 @@ export async function POST(
               // branch above and returned.
               credential: textCredential!,
               temperature: 0.2,
-              maxTokens: 1200,
+              maxTokens: graderMaxTokens(guidanceInput, 1200),
+              noThinking: graderNoThinking(guidanceInput),
               // Grading fans out: MAX_EXAM_ITEMS items at GRADING_CONCURRENCY
               // means ceil(items/concurrency) sequential waves inside one 60s
               // invocation. The default per-call budget in lib/ai.ts assumes a

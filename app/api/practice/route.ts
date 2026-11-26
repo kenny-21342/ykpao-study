@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chatJSON, SYSTEM_PROMPTS } from '@/lib/ai';
+import { graderGuidance, graderMaxTokens, graderNoThinking } from '@/lib/subject-guidance';
 import { requireTextAi, requireVisionAi } from '@/lib/ai-credentials';
 import { checkAiAllowance, recordUsage } from '@/lib/rate-limit';
 import { transcribeHandwriting, VISION_GRADE_TOKENS_ESTIMATE } from '@/lib/vision';
@@ -226,16 +227,18 @@ ${question.content}
 ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${question.marks ? `Total marks: ${question.marks}\n\n` : ''}Student answer:
 ${gradedAnswer}`;
 
+        const guidanceInput = { subject: question.paper.subject.name, marks: question.marks, questionText: question.content };
         const usage: { current: { promptTokens: number; completionTokens: number } | null } = { current: null };
         grade = await chatJSON<GradeResult>(
           [
-            { role: 'system', content: SYSTEM_PROMPTS.grader },
+            { role: 'system', content: SYSTEM_PROMPTS.grader + graderGuidance(guidanceInput) },
             { role: 'user', content: userContent },
           ],
           {
             credential: textAccess.credential,
             temperature: 0.2,
-            maxTokens: 1500,
+            maxTokens: graderMaxTokens(guidanceInput, 1500),
+            noThinking: graderNoThinking(guidanceInput),
             onUsage: (u) => { usage.current = u; },
             onModel: (m) => { servedModel.current = m; },
           }

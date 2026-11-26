@@ -490,6 +490,35 @@ export async function chatJSON<T = unknown>(
   options: Omit<ChatOptions, 'jsonResponse'>
 ): Promise<T> {
   const raw = await chat(messages, { ...options, jsonResponse: true });
+  return parseJsonReply<T>(raw);
+}
+
+/**
+ * Drop a stray `]` or `}` where the parser says a comma or end was expected.
+ *
+ * Long grader replies occasionally close a bracket that was never opened --
+ * `"explanation":"...long text..."],"modelAnswer":...` -- one character that
+ * otherwise throws away an 800-word model answer and the whole grade. Only a
+ * closer sitting exactly at the reported error position is removed, a few
+ * times at most, so a reply that is actually broken still fails.
+ */
+export function mendStrayClosers(text: string, maxFixes = 3): unknown | null {
+  let current = text;
+  for (let fix = 0; fix <= maxFixes; fix += 1) {
+    try {
+      return JSON.parse(current);
+    } catch (err) {
+      if (fix === maxFixes) return null;
+      const position = Number(/position (\d+)/.exec(String((err as Error)?.message))?.[1]);
+      if (!Number.isFinite(position) || !/[\]}]/.test(current[position] ?? '')) return null;
+      current = current.slice(0, position) + current.slice(position + 1);
+    }
+  }
+  return null;
+}
+
+/** chatJSON's parsing half, exported so a caller holding the raw reply can reuse it. */
+export function parseJsonReply<T = unknown>(raw: string): T {
   const attempts: string[] = [raw];
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -504,6 +533,8 @@ export async function chatJSON<T = unknown>(
       firstError ??= err;
     }
   }
+  const mended = mendStrayClosers(attempts[attempts.length - 1]);
+  if (mended !== null) return mended as T;
   // Operators need to see what the model actually wrote; the client only gets
   // the generic message below.
   const position = Number(/position (\d+)/.exec(String((firstError as Error)?.message))?.[1]);

@@ -100,6 +100,8 @@ export async function runVisionGrading(params: {
   markscheme?: string | null;
   totalMarks?: number | null;
   credential: VisionCredential;
+  /** Subject examiner guidance appended to the vision grader's system prompt. */
+  systemExtra?: string;
   /** Passed straight through to `gradeWithVision`; see its defaults. */
   budgetMs?: number;
   requestTimeoutMs?: number;
