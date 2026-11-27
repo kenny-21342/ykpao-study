@@ -251,9 +251,10 @@ function AnswerPanel({
   const [hasInk, setHasInk] = useState(false);
   const [aiMarking, setAiMarking] = useState(false);
   const inkRef = useRef<HandwrittenAnswerHandle | null>(null);
-  // The AI marks against the question's text; a question without one can
-  // only be self-marked.
-  const canAiMark = Boolean(question.text);
+  // The AI marks against the question's text (read server-side); a question
+  // without one can only be self-marked. The paper view sends `hasText` but
+  // not the text itself.
+  const canAiMark = Boolean(question.text) || question.hasText === true;
 
   const submit = async (value: string, markWith?: 'ai') => {
     if ((!value.trim() && !hasInk) || saving) return;
