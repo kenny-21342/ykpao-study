@@ -47,12 +47,12 @@ function AiFeedback({ verdict }: { verdict: AiVerdict }) {
           Check it against the mark scheme below.
         </p>
       )}
-      {verdict.explanation && <p className="text-secondary">{verdict.explanation}</p>}
+      {verdict.explanation && <div className="text-secondary"><FormattedMessage content={verdict.explanation} /></div>}
       {verdict.strengths.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-accent-text">Earned marks for</p>
           <ul className="ml-4 list-disc text-secondary">
-            {verdict.strengths.map((item) => <li key={item}>{item}</li>)}
+            {verdict.strengths.map((item) => <li key={item}><FormattedMessage content={item} /></li>)}
           </ul>
         </div>
       )}
@@ -60,7 +60,7 @@ function AiFeedback({ verdict }: { verdict: AiVerdict }) {
         <div>
           <p className="text-xs font-semibold text-danger">Missed</p>
           <ul className="ml-4 list-disc text-secondary">
-            {verdict.weaknesses.map((item) => <li key={item}>{item}</li>)}
+            {verdict.weaknesses.map((item) => <li key={item}><FormattedMessage content={item} /></li>)}
           </ul>
         </div>
       )}
