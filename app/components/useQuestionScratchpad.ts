@@ -84,9 +84,11 @@ export function useQuestionScratchpad(ref: ScratchpadRef | null, getPreviewDataU
     pendingStrokesRef.current = null;
     setIsDirty(false);
 
+    // `getPreviewDataUrl` returns null for an empty page, which clears the
+    // stored image: every grader treats the image as the answer.
     const dataUrl = getPreviewRef.current();
     const uploadedUrl = dataUrl ? await uploadPreviewPng(dataUrl) : null;
-    if (uploadedUrl) setPreviewImageUrl(uploadedUrl);
+    setPreviewImageUrl(uploadedUrl);
 
     await fetch('/api/scratchpads', {
       method: 'PUT',

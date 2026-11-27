@@ -175,7 +175,10 @@ const HandwrittenPage = forwardRef<HandwrittenAnswerHandle, HandwrittenAnswerPro
     const { strokes, loaded, isDirty, onStrokesChange, flushSave } = useQuestionScratchpad(
       questionRef,
       () => {
-        if (!usePaper) return canvasRef.current?.exportDataURL() ?? null;
+        // An empty page has no answer image. Over a scan an "empty" export is
+        // the printed question itself, which would be marked as the answer.
+        if (!canvasRef.current || canvasRef.current.isEmpty()) return null;
+        if (!usePaper) return canvasRef.current.exportDataURL();
         // A scan page is tall: send a fixed width as JPEG, which keeps a
         // five-page question to a few hundred kilobytes and is plenty for the
         // marker to read both print and handwriting.
