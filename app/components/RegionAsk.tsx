@@ -86,6 +86,7 @@ export default function RegionAsk({
   const containerRef = useRef<HTMLDivElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const dragRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [crop, setCrop] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -171,20 +172,29 @@ export default function RegionAsk({
             className="absolute inset-0 z-10 cursor-crosshair bg-accent/5"
             // The page must not scroll or pan while the finger is drawing a box.
             style={{ touchAction: 'none' }}
+            // The drag lives in a ref as well as state: a quick flick can be
+            // released before React has re-rendered with its start, and the
+            // release's own position is the true end of the box.
             onPointerDown={(event) => {
               event.stopPropagation();
               event.currentTarget.setPointerCapture(event.pointerId);
               const p = point(event);
-              setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+              dragRef.current = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+              setDrag(dragRef.current);
             }}
             onPointerMove={(event) => {
-              if (!drag) return;
+              if (!dragRef.current) return;
               const p = point(event);
-              setDrag({ ...drag, x1: p.x, y1: p.y });
+              dragRef.current = { ...dragRef.current, x1: p.x, y1: p.y };
+              setDrag(dragRef.current);
             }}
             onPointerUp={(event) => {
               event.stopPropagation();
-              if (drag) void finish(drag);
+              const start = dragRef.current;
+              dragRef.current = null;
+              if (!start) return;
+              const p = point(event);
+              void finish({ ...start, x1: p.x, y1: p.y });
             }}
             onClick={(event) => event.stopPropagation()}
           >
