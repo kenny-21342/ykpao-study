@@ -35,7 +35,18 @@ const SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
 const REDIRECT_CACHE_CONTROL = `private, max-age=${SIGNED_URL_WINDOW_SECONDS}`;
 const SIGNED_OBJECT_CACHE_CONTROL = `public, max-age=${SIGNED_URL_WINDOW_SECONDS}, immutable`;
 
-export async function serveStoredObject(pathSegments: string[]): Promise<Response> {
+export async function serveStoredObject(
+  pathSegments: string[],
+  options: {
+    /**
+     * Send the bytes from this origin instead of redirecting to the store.
+     * A page that draws a crop into a canvas and reads it back (writing on a
+     * question scan) needs a same-origin image: the store sends no CORS
+     * headers, so a redirected image taints the canvas.
+     */
+    inline?: boolean;
+  } = {},
+): Promise<Response> {
   const key = keyFromPublicPath(pathSegments.join('/'));
   if (!key) {
     return new Response('Not found', { status: 404 });
@@ -52,7 +63,7 @@ export async function serveStoredObject(pathSegments: string[]): Promise<Respons
     // headers at all, so the old two-line version re-downloaded every crop on
     // every render: a question page with thirty strips paid thirty function
     // invocations and thirty full object reads each time a student opened it.
-    const signedUrl = await store.signedGetUrl(key, {
+    const signedUrl = options.inline ? null : await store.signedGetUrl(key, {
       cacheControl: SIGNED_OBJECT_CACHE_CONTROL,
       stableWindowSeconds: SIGNED_URL_WINDOW_SECONDS,
       expiresInSeconds: SIGNED_URL_TTL_SECONDS,
@@ -75,7 +86,8 @@ export async function serveStoredObject(pathSegments: string[]): Promise<Respons
       headers: {
         'Content-Type': object.contentType ?? 'application/octet-stream',
         'Content-Length': String(object.size),
-        'Cache-Control': CACHE_CONTROL,
+        // Inline copies are served behind the session gate: private only.
+        'Cache-Control': options.inline ? 'private, max-age=31536000, immutable' : CACHE_CONTROL,
         // These are user-uploaded bytes served from our own origin; stop the
         // browser sniffing a .txt into something executable.
         'X-Content-Type-Options': 'nosniff',

@@ -37,6 +37,8 @@ export type ProtectedAssetDeps = {
   getSession: () => Promise<AssetSession>;
   /** Resolves the object once access is granted. Defaults to the object store. */
   serve?: (pathSegments: string[]) => Promise<Response>;
+  /** Serve the bytes same-origin rather than redirecting (see serveStoredObject). */
+  inline?: boolean;
 };
 
 function unauthorized(): Response {
@@ -72,7 +74,7 @@ export async function serveProtectedAsset(
     deps.serve ??
     (async (segments: string[]) => {
       const { serveStoredObject } = await import('./serve.ts');
-      return serveStoredObject(segments);
+      return serveStoredObject(segments, { inline: deps.inline });
     });
 
   return serve([prefix, ...path]);

@@ -17,11 +17,13 @@ export const runtime = 'nodejs';
  * lib/storage/protected-asset.ts.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
   return serveProtectedAsset('bank_assets', path, {
     getSession: () => getServerSession(authOptions),
+    // `?inline=1`: bytes from this origin, for drawing into a canvas.
+    inline: new URL(request.url).searchParams.get('inline') === '1',
   });
 }

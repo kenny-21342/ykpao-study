@@ -70,7 +70,12 @@ function useStitchedPaper(strips: PaperStrip[] | undefined) {
     let cancelled = false;
     (async () => {
       try {
-        const images = await Promise.all(strips.map((strip) => loadImage(strip.url)));
+        // Same-origin copies: the usual URL redirects to the object store,
+        // which sends no CORS headers, and a canvas holding a cross-origin
+        // image cannot be exported.
+        const images = await Promise.all(
+          strips.map((strip) => loadImage(`${strip.url}${strip.url.includes('?') ? '&' : '?'}inline=1`)),
+        );
         const widest = Math.max(...images.map((image) => image.naturalWidth), 1);
         const total = images.reduce((sum, image) => sum + image.naturalHeight, 0);
         const scale = Math.min(1, Math.sqrt(STITCH_MAX_PIXELS / (widest * total)));
