@@ -15,6 +15,7 @@ import { formatQuestionCode, storedSession, type ParsedQuery } from '@/lib/bank-
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { prisma } from '@/lib/prisma';
 import { bankAssetKey } from '@/lib/storage/keys';
+import { stripDisplaySize } from '@/lib/bank-strip-size';
 
 export type BankStrip = {
   url: string;
@@ -134,7 +135,7 @@ function qualificationLabel(board: string, level: string | null): string | null 
 
 type StripRow = {
   page: number;
-  asset: { sha256: string; width: number | null; height: number | null };
+  asset: { sha256: string; width: number | null; height: number | null; sourceDpi?: number | null };
 };
 
 /**
@@ -150,8 +151,7 @@ function toStrips(rows: StripRow[]): BankStrip[] {
     if (!key) continue;
     strips.push({
       url: `/${key}`,
-      width: row.asset.width,
-      height: row.asset.height,
+      ...stripDisplaySize(row.asset),
       page: row.page,
     });
   }
@@ -177,13 +177,13 @@ export async function getBankPaper(paperId: number): Promise<BankPaperView | nul
         include: {
           strips: {
             orderBy: { ordering: 'asc' },
-            include: { asset: { select: { sha256: true, width: true, height: true } } },
+            include: { asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
           },
           markScheme: {
             include: {
               strips: {
                 orderBy: { ordering: 'asc' },
-                include: { asset: { select: { sha256: true, width: true, height: true } } },
+                include: { asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
               },
             },
           },
@@ -675,7 +675,7 @@ export async function listBankQuestions(options: {
         strips: {
           orderBy: { ordering: 'asc' },
           take: 1,
-          select: { page: true, asset: { select: { sha256: true, width: true, height: true } } },
+          select: { page: true, asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
         },
         paper: {
           select: {
@@ -720,7 +720,7 @@ async function paperGuidance(paperId: number): Promise<{ strips: BankStrip[] } |
   const rows = await prisma.bankPaperGuide.findMany({
     where: { paperId },
     orderBy: { ordering: 'asc' },
-    include: { asset: { select: { sha256: true, width: true, height: true } } },
+    include: { asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
   });
   const strips = toStrips(rows);
   return strips.length > 0 ? { strips } : null;
@@ -735,19 +735,19 @@ export async function getBankQuestion(
     include: {
       strips: {
         orderBy: { ordering: 'asc' },
-        include: { asset: { select: { sha256: true, width: true, height: true } } },
+        include: { asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
       },
       markScheme: {
         include: {
           strips: {
             orderBy: { ordering: 'asc' },
-            include: { asset: { select: { sha256: true, width: true, height: true } } },
+            include: { asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } },
           },
         },
       },
       skills: { select: { skill: { select: { slug: true } } } },
       partRows: { select: { label: true, marks: true }, orderBy: { ordering: 'asc' } },
-      assets: { select: { placeholder: true, asset: { select: { sha256: true, width: true, height: true } } } },
+      assets: { select: { placeholder: true, asset: { select: { sha256: true, width: true, height: true, sourceDpi: true } } } },
       paper: {
         select: {
           id: true, year: true, session: true, paperNumber: true, variant: true, timezone: true,

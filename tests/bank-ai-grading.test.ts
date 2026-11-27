@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { bankGradeFields } from '../lib/bank-grade-fields.ts';
+import { aiVerdictFrom, bankGradeFields } from '../lib/bank-grade-fields.ts';
 
 test('AI marks are clamped to the question and stored as marks and a fraction', () => {
   assert.deepEqual(bankGradeFields({ score: 4, maxScore: 6, isCorrect: false }, 6), {
@@ -19,4 +19,21 @@ test('with no total on the question, the model\'s own maximum is used', () => {
     awardedMarks: 2, outOfMarks: 3, score: 2 / 3, isCorrect: false,
   });
   assert.equal(bankGradeFields({}, null).outOfMarks, 1);
+});
+
+test('aiVerdictFrom keeps only usable feedback for storage', () => {
+  const verdict = aiVerdictFrom({
+    official: true,
+    mode: 'vision',
+    grade: { explanation: '  ', strengths: ['Correct method', 3, ''], weaknesses: 'not a list', modelAnswer: 'x = 2' },
+  });
+  assert.deepEqual(verdict, {
+    graded: true,
+    official: true,
+    mode: 'vision',
+    explanation: null,
+    strengths: ['Correct method'],
+    weaknesses: [],
+    modelAnswer: 'x = 2',
+  });
 });

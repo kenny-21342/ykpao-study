@@ -15,6 +15,7 @@
 import { Prisma } from '@prisma/client';
 import { bankAssetKey } from '@/lib/storage/keys';
 import type { BankStrip } from '@/lib/bank-questions';
+import { stripDisplaySize } from '@/lib/bank-strip-size';
 
 /** What every consumer of a mock-exam item sees, regardless of corpus. */
 export type NormalizedExamItem = {
@@ -52,7 +53,7 @@ export const EXAM_ITEM_INCLUDE = {
 
 type StripRow = {
   page: number;
-  asset: { sha256: string; width: number | null; height: number | null };
+  asset: { sha256: string; width: number | null; height: number | null; sourceDpi?: number | null };
 };
 
 function toStrips(rows: StripRow[]): BankStrip[] {
@@ -62,8 +63,7 @@ function toStrips(rows: StripRow[]): BankStrip[] {
     if (!key) continue;
     strips.push({
       url: `/${key}`,
-      width: row.asset.width,
-      height: row.asset.height,
+      ...stripDisplaySize(row.asset),
       page: row.page,
     });
   }

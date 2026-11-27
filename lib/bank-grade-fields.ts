@@ -11,3 +11,33 @@ export function bankGradeFields(grade: Partial<GradeResult>, totalMarks: number 
     isCorrect: typeof grade.isCorrect === 'boolean' ? grade.isCorrect && awarded === max : awarded === max,
   };
 }
+
+/** What the student sees under an AI mark, and what is stored with the attempt. */
+export type BankAiVerdict = {
+  graded: true;
+  official: boolean;
+  mode: 'text' | 'vision';
+  explanation: string | null;
+  strengths: string[];
+  weaknesses: string[];
+  modelAnswer: string | null;
+};
+
+export function aiVerdictFrom(result: {
+  official: boolean;
+  mode: 'text' | 'vision';
+  grade: { explanation?: unknown; strengths?: unknown; weaknesses?: unknown; modelAnswer?: unknown };
+}): BankAiVerdict {
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null);
+  const list = (value: unknown) =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '') : [];
+  return {
+    graded: true,
+    official: result.official,
+    mode: result.mode,
+    explanation: text(result.grade.explanation),
+    strengths: list(result.grade.strengths),
+    weaknesses: list(result.grade.weaknesses),
+    modelAnswer: text(result.grade.modelAnswer),
+  };
+}

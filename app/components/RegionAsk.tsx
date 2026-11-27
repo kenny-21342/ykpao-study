@@ -22,8 +22,15 @@ const MAX_EDGE = 1600;
 async function cropSelection(container: HTMLElement, rect: Rect): Promise<string | null> {
   const box = container.getBoundingClientRect();
   const pieces: Array<{ bitmap: ImageBitmap; sx: number; sy: number; sw: number; sh: number }> = [];
-  for (const img of Array.from(container.querySelectorAll('img'))) {
-    const r = img.getBoundingClientRect();
+  // An <img>, or an element that paints an image it names in
+  // `data-region-src` across its top `data-region-height` pixels -- the
+  // handwriting canvas, whose question scan is a CSS background under the ink.
+  for (const el of Array.from(container.querySelectorAll<HTMLElement>('img, [data-region-src]'))) {
+    const src = el instanceof HTMLImageElement ? el.currentSrc || el.src : el.dataset.regionSrc;
+    if (!src) continue;
+    const bounds = el.getBoundingClientRect();
+    const paintedHeight = el instanceof HTMLImageElement ? bounds.height : Number(el.dataset.regionHeight) || bounds.height;
+    const r = { left: bounds.left, top: bounds.top, width: bounds.width, height: Math.min(bounds.height, paintedHeight) };
     const left = r.left - box.left;
     const top = r.top - box.top;
     const x0 = Math.max(rect.x, left);
@@ -31,7 +38,7 @@ async function cropSelection(container: HTMLElement, rect: Rect): Promise<string
     const x1 = Math.min(rect.x + rect.w, left + r.width);
     const y1 = Math.min(rect.y + rect.h, top + r.height);
     if (x1 - x0 < 4 || y1 - y0 < 4) continue;
-    const res = await fetch(img.currentSrc || img.src);
+    const res = await fetch(src);
     if (!res.ok) return null;
     const bitmap = await createImageBitmap(await res.blob());
     const kx = bitmap.width / r.width;

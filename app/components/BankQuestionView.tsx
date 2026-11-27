@@ -15,7 +15,7 @@ import PhotoAnswerButtons from './PhotoAnswerButtons';
 import RegionAsk from './RegionAsk';
 import FormattedMessage from './FormattedMessage';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, Maximize2, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Loader2, Maximize2, Sparkles, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
 import { optionLettersFor } from '@/lib/bank-grading';
 import { commandTerm } from '@/lib/command-terms';
@@ -81,6 +81,53 @@ function AiFeedback({ verdict }: { verdict: AiVerdict }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+type StoredAttempt = {
+  id: string;
+  gradedBy: string;
+  awardedMarks: number | null;
+  outOfMarks: number | null;
+  aiFeedback: AiVerdict | null;
+  createdAt: string;
+};
+
+/**
+ * The most recent AI marking of this question, shown when the student comes
+ * back to it. The feedback used to live only in the response to the submit,
+ * so reopening the question threw away the explanation they had paid for.
+ */
+function LastAiMarking({ questionId }: { questionId: number }) {
+  const [last, setLast] = useState<StoredAttempt | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/bank/attempts?questionId=${questionId}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { attempts?: StoredAttempt[] } | null) => {
+        const found = data?.attempts?.find((attempt) => attempt.gradedBy === 'ai' && attempt.aiFeedback?.graded);
+        if (found) setLast(found);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [questionId]);
+  if (!last?.aiFeedback) return null;
+  const when = new Date(last.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return (
+    <div className="mb-3 rounded-md border border-subtle bg-surface-raised px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 text-left text-sm font-medium text-primary"
+      >
+        <Sparkles className="h-4 w-4 text-accent-text" aria-hidden="true" />
+        Last AI mark ({when}){last.awardedMarks !== null && last.outOfMarks !== null ? `: ${last.awardedMarks} of ${last.outOfMarks}` : ''}
+        {open ? <ChevronUp className="ml-auto h-4 w-4" aria-hidden="true" /> : <ChevronDown className="ml-auto h-4 w-4" aria-hidden="true" />}
+      </button>
+      {open && <div className="mt-2"><AiFeedback verdict={last.aiFeedback} /></div>}
     </div>
   );
 }
@@ -433,6 +480,7 @@ function AnswerPanel({
 
   return (
     <div className="border-t border-subtle px-4 py-3">
+      {!answerLetter && <LastAiMarking questionId={question.id} />}
       {answerLetter ? (
         <div className="flex flex-wrap gap-2">
           {optionLettersFor(answerLetter).map((letter) => (
@@ -612,6 +660,21 @@ export default function BankQuestionCard({
             <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
             Enlarge
           </button>
+          {/* The whole official mark scheme for this question's sitting, found
+              from the paper the question was cut from -- so it is the right
+              document even when the per-question mark scheme below is
+              missing or linked to the wrong question. */}
+          <a
+            href={`/api/bank/questions/${question.id}/mark-scheme-pdf`}
+            target="_blank"
+            rel="noopener"
+            title="Open the official mark scheme for this paper"
+            aria-label="Open the official mark scheme PDF for this paper"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface-hover hover:text-secondary"
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+            Mark scheme PDF
+          </a>
           {question.pageStart !== null && (
             <span className="tabular-nums">
               {question.pageEnd && question.pageEnd !== question.pageStart
@@ -624,12 +687,16 @@ export default function BankQuestionCard({
 
       <div className="p-2 sm:p-4">
         {writeOnPaper ? (
-          <HandwrittenAnswer
-            ref={inkRef}
-            questionRef={{ bankQuestionId: question.id }}
-            paper={question.strips}
-            onInkChange={setHasInk}
-          />
+          // Selecting a region is a mode behind its own button, so it never
+          // competes with the pen for the same drag.
+          <RegionAsk bankQuestionId={question.id} from="question">
+            <HandwrittenAnswer
+              ref={inkRef}
+              questionRef={{ bankQuestionId: question.id }}
+              paper={question.strips}
+              onInkChange={setHasInk}
+            />
+          </RegionAsk>
         ) : (
         <>
         {text && (

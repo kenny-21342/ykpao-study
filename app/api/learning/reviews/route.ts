@@ -7,17 +7,18 @@ import { PLACEHOLDER_ANSWER, plainText, scheduleReview, upsertBankMistakeReview 
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { resolveCourseScope } from '@/lib/course-scope';
 import { LearnerContextError } from '@/lib/learner-context';
+import { stripDisplaySize } from '@/lib/bank-strip-size';
 
 export const dynamic = 'force-dynamic';
 
 /** Stored strip rows as servable URLs; malformed digests are dropped. */
 function toReviewStrips(
-  rows: Array<{ page: number; asset: { sha256: string; width: number | null; height: number | null } }>,
+  rows: Array<{ page: number; asset: { sha256: string; width: number | null; height: number | null; sourceDpi?: number | null } }>,
 ) {
   return rows.flatMap((row) => {
     const key = bankAssetKey(row.asset.sha256);
     if (!key) return [];
-    return [{ url: `/${key}`, width: row.asset.width, height: row.asset.height, page: row.page }];
+    return [{ url: `/${key}`, ...stripDisplaySize(row.asset), page: row.page }];
   });
 }
 

@@ -23,7 +23,7 @@ import { upsertBankMistakeReview } from '@/lib/learning';
 import { SelfMarkError, resolveSelfMark } from '@/lib/self-marking';
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { reportError } from '@/lib/error-reporting';
-import { bankGradeFields, gradeBankAnswer } from '@/lib/bank-ai-grading';
+import { aiVerdictFrom, bankGradeFields, gradeBankAnswer } from '@/lib/bank-ai-grading';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +86,9 @@ export async function GET(req: NextRequest) {
       isCorrect: true,
       score: true,
       gradedBy: true,
+      awardedMarks: true,
+      outOfMarks: true,
+      aiFeedback: true,
       createdAt: true,
     },
   });
@@ -362,6 +365,8 @@ export async function POST(req: Request) {
         }
       : null);
 
+  const aiVerdict = aiGrade?.graded ? aiVerdictFrom(aiGrade) : null;
+
   try {
     const attempt = await prisma.bankQuestionAttempt.create({
       data: {
@@ -382,6 +387,9 @@ export async function POST(req: Request) {
         timeSpent: body.timeSpent,
         answerImageUrl,
         gradingMode: aiGrade?.graded ? aiGrade.mode : 'text',
+        // Stored so the student can reread it when they come back to the
+        // question; the marks alone say how they did, not why.
+        ...(aiVerdict ? { aiFeedback: aiVerdict } : {}),
       },
       select: {
         id: true,
@@ -419,21 +427,8 @@ export async function POST(req: Request) {
       // What the client should offer for that: a mark stepper where the
       // question carries a total, the old true/false where it does not.
       totalMarks: question.totalMarks,
-      // The AI's verdict, when one was asked for. Feedback is returned, not
-      // stored: the attempt keeps the marks, the explanation is for now.
-      ai: aiGrade
-        ? aiGrade.graded
-          ? {
-              graded: true,
-              official: aiGrade.official,
-              mode: aiGrade.mode,
-              explanation: aiGrade.grade.explanation ?? null,
-              strengths: aiGrade.grade.strengths ?? [],
-              weaknesses: aiGrade.grade.weaknesses ?? [],
-              modelAnswer: aiGrade.grade.modelAnswer ?? null,
-            }
-          : { graded: false, notice: aiGrade.notice }
-        : null,
+      // The AI's verdict, when one was asked for (also stored on the attempt).
+      ai: aiVerdict ?? (aiGrade && !aiGrade.graded ? { graded: false, notice: aiGrade.notice } : null),
     });
   } catch (error) {
     reportError(error, { routePath: '/api/bank/attempts', routeType: 'route', method: 'POST' });

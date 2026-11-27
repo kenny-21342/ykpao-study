@@ -848,6 +848,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
             onPointerCancel={onPointerUp}
+            // Lets "Ask AI about part of this" crop the scan under the ink.
+            data-region-src={backdrop && backdropHeight > 0 ? backdrop.src : undefined}
+            data-region-height={backdrop && backdropHeight > 0 ? backdropHeight : undefined}
             className={`border border-line rounded-md ${penOnly ? 'touch-pan-y' : 'touch-none'} ${
               tool === 'pen' ? 'cursor-crosshair' : tool === 'eraser' ? 'cursor-cell' : 'cursor-text'
             }`}

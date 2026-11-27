@@ -1613,6 +1613,9 @@ model BankQuestionAttempt {
   timeSpent          Int?
   answerImageUrl     String? // optional photo/scratchpad snapshot of drawn working -- mirrors PastPaperAttempt/MockExamItem
   gradingMode        String   @default("text") // text | ocr-text | vision -- which path graded this attempt, within gradedBy: 'ai'
+  // The AI marker's explanation, strengths, weaknesses and model answer, kept so a
+  // reopened question still shows them. Null unless gradedBy is 'ai'.
+  aiFeedback         Json?
   createdAt          DateTime @default(now())
 
   user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -76,8 +76,15 @@ function useStitchedPaper(strips: PaperStrip[] | undefined) {
         const images = await Promise.all(
           strips.map((strip) => loadImage(`${strip.url}${strip.url.includes('?') ? '&' : '?'}inline=1`)),
         );
-        const widest = Math.max(...images.map((image) => image.naturalWidth), 1);
-        const total = images.reduce((sum, image) => sum + image.naturalHeight, 0);
+        // Each strip at its size on the page (the strip's `width` is in
+        // 200-DPI pixels), not its pixel count: a strip rendered at 147 DPI
+        // would otherwise come out narrower than the 200-DPI strip under it.
+        const sizes = images.map((image, index) => {
+          const width = strips[index].width ?? image.naturalWidth;
+          return { width, height: image.naturalHeight * (width / Math.max(image.naturalWidth, 1)) };
+        });
+        const widest = Math.max(...sizes.map((size) => size.width), 1);
+        const total = sizes.reduce((sum, size) => sum + size.height, 0);
         const scale = Math.min(1, Math.sqrt(STITCH_MAX_PIXELS / (widest * total)));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(widest * scale);
@@ -87,10 +94,10 @@ function useStitchedPaper(strips: PaperStrip[] | undefined) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         let y = 0;
-        for (const image of images) {
-          ctx.drawImage(image, 0, y * scale, image.naturalWidth * scale, image.naturalHeight * scale);
-          y += image.naturalHeight;
-        }
+        images.forEach((image, index) => {
+          ctx.drawImage(image, 0, y * scale, sizes[index].width * scale, sizes[index].height * scale);
+          y += sizes[index].height;
+        });
         const stitched = await loadImage(canvas.toDataURL('image/jpeg', 0.9));
         if (!cancelled) setPaper(stitched);
       } catch {

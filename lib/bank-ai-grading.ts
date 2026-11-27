@@ -129,4 +129,4 @@ ${typed}`;
   }
 }
 
-export { bankGradeFields } from './bank-grade-fields';
+export { aiVerdictFrom, bankGradeFields, type BankAiVerdict } from './bank-grade-fields';
