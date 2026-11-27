@@ -122,17 +122,18 @@ function useStitchedPaper(strips: PaperStrip[] | undefined) {
  * stored with the strokes, so a long answer reopens at the length it was
  * written at.
  */
-const HandwrittenAnswer = forwardRef<
-  HandwrittenAnswerHandle,
-  {
-    questionRef: ScratchpadRef;
-    /** Write on the question scan instead of a blank page. */
-    paper?: PaperStrip[];
-    /** Whether there is any ink, for enabling submit. */
-    onInkChange?: (hasInk: boolean) => void;
-  }
->(
-  function HandwrittenAnswer({ questionRef, paper: paperStrips, onInkChange }, ref) {
+type HandwrittenAnswerProps = {
+  questionRef: ScratchpadRef;
+  /** Write on the question scan instead of a blank page. */
+  paper?: PaperStrip[];
+  /** Whether there is any ink, for enabling submit. */
+  onInkChange?: (hasInk: boolean) => void;
+  /** Called with the page's height whenever it changes, for a placeholder. */
+  onHeight?: (height: number) => void;
+};
+
+const HandwrittenPage = forwardRef<HandwrittenAnswerHandle, HandwrittenAnswerProps>(
+  function HandwrittenPage({ questionRef, paper: paperStrips, onInkChange, onHeight }, ref) {
     const onPaper = Boolean(paperStrips?.length);
     const { paper, failed: paperFailed } = useStitchedPaper(paperStrips);
     const canvasRef = useRef<DrawingCanvasHandle | null>(null);
@@ -150,6 +151,9 @@ const HandwrittenAnswer = forwardRef<
     }, [onPaper, fixedWidth, measured]);
     const width = onPaper ? fixedWidth : measured;
     const [height, setHeight] = useState<number | null>(null);
+    useEffect(() => {
+      if (height !== null) onHeight?.(height);
+    }, [height, onHeight]);
     const paperHeight = paper && width ? Math.round(width * (paper.naturalHeight / paper.naturalWidth)) : 0;
     const ready = !onPaper || paper !== null || paperFailed;
     const usePaper = onPaper && paper !== null;
@@ -282,6 +286,73 @@ const HandwrittenAnswer = forwardRef<
             </button>
           )}
         </div>
+      </div>
+    );
+  },
+);
+
+/** Mount the page within this distance of the viewport... */
+const NEAR_MARGIN = '1200px 0px';
+/** ...and release it beyond this one. */
+const FAR_PX = 3000;
+
+/**
+ * The page, mounted only while it is near the screen.
+ *
+ * A paper page lists every question, and in writing mode each would hold a
+ * canvas the size of its scan at retina density -- tens of megabytes each,
+ * enough to take an iPad's tab down on a 20-question paper. Off-screen pages
+ * become a placeholder of the same height: the ink is autosaved when the page
+ * unmounts and imported again when it returns. Only undo history is lost.
+ */
+const HandwrittenAnswer = forwardRef<HandwrittenAnswerHandle, HandwrittenAnswerProps>(
+  function HandwrittenAnswer(props, ref) {
+    const holderRef = useRef<HTMLDivElement | null>(null);
+    const [near, setNear] = useState(false);
+    const [lastHeight, setLastHeight] = useState(360);
+    const pageRef = useRef<HandwrittenAnswerHandle | null>(null);
+    useImperativeHandle(ref, () => ({ flush: async () => { await pageRef.current?.flush(); } }), []);
+
+    useEffect(() => {
+      const holder = holderRef.current;
+      if (!holder || typeof IntersectionObserver === 'undefined') {
+        setNear(true);
+        return;
+      }
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setNear(true);
+        },
+        { rootMargin: NEAR_MARGIN },
+      );
+      observer.observe(holder);
+      // A second, wider band decides when to let go, so a page scrolled just
+      // past is not torn down and rebuilt on every small scroll.
+      const far = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) setNear(false);
+        },
+        { rootMargin: `${FAR_PX}px 0px` },
+      );
+      far.observe(holder);
+      return () => {
+        observer.disconnect();
+        far.disconnect();
+      };
+    }, []);
+
+    return (
+      <div ref={holderRef}>
+        {near ? (
+          <HandwrittenPage {...props} ref={pageRef} onHeight={setLastHeight} />
+        ) : (
+          <div
+            style={{ height: lastHeight + 60 }}
+            className="flex items-center justify-center rounded-md border border-line bg-surface-raised text-sm text-muted"
+          >
+            Your writing on this question is saved.
+          </div>
+        )}
       </div>
     );
   },
