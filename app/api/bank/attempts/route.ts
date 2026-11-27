@@ -7,10 +7,11 @@
  * no attempt path at all, and the dashboard's "Questions Answered" tile was
  * pinned at zero by the schema rather than by how much anyone studied.
  *
- * Marking happens here and not through the model. Where the mark scheme carries
- * an answer key -- the multiple-choice half of Physics, Biology, Chemistry and
- * Economics -- a character comparison settles it in the request. Everything
- * else is recorded unmarked and handed back with the mark scheme for the
+ * Where the mark scheme carries an answer key -- the multiple-choice half of
+ * Physics, Biology, Chemistry and Economics -- a character comparison settles
+ * it in the request. Everything else is either marked by the AI on request
+ * (`markWith: 'ai'`: typed text, a handwritten answer from the answer box, or
+ * both) or recorded unmarked and handed back with the mark scheme for the
  * student to mark themselves.
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,12 +23,21 @@ import { upsertBankMistakeReview } from '@/lib/learning';
 import { SelfMarkError, resolveSelfMark } from '@/lib/self-marking';
 import { subjectNameForCode } from '@/lib/course-catalog';
 import { reportError } from '@/lib/error-reporting';
+import { bankGradeFields, gradeBankAnswer } from '@/lib/bank-ai-grading';
 
 export const dynamic = 'force-dynamic';
 
+/** One vision grade of a handwritten answer runs to ~30s and past it. */
+export const maxDuration = 120;
+const AI_GRADE_BUDGET_MS = (maxDuration - 20) * 1000;
+
 const AttemptBody = z.object({
   questionId: z.number().int().positive(),
-  answer: z.string().min(1).max(10000),
+  // May be empty when the answer was written by hand: the ink is read from the
+  // question's autosaved scratchpad, checked below.
+  answer: z.string().max(10000),
+  /** Ask the AI to mark a free-response answer instead of leaving it to the student. */
+  markWith: z.enum(['ai']).optional(),
   timeSpent: z.number().int().nonnegative().max(60 * 60 * 24).optional(),
   /**
    * Marks the student awarded themselves against the mark scheme.
@@ -266,7 +276,7 @@ export async function POST(req: Request) {
       rootNumber: true,
       bodyMd: true,
       totalMarks: true,
-      paper: { select: { subject: { select: { code: true, name: true } } } },
+      paper: { select: { subject: { select: { code: true, name: true, board: true } } } },
       markScheme: {
         select: {
           status: true,
@@ -292,7 +302,33 @@ export async function POST(req: Request) {
     question.markScheme?.status === 'published' ? question.markScheme : null;
   const answerLetter = publishedMarkScheme?.answerLetter ?? null;
 
+  const answerImageUrl = scratchpad?.previewImageUrl ?? null;
+  if (!body.answer.trim() && !answerImageUrl) {
+    return NextResponse.json({ error: 'Write or type an answer first' }, { status: 400 });
+  }
+
   const keyGrade = gradeAgainstKey(body.answer, answerLetter);
+
+  // AI marking: only where there is no key (a key outranks any model) and the
+  // student has not already given their own mark.
+  let aiGrade: Awaited<ReturnType<typeof gradeBankAnswer>> | null = null;
+  if (!keyGrade && body.markWith === 'ai' && body.awardedMarks === undefined && body.selfMarkedCorrect === undefined) {
+    aiGrade = await gradeBankAnswer({
+      userId: user.id,
+      questionText: question.bodyMd,
+      // The board keeps CAIE Economics out of the IB economics guidance.
+      subject: `${question.paper.subject.board} ${question.paper.subject.name} ${question.paper.subject.code}`,
+      totalMarks: question.totalMarks,
+      typed: body.answer.trim(),
+      imageUrl: answerImageUrl,
+      markscheme: publishedMarkScheme?.answerMd?.trim() || null,
+      budgetMs: AI_GRADE_BUDGET_MS,
+    });
+    if (!aiGrade.graded && aiGrade.status === 429) {
+      return NextResponse.json({ error: aiGrade.notice }, { status: 429 });
+    }
+  }
+  const aiFields = aiGrade?.graded ? bankGradeFields(aiGrade.grade, question.totalMarks) : null;
 
   // Precedence matters: a real answer key outranks the student's own verdict,
   // so self-marking cannot be used to score a multiple-choice question correct.
@@ -314,6 +350,9 @@ export async function POST(req: Request) {
 
   const marked =
     keyGrade ??
+    (aiFields
+      ? { isCorrect: aiFields.isCorrect, score: aiFields.score, gradedBy: 'ai' as const, correctLetter: null }
+      : null) ??
     (selfMark
       ? {
           isCorrect: selfMark.isCorrect,
@@ -338,10 +377,11 @@ export async function POST(req: Request) {
         // of the two marked this attempt is not recoverable from a fraction.
         selfAwardedScore: selfMark ? selfMark.score : null,
         authoritativeScore: keyGrade ? keyGrade.score : null,
-        awardedMarks: selfMark?.awardedMarks ?? null,
-        outOfMarks: selfMark?.awardedMarks === null ? null : question.totalMarks,
+        awardedMarks: aiFields?.awardedMarks ?? selfMark?.awardedMarks ?? null,
+        outOfMarks: aiFields ? aiFields.outOfMarks : selfMark?.awardedMarks === null ? null : question.totalMarks,
         timeSpent: body.timeSpent,
-        answerImageUrl: scratchpad?.previewImageUrl ?? null,
+        answerImageUrl,
+        gradingMode: aiGrade?.graded ? aiGrade.mode : 'text',
       },
       select: {
         id: true,
@@ -379,6 +419,21 @@ export async function POST(req: Request) {
       // What the client should offer for that: a mark stepper where the
       // question carries a total, the old true/false where it does not.
       totalMarks: question.totalMarks,
+      // The AI's verdict, when one was asked for. Feedback is returned, not
+      // stored: the attempt keeps the marks, the explanation is for now.
+      ai: aiGrade
+        ? aiGrade.graded
+          ? {
+              graded: true,
+              official: aiGrade.official,
+              mode: aiGrade.mode,
+              explanation: aiGrade.grade.explanation ?? null,
+              strengths: aiGrade.grade.strengths ?? [],
+              weaknesses: aiGrade.grade.weaknesses ?? [],
+              modelAnswer: aiGrade.grade.modelAnswer ?? null,
+            }
+          : { graded: false, notice: aiGrade.notice }
+        : null,
     });
   } catch (error) {
     reportError(error, { routePath: '/api/bank/attempts', routeType: 'route', method: 'POST' });

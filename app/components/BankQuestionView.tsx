@@ -14,12 +14,76 @@
 import PhotoAnswerButtons from './PhotoAnswerButtons';
 import RegionAsk from './RegionAsk';
 import FormattedMessage from './FormattedMessage';
-import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Loader2, Maximize2, Sparkles, X } from 'lucide-react';
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
 import { optionLettersFor } from '@/lib/bank-grading';
 import { commandTerm } from '@/lib/command-terms';
-import QuestionScratchpadPanel from './QuestionScratchpadPanel';
+import HandwrittenAnswer, { AnswerModeToggle, useAnswerMode, type HandwrittenAnswerHandle } from './HandwrittenAnswer';
+
+type AiVerdict =
+  | {
+      graded: true;
+      official: boolean;
+      mode: 'text' | 'vision';
+      explanation: string | null;
+      strengths: string[];
+      weaknesses: string[];
+      modelAnswer: string | null;
+    }
+  | { graded: false; notice: string };
+
+/** What the AI marker said, under the marks it gave. */
+function AiFeedback({ verdict }: { verdict: AiVerdict }) {
+  const [showModel, setShowModel] = useState(false);
+  if (!verdict.graded) {
+    return <p className="text-sm text-warning">{verdict.notice}</p>;
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      {!verdict.official && (
+        <p className="rounded-md bg-surface-raised px-3 py-2 text-xs text-muted">
+          There was no mark scheme text for the AI to mark against, so this is its own judgement.
+          Check it against the mark scheme below.
+        </p>
+      )}
+      {verdict.explanation && <p className="text-secondary">{verdict.explanation}</p>}
+      {verdict.strengths.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-accent-text">Earned marks for</p>
+          <ul className="ml-4 list-disc text-secondary">
+            {verdict.strengths.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {verdict.weaknesses.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-danger">Missed</p>
+          <ul className="ml-4 list-disc text-secondary">
+            {verdict.weaknesses.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {verdict.modelAnswer && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowModel((open) => !open)}
+            aria-expanded={showModel}
+            className="text-xs font-medium text-accent-text underline hover:no-underline"
+          >
+            {showModel ? 'Hide model answer' : 'Show model answer'}
+          </button>
+          {showModel && (
+            <div className="mt-1 rounded-md border border-subtle bg-surface-raised px-3 py-2 text-secondary">
+              <FormattedMessage content={verdict.modelAnswer} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * One past-paper question, shown as the crop it was cut from.
@@ -180,18 +244,30 @@ function AnswerPanel({
     correctLetter: string | null;
     awardedMarks: number | null;
     outOfMarks: number | null;
+    ai: AiVerdict | null;
   } | null>(null);
   const [marking, setMarking] = useState(false);
+  const [mode, setMode] = useAnswerMode();
+  const [hasInk, setHasInk] = useState(false);
+  const [aiMarking, setAiMarking] = useState(false);
+  const inkRef = useRef<HandwrittenAnswerHandle | null>(null);
+  // The AI marks against the question's text; a question without one can
+  // only be self-marked.
+  const canAiMark = Boolean(question.text);
 
-  const submit = async (value: string) => {
-    if (!value.trim() || saving) return;
+  const submit = async (value: string, markWith?: 'ai') => {
+    if ((!value.trim() && !hasInk) || saving) return;
     setSaving(true);
+    setAiMarking(markWith === 'ai');
     setError(null);
     try {
+      // The handwriting autosaves on a debounce; save the last strokes now so
+      // the server reads the answer as it stands, not as it was a second ago.
+      await inkRef.current?.flush();
       const res = await fetch('/api/bank/attempts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: question.id, answer: value }),
+        body: JSON.stringify({ questionId: question.id, answer: value, ...(markWith ? { markWith } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Could not save your answer');
@@ -201,12 +277,14 @@ function AnswerPanel({
         correctLetter: data.correctLetter ?? null,
         awardedMarks: data.attempt?.awardedMarks ?? null,
         outOfMarks: data.attempt?.outOfMarks ?? null,
+        ai: data.ai ?? null,
       });
       onAnswered();
     } catch (submitError) {
       setError((submitError as Error).message);
     } finally {
       setSaving(false);
+      setAiMarking(false);
     }
   };
 
@@ -244,7 +322,8 @@ function AnswerPanel({
   };
 
   if (result) {
-    const { isCorrect, correctLetter, awardedMarks, outOfMarks } = result;
+    const { isCorrect, correctLetter, awardedMarks, outOfMarks, ai } = result;
+    const aiGraded = ai?.graded === true;
     const total = question.totalMarks;
     // Only where the corpus captured a mark total -- most of the bank has none,
     // because a total is only recorded where the paper printed one. Inventing
@@ -257,6 +336,13 @@ function AnswerPanel({
         )}
         {/* Suppressed once marks are on the screen: "Not quite" is the wrong
           * word for 5 out of 6, and the marks say it better. */}
+        {aiGraded && awardedMarks !== null && outOfMarks !== null && (
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-primary">
+            <Sparkles className="h-4 w-4 text-accent-text" aria-hidden="true" />
+            AI mark: {awardedMarks} of {outOfMarks}
+          </p>
+        )}
+        {ai && <div className="mb-3"><AiFeedback verdict={ai} /></div>}
         {isCorrect === false && awardedMarks === null && (
           <p className="text-sm font-medium text-danger">
             Not quite.
@@ -319,7 +405,7 @@ function AnswerPanel({
             </div>
           </div>
         )}
-        {awardedMarks !== null && outOfMarks !== null && (
+        {!aiGraded && awardedMarks !== null && outOfMarks !== null && (
           <p className="text-sm font-medium text-primary">
             You awarded yourself {awardedMarks} of {outOfMarks} marks.
           </p>
@@ -356,25 +442,61 @@ function AnswerPanel({
         </div>
       ) : (
         <div className="space-y-2">
-          <textarea
-            value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
-            rows={3}
-            placeholder="Write your working, then mark it against the mark scheme."
-            className="w-full rounded-md border border-strong px-3 py-2 text-sm bg-surface text-primary"
-          />
-          <PhotoAnswerButtons
-            onText={(text) => setAnswer((current) => (current.trim() ? `${current.trim()}\n${text}` : text))}
-          />
-          <QuestionScratchpadPanel questionRef={{ bankQuestionId: question.id }} />
-          <button
-            type="button"
-            disabled={saving || !answer.trim()}
-            onClick={() => submit(answer)}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save answer'}
-          </button>
+          <AnswerModeToggle mode={mode} onChange={setMode} />
+          {mode === 'type' ? (
+            <>
+              <textarea
+                value={answer}
+                onChange={(event) => setAnswer(event.target.value)}
+                rows={4}
+                placeholder="Type your answer and working."
+                className="w-full rounded-md border border-strong px-3 py-2 text-sm bg-surface text-primary"
+              />
+              <PhotoAnswerButtons
+                onText={(text) => setAnswer((current) => (current.trim() ? `${current.trim()}\n${text}` : text))}
+              />
+              {hasInk && (
+                <p className="text-xs text-muted">Your handwritten answer is kept and will be marked with this.</p>
+              )}
+            </>
+          ) : (
+            <>
+              <HandwrittenAnswer
+                ref={inkRef}
+                questionRef={{ bankQuestionId: question.id }}
+                onInkChange={setHasInk}
+              />
+              {answer.trim() && (
+                <p className="text-xs text-muted">Your typed answer is kept and will be marked with this.</p>
+              )}
+            </>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {canAiMark && (
+              <button
+                type="button"
+                disabled={saving || (!answer.trim() && !hasInk)}
+                onClick={() => submit(answer, 'ai')}
+                className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+              >
+                {aiMarking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+                {aiMarking ? 'Marking…' : 'Mark with AI'}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={saving || (!answer.trim() && !hasInk)}
+              onClick={() => submit(answer)}
+              className={canAiMark
+                ? 'rounded-md border border-strong px-3 py-1.5 text-sm font-medium text-secondary hover:bg-surface-hover disabled:opacity-50'
+                : 'rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50'}
+            >
+              {saving && !aiMarking ? 'Saving…' : canAiMark ? 'Mark it myself' : 'Save answer'}
+            </button>
+          </div>
+          {aiMarking && hasInk && (
+            <p className="text-xs text-muted">Reading your handwriting can take up to a minute.</p>
+          )}
         </div>
       )}
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}

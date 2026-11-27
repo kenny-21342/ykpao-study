@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Columns2, Download, Loader2, Music } from 'lucide-react';
+import { ArrowLeft, Columns2, Download, Loader2, Maximize, Music } from 'lucide-react';
 import { documentLabel } from '@/lib/paper-catalogue';
 import type { PaperInstance } from '@/lib/paper-catalogue';
 import { useScreenContext } from '@/app/components/ScreenContext';
@@ -32,6 +32,23 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
     }
   });
   const { update } = useScreenContext();
+
+  // Full screen for the documents area: the paper alone, edge to edge. Safari
+  // on iPad still needs the prefixed call; iPhone Safari has neither, so the
+  // button is hidden there rather than doing nothing.
+  const documentsRef = useRef<HTMLDivElement | null>(null);
+  const [canFullscreen, setCanFullscreen] = useState(false);
+  useEffect(() => {
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a capability read after mount
+    setCanFullscreen(Boolean(el.requestFullscreen || el.webkitRequestFullscreen));
+  }, []);
+  const enterFullscreen = () => {
+    const el = documentsRef.current as (HTMLDivElement & { webkitRequestFullscreen?: () => void }) | null;
+    if (!el) return;
+    if (el.requestFullscreen) void el.requestFullscreen().catch(() => {});
+    else el.webkitRequestFullscreen?.();
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,31 +129,50 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
   const sideBySide = split && canSplit;
 
   return (
-    <div className={`mx-auto space-y-4 p-4 md:p-6 ${sideBySide ? 'max-w-none' : 'max-w-6xl'}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    // Fills the app's scroll area below its header, so the paper gets every
+    // pixel of height the window has. The title block used to take three
+    // lines and the PDF a fixed `100vh - 15rem` under it, which on a laptop
+    // left about half the window for the page itself.
+    <div className={`mx-auto flex h-full flex-col gap-2 px-3 pb-3 pt-2 md:px-4 ${sideBySide ? 'max-w-none' : 'max-w-6xl'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             href="/papers"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent-text"
+            aria-label="Back to past papers"
+            title="Past papers"
+            className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-accent-text"
           >
             <ArrowLeft className="h-4 w-4" />
-            Past papers
           </Link>
-          <h1 className="mt-1 text-xl font-bold text-primary">
-            {data.instance.subjectName} · {data.instance.label}
-          </h1>
-          <p className="text-sm text-muted">
-            {data.curriculum.label} · {data.instance.year} · {data.instance.sessionLabel}
-          </p>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-bold text-primary">
+              {data.instance.subjectName} · {data.instance.label}
+            </h1>
+            <p className="truncate text-xs text-muted">
+              {data.curriculum.label} · {data.instance.year} · {data.instance.sessionLabel}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {canFullscreen && (
+            <button
+              type="button"
+              onClick={enterFullscreen}
+              className="inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover"
+              title="Show the paper full screen (Esc to leave)"
+              aria-label="Full screen"
+            >
+              <Maximize className="h-4 w-4" />
+              Full screen
+            </button>
+          )}
           {canSplit ? (
             <button
               type="button"
               onClick={toggleSplit}
               aria-pressed={sideBySide}
-              className={`hidden items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
+              className={`hidden items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors lg:inline-flex ${
                 sideBySide
                   ? 'border-accent bg-accent-subtle text-accent-text'
                   : 'border-line text-secondary hover:bg-surface-hover'
@@ -148,7 +184,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
           ) : null}
           <a
             href={`/api/papers/${active.id}/file?download=1`}
-            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
           >
             <Download className="h-4 w-4" />
             Download
@@ -157,13 +193,24 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
       </div>
 
       {sideBySide && questionPaper && markScheme ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div ref={documentsRef} className="grid min-h-0 flex-1 gap-3 bg-surface lg:grid-cols-2 lg:grid-rows-1">
           {[questionPaper, markScheme].map((document) => (
-            <section key={document.id} className="overflow-hidden rounded-lg border border-line bg-surface">
-              <h2 className="border-b border-line px-4 py-2 text-sm font-semibold text-primary">
+            <section key={document.id} className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-line bg-surface">
+              <h2 className="flex items-center justify-between border-b border-line px-3 py-1.5 text-sm font-semibold text-primary">
                 {documentLabel(document)}
+                <a
+                  href={`/api/papers/${document.id}/file?download=1`}
+                  download={document.filename}
+                  className="rounded-md p-1 text-muted hover:bg-surface-hover hover:text-secondary"
+                  title={`Download ${documentLabel(document)}`}
+                  aria-label={`Download ${documentLabel(document)}`}
+                >
+                  <Download className="h-4 w-4" />
+                </a>
               </h2>
-              <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} />
+              <div className="min-h-0 flex-1">
+                <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} fill toolbar={false} />
+              </div>
             </section>
           ))}
         </div>
@@ -173,7 +220,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
       {/* One tab per document in this sitting: paper, audio, mark scheme,
           inserts. A listening sitting carries four tracks, all of docType
           `au`, so tabs are labelled by track number rather than by type. */}
-      <div className="flex flex-wrap gap-1 border-b border-line">
+      <div className="flex shrink-0 flex-wrap gap-1 border-b border-line">
         {data.instance.documents.map((document) => (
           <button
             key={document.id}
@@ -181,7 +228,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
               setActiveId(document.id);
               setOpened((current) => (current.has(document.id) ? current : new Set(current).add(document.id)));
             }}
-            className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`-mb-px rounded-t-md border-b-2 px-3 py-1.5 text-sm font-medium transition-colors ${
               document.id === active.id
                 ? 'border-accent text-accent-text'
                 : 'border-transparent text-muted hover:text-secondary'
@@ -192,7 +239,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
         ))}
       </div>
 
-      <div className="rounded-lg border border-line bg-surface overflow-hidden">
+      <div ref={documentsRef} className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface">
         {active.docType === 'au' ? (
           <div className="space-y-3 p-6">
             <div className="flex items-center gap-2 text-primary">
@@ -222,7 +269,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
             threw the paper away on every tab switch and downloaded it again.
             `invisible` rather than `hidden`: display:none can make the browser's
             PDF plugin reload when it is shown again. */}
-        <div className={active.docType === 'au' ? 'hidden' : 'grid'}>
+        <div className={active.docType === 'au' ? 'hidden' : 'grid min-h-0 flex-1 grid-rows-1'}>
           {data.instance.documents
             .filter((document) => document.docType !== 'au' && (opened.has(document.id) || document.id === active.id))
             .map((document) => (
@@ -233,7 +280,7 @@ export default function PaperViewer({ paperId }: { paperId: number }) {
                 }`}
                 aria-hidden={document.id !== active.id}
               >
-                <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} />
+                <PDFViewer fileUrl={`/api/papers/${document.id}/file`} fileName={document.filename} fill toolbar={false} />
               </div>
             ))}
         </div>

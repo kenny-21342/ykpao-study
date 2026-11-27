@@ -72,7 +72,24 @@ type DrawingCanvasProps = {
   // text-box edit -- not on every pointermove -- so callers can debounce an
   // autosave off of it without reacting to every drawn segment.
   onStrokesChange?: (data: DrawingCanvasStrokeData) => void;
+  /**
+   * Faint ruled lines behind the ink, like answer-booklet paper. Painted as
+   * the canvas's CSS background, so they never reach the exported image.
+   */
+  ruled?: boolean;
+  /**
+   * Stylus-first input, for writing an answer with an Apple Pencil or a pen.
+   * Once a pen has touched any canvas on this device, fingers stop drawing:
+   * they scroll the page instead, and a resting palm leaves no marks. Without
+   * it a full-width answer box traps an iPad's scroll the moment a finger
+   * lands on it. Off by default so the note and diagram canvases keep
+   * finger-drawing.
+   */
+  stylusAware?: boolean;
 };
+
+/** Set once a pen is seen on this device, so fingers scroll from then on. */
+const STYLUS_KEY = 'ink:stylus:v1';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -187,7 +204,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 // ---------------------------------------------------------------------------
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ width = 800, height = 500, className = '', onSave, onStrokesChange }, ref) => {
+  ({ width = 800, height = 500, className = '', onSave, onStrokesChange, ruled = false, stylusAware = false }, ref) => {
     const { confirm, confirmDialog } = useConfirm();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -203,6 +220,31 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
     const currentStrokeRef = useRef<Stroke | null>(null);
     const isDrawingRef = useRef(false);
+    /** The pointer drawing the current stroke; any other contact is ignored. */
+    const activePointerRef = useRef<number | null>(null);
+
+    // Pen-only mode, remembered per device. Read after mount: storage is not
+    // there during the server render.
+    const [stylusMode, setStylusMode] = useState(false);
+    useEffect(() => {
+      if (!stylusAware) return;
+      try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one read of a device preference after mount
+        if (localStorage.getItem(STYLUS_KEY) === '1') setStylusMode(true);
+      } catch {
+        /* storage blocked: start in finger mode */
+      }
+    }, [stylusAware]);
+    const setStylusPreference = (on: boolean) => {
+      setStylusMode(on);
+      try {
+        if (on) localStorage.setItem(STYLUS_KEY, '1');
+        else localStorage.removeItem(STYLUS_KEY);
+      } catch {
+        /* storage blocked: the mode still holds for this page */
+      }
+    };
+    const penOnly = stylusAware && stylusMode;
     const nextTextBoxIdRef = useRef(0);
 
     // Uploaded background image
@@ -259,6 +301,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       redraw();
     }, [width, height, redraw]);
 
+    // In pen-only mode the canvas allows panning so fingers scroll the page.
+    // Safari pans for an Apple Pencil too unless its touch is cancelled, so
+    // stylus touches are stopped here; finger touches pass through.
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || !penOnly) return;
+      const stopStylus = (event: TouchEvent) => {
+        const touches = Array.from(event.changedTouches) as (Touch & { touchType?: string })[];
+        if (touches.some((touch) => touch.touchType === 'stylus')) event.preventDefault();
+      };
+      canvas.addEventListener('touchstart', stopStylus, { passive: false });
+      canvas.addEventListener('touchmove', stopStylus, { passive: false });
+      return () => {
+        canvas.removeEventListener('touchstart', stopStylus);
+        canvas.removeEventListener('touchmove', stopStylus);
+      };
+    }, [penOnly]);
+
     // -----------------------------------------------------------------------
     // Drawing logic
     // -----------------------------------------------------------------------
@@ -274,11 +334,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     };
 
     const onPointerDown = (e: React.PointerEvent) => {
+      if (stylusAware && e.pointerType === 'pen' && !stylusMode) setStylusPreference(true);
+      // A finger or palm in pen-only mode: let it scroll, draw nothing.
+      if (penOnly && e.pointerType === 'touch') return;
+      if (isDrawingRef.current) return; // a second contact mid-stroke
       if (tool === 'text') {
         createTextBox(e);
         return;
       }
       canvasRef.current?.setPointerCapture(e.pointerId);
+      activePointerRef.current = e.pointerId;
       isDrawingRef.current = true;
       const point = getPointerPos(e);
       currentStrokeRef.current = {
@@ -292,6 +357,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
     const onPointerMove = (e: React.PointerEvent) => {
       if (!isDrawingRef.current || !currentStrokeRef.current) return;
+      if (activePointerRef.current !== null && e.pointerId !== activePointerRef.current) return;
       const point = getPointerPos(e);
       currentStrokeRef.current.points.push(point);
       // Incremental draw: just draw the new segment
@@ -299,11 +365,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     };
 
     const notifyStrokesChange = () => {
-      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes });
+      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes, width, height });
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (e?: React.PointerEvent) => {
       if (!isDrawingRef.current || !currentStrokeRef.current) return;
+      if (e && activePointerRef.current !== null && e.pointerId !== activePointerRef.current) return;
+      activePointerRef.current = null;
       isDrawingRef.current = false;
       let committed = false;
       if (currentStrokeRef.current.points.length > 1) {
@@ -355,13 +423,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         deleteTextBox(id);
         return;
       }
-      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes });
+      onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes, width, height });
     };
 
     const deleteTextBox = (id: string) => {
       setTextBoxes((boxes) => {
         const next = boxes.filter((box) => box.id !== id);
-        onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next });
+        onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next, width, height });
         return next;
       });
     };
@@ -379,7 +447,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       } else if (textBoxes.length > 0) {
         setTextBoxes((boxes) => {
           const next = boxes.slice(0, -1);
-          onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next });
+          onStrokesChangeRef.current?.({ strokes: strokesRef.current, textBoxes: next, width, height });
           return next;
         });
       }
@@ -404,8 +472,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       setTextBoxes([]);
       setBgImage(null);
       redraw();
-      if (hasWork) onStrokesChangeRef.current?.({ strokes: [], textBoxes: [] });
-    }, [bgImage, redraw, textBoxes]);
+      if (hasWork) onStrokesChangeRef.current?.({ strokes: [], textBoxes: [], width, height });
+    }, [bgImage, height, redraw, textBoxes, width]);
 
     // -----------------------------------------------------------------------
     // Import / Export
@@ -718,6 +786,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           )}
         </div>
 
+        {stylusAware && (
+          <p className="mb-2 text-xs text-muted">
+            {penOnly ? (
+              <>
+                Pencil mode: only a pen writes, fingers scroll.{' '}
+                <button type="button" onClick={() => setStylusPreference(false)} className="underline hover:no-underline">
+                  Draw with fingers
+                </button>
+              </>
+            ) : (
+              'Write with a stylus, finger or mouse. With an Apple Pencil, fingers switch to scrolling.'
+            )}
+          </p>
+        )}
+
         {photoError && <p role="alert" className="mb-2 text-xs text-danger">{photoError}</p>}
 
         {/* Canvas.
@@ -736,12 +819,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
-            className={`border border-line rounded-md touch-none ${
+            onPointerCancel={onPointerUp}
+            className={`border border-line rounded-md ${penOnly ? 'touch-pan-y' : 'touch-none'} ${
               tool === 'pen' ? 'cursor-crosshair' : tool === 'eraser' ? 'cursor-cell' : 'cursor-text'
             }`}
             // White paper in both themes: ink defaults to near-black, the eraser paints
             // white and the saved image is flattened onto white.
-            style={{ width, height, backgroundColor: '#ffffff' }}
+            style={{
+              width,
+              height,
+              backgroundColor: '#ffffff',
+              // Lines every 36px, the spacing of an answer booklet at this size.
+              ...(ruled
+                ? { backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 35px, #dbe2ec 35px, #dbe2ec 36px)' }
+                : {}),
+            }}
           />
           {/* Text boxes overlay */}
           {textBoxes.map((tb) => (

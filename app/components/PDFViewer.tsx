@@ -7,6 +7,13 @@ import { Skeleton, SkeletonRegion } from './Skeleton';
 type PDFViewerProps = {
   fileUrl: string;
   fileName: string;
+  /**
+   * Fill the parent's height instead of sizing to the viewport. The parent
+   * must give a definite height (a flex column with `min-h-0`, say).
+   */
+  fill?: boolean;
+  /** The Download bar above the paper; off where the page already has one. */
+  toolbar?: boolean;
 };
 
 // Renders via the browser's own PDF viewer instead of a custom react-pdf
@@ -23,7 +30,7 @@ type PDFViewerProps = {
 // HTML default of 150px, and every caller so far has mounted this inside an
 // auto-height container -- so `h-full` resolved to nothing and the paper
 // rendered as a blank 150px sliver.
-export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
+export default function PDFViewer({ fileUrl, fileName, fill = false, toolbar = true }: PDFViewerProps) {
   /**
    * Past papers are multi-megabyte scans, and until one arrives the `<object>`
    * paints nothing at all -- so the whole panel was a blank 520px rectangle
@@ -50,8 +57,8 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
   }, [fileUrl]);
 
   return (
-    <div className="relative flex h-[calc(100vh-15rem)] min-h-[520px] flex-col">
-      <div className="flex items-center justify-end border-b border-line bg-surface px-4 py-2">
+    <div className={`relative flex flex-col ${fill ? 'h-full min-h-[480px]' : 'h-[calc(100vh-15rem)] min-h-[520px]'}`}>
+      {toolbar && <div className="flex items-center justify-end border-b border-line bg-surface px-4 py-2">
         <a
           href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
           download={fileName}
@@ -61,11 +68,11 @@ export default function PDFViewer({ fileUrl, fileName }: PDFViewerProps) {
           <Download className="h-4 w-4" />
           Download
         </a>
-      </div>
+      </div>}
       {!loaded && (
         <SkeletonRegion
           label="Loading the paper"
-          className="pointer-events-none absolute inset-x-0 bottom-0 top-[41px] z-10 flex flex-col items-center gap-3 overflow-hidden bg-surface-raised p-6"
+          className={`pointer-events-none absolute inset-x-0 bottom-0 ${toolbar ? 'top-[41px]' : 'top-0'} z-10 flex flex-col items-center gap-3 overflow-hidden bg-surface-raised p-6`}
         >
           {/* Page-shaped, so the wait looks like a document arriving rather
               than an error. */}

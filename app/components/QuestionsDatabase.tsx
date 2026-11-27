@@ -11,7 +11,7 @@ import AiNotice from './AiNotice';
 import PreviewNotice from './PreviewNotice';
 import CompetitionVault from './CompetitionVault';
 import { useScreenContext } from './ScreenContext';
-import QuestionScratchpadPanel from './QuestionScratchpadPanel';
+import HandwrittenAnswer, { AnswerModeToggle, useAnswerMode, type HandwrittenAnswerHandle } from './HandwrittenAnswer';
 import { readUploadResult } from '@/lib/upload-client';
 import { prepareImageForUpload } from '@/lib/image-compress';
 
@@ -114,6 +114,9 @@ export default function QuestionsDatabase({
   // Top search box (free-text across question code + topic).
   const [searchBox, setSearchBox] = useState('');
   const [answer, setAnswer] = useState('');
+  const [answerMode, setAnswerMode] = useAnswerMode();
+  const [hasInk, setHasInk] = useState(false);
+  const inkRef = useRef<HandwrittenAnswerHandle | null>(null);
   const [grade, setGrade] = useState<{
     isCorrect: boolean | null;
     score: number | null;
@@ -393,8 +396,10 @@ export default function QuestionsDatabase({
   };
 
   const submitAnswer = async () => {
-    if (!selectedQuestion || !answer.trim() || submitting) return;
+    if (!selectedQuestion || (!answer.trim() && !hasInk) || submitting) return;
     setSubmitting(true);
+    // Save the last strokes first: the server reads the ink by question.
+    await inkRef.current?.flush();
     setSubmitError(null);
     setGrade(null);
     setAiNotices([]);
@@ -407,8 +412,8 @@ export default function QuestionsDatabase({
         body: JSON.stringify({
           questionId: selectedQuestion.id,
           answer,
-          // Any scratchpad drawing is picked up server-side by question ref
-          // (QuestionScratchpadPanel autosaves it independently of submit).
+          // A handwritten answer is picked up server-side by question ref
+          // (HandwrittenAnswer autosaves it, and was flushed above).
           image: uploadedImageUrl,
           timeSpent: Math.round((Date.now() - t0) / 1000),
         }),
@@ -1115,26 +1120,35 @@ export default function QuestionsDatabase({
                     </div>
                   )}
 
-                  <QuestionScratchpadPanel
-                    questionRef={{ pastPaperQuestionId: selectedQuestion.id }}
-                    className="mb-4"
-                  />
-
-                  <RichTextEditor
-                    content={answer}
-                    onChange={setAnswer}
-                    placeholder="Explain your steps and use Σ for LaTeX math."
-                  />
+                  <div className="mb-2">
+                    <AnswerModeToggle mode={answerMode} onChange={setAnswerMode} />
+                  </div>
+                  {answerMode === 'write' ? (
+                    <HandwrittenAnswer
+                      key={selectedQuestion.id}
+                      ref={inkRef}
+                      questionRef={{ pastPaperQuestionId: selectedQuestion.id }}
+                      onInkChange={setHasInk}
+                    />
+                  ) : (
+                    <RichTextEditor
+                      content={answer}
+                      onChange={setAnswer}
+                      placeholder="Explain your steps and use Σ for LaTeX math."
+                    />
+                  )}
 
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-xs text-muted">
-                      {answer.trim().length === 0
-                        ? 'Write something to get AI feedback.'
-                        : `${answer.trim().length} chars`}
+                      {answer.trim().length === 0 && !hasInk
+                        ? 'Type or write an answer to get AI feedback.'
+                        : answerMode === 'write'
+                          ? 'Your handwriting and anything typed are marked together.'
+                          : `${answer.trim().length} chars`}
                     </p>
                     <button
                       onClick={submitAnswer}
-                      disabled={submitting || answer.trim().length === 0}
+                      disabled={submitting || (answer.trim().length === 0 && !hasInk)}
                       className="px-5 py-2 bg-accent text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {submitting ? 'Grading…' : 'Submit & Grade'}

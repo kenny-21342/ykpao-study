@@ -16,7 +16,7 @@ export default async function PaperPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <main className="min-h-full">
+    <main className="h-full">
       <PaperViewer paperId={paperId} />
     </main>
   );

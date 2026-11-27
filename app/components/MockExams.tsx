@@ -6,7 +6,7 @@ import Link from 'next/link';
 import NoticeDialog from './NoticeDialog';
 import { useConfirm } from './useConfirm';
 import PreviewNotice from './PreviewNotice';
-import QuestionScratchpadPanel from './QuestionScratchpadPanel';
+import HandwrittenAnswer, { AnswerModeToggle, useAnswerMode } from './HandwrittenAnswer';
 import { useScreenContext } from './ScreenContext';
 import toast from 'react-hot-toast';
 import { normalizeOptionLetter } from '@/lib/bank-grading';
@@ -1133,6 +1133,8 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
   const [error, setError] = useState<string | null>(null);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Type or write by hand: one choice for the whole paper, remembered per device.
+  const [answerMode, setAnswerMode] = useAnswerMode();
   const [images, setImages] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState<string | null>(null); // itemId being transcribed
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
@@ -1722,17 +1724,27 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                     <button onClick={() => setImages((prev) => { const next = { ...prev }; delete next[item.id]; return next; })} className="text-xs font-medium text-danger hover:text-danger">Remove</button>
                   </div>
                 )}
-                <RichTextEditor
-                  content={answers[item.id] ?? ''}
-                  onChange={(html) => setAnswers((a) => ({ ...a, [item.id]: html }))}
-                  placeholder="Explain your method, final answer, and any LaTeX working."
-                />
-                <p className="text-xs text-muted mt-1.5">
-                  {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit.
-                  {saving && <span className="ml-2 text-muted">• Saving…</span>}
-                  {!saving && lastSavedAt && <span className="ml-2 text-accent-text">• Saved to server</span>}
-                </p>
-                <QuestionScratchpadPanel questionRef={{ mockExamItemId: item.id }} className="mt-2" />
+                <div className="mb-2">
+                  <AnswerModeToggle mode={answerMode} onChange={setAnswerMode} />
+                </div>
+                {answerMode === 'write' ? (
+                  // Keyed by item so each question has its own page of ink.
+                  // Marked with the typed answer, if there is one, on submit.
+                  <HandwrittenAnswer key={item.id} questionRef={{ mockExamItemId: item.id }} />
+                ) : (
+                  <>
+                    <RichTextEditor
+                      content={answers[item.id] ?? ''}
+                      onChange={(html) => setAnswers((a) => ({ ...a, [item.id]: html }))}
+                      placeholder="Explain your method, final answer, and any LaTeX working."
+                    />
+                    <p className="text-xs text-muted mt-1.5">
+                      {answers[item.id]?.trim() ? 'Saved locally' : 'Not yet answered'} • Show your working for partial credit. Anything you wrote by hand is marked too.
+                      {saving && <span className="ml-2 text-muted">• Saving…</span>}
+                      {!saving && lastSavedAt && <span className="ml-2 text-accent-text">• Saved to server</span>}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 

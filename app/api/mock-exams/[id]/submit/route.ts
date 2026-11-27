@@ -470,7 +470,9 @@ export async function POST(
           });
         }
 
-        if (!answer) {
+        // A handwritten answer with nothing typed is still an answer: the vision
+        // grader reads the ink. Only OCR-path answers depend on `answer` text.
+        if (!answer && !(useVisionGrading && answerImageUrl)) {
           await prisma.mockExamItem.update({
             where: { id: item.id },
             data: { answer: '', score: 0, isCorrect: false, attemptedAt: new Date(), gradingStatus: markscheme ? 'official' : 'provisional', gradingSourceId: markschemeId },
