@@ -25,10 +25,13 @@ export const bankAnalyticsQuestionSelect = {
       subject: { select: { name: true, code: true, level: true, board: true } },
     },
   },
+  // Every topic, not the first: a multi-part question (an IB Economics
+  // Paper 3 case runs from consumer surplus to natural monopoly) is evidence
+  // about each topic it examines. Names repeat once per subject row the topic
+  // is filed under (HL and combined HLSL); `bankTopicNames` de-duplicates.
   topics: {
     select: { topic: { select: { name: true } } },
     orderBy: { confidence: 'desc' as const },
-    take: 1,
   },
   tags: {
     select: { tag: { select: { label: true } } },
@@ -73,7 +76,22 @@ export function bankTopicName(question: {
   topics: { topic: { name: string } }[];
   tags: { tag: { label: string } }[];
 }): string {
-  return question.topics[0]?.topic.name ?? question.tags[0]?.tag.label ?? 'General';
+  return bankTopicNames(question)[0];
+}
+
+/**
+ * Every topic to aggregate a question under, most confident first, never
+ * empty. An attempt on a question that spans three topics counts towards all
+ * three: a wrong answer on a mixed question is weak evidence about each, which
+ * is still better than charging it all to whichever topic was listed first.
+ */
+export function bankTopicNames(question: {
+  topics: { topic: { name: string } }[];
+  tags: { tag: { label: string } }[];
+}): string[] {
+  const names = [...new Set(question.topics.map((link) => link.topic.name).filter(Boolean))];
+  if (names.length > 0) return names;
+  return [question.tags[0]?.tag.label ?? 'General'];
 }
 
 /** Scope filter for bank attempts, mirroring `ppWhere` in the dashboard route. */

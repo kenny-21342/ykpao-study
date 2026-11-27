@@ -176,8 +176,91 @@ def pending(connection: sqlite3.Connection, subject: str | None) -> list[dict[st
     return rows
 
 
+def run_from_json(source: Path, out: Path, *, apply: bool, concurrency: int, max_spend: float) -> int:
+    """Tag questions listed in a production export (scripts/export-untagged-parts.mjs).
+
+    Production decides what is published, and questions published from review
+    there are still `needs_review` locally, so the local selection never
+    reaches them. Results go to OUT as JSONL keyed by the production question
+    id (scripts/apply-part-results.mjs pushes them); a re-run skips ids
+    already in OUT.
+    """
+    settings = text_settings()
+    model = settings["model"]
+    done_ids: set[int] = set()
+    if out.exists():
+        for line in out.read_text().splitlines():
+            if line.strip():
+                done_ids.add(json.loads(line)["questionId"])
+    work = []
+    for row in json.loads(source.read_text()):
+        if row["questionId"] in done_ids:
+            continue
+        parts = parts_for_question(row.get("parts"), row["body"])
+        if not parts:
+            continue
+        found = syllabus_for(row["code"], row.get("year"), row.get("level"))
+        topics, context = (found.topics, found.context) if found else ([], None)
+        version = f"{PROMPT_VERSION}:{found.variant}" if found and found.variant else PROMPT_VERSION
+        work.append((row, parts, topics, context, version))
+    print(f"{len(work)} multi-part questions to tag ({len(done_ids)} already in {out.name})")
+    if not apply:
+        chars = sum(len(w[0]["body"]) for w in work)
+        est_in = (chars / 3 + 900 * len(work)) / 1e6
+        print(f"rough input estimate: {est_in:.1f}M tokens -> ${est_in * TEXT_INPUT_PER_MTOK:.2f} in. Dry run.")
+        return 0
+
+    spend = 0.0
+    done = failed = 0
+    started = time.time()
+
+    def call(entry):
+        row, parts, topics, context, _version = entry
+        for attempt, wait in enumerate([0, *COOLDOWN_WAITS[:COOLDOWN_GIVE_UP_AFTER]]):
+            if wait:
+                time.sleep(wait)
+            try:
+                return tag_parts(row["body"], parts, topics, context, settings=settings)
+            except Exception as error:  # noqa: BLE001
+                if not _is_cooldown(error) or attempt == COOLDOWN_GIVE_UP_AFTER:
+                    raise
+        raise ProviderError("cooldown")
+
+    with ThreadPoolExecutor(max_workers=concurrency) as pool, out.open("a") as sink:
+        futures = [(entry, pool.submit(call, entry)) for entry in work]
+        for entry, future in futures:
+            row, _parts, _topics, _context, version = entry
+            try:
+                results, call_result = future.result()
+            except Exception as error:  # noqa: BLE001
+                failed += 1
+                print(f"  ! {row['questionId']}: {str(error)[:120]}", flush=True)
+                continue
+            if not results:
+                failed += 1
+                continue
+            sink.write(json.dumps({"questionId": row["questionId"], "model": model,
+                                   "promptVersion": version, "parts": results}) + "\n")
+            sink.flush()
+            done += 1
+            spend += (call_result.input_tokens / 1e6 * TEXT_INPUT_PER_MTOK
+                      + call_result.output_tokens / 1e6 * TEXT_OUTPUT_PER_MTOK)
+            if done % 100 == 0:
+                rate = done / max(time.time() - started, 1) * 3600
+                print(f"  {done}/{len(work)}  ${spend:.2f}  {rate:,.0f}/h  {failed} failed", flush=True)
+            if spend >= max_spend:
+                print(f"  spend cap ${max_spend:.2f} reached - stopping", flush=True)
+                for _entry, pending_future in futures:
+                    pending_future.cancel()
+                break
+    print(f"\ndone in {(time.time() - started) / 60:.1f} min: {done} questions, {failed} failed, ${spend:.2f}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--from-json", type=Path, help="production export to tag instead of the local store")
+    parser.add_argument("--out", type=Path, help="JSONL results for --from-json")
     parser.add_argument("--subject", default=None)
     parser.add_argument("--apply", action="store_true", help="make the calls. THIS SPENDS MONEY.")
     parser.add_argument("--sample", type=int, default=0,
@@ -189,6 +272,11 @@ def main() -> int:
                         help="count a question already rated by ANY model as done (switching models "
                              "otherwise starts the whole run again)")
     args = parser.parse_args()
+    if args.from_json:
+        if not args.out:
+            parser.error("--from-json needs --out")
+        return run_from_json(args.from_json, args.out, apply=args.apply,
+                             concurrency=args.concurrency, max_spend=args.max_spend)
 
     settings = text_settings()
     model = settings["model"]

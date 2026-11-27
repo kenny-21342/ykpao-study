@@ -5,6 +5,7 @@ import {
   analyticsSubjectName,
   bankSubjectCodesForNames,
   bankTopicName,
+  bankTopicNames,
 } from '../lib/bank-analytics.ts';
 
 /**
@@ -53,4 +54,16 @@ test('topics win over tags, and something is always returned', () => {
   // registries land, so the tag fallback is what actually runs today.
   assert.equal(bankTopicName({ topics: [], tags: [{ tag: { label: 'dot-product' } }] }), 'dot-product');
   assert.equal(bankTopicName({ topics: [], tags: [] }), 'General');
+});
+
+test('a multi-topic question aggregates under every topic, once each', () => {
+  const link = (name: string) => ({ topic: { name } });
+  // Names repeat once per subject row (HL and combined HLSL).
+  const question = {
+    topics: [link('Market failure and externalities'), link('Behavioural economics'), link('Market failure and externalities')],
+    tags: [{ tag: { label: 'consumer-surplus' } }],
+  };
+  assert.deepEqual(bankTopicNames(question), ['Market failure and externalities', 'Behavioural economics']);
+  assert.equal(bankTopicName(question), 'Market failure and externalities');
+  assert.deepEqual(bankTopicNames({ topics: [], tags: [] }), ['General']);
 });

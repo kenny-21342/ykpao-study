@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { addDays, endOfDay, startOfDay } from '@/lib/learning';
 import { loadTodoContext } from '@/lib/study-actions';
 import { resolveCourseScope } from '@/lib/course-scope';
-import { analyticsSubjectName, bankSubjectCodesForNames, bankTopicName } from '@/lib/bank-analytics';
+import { analyticsSubjectName, bankSubjectCodesForNames, bankTopicNames } from '@/lib/bank-analytics';
 import { LearnerContextError } from '@/lib/learner-context';
 import {
   averageIntensity,
@@ -180,7 +180,7 @@ async function generatePlan(userId: string) {
           select: {
             totalMarks: true,
             paper: { select: { subject: { select: { name: true, code: true } } } },
-            topics: { select: { topic: { select: { name: true } } }, take: 1 },
+            topics: { select: { topic: { select: { name: true } } }, orderBy: { confidence: 'desc' } },
             tags: { select: { tag: { select: { label: true } } }, take: 1 },
           },
         },
@@ -214,13 +214,15 @@ async function generatePlan(userId: string) {
     if (!question) continue;
     const subject = analyticsSubjectName(question.paper.subject);
     if (courseScope.effectiveScope === 'enrolled' && !courseScope.subjects.includes(subject)) continue;
-    const topic = bankTopicName(question);
-    const key = `${subject}::${topic}`;
-    const row = grouped.get(key) ?? { subject, topic, score: 0, max: 0, attempts: 0 };
-    row.score += attempt.score ?? (attempt.isCorrect ? 1 : 0);
-    row.max += question.totalMarks ?? 1;
-    row.attempts += 1;
-    grouped.set(key, row);
+    // A question that examines several topics counts towards each of them.
+    for (const topic of bankTopicNames(question)) {
+      const key = `${subject}::${topic}`;
+      const row = grouped.get(key) ?? { subject, topic, score: 0, max: 0, attempts: 0 };
+      row.score += attempt.score ?? (attempt.isCorrect ? 1 : 0);
+      row.max += question.totalMarks ?? 1;
+      row.attempts += 1;
+      grouped.set(key, row);
+    }
   }
 
   const priorities: Priority[] = [...grouped.values()]
@@ -288,7 +290,7 @@ async function generatePlan(userId: string) {
   const candidateSelect = {
     id: true,
     paper: { select: { subject: { select: { name: true, code: true } } } },
-    topics: { select: { topic: { select: { name: true } } }, take: 1 },
+    topics: { select: { topic: { select: { name: true } } }, orderBy: { confidence: 'desc' } },
     tags: { select: { tag: { select: { label: true } } }, take: 1 },
   } as const;
 
@@ -368,7 +370,7 @@ async function generatePlan(userId: string) {
       const priority = focus[priorityIndex % focus.length];
       const makeMock = tasks.length > 0 && (tasks.length + 1) % 7 === 0;
       const candidate = candidateQuestions.find((question) =>
-        bankTopicName(question) === priority.topic
+        bankTopicNames(question).includes(priority.topic)
         && analyticsSubjectName(question.paper.subject) === priority.subject
       ) ?? candidateQuestions[priorityIndex % Math.max(1, candidateQuestions.length)];
       const dueAt = new Date(day);

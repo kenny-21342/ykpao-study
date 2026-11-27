@@ -23,7 +23,7 @@ from typing import Any
 from .client import CallResult, ProviderError, call_json
 from .env import text_settings
 
-PROMPT_VERSION = "v4-tag-1"
+PROMPT_VERSION = "v5-tag-1"
 
 DIFFICULTY_RUBRIC = """\
 1 — Recall. One step: state a fact, or substitute directly into a formula that
@@ -48,8 +48,12 @@ sitting this paper, not how hard the topic sounds:
 {DIFFICULTY_RUBRIC}
 
 RULES
-1. topics: choose ONLY from the supplied syllabus topic list, copying each
-   string verbatim. If the list is empty or nothing fits, return [].
+1. topics: EVERY syllabus topic the question examines, in any of its parts,
+   most central first. Choose ONLY from the supplied syllabus topic list,
+   copying each string verbatim. A long multi-part question (a case study, a
+   data-response question) usually spans several topics: list each one a part
+   actually tests, not just the opening topic. Do not add a topic that is only
+   mentioned in passing. If the list is empty or nothing fits, return [].
 2. tags: 2-6 lowercase kebab-case terms a student would actually search for,
    naming the specific technique or concept ("maclaurin-series",
    "projectile-motion", "electromagnetic-induction"). Not generic words like

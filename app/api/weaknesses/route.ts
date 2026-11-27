@@ -6,7 +6,7 @@ import {
   analyticsSubjectName,
   bankSubjectCodesForNames,
   bankAnalyticsQuestionSelect,
-  bankTopicName,
+  bankTopicNames,
   type BankAnalyticsQuestion,
 } from '@/lib/bank-analytics';
 
@@ -17,7 +17,8 @@ type NormalizedAttempt = {
   questionId: number | null;
   bankQuestionId: number | null;
   subject: string;
-  topic: string;
+  /** Every topic the question examines; the attempt counts towards each. */
+  topics: string[];
   content: string;
   score: number | null;
   maxScore: number | null;
@@ -199,7 +200,7 @@ export async function GET(req: Request) {
       questionId: question.id,
       bankQuestionId: null,
       subject,
-      topic: question.topic || 'General',
+      topics: [question.topic || 'General'],
       content: question.content,
       score: item.score ?? null,
       maxScore: item.maxScore ?? question.marks ?? null,
@@ -226,7 +227,7 @@ export async function GET(req: Request) {
       questionId: question?.id ?? null,
       bankQuestionId: bankQuestion?.id ?? null,
       subject,
-      topic: question ? question.topic || 'General' : bankTopicName(bankQuestion!),
+      topics: question ? [question.topic || 'General'] : bankTopicNames(bankQuestion!),
       content: question ? question.content : bankQuestion!.bodyMd,
       score: item.score ?? null,
       maxScore: question ? question.marks ?? null : bankQuestion!.totalMarks ?? null,
@@ -247,7 +248,7 @@ export async function GET(req: Request) {
       questionId: null,
       bankQuestionId: question.id,
       subject,
-      topic: bankTopicName(question),
+      topics: bankTopicNames(question),
       content: question.bodyMd,
       score: item.score ?? null,
       maxScore: question.totalMarks ?? null,
@@ -274,7 +275,7 @@ export async function GET(req: Request) {
       questionId: null,
       bankQuestionId: null,
       subject,
-      topic,
+      topics: [topic],
       content: question.content || question.title,
       score,
       maxScore: score == null ? null : maxScore,
@@ -312,20 +313,22 @@ export async function GET(req: Request) {
   >();
 
   for (const a of attempts) {
-    const key = `${a.subject}::${a.topic}`;
-    const entry =
-      topicMap.get(key) ?? {
-        subject: a.subject,
-        total: 0,
-        correct: 0,
-        scoreSum: 0,
-        maxSum: 0,
-      };
-    entry.total += 1;
-    if (a.isCorrect) entry.correct += 1;
-    if (typeof a.score === 'number') entry.scoreSum += a.score;
-    if (typeof a.maxScore === 'number') entry.maxSum += a.maxScore;
-    topicMap.set(key, entry);
+    for (const topic of a.topics) {
+      const key = `${a.subject}::${topic}`;
+      const entry =
+        topicMap.get(key) ?? {
+          subject: a.subject,
+          total: 0,
+          correct: 0,
+          scoreSum: 0,
+          maxSum: 0,
+        };
+      entry.total += 1;
+      if (a.isCorrect) entry.correct += 1;
+      if (typeof a.score === 'number') entry.scoreSum += a.score;
+      if (typeof a.maxScore === 'number') entry.maxSum += a.maxScore;
+      topicMap.set(key, entry);
+    }
   }
 
   const topics = Array.from(topicMap.entries())
@@ -398,7 +401,7 @@ export async function GET(req: Request) {
       bodyMd: true,
       totalMarks: true,
       paper: { select: { subject: { select: { name: true, code: true } } } },
-      topics: { select: { topic: { select: { name: true } } }, take: 1 },
+      topics: { select: { topic: { select: { name: true } } } },
       tags: { select: { tag: { select: { label: true } } }, take: 1 },
     } as const;
 
@@ -427,7 +430,9 @@ export async function GET(req: Request) {
       .slice(0, limit)
       .map((q) => ({
         id: q.id,
-        topic: q.topics[0]?.topic.name ?? q.tags[0]?.tag.label ?? 'General',
+        // Label it with the weak topic it was picked for, not its first topic.
+        topic: q.topics.map((link) => link.topic.name).find((name) => weakTopicNames.includes(name))
+          ?? q.topics[0]?.topic.name ?? q.tags[0]?.tag.label ?? 'General',
         subject: analyticsSubjectName(q.paper.subject),
         content: q.bodyMd.slice(0, 200),
         marks: q.totalMarks ?? 0,
@@ -436,14 +441,14 @@ export async function GET(req: Request) {
     // If we still need more, include questions they got wrong before.
     if (recommended.length < limit) {
       const wrongQuestions = attempts
-        .filter((a) => a.isCorrect === false && weakTopicNames.includes(a.topic))
+        .filter((a) => a.isCorrect === false && a.topics.some((name) => weakTopicNames.includes(name)))
         .slice(0, limit - recommended.length)
         .map((a) =>
           a.questionId == null
             ? null
             : {
                 id: a.questionId,
-                topic: a.topic,
+                topic: a.topics.find((name) => weakTopicNames.includes(name)) ?? a.topics[0],
                 subject: a.subject,
                 content: a.content.slice(0, 200),
                 marks: a.maxScore ?? 0,

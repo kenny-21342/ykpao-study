@@ -525,6 +525,31 @@
       "Economic integration",
       "Economic development",
       "Sustainable development"
+    ],
+    "eras": [
+      {
+        "from_year": 2022,
+        "context": "IB Diploma Programme Economics, first assessment 2022",
+        "topics": [
+          "Introduction to economics",
+          "Microeconomics: demand, supply and market equilibrium",
+          "Elasticity",
+          "Behavioural economics",
+          "Government intervention in markets",
+          "Market failure and externalities",
+          "Theory of the firm and market structures",
+          "Macroeconomics: measuring economic activity",
+          "Aggregate demand and aggregate supply",
+          "Macroeconomic objectives",
+          "Economics of inequality and poverty",
+          "Fiscal, monetary and supply-side policy",
+          "International trade",
+          "Exchange rates and the balance of payments",
+          "Economic integration",
+          "Economic development",
+          "Sustainable development"
+        ]
+      }
     ]
   },
   "business-management": {
