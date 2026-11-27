@@ -19,7 +19,7 @@ import { ChevronDown, ChevronUp, Loader2, Maximize2, Sparkles, X } from 'lucide-
 import type { BankQuestionView as Question, BankStrip } from '@/lib/bank-questions';
 import { optionLettersFor } from '@/lib/bank-grading';
 import { commandTerm } from '@/lib/command-terms';
-import HandwrittenAnswer, { AnswerModeToggle, useAnswerMode, type HandwrittenAnswerHandle } from './HandwrittenAnswer';
+import HandwrittenAnswer, { AnswerModeToggle, useAnswerMode, type AnswerMode, type HandwrittenAnswerHandle } from './HandwrittenAnswer';
 
 type AiVerdict =
   | {
@@ -230,9 +230,18 @@ function ZoomOverlay({
 function AnswerPanel({
   question,
   onAnswered,
+  mode,
+  setMode,
+  inkRef,
+  hasInk,
 }: {
   question: Question;
   onAnswered: () => void;
+  /** Lifted to the card: in writing mode the question scan above is the page. */
+  mode: AnswerMode;
+  setMode: (mode: AnswerMode) => void;
+  inkRef: React.RefObject<HandwrittenAnswerHandle | null>;
+  hasInk: boolean;
 }) {
   const answerLetter = question.markScheme?.answerLetter ?? null;
   const [answer, setAnswer] = useState('');
@@ -247,10 +256,7 @@ function AnswerPanel({
     ai: AiVerdict | null;
   } | null>(null);
   const [marking, setMarking] = useState(false);
-  const [mode, setMode] = useAnswerMode();
-  const [hasInk, setHasInk] = useState(false);
   const [aiMarking, setAiMarking] = useState(false);
-  const inkRef = useRef<HandwrittenAnswerHandle | null>(null);
   // The AI marks against the question's text (read server-side); a question
   // without one can only be self-marked. The paper view sends `hasText` but
   // not the text itself.
@@ -461,16 +467,10 @@ function AnswerPanel({
               )}
             </>
           ) : (
-            <>
-              <HandwrittenAnswer
-                ref={inkRef}
-                questionRef={{ bankQuestionId: question.id }}
-                onInkChange={setHasInk}
-              />
-              {answer.trim() && (
-                <p className="text-xs text-muted">Your typed answer is kept and will be marked with this.</p>
-              )}
-            </>
+            <p className="text-xs text-muted">
+              Write on the question above: in its answer boxes, as in the exam, or in the lined space under it.
+              {answer.trim() && ' Your typed answer is kept and will be marked with this.'}
+            </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
             {canAiMark && (
@@ -575,6 +575,13 @@ export default function BankQuestionCard({
   // and a student cannot tell: the scan stays the source of truth until then.
   const text = question.text ?? null;
   const [view, setView] = useState<'scan' | 'text'>(text?.audit === 'clean' ? 'text' : 'scan');
+  const [mode, setMode] = useAnswerMode();
+  const [hasInk, setHasInk] = useState(false);
+  const inkRef = useRef<HandwrittenAnswerHandle | null>(null);
+  // Writing goes on the scan itself, so a free-response question in writing
+  // mode shows the page to write on in place of the read-only scan. A
+  // multiple-choice question is answered with its letter buttons either way.
+  const writeOnPaper = mode === 'write' && !question.markScheme?.answerLetter && question.strips.length > 0;
 
   return (
     <article className="rounded-lg border border-line bg-surface">
@@ -616,6 +623,15 @@ export default function BankQuestionCard({
       </header>
 
       <div className="p-2 sm:p-4">
+        {writeOnPaper ? (
+          <HandwrittenAnswer
+            ref={inkRef}
+            questionRef={{ bankQuestionId: question.id }}
+            paper={question.strips}
+            onInkChange={setHasInk}
+          />
+        ) : (
+        <>
         {text && (
           <div role="tablist" aria-label="How to show this question" className="mb-2 inline-flex rounded-md border border-strong p-0.5 text-xs font-semibold">
             {(['text', 'scan'] as const).map((mode) => (
@@ -651,12 +667,18 @@ export default function BankQuestionCard({
             ask={{ bankQuestionId: question.id, from: 'question' }}
           />
         )}
+        </>
+        )}
       </div>
 
       <CommandTermPanel slugs={question.commandTerms} />
 
       <AnswerPanel
         question={question}
+        mode={mode}
+        setMode={setMode}
+        inkRef={inkRef}
+        hasInk={hasInk}
         onAnswered={() => {
           setShowAnswer(true);
           onAttempted?.();

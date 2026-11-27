@@ -19,11 +19,24 @@ export type HandwrittenAnswerHandle = {
   flush: () => Promise<void>;
 };
 
+/** A strip of the question scan, as the bank serves it. */
+export type PaperStrip = { url: string; width: number | null; height: number | null };
+
 /** How much paper is added at a time, in canvas pixels. */
 const GROW_STEP = 280;
 /** Ink this close to the bottom edge adds more paper, as a booklet would. */
 const GROW_MARGIN = 90;
 const MAX_WIDTH = 900;
+/** Ruled space under a question scan, for working that does not fit a box. */
+const SPACE_UNDER_PAPER = 240;
+/** Width of the image the marker receives when the page is a question scan. */
+const PAPER_EXPORT_WIDTH = 1200;
+/**
+ * Pixel budget for the stitched scan. iOS Safari refuses a canvas over about
+ * 16.7 million pixels, and a five-page question at full scan resolution is
+ * well past that.
+ */
+const STITCH_MAX_PIXELS = 10_000_000;
 
 function lowestInk(data: DrawingCanvasStrokeData): number {
   let lowest = 0;
@@ -34,15 +47,76 @@ function lowestInk(data: DrawingCanvasStrokeData): number {
   return lowest;
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`could not load ${src}`));
+    image.src = src;
+  });
+}
+
 /**
- * A handwritten answer: ruled paper the full width of the answer box, written
- * on with a stylus, finger or mouse.
+ * The question's strips stacked into one page, as `StripStack` shows them:
+ * each at its own width, left-aligned, so a narrow part stays narrow. The
+ * strips are same-origin, so the canvas stays readable for export.
+ */
+function useStitchedPaper(strips: PaperStrip[] | undefined) {
+  const [paper, setPaper] = useState<HTMLImageElement | null>(null);
+  const [failed, setFailed] = useState(false);
+  const key = strips?.map((strip) => strip.url).join('|') ?? '';
+  useEffect(() => {
+    if (!strips?.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const images = await Promise.all(strips.map((strip) => loadImage(strip.url)));
+        const widest = Math.max(...images.map((image) => image.naturalWidth), 1);
+        const total = images.reduce((sum, image) => sum + image.naturalHeight, 0);
+        const scale = Math.min(1, Math.sqrt(STITCH_MAX_PIXELS / (widest * total)));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(widest * scale);
+        canvas.height = Math.round(total * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('no 2d context');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let y = 0;
+        for (const image of images) {
+          ctx.drawImage(image, 0, y * scale, image.naturalWidth * scale, image.naturalHeight * scale);
+          y += image.naturalHeight;
+        }
+        const stitched = await loadImage(canvas.toDataURL('image/jpeg', 0.9));
+        if (!cancelled) setPaper(stitched);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // `key` stands for `strips`: a new array with the same strips is the same page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return { paper, failed };
+}
+
+/**
+ * A handwritten answer, written with a stylus, finger or mouse.
+ *
+ * Two layouts. Given `paper` (the question's scan strips), the student writes
+ * on the question itself -- into the printed answer boxes, as in the exam --
+ * with ruled space below it for anything that does not fit. Without it, a
+ * blank ruled page. The image the marker receives is the page as written:
+ * for a scan, the question with the answers in its boxes, which is exactly
+ * what an examiner marks.
  *
  * It replaces the collapsed "Scratchpad" that sat under the typed box. The
  * storage is the same per-question scratchpad row -- autosaved strokes plus a
- * flattened PNG -- so working drawn before this existed opens here, and every
- * grader that already reads the scratchpad image (mock exams, practice, the
- * bank) marks it without change.
+ * flattened image -- so earlier working still opens, and every grader that
+ * reads the scratchpad image marks it without change. Ink drawn on a blank
+ * page before the question became the page is moved below the scan rather
+ * than drawn over it.
  *
  * The paper grows as the student writes near the bottom, and its height is
  * stored with the strokes, so a long answer reopens at the length it was
@@ -50,39 +124,94 @@ function lowestInk(data: DrawingCanvasStrokeData): number {
  */
 const HandwrittenAnswer = forwardRef<
   HandwrittenAnswerHandle,
-  { questionRef: ScratchpadRef; /** Whether there is any ink, for enabling submit. */ onInkChange?: (hasInk: boolean) => void }
+  {
+    questionRef: ScratchpadRef;
+    /** Write on the question scan instead of a blank page. */
+    paper?: PaperStrip[];
+    /** Whether there is any ink, for enabling submit. */
+    onInkChange?: (hasInk: boolean) => void;
+  }
 >(
-  function HandwrittenAnswer({ questionRef, onInkChange }, ref) {
+  function HandwrittenAnswer({ questionRef, paper: paperStrips, onInkChange }, ref) {
+    const onPaper = Boolean(paperStrips?.length);
+    const { paper, failed: paperFailed } = useStitchedPaper(paperStrips);
     const canvasRef = useRef<DrawingCanvasHandle | null>(null);
     const importedRef = useRef(false);
     const [canvasEpoch, setCanvasEpoch] = useState(0);
     const frameRef = useRef<HTMLDivElement | null>(null);
-    const width = useMeasuredCanvasWidth(frameRef, MAX_WIDTH, true);
+    const measured = useMeasuredCanvasWidth(frameRef, onPaper ? 1000 : MAX_WIDTH, true);
+    // Over a scan the width is fixed once measured: ink is placed against the
+    // printed boxes, and a canvas that resized on rotation would leave it
+    // beside them. A blank page may follow the window.
+    const [fixedWidth, setFixedWidth] = useState<number | null>(null);
+    useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- latched once from the first measurement
+      if (onPaper && fixedWidth === null && measured !== null) setFixedWidth(measured);
+    }, [onPaper, fixedWidth, measured]);
+    const width = onPaper ? fixedWidth : measured;
     const [height, setHeight] = useState<number | null>(null);
+    const paperHeight = paper && width ? Math.round(width * (paper.naturalHeight / paper.naturalWidth)) : 0;
+    const ready = !onPaper || paper !== null || paperFailed;
+    const usePaper = onPaper && paper !== null;
 
     const attachCanvas = useCallback((handle: DrawingCanvasHandle | null) => {
       canvasRef.current = handle;
       setCanvasEpoch((value) => value + 1);
     }, []);
 
+    const widthRef = useRef(width);
+    useEffect(() => {
+      widthRef.current = width;
+    }, [width]);
     const { strokes, loaded, isDirty, onStrokesChange, flushSave } = useQuestionScratchpad(
       questionRef,
-      // Rasterised at the size the strokes are stored at, not this screen's.
-      () => canvasRef.current?.exportDataURL() ?? null,
+      () => {
+        if (!usePaper) return canvasRef.current?.exportDataURL() ?? null;
+        // A scan page is tall: send a fixed width as JPEG, which keeps a
+        // five-page question to a few hundred kilobytes and is plenty for the
+        // marker to read both print and handwriting.
+        const dpr = window.devicePixelRatio || 1;
+        const factor = PAPER_EXPORT_WIDTH / ((widthRef.current || PAPER_EXPORT_WIDTH) * dpr);
+        return canvasRef.current?.exportDataURL(factor, 'image/jpeg') ?? null;
+      },
     );
 
     useImperativeHandle(ref, () => ({ flush: flushSave }), [flushSave]);
 
-    // Decide the paper's height once, when both the width and any saved work
-    // are known: a canvas that resizes after importing would clip or stretch.
-    useEffect(() => {
-      if (!loaded || width === null || height !== null) return;
-      const base = Math.max(360, Math.round(width * 0.62));
+    /**
+     * Saved work, in this layout. Ink from a blank page (no `layout`) opened
+     * over a scan is moved down below the scan, keeping its own size.
+     */
+    const savedForLayout = (): DrawingCanvasStrokeData | null => {
       const saved = strokes as DrawingCanvasStrokeData | null;
+      if (!saved || !usePaper || saved.layout === 'paper' || !width) return saved;
+      const hasInk = saved.strokes?.length || saved.textBoxes?.length;
+      if (!hasInk) return { ...saved, layout: 'paper' };
+      const savedWidth = saved.width && saved.width > 0 ? saved.width : width;
+      const shift = paperHeight * (savedWidth / width);
+      return {
+        strokes: saved.strokes.map((stroke) => ({
+          ...stroke,
+          points: stroke.points.map(([x, y, pressure]) => [x, y + shift, pressure] as [number, number, number]),
+        })),
+        textBoxes: saved.textBoxes.map((box) => ({ ...box, y: box.y + shift })),
+        width: savedWidth,
+        height: (saved.height ?? 0) + shift,
+        layout: 'paper',
+      };
+    };
+
+    // Decide the paper's height once, when the width, the scan and any saved
+    // work are all known: a canvas that resizes after importing would clip.
+    useEffect(() => {
+      if (!loaded || !ready || width === null || height !== null) return;
+      const base = usePaper ? paperHeight + SPACE_UNDER_PAPER : Math.max(360, Math.round(width * 0.62));
+      const saved = savedForLayout();
       const restored = saved?.height && saved.width ? Math.round(saved.height * (width / saved.width)) : 0;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sized once from measured width and saved work
       setHeight(Math.max(base, restored));
-    }, [loaded, width, height, strokes]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loaded, ready, width, height, strokes, usePaper, paperHeight]);
 
     const onInkChangeRef = useRef(onInkChange);
     useEffect(() => {
@@ -98,23 +227,30 @@ const HandwrittenAnswer = forwardRef<
       const canvas = canvasRef.current;
       if (loaded && strokes && !importedRef.current && canvas) {
         importedRef.current = true;
-        canvas.importStrokes(strokes as DrawingCanvasStrokeData);
+        const saved = savedForLayout();
+        if (saved) canvas.importStrokes(saved);
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loaded, strokes, canvasEpoch]);
 
     const handleChange = useCallback(
       (data: DrawingCanvasStrokeData) => {
-        onStrokesChange(data);
+        onStrokesChange(usePaper ? { ...data, layout: 'paper' } : data);
         onInkChangeRef.current?.(data.strokes.length > 0 || data.textBoxes.length > 0);
         if (height !== null && lowestInk(data) > height - GROW_MARGIN) {
           setHeight(height + GROW_STEP);
         }
       },
-      [height, onStrokesChange],
+      [height, onStrokesChange, usePaper],
     );
 
     return (
       <div>
+        {onPaper && paperFailed && (
+          <p className="mb-2 text-xs text-warning">
+            The question scan could not be loaded to write on, so this is a blank page instead.
+          </p>
+        )}
         <div ref={frameRef}>
           {width !== null && height !== null && (
             <DrawingCanvas
@@ -123,8 +259,14 @@ const HandwrittenAnswer = forwardRef<
               height={height}
               ruled
               stylusAware
+              backdrop={usePaper ? paper : null}
               onStrokesChange={handleChange}
             />
+          )}
+          {(width === null || height === null) && (
+            <div className="flex h-60 items-center justify-center text-sm text-muted">
+              {onPaper ? 'Preparing the question to write on…' : 'Loading the writing area…'}
+            </div>
           )}
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted">

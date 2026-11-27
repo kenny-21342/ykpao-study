@@ -1,6 +1,7 @@
 import { DeepSeekMessage, DeepSeekResponse } from '@/types/ai';
 import type { TextCredential } from '@/lib/ai-credentials';
 import { candidateModels, noteModelOutcome } from '@/lib/ai-model-pool';
+import { escapeStrayBackslashes } from '@/lib/json-escapes';
 
 /**
  * Provider-agnostic chat client.
@@ -524,6 +525,7 @@ export function parseJsonReply<T = unknown>(raw: string): T {
   const end = raw.lastIndexOf('}');
   if (start !== -1 && end !== -1) attempts.push(raw.slice(start, end + 1));
   attempts.push(...attempts.map(repairJson));
+  attempts.push(...attempts.map(escapeStrayBackslashes));
 
   let firstError: unknown;
   for (const candidate of attempts) {

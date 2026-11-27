@@ -25,6 +25,7 @@
 
 import type { VisionCredential } from "@/lib/ai-credentials";
 import type { GradeResult } from "@/types/ai";
+import { escapeStrayBackslashes } from "./json-escapes.ts";
 
 const TRANSCRIBE_SYSTEM = `You transcribe handwritten student work from a photo into clean, gradeable text.
 
@@ -645,7 +646,9 @@ ${markscheme ? `Markscheme:\n${markscheme}\n\n` : ''}${totalMarks ? `Total marks
 Student's typed answer:
 ${typed}`
       : "The student's answer is the image attached to this message."
-  }`;
+  }
+
+The image may be the printed question paper with the student's handwriting on it, written into its answer boxes and the space below. In that case only the handwriting is the student's answer: the printed text, diagrams and any printed lines are the question, and nothing printed earns marks.`;
 
   const retryOpts: RetryOpts = {
     maxRetries: credential.source === "user" ? 2 : 5,
@@ -666,21 +669,20 @@ ${typed}`
 
 /** The model is asked for bare JSON but sometimes wraps it in prose. */
 function parseGradeJson(raw: string): GradeResult | null {
-  try {
-    return JSON.parse(raw) as GradeResult;
-  } catch {
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}");
-    if (start !== -1 && end !== -1) {
-      try {
-        return JSON.parse(raw.slice(start, end + 1)) as GradeResult;
-      } catch {
-        // fall through to the warning below
-      }
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  const body = start !== -1 && end !== -1 ? raw.slice(start, end + 1) : raw;
+  // LaTeX in a verdict (`\(v\)`, `\Delta`) often arrives with single
+  // backslashes, which JSON rejects; a full-marks grade was thrown away for it.
+  for (const candidate of [raw, body, escapeStrayBackslashes(body)]) {
+    try {
+      return JSON.parse(candidate) as GradeResult;
+    } catch {
+      // next candidate
     }
-    console.warn("gradeWithVision: response was not JSON:", raw.slice(0, 200));
-    return null;
   }
+  console.warn("gradeWithVision: response was not JSON:", raw.slice(0, 200));
+  return null;
 }
 
 /**

@@ -20,7 +20,9 @@ async function uploadPreviewPng(dataUrl: string): Promise<string | null> {
   try {
     const blob = await (await fetch(dataUrl)).blob();
     const form = new FormData();
-    form.append('file', blob, 'scratchpad.png');
+    // The upload route matches the extension to the MIME type; a page written
+    // over a question scan is exported as JPEG to keep a tall page small.
+    form.append('file', blob, blob.type === 'image/jpeg' ? 'scratchpad.jpg' : 'scratchpad.png');
     const res = await fetch('/api/upload', { method: 'POST', body: form });
     if (!res.ok) return null;
     const data = await res.json();

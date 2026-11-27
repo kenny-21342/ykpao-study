@@ -45,6 +45,11 @@ export type DrawingCanvasStrokeData = {
    */
   width?: number;
   height?: number;
+  /**
+   * 'paper': drawn over a question scan (`backdrop`), so the coordinates are
+   * relative to the top of the scan. Absent on a blank page.
+   */
+  layout?: 'paper';
 };
 
 export type DrawingCanvasHandle = {
@@ -55,7 +60,7 @@ export type DrawingCanvasHandle = {
    * otherwise a single edit on a small screen permanently halves the
    * thumbnail everyone else sees.
    */
-  exportDataURL: (scale?: number) => string | null;
+  exportDataURL: (scale?: number, type?: 'image/png' | 'image/jpeg') => string | null;
   importDataURL: (data: string) => void;
   exportStrokes: () => DrawingCanvasStrokeData;
   importStrokes: (data: DrawingCanvasStrokeData) => void;
@@ -86,7 +91,23 @@ type DrawingCanvasProps = {
    * finger-drawing.
    */
   stylusAware?: boolean;
+  /**
+   * A page to write on: drawn full-width at the top, behind the ink, and
+   * flattened under it on export. It sits under the canvas as a CSS
+   * background, so the eraser removes ink and never the page.
+   */
+  backdrop?: HTMLImageElement | null;
 };
+
+/**
+ * Most pixels one canvas may hold. iOS Safari refuses a canvas over about
+ * 16.7 million, and a long question written on at a retina density gets there,
+ * so a tall canvas trades a little sharpness for existing at all.
+ */
+const MAX_CANVAS_PIXELS = 14_000_000;
+function pixelRatio(width: number, height: number, wanted: number): number {
+  return Math.min(wanted, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)));
+}
 
 /** Set once a pen is seen on this device, so fingers scroll from then on. */
 const STYLUS_KEY = 'ink:stylus:v1';
@@ -204,7 +225,10 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 // ---------------------------------------------------------------------------
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ width = 800, height = 500, className = '', onSave, onStrokesChange, ruled = false, stylusAware = false }, ref) => {
+  ({ width = 800, height = 500, className = '', onSave, onStrokesChange, ruled = false, stylusAware = false, backdrop = null }, ref) => {
+    const backdropHeight = backdrop && backdrop.naturalWidth > 0
+      ? Math.round(width * (backdrop.naturalHeight / backdrop.naturalWidth))
+      : 0;
     const { confirm, confirmDialog } = useConfirm();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -286,9 +310,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      const dpr = pixelRatio(width, height, window.devicePixelRatio || 1);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       const ctx = canvas.getContext('2d');
@@ -479,52 +503,56 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     // Import / Export
     // -----------------------------------------------------------------------
 
-    const exportDataURL = useCallback((scale = 1): string | null => {
+    const exportDataURL = useCallback((scale = 1, type: 'image/png' | 'image/jpeg' = 'image/png'): string | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
 
-      // Composite strokes + text boxes onto a temp canvas at full resolution.
-      // `scale` enlarges the output only: everything below still draws in this
-      // canvas's coordinates, and the transform maps them up.
+      // `scale` enlarges (or shrinks) the output only: everything below still
+      // draws in this canvas's coordinates, and the transform maps them.
       const factor = Number.isFinite(scale) && scale > 0 ? scale : 1;
-      const dpr = window.devicePixelRatio || 1;
-      const tmp = document.createElement('canvas');
-      tmp.width = Math.round(width * factor * dpr);
-      tmp.height = Math.round(height * factor * dpr);
-      const tctx = tmp.getContext('2d');
-      if (!tctx) return null;
-      tctx.scale(dpr * factor, dpr * factor);
+      const ratio = pixelRatio(width, height, (window.devicePixelRatio || 1) * factor);
+      const sized = () => {
+        const layer = document.createElement('canvas');
+        layer.width = Math.round(width * ratio);
+        layer.height = Math.round(height * ratio);
+        const lctx = layer.getContext('2d');
+        lctx?.scale(ratio, ratio);
+        return { layer, lctx };
+      };
 
-      // White background
-      tctx.fillStyle = '#ffffff';
-      tctx.fillRect(0, 0, width, height);
-
-      // Background image
-      if (bgImage) {
-        drawFitted(tctx, bgImage, width, height);
-      }
-
-      // Strokes
-      tctx.lineCap = 'round';
-      tctx.lineJoin = 'round';
+      // Ink on its own layer, so an eraser stroke (destination-out) removes
+      // ink only -- never the page or the photo beneath it.
+      const { layer: ink, lctx: ictx } = sized();
+      if (!ictx) return null;
+      ictx.lineCap = 'round';
+      ictx.lineJoin = 'round';
       for (const stroke of strokesRef.current) {
-        drawStroke(tctx, stroke);
+        drawStroke(ictx, stroke);
       }
-
-      // Text boxes
       for (const tb of textBoxes) {
         if (tb.text) {
-          tctx.fillStyle = tb.color;
-          tctx.font = `${tb.fontSize}px sans-serif`;
-          // Handle multi-line
+          ictx.fillStyle = tb.color;
+          ictx.font = `${tb.fontSize}px sans-serif`;
           tb.text.split('\n').forEach((line, i) => {
-            tctx.fillText(line, tb.x, tb.y + (i + 1) * tb.fontSize * 1.2);
+            ictx.fillText(line, tb.x, tb.y + (i + 1) * tb.fontSize * 1.2);
           });
         }
       }
 
-      return tmp.toDataURL('image/png');
-    }, [width, height, bgImage, textBoxes]);
+      const { layer: tmp, lctx: tctx } = sized();
+      if (!tctx) return null;
+      tctx.fillStyle = '#ffffff';
+      tctx.fillRect(0, 0, width, height);
+      if (backdrop && backdropHeight > 0) {
+        tctx.drawImage(backdrop, 0, 0, width, backdropHeight);
+      }
+      if (bgImage) {
+        drawFitted(tctx, bgImage, width, height);
+      }
+      tctx.drawImage(ink, 0, 0, width, height);
+
+      return type === 'image/jpeg' ? tmp.toDataURL('image/jpeg', 0.85) : tmp.toDataURL('image/png');
+    }, [width, height, bgImage, textBoxes, backdrop, backdropHeight]);
 
     const handleSave = () => {
       const dataUrl = exportDataURL();
@@ -829,9 +857,28 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               width,
               height,
               backgroundColor: '#ffffff',
-              // Lines every 36px, the spacing of an answer booklet at this size.
-              ...(ruled
-                ? { backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 35px, #dbe2ec 35px, #dbe2ec 36px)' }
+              // The page, then white under it (a scan can be transparent), then
+              // lines every 36px -- the spacing of an answer booklet at this
+              // size -- which the page covers and the space below it keeps.
+              ...(backdrop || ruled
+                ? {
+                    backgroundImage: [
+                      ...(backdrop ? [`url("${backdrop.src}")`, 'linear-gradient(#ffffff, #ffffff)'] : []),
+                      ...(ruled ? ['repeating-linear-gradient(to bottom, transparent 0, transparent 35px, #dbe2ec 35px, #dbe2ec 36px)'] : []),
+                    ].join(', '),
+                    backgroundSize: [
+                      ...(backdrop ? [`${width}px ${backdropHeight}px`, `${width}px ${backdropHeight}px`] : []),
+                      ...(ruled ? ['auto'] : []),
+                    ].join(', '),
+                    backgroundPosition: [
+                      ...(backdrop ? ['0 0', '0 0'] : []),
+                      ...(ruled ? [`0 ${backdropHeight}px`] : []),
+                    ].join(', '),
+                    backgroundRepeat: [
+                      ...(backdrop ? ['no-repeat', 'no-repeat'] : []),
+                      ...(ruled ? ['repeat'] : []),
+                    ].join(', '),
+                  }
                 : {}),
             }}
           />

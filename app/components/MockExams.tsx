@@ -1628,15 +1628,24 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
               </div>
             </div>
 
-            {/* Question content */}
+            {/* Question content. Writing by hand on a scanned question goes on
+                the scan itself, into its printed answer boxes. */}
             <div className="bg-surface border border-line rounded-lg p-5">
-              <div className="prose prose-sm max-w-none text-primary">
-                <ExamContent
-                  content={item.content}
-                  strips={item.strips}
-                  alt={`Question ${item.number}`}
+              {answerMode === 'write' && !item.options?.length && item.strips?.length ? (
+                <HandwrittenAnswer
+                  key={`paper-${item.id}`}
+                  questionRef={{ mockExamItemId: item.id }}
+                  paper={item.strips}
                 />
-              </div>
+              ) : (
+                <div className="prose prose-sm max-w-none text-primary">
+                  <ExamContent
+                    content={item.content}
+                    strips={item.strips}
+                    alt={`Question ${item.number}`}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Answer area */}
@@ -1728,9 +1737,15 @@ function TakeExamView({ examId, onExit, onSubmitted }: { examId: string; onExit:
                   <AnswerModeToggle mode={answerMode} onChange={setAnswerMode} />
                 </div>
                 {answerMode === 'write' ? (
-                  // Keyed by item so each question has its own page of ink.
-                  // Marked with the typed answer, if there is one, on submit.
-                  <HandwrittenAnswer key={item.id} questionRef={{ mockExamItemId: item.id }} />
+                  item.strips?.length ? (
+                    <p className="text-xs text-muted">
+                      Write on the question above: in its answer boxes, or in the lined space under it.
+                    </p>
+                  ) : (
+                    // A question with text and no scan gets a blank page.
+                    // Keyed by item so each question has its own page of ink.
+                    <HandwrittenAnswer key={item.id} questionRef={{ mockExamItemId: item.id }} />
+                  )
                 ) : (
                   <>
                     <RichTextEditor
